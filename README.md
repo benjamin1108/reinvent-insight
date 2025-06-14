@@ -1,91 +1,103 @@
-# YouTube 视频字幕摘要工具
+# YouTube 视频字幕深度摘要工具
 
-本项目是一个命令行工具，可以使用 AI 大语言模型（当前支持 Gemini Pro）自动下载 YouTube 视频的英文字幕，并根据高度定制化的 Prompt 生成深度摘要笔记。
+> 基于 **yt-dlp + Gemini 2.5 Pro**，一键下载并智能总结 YouTube 字幕，生成可替代观看的视频深度笔记。
 
-## 特性
+## ✨ 功能亮点
 
-- **自动字幕下载**: 使用 `yt-dlp` 从 YouTube 下载指定视频的字幕。
-- **多模型支持**: 采用可扩展设计，当前已实现 Google Gemini Pro，并为 XAI、Alibaba 的模型预留了接口。
-- **高度定制化 Prompt**: 通过独立的 `prompt.txt` 文件定义摘要逻辑，轻松调整输出风格和结构。
-- **良好交互体验**: 基于 `questionary` 和 `rich` 库，提供清晰、美观的交互式命令行菜单。
-- **可配置日志**: 支持设置不同的日志级别，方便调试。
+1. **自动字幕获取**  
+   - 优先下载 *人工中文字幕* → *人工英文字幕* → *自动英文字幕*  
+   - 同步支持 `vtt / srt` 双格式；若无 srt 自动回退 vtt
+2. **Token 友好**  
+   - 清洗字幕去掉时间戳 & 元数据，字符量缩减 80%+，大幅降低 API 成本
+3. **多模型可插拔**  
+   - 默认 `Gemini-2.5-pro-preview`（已开启推理模式）  
+   - 预留 XAI / Alibaba 接口，后续可扩展
+4. **交互式 CLI**  
+   - `questionary + rich` 提供中文友好菜单 & 彩色日志
+5. **可配置日志**  
+   - `.env` 一行切换 `DEBUG / INFO / WARNING` 级别
+6. **智能命名**  
+   - 自动用 *清理后的视频标题* 作为 Markdown 文件名，可手动覆盖
 
-## 安装与配置
-
-**1. 克隆项目**
-
-```bash
-git clone <your-repo-url>
-cd youtube-summarizer
-```
-
-**2. 安装 `uv` (如果尚未安装)**
-
-`uv` 是一个极速的 Python 包安装和管理工具。
-
-```bash
-# macOS / Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Windows
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
-
-**3. 创建虚拟环境并安装依赖**
-
-```bash
-# 创建虚拟环境
-uv venv
-
-# 激活虚拟环境
-# macOS / Linux
-source .venv/bin/activate
-# Windows
-.venv\Scripts\activate
-
-# 使用 uv 安装依赖
-uv pip install -e .
-```
-
-**4. 配置环境变量**
-
-复制 `.env.example` 文件为 `.env`，并填入你的 API 密钥。
-
-```bash
-cp .env.example .env
-```
-
-然后编辑 `.env` 文件:
-```
-GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
-```
-
-## 使用方法
-
-在项目根目录下，直接运行以下命令启动交互式程序：
-
-```bash
-youtube-summarizer
-```
-
-程序会引导您输入 YouTube 视频链接、选择模型、并确认输出文件名。
-
-## 项目结构
+## 📂 项目结构
 
 ```
 .
-├── .env.example
-├── .gitignore
-├── pyproject.toml
-├── README.md
+├── pyproject.toml          # uv 依赖管理
+├── README.md               # 当前文件
 ├── prompt/
-│   └── youtbe-deep-summary.txt
+│   └── youtbe-deep-summary.txt  # 深度摘要 Prompt 模板
 └── src/
     └── youtube_summarizer/
         ├── __init__.py
-        ├── main.py         # 主程序
-        ├── config.py       # 配置模块
-        ├── downloader.py   # 字幕下载模块
-        ├── summarizer.py   # AI 摘要模块
-        └── logger.py       # 日志配置模块
+        ├── config.py        # 环境变量 & 路径
+        ├── logger.py        # rich 日志封装
+        ├── downloader.py    # 字幕下载 & 清洗
+        ├── summarizer.py    # 智能摘要（支持推理模式）
+        └── main.py          # CLI 入口
 ```
+
+## 🚀 快速开始
+
+### 1. 克隆项目
+```bash
+git clone <repo-url>
+cd youtube-summarizer
+```
+
+### 2. 安装 `uv`
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh   # macOS / Linux
+```
+
+### 3. 创建虚拟环境 & 安装依赖
+```bash
+uv venv                    # 创建 .venv
+source .venv/bin/activate  # 激活
+uv pip install -e .        # 安装本项目（生成 youtube-summarizer 命令）
+```
+
+### 4. 配置环境变量
+```bash
+cp .env.example .env
+vim .env
+# 填入 Google Gemini API Key
+GEMINI_API_KEY="sk-xxxx"
+# 可选：日志级别
+LOG_LEVEL="INFO"   # DEBUG / INFO / WARNING / ERROR
+```
+
+### 5. 运行
+```bash
+# 方式一（已生成脚本）
+youtube-summarizer
+
+# 方式二（不安装脚本）
+uv run python src/youtube_summarizer/main.py
+```
+
+跟随 CLI 提示输入视频地址，即可在 `downloads/summaries` 目录生成 `*.md` 深度笔记。
+
+## 🛠 常用参数
+| 场景 | 配置方法 |
+| ---- | -------- |
+| 切换模型 | 在 CLI 中选择（默认 Gemini） |
+| 开启调试日志 | `.env` 设置 `LOG_LEVEL=DEBUG` |
+| 自定义 Prompt | 编辑 `prompt/youtbe-deep-summary.txt` |
+| 修改下载目录 | `config.py` 中 `DOWNLOAD_DIR` 常量 |
+
+## 🤖 推理模式说明
+- 通过 **System Instruction** + **Reasoning Prompt** 双保险，引导模型进行 *逐步推理*  
+- 生成配置：`temperature=0.7 / top_p=0.9 / top_k=40 / max_tokens=8192`  
+- 如需关闭推理，可在 `summarizer.py` 将 `reasoning_prompt` 换回简单模板
+
+## 💡 故障排查
+| 问题 | 解决方案 |
+| ---- | -------- |
+| 无法获取字幕 | 检查视频是否公开字幕；尝试代理；查看 `downloads/subtitles` 目录文件 |
+| 404 model not found | 确认 `.env` 中 API Key 有权限；检查 `summarizer.py` 模型名称 |
+| CLI 卡住或乱码 | 终端需支持 UTF-8；Windows 请使用 `PowerShell 7+` 或 `Windows Terminal` |
+
+## 📜 许可协议
+
+本项目遵循 **MIT License**，请自由 Fork / 修改 / 商用，但需保留原作者署名。
