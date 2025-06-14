@@ -1,0 +1,19 @@
+[tool.uv.sources]
+youtube-summarizer = { path = "src/youtube_summarizer" }
+
+[project]
+name = "youtube-summarizer"
+version = "0.1.0"
+description = "使用AI模型（Gemini, XAI, Alibaba）下载并总结YouTube视频字幕。"
+authors = [{ name = "Your Name", email = "you@example.com" }]
+requires-python = ">=3.9"
+dependencies = [
+    "yt-dlp",
+    "google-generativeai",
+    "rich",
+    "python-dotenv",
+    "questionary"
+]
+
+[project.scripts]
+youtube-summarizer = "youtube_summarizer.main:run"
