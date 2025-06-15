@@ -53,20 +53,20 @@ class GeminiSummarizer(Summarizer):
         logger.info("开始使用 Gemini Pro 进行摘要（已开启推理模式）...")
         
         # 增强 prompt 以促进推理
-        reasoning_prompt = f"""请按照以下步骤进行深度分析和摘要：
+        reasoning_prompt = f"""请先进行深入分析，再撰写最终摘要。
 
 <thinking>
-首先，让我仔细分析这个内容：
-1. 主题识别：这个内容的核心主题是什么？
-2. 结构分析：内容是如何组织的？有哪些主要部分？
+1. 主题识别：本内容的核心主题是什么？
+2. 结构分析：内容由哪些主要部分组成？
 3. 关键信息提取：最重要的技术点、数据、案例是什么？
-4. 逻辑关系：这些信息之间有什么联系？
+4. 逻辑关系：信息之间的联系如何？
 5. 价值评估：哪些信息对读者最有价值？
 </thinking>
 
-基于以上分析，请严格按照以下要求生成摘要：
-
+以下 **写作规范** 仅供你参考，**请不要将写作规范本身出现在最终输出中**。
+### 写作规范开始
 {prompt}
+### 写作规范结束
 
 # 输入素材
 - 提供材料：
@@ -74,7 +74,7 @@ class GeminiSummarizer(Summarizer):
 {text}
 ```
 
-请确保你的分析过程体现在最终的摘要质量中，生成一份深度、结构化的技术摘要。"""
+请根据上面的分析与写作规范，生成一份深度且结构化的技术摘要。仅输出正文，不要输出其他无关内容"""
 
         try:
             response = self.model.generate_content(
@@ -83,7 +83,7 @@ class GeminiSummarizer(Summarizer):
                     temperature=0.7,  # 适中的创造性
                     top_p=0.9,        # 核采样参数
                     top_k=40,         # 限制候选词数量
-                    max_output_tokens=8192,  # 增加输出长度限制
+                    max_output_tokens=128000,  # 根据用户要求调高输出长度上限
                     response_mime_type="text/plain",
                 )
             )

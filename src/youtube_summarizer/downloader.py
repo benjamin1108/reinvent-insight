@@ -117,8 +117,8 @@ def extract_text_from_vtt(vtt_content: str) -> str:
 
 def download_subtitles(url: str) -> tuple[str | None, Path | None, str | None]:
     """
-    使用 yt-dlp 按优先级下载指定 YouTube URL 的字幕。
-    优先级: 1. 中文人工, 2. 英文人工, 3. 英文自动
+    使用 yt-dlp 下载指定 YouTube URL 的英文字幕。
+    优先级: 1. 英文人工字幕, 2. 英文自动字幕
     使用 SRT 格式以简化后续文本处理。
 
     Args:
@@ -128,7 +128,7 @@ def download_subtitles(url: str) -> tuple[str | None, Path | None, str | None]:
         A tuple containing:
         - str: 字幕的纯文本内容，如果失败则为 None.
         - Path: 字幕文件的路径，如果失败则为 None.
-        - str: 下载的字幕语言代码 (e.g., "zh-Hans", "en")，如果失败则为 None.
+        - str: 下载的字幕语言代码 (e.g., "en")，如果失败则为 None.
     """
     logger.info(f"开始处理 URL: {url}")
 
@@ -145,7 +145,7 @@ def download_subtitles(url: str) -> tuple[str | None, Path | None, str | None]:
         ydl_opts = {
             'writesubtitles': True,
             'writeautomaticsub': True,
-            'subtitleslangs': ['zh-Hans', 'zh-CN', 'en'],
+            'subtitleslangs': ['en'],  # 只下载英文字幕
             'subtitlesformat': 'srt',  # 指定使用 SRT 格式
             'skip_download': True,
             'outtmpl': str(output_path),
@@ -174,7 +174,7 @@ def download_subtitles(url: str) -> tuple[str | None, Path | None, str | None]:
                 logger.info("未找到 SRT 格式，尝试使用 VTT 格式")
 
             if not subtitle_file or not subtitle_file.exists():
-                logger.error(f"字幕下载失败或未找到。检查视频是否有中/英文字幕。")
+                logger.error(f"字幕下载失败或未找到。检查视频是否有英文字幕。")
                 logger.error(f"查找的文件模式: {clean_title}*.srt 和 {clean_title}*.vtt")
                 return None, None, None
 
@@ -194,6 +194,11 @@ def download_subtitles(url: str) -> tuple[str | None, Path | None, str | None]:
                 logger.info(f"使用 VTT 格式处理")
             
             logger.info(f"原始字幕长度: {len(subtitle_content)} 字符，清理后: {len(clean_text)} 字符")
+            
+            # 保存清理过时间线的纯文本字幕文件
+            clean_subtitle_path = config.SUBTITLE_DIR / f"{clean_title}_clean.txt"
+            clean_subtitle_path.write_text(clean_text, encoding='utf-8')
+            logger.info(f"清理后的纯文本字幕已保存到: {clean_subtitle_path}")
             
             return clean_text, subtitle_file, lang_code
 
