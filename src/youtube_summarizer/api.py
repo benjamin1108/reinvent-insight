@@ -87,7 +87,19 @@ async def summary_task_worker(url: str, task_id: str):
         output_path = config.OUTPUT_DIR / f"{output_filename}.md"
         output_path.write_text(summary_md, encoding="utf-8")
         await manager.send_message(f"摘要已保存到 {output_path}", task_id)
-
+        
+        # 6. 统计字数和费用估算（Gemini 2.5 Pro）
+        # 1 token ≈ 1 字/1.3英文单词，粗略用1字=1token估算
+        char_count = len(summary_md)
+        # 20万token以内，输出价10美元/10万token=0.0001美元/字
+        # 20万token以上，输出价15美元/10万token=0.00015美元/字
+        if char_count <= 200000:
+            price = char_count * 0.0001
+        else:
+            price = 200000 * 0.0001 + (char_count - 200000) * 0.00015
+        price = round(price, 4)
+        await manager.send_message(f"本摘要输出字数：{char_count}，Gemini 2.5 Pro 预估费用：${price}", task_id)
+        
         await manager.send_message("摘要完成！", task_id)
         await manager.send_result(video_title, summary_md, task_id)
 
@@ -132,7 +144,60 @@ async def websocket_endpoint(websocket: WebSocket, task_id: str):
         manager.disconnect(task_id)
         logger.info(f"客户端 {task_id} 断开连接。")
 
-# 挂载前端静态文件
+@app.get("/summaries")
+async def list_summaries():
+    """获取所有已生成的摘要文件列表。"""
+    try:
+        summaries = []
+        if config.OUTPUT_DIR.exists():
+            for md_file in config.OUTPUT_DIR.glob("*.md"):
+                # 获取文件信息
+                stat = md_file.stat()
+                summaries.append({
+                    "filename": md_file.name,
+                    "title": md_file.stem,  # 文件名不含扩展名
+                    "size": stat.st_size,
+                    "created_at": stat.st_ctime,
+                    "modified_at": stat.st_mtime
+                })
+        
+        # 按修改时间倒序排列
+        summaries.sort(key=lambda x: x["modified_at"], reverse=True)
+        return {"summaries": summaries}
+    except Exception as e:
+        logger.error(f"获取摘要列表失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="获取摘要列表失败")
+
+@app.get("/summaries/{filename}")
+async def get_summary(filename: str):
+    """获取指定摘要文件的内容。"""
+    try:
+        # 安全检查：确保文件名不包含路径遍历字符
+        if ".." in filename or "/" in filename or "\\" in filename:
+            raise HTTPException(status_code=400, detail="无效的文件名")
+        
+        # 确保文件名以 .md 结尾
+        if not filename.endswith(".md"):
+            filename += ".md"
+        
+        file_path = config.OUTPUT_DIR / filename
+        
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="摘要文件未找到")
+        
+        content = file_path.read_text(encoding="utf-8")
+        return {
+            "filename": filename,
+            "title": file_path.stem,
+            "content": content
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"读取摘要文件失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="读取摘要文件失败")
+
+# 挂载前端静态文件 - 必须放在最后，避免覆盖 API 路由
 # 使用 config.BASE_DIR 来确保路径的准确性
 web_dir = config.BASE_DIR / "web"
 if web_dir.exists():
