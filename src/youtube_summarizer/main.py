@@ -20,24 +20,9 @@ def get_user_input():
     ).ask()
 
     if not url:
-        return None, None, None
-
-    model_choices = [
-        questionary.Choice("Gemini (推荐)", value="Gemini"),
-        questionary.Choice("XAI (暂未支持)", value="XAI", disabled=True),
-        questionary.Choice("Alibaba (暂未支持)", value="Alibaba", disabled=True),
-    ]
-
-    model = questionary.select(
-        "请选择用于摘要的大语言模型:",
-        choices=model_choices,
-        default="Gemini"
-    ).ask()
-
-    if not model:
-        return None, None, None
+        return None
         
-    return url, model, None  # 不再在这里询问文件名
+    return url
 
 def run():
     """主程序运行函数。"""
@@ -47,11 +32,13 @@ def run():
         return
 
     try:
-        url, model_name, _ = get_user_input()
+        url = get_user_input()
 
-        if not all([url, model_name]):
+        if not url:
             console.print("\n操作已取消。", style="yellow")
             return
+
+        model_name = config.PREFERRED_MODEL
 
         # 1. 下载字幕
         subtitle_text = None
@@ -66,17 +53,7 @@ def run():
             video_title = subtitle_path.stem.split('.')[0]  # 移除语言代码和扩展名
             status.update(f"[bold green]成功下载 '{subtitle_lang}' 字幕。[/bold green]")
 
-        # 2. 询问输出文件名，使用视频标题作为默认值
-        output_filename = questionary.text(
-            "请输入输出的 Markdown 文件名 (不含扩展名):",
-            default=video_title
-        ).ask()
-
-        if not output_filename:
-            console.print("\n操作已取消。", style="yellow")
-            return
-
-        # 3. 读取 Prompt
+        # 2. 读取 Prompt
         try:
             prompt_text = config.PROMPT_FILE_PATH.read_text(encoding="utf-8")
             logger.info("成功加载 Prompt 文件。")
@@ -84,7 +61,7 @@ def run():
             console.print(f"\n[bold red]错误: Prompt 文件未找到于 {config.PROMPT_FILE_PATH}[/bold red]")
             return
             
-        # 4. 获取摘要器并执行摘要
+        # 3. 获取摘要器并执行摘要
         summary_md = None
         with console.status(f"[bold green]正在使用 {model_name} 进行摘要，请稍候...", spinner="earth") as status:
             summarizer_instance = summarizer.get_summarizer(model_name)
@@ -97,7 +74,8 @@ def run():
                 console.print("\n[bold red]错误: 生成摘要失败，请检查日志获取详细信息。[/bold red]")
                 return
 
-        # 5. 保存摘要
+        # 4. 保存摘要
+        output_filename = video_title
         output_path = config.OUTPUT_DIR / f"{output_filename}.md"
         output_path.write_text(summary_md, encoding="utf-8")
 
@@ -106,7 +84,6 @@ def run():
 摘要已成功保存到: [cyan]{output_path}[/cyan]
 """)
         console.print(Panel(success_message, title="[bold]成功[/bold]", border_style="green"))
-
 
     except NotImplementedError:
         console.print(f"\n[bold yellow]提示: 您选择的模型 '{model_name}' 当前尚未支持。[/bold yellow]")

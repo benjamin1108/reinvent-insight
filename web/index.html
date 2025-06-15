@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="h-full bg-gray-950 text-gray-100">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>reinvent Insight · YouTube 摘要</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script src="https://unpkg.com/marked/marked.min.js"></script>
+  <style>
+    /* Tailwind Typography Plugin (prose-invert) Styles */
+    .prose { color: #d1d5db; max-width: 65ch; }
+    .prose :where(a):not(:where([class~="not-prose"] *)) { color: #93c5fd; text-decoration: underline; }
+    .prose :where(strong):not(:where([class~="not-prose"] *)) { color: #f9fafb; }
+    .prose :where(ol):not(:where([class~="not-prose"] *)) { list-style-type: decimal; }
+    .prose :where(ol > li):not(:where([class~="not-prose"] *))::before { content: counter(list-item) ". "; position: absolute; left: -1.75rem; color: #6b7280; }
+    .prose :where(ul):not(:where([class~="not-prose"] *)) { list-style-type: disc; }
+    .prose :where(ul > li):not(:where([class~="not-prose"] *))::before { content: ""; position: absolute; left: -1.25rem; top: 0.5rem; width: 0.375rem; height: 0.375rem; border-radius: 9999px; background-color: #4b5563; }
+    .prose :where(hr):not(:where([class~="not-prose"] *)) { border-color: #374151; margin-top: 3em; margin-bottom: 3em; }
+    .prose :where(blockquote):not(:where([class~="not-prose"] *)) { color: #d1d5db; border-left-color: #4b5563; font-style: italic; padding-left: 1em; }
+    .prose :where(h1):not(:where([class~="not-prose"] *)), .prose :where(h2):not(:where([class~="not-prose"] *)), .prose :where(h3):not(:where([class~="not-prose"] *)), .prose :where(h4):not(:where([class~="not-prose"] *)) { color: #f9fafb; font-weight: 700; }
+    .prose :where(h1):not(:where([class~="not-prose"] *)) { font-size: 2.25em; margin-top: 0; margin-bottom: 0.8888889em; }
+    .prose :where(h2):not(:where([class~="not-prose"] *)) { font-size: 1.5em; margin-top: 2em; margin-bottom: 1em; }
+    .prose :where(h3):not(:where([class~="not-prose"] *)) { font-size: 1.25em; margin-top: 1.6em; margin-bottom: 0.6em; }
+    .prose :where(h4):not(:where([class~="not-prose"] *)) { margin-top: 1.5em; margin-bottom: 0.5em; }
+    .prose :where(code):not(:where([class~="not-prose"] *)) { color: #f9fafb; background-color: #374151; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; }
+    .prose :where(pre):not(:where([class~="not-prose"] *)) { background-color: #1f2937; color: #d1d5db; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
+    .prose :where(pre code):not(:where([class~="not-prose"] *)) { background-color: transparent; border-width: 0; border-radius: 0; padding: 0; font-weight: inherit; color: inherit; }
+    .prose :where(table):not(:where([class~="not-prose"] *)) { width: 100%; table-layout: auto; text-align: left; margin-top: 2em; margin-bottom: 2em; }
+    .prose :where(thead):not(:where([class~="not-prose"] *)) { border-bottom-width: 1px; border-bottom-color: #4b5563; }
+    .prose :where(thead th):not(:where([class~="not-prose"] *)) { color: #f9fafb; font-weight: 600; vertical-align: bottom; padding-right: 0.5714286em; padding-bottom: 0.5714286em; padding-left: 0.5714286em; }
+    .prose :where(tbody tr):not(:where([class~="not-prose"] *)) { border-bottom-width: 1px; border-bottom-color: #374151; }
+    .prose :where(tbody td):not(:where([class~="not-prose"] *)) { vertical-align: top; padding: 0.5714286em; }
+  </style>
+</head>
+<body class="h-full flex flex-col">
+  <!-- Header -->
+  <header class="p-4 border-b border-gray-800 flex items-center justify-between">
+    <h1 class="text-xl font-bold text-teal-400 select-none">reinvent&nbsp;<span class="text-teal-200">Insight</span></h1>
+    <a href="https://github.com" target="_blank" class="text-sm text-gray-400 hover:text-teal-300">GitHub</a>
+  </header>
+
+  <!-- App Root -->
+  <div id="app" class="flex-1 overflow-auto">
+    <div class="max-w-3xl mx-auto p-6">
+      <!-- Input Card -->
+      <div class="bg-gray-900 border border-gray-800 rounded-lg p-6 shadow-lg mb-8">
+        <label class="block text-sm font-medium mb-2">输入 YouTube 链接</label>
+        <input v-model="url" :disabled="loading" type="url" placeholder="https://www.youtube.com/watch?v=..." class="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-50" />
+        <button :disabled="loading || !url" @click="startSummarize" class="mt-4 w-full py-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-40 rounded text-white font-semibold">
+          <span v-if="!loading">生成摘要</span>
+          <span v-else>处理中...</span>
+        </button>
+      </div>
+      
+      <!-- Progress Logs -->
+      <div v-if="logs.length" class="bg-gray-900 border border-gray-800 rounded-lg p-4 shadow-lg mb-8">
+        <h3 class="text-lg font-semibold mb-2 text-teal-400">处理进度</h3>
+        <ul class="space-y-1 text-sm text-gray-300">
+          <li v-for="(log, index) in logs" :key="index" class="flex items-center">
+            <svg class="w-4 h-4 text-teal-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <span>{{ log }}</span>
+          </li>
+          <li v-if="loading && !summary" class="flex items-center text-gray-400">
+            <svg class="w-4 h-4 text-teal-500 mr-2 animate-spin flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>等待后续步骤...</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Result -->
+      <div v-if="summary" class="mt-8">
+        <h2 class="text-2xl font-bold mb-4 text-teal-400">{{ title }}</h2>
+        <div v-html="rendered" class="prose prose-invert max-w-none"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { createApp, ref, computed } = Vue;
+
+    createApp({
+      setup() {
+        const url = ref('');
+        const loading = ref(false);
+        const logs = ref([]);
+        const summary = ref('');
+        const title = ref('');
+
+        const rendered = computed(() => marked.parse(summary.value));
+
+        const connectWebSocket = (taskId) => {
+          const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const wsUrl = `${wsProtocol}//${window.location.host}/ws/${taskId}`;
+          const ws = new WebSocket(wsUrl);
+
+          ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'result') {
+              summary.value = data.summary;
+              title.value = data.title;
+              loading.value = false;
+            } else if(data.message) {
+              logs.value.push(data.message);
+            }
+          };
+
+          ws.onerror = (event) => {
+            logs.value.push("WebSocket 连接错误。");
+            loading.value = false;
+          };
+
+          ws.onclose = (event) => {
+            logs.value.push("连接已关闭。");
+            if (!summary.value) {
+              loading.value = false;
+            }
+          };
+        };
+
+        const startSummarize = async () => {
+          logs.value = [];
+          summary.value = '';
+          title.value = '';
+          loading.value = true;
+          
+          try {
+            const res = await axios.post('/summarize', { url: url.value });
+            const taskId = res.data.task_id;
+            logs.value.push("任务已创建，正在连接实时日志...");
+            connectWebSocket(taskId);
+          } catch (e) {
+            const errorMsg = e.response?.data?.detail || '创建任务失败';
+            logs.value.push(`错误: ${errorMsg}`);
+            loading.value = false;
+          }
+        };
+
+        return { url, loading, logs, summary, rendered, title, startSummarize };
+      },
+    }).mount('#app');
+  </script>
+</body>
+</html> 

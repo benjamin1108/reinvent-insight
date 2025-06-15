@@ -12,7 +12,9 @@ dependencies = [
     "google-generativeai",
     "rich",
     "python-dotenv",
-    "questionary"
+    "questionary",
+    "fastapi",
+    "uvicorn[standard]"
 ]
 
 [project.scripts]

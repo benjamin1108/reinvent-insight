@@ -32,6 +32,9 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 # --- Prompt 配置 ---
 PROMPT_FILE_PATH = BASE_DIR / "prompt" / "youtbe-deep-summary.txt"
 
+# --- 模型配置 ---
+PREFERRED_MODEL = os.getenv("PREFERRED_MODEL", "Gemini")
+
 # --- 下载配置 ---
 DOWNLOAD_DIR = BASE_DIR / "downloads"
 DOWNLOAD_DIR.mkdir(exist_ok=True) # 确保下载目录存在
