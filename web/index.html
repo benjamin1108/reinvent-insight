@@ -227,7 +227,7 @@
       border-radius: 12px;
       padding: 1.5rem;
       backdrop-filter: blur(10px);
-      max-height: calc(100vh - 200px);
+      height: 100%;
       overflow-y: auto;
     }
 
@@ -267,22 +267,49 @@
       padding-left: 0.5rem;
     }
 
-    /* 滚动条样式 */
-    ::-webkit-scrollbar {
+    /* 定制暗色滚动条，避免覆盖圆角背景 */
+    .tech-gradient::-webkit-scrollbar,
+    .toc::-webkit-scrollbar,
+    .resizable::-webkit-scrollbar {
       width: 8px;
     }
-
-    ::-webkit-scrollbar-track {
-      background: #1e293b;
+    .tech-gradient::-webkit-scrollbar-track,
+    .toc::-webkit-scrollbar-track,
+    .resizable::-webkit-scrollbar-track {
+      background: transparent;
+      border-radius: 6px;
+    }
+    .tech-gradient::-webkit-scrollbar-thumb,
+    .toc::-webkit-scrollbar-thumb,
+    .resizable::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.4);
+      border-radius: 6px;
+    }
+    .tech-gradient::-webkit-scrollbar-thumb:hover,
+    .toc::-webkit-scrollbar-thumb:hover,
+    .resizable::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.6);
     }
 
-    ::-webkit-scrollbar-thumb {
-      background: #475569;
-      border-radius: 4px;
+    /* 调整 resizable 底部拖拽手柄颜色（WebKit） */
+    .resizable::-webkit-resizer {
+      background: rgba(148, 163, 184, 0.35);
     }
 
-    ::-webkit-scrollbar-thumb:hover {
-      background: #64748b;
+    /* 隐藏默认滚动条角落在 Firefox 等浏览器上的溢出覆盖 */
+    .tech-gradient {
+      scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+      scrollbar-width: thin;
+    }
+
+    /* 目录收起时在桌面端使文档保持原宽度并居中 */
+    @media (min-width: 1024px) {
+      .no-toc-centered {
+        width: 72%;
+        margin-left: auto;
+        margin-right: auto;
+        transition: all 0.4s ease-in-out;
+      }
     }
 
     /* 动画效果 */
@@ -424,7 +451,20 @@
         <h1 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
           reinvent <span class="text-purple-400">Insight</span>
         </h1>
-        <div class="hidden md:flex space-x-1">
+        
+        <!-- 阅读页面导航 -->
+        <div v-if="currentView === 'read'" class="flex items-center space-x-1">
+          <button @click="currentView = 'library'"
+            class="flex items-center text-gray-300 hover:text-cyan-400 transition-all duration-200 group px-3 py-2 rounded-lg hover:bg-cyan-400/10">
+            <svg class="w-4 h-4 mr-2 group-hover:transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            <span class="text-sm font-medium">笔记库</span>
+          </button>
+        </div>
+        
+        <!-- 普通页面导航 -->
+        <div v-else class="hidden md:flex space-x-1">
           <!-- 创建按钮始终可见 -->
           <button @click="currentView = 'create'"
             :class="currentView === 'create' ? 'bg-cyan-600 text-white' : 'text-gray-300 hover:text-white hover:bg-gray-700'"
@@ -439,17 +479,47 @@
         </div>
       </div>
       <div class="flex items-center space-x-4">
-        <div class="text-sm text-gray-400">
-          <!-- <span class="hidden sm:inline">AI 驱动的</span> YouTube 深度分析 -->
+        <!-- 阅读页面操作按钮 -->
+        <div v-if="currentView === 'read'" class="flex items-center space-x-1">
+          <!-- 分享按钮 -->
+          <button @click="shareDocument" :disabled="shareLoading"
+            class="p-2 text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all duration-200 group relative"
+            :title="shareLoading ? '生成中...' : '分享文档'">
+            <svg v-if="!shareLoading" class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
+            </svg>
+            <svg v-else class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </button>
+          
+          <!-- 目录切换按钮 -->
+          <button @click="toggleToc"
+            class="p-2 text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 rounded-lg transition-all duration-200 group relative"
+            :title="showToc ? '隐藏目录' : '显示目录'">
+            <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    :d="showToc ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h7'"></path>
+            </svg>
+          </button>
         </div>
-        <a href="https://github.com" target="_blank" class="text-gray-400 hover:text-cyan-400 transition-colors">
-          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd"
-              d="M10 0C4.477 0 0 4.484 0 10.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0110 4.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0020 10.017C20 4.484 15.522 0 10 0z"
-              clip-rule="evenodd"></path>
-          </svg>
-        </a>
-        <!-- 登录 / 退出 按钮 -->
+        
+        <!-- 普通页面右侧内容 -->
+        <div v-else class="flex items-center space-x-4">
+          <div class="text-sm text-gray-400">
+            <!-- <span class="hidden sm:inline">AI 驱动的</span> YouTube 深度分析 -->
+          </div>
+          <a href="https://github.com" target="_blank" class="text-gray-400 hover:text-cyan-400 transition-colors">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd"
+                d="M10 0C4.477 0 0 4.484 0 10.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0110 4.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0020 10.017C20 4.484 15.522 0 10 0z"
+                clip-rule="evenodd"></path>
+            </svg>
+          </a>
+        </div>
+        
+        <!-- 登录 / 退出 按钮 - 始终显示 -->
         <button v-if="!isAuthenticated" @click="showLogin = true"
           class="px-3 py-1.5 text-sm bg-gray-700 hover:bg-cyan-600 text-gray-200 hover:text-white rounded-lg transition-all duration-200">
           登录
@@ -632,67 +702,34 @@
     </div>
 
     <!-- 阅读页面 - 全宽布局 -->
-    <div v-if="currentView === 'read'" class="w-full fade-in">
-      <!-- 阅读页面头部 -->
-      <div class="tech-gradient border-b border-gray-800 px-6 py-4 sticky top-0 z-10">
-        <div class="flex items-center justify-between">
-          <button @click="currentView = 'library'"
-            class="flex items-center px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white transition-colors">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-            </svg>
-            返回笔记库
-          </button>
-
-          <div class="flex items-center space-x-4">
-            <button @click="shareDocument" :disabled="shareLoading"
-              class="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white transition-colors flex items-center">
-              <svg v-if="!shareLoading" class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
-              </svg>
-              <svg v-else class="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              {{ shareLoading ? '生成中...' : '分享' }}
-            </button>
-            <button @click="toggleToc"
-              class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white transition-colors">
-              {{ showToc ? '隐藏目录' : '显示目录' }}
-            </button>
+    <div v-if="currentView === 'read'" class="w-full h-full fade-in flex">
+      <!-- 目录侧边栏 -->
+      <div v-if="showToc" :style="{ width: tocWidth + 'px' }" class="flex-shrink-0 border-r border-gray-800 bg-gray-900/30 px-6 py-4 h-full flex flex-col">
+        <div class="h-full overflow-y-auto">
+          <div class="toc">
+            <h3>目录</h3>
+            <div v-html="tocHtml" @click="handleTocClick"></div>
           </div>
         </div>
       </div>
 
-      <div class="flex">
-        <!-- 目录侧边栏 -->
-        <div v-if="showToc" :style="{ width: tocWidth + 'px' }" class="w-[26rem] flex-shrink-0 border-r border-gray-800 bg-gray-900/30">
-          <div class="sticky top-20 p-6">
-            <div class="toc">
-              <h3>目录</h3>
-              <div v-html="tocHtml" @click="handleTocClick"></div>
-            </div>
-          </div>
+      <!-- 拖拽分隔条 -->
+      <div v-if="showToc" class="dragbar" @mousedown="initDrag"></div>
+
+      <!-- 文章内容 - 全宽 -->
+      <div class="flex-1 min-w-0 px-4 py-4">
+        <div v-if="readingContent" :class="['tech-gradient border border-gray-700 rounded-xl p-10 shadow-2xl backdrop-blur-sm resizable h-full overflow-y-auto', !showToc ? 'no-toc-centered' : '']">
+          <div v-html="readingContent" class="prose-tech max-w-none"></div>
         </div>
-
-        <!-- 拖拽分隔条 -->
-        <div v-if="showToc" class="dragbar" @mousedown="initDrag"></div>
-
-        <!-- 文章内容 - 全宽 -->
-        <div class="flex-1 min-w-0">
-          <div class="max-w-none px-4 py-8">
-            <div v-if="readingContent" class="tech-gradient border border-gray-700 rounded-xl p-10 shadow-2xl backdrop-blur-sm resizable">
-              <div v-html="readingContent" class="prose-tech max-w-none"></div>
-            </div>
-            <div v-else class="text-center py-12">
-              <svg class="w-8 h-8 animate-spin text-cyan-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                </path>
-              </svg>
-              <p class="text-gray-400">加载中...</p>
-            </div>
+        <div v-else class="h-full flex items-center justify-center">
+          <div class="text-center">
+            <svg class="w-8 h-8 animate-spin text-cyan-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+              </path>
+            </svg>
+            <p class="text-gray-400">加载中...</p>
           </div>
         </div>
       </div>
@@ -1097,7 +1134,12 @@
         };
 
         // 拖拽侧栏分隔条
-        const tocWidth = ref(Math.round(window.innerWidth / 3.7));
+        const tocWidth = ref(Math.round(window.innerWidth / 3.55));
+
+        // 移动端默认隐藏目录
+        if (window.innerWidth < 768) {
+          showToc.value = false;
+        }
 
         const initDrag = (e) => {
           e.preventDefault();
