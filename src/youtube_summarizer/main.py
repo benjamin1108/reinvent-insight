@@ -6,6 +6,7 @@ from rich.text import Text
 
 from . import config, downloader, summarizer
 from .logger import setup_logger
+from scripts.markdown_postprocess import process_file  # 自动格式化Markdown
 
 console = Console()
 logger = logging.getLogger(__name__)
@@ -78,6 +79,12 @@ def run():
         output_filename = video_title
         output_path = config.OUTPUT_DIR / f"{output_filename}.md"
         output_path.write_text(summary_md, encoding="utf-8")
+        # 自动格式化 Markdown
+        try:
+            process_file(output_path)
+            console.print("[green]已自动格式化 Markdown 文件[/green]")
+        except Exception as e:
+            logger.warning(f"Markdown 格式化失败: {e}")
 
         success_message = Text.from_markup(f"""[bold green]✓ 任务完成！[/bold green]
 

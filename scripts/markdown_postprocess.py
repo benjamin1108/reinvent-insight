@@ -326,6 +326,15 @@ def fix_content_structure(lines):
     return result
 
 
+def fix_bold_spacing(line: str) -> str:
+    """确保粗体标记 ** 与中文/英文单词之间至少有一个空格。避免 ** 被原样渲染。"""
+    # 在左侧缺失空格的情况插入空格：汉字/字母/数字紧邻 **
+    line = re.sub(r'([\u4e00-\u9fa5A-Za-z0-9])\*\*(\S)', r'\1 **\2', line)
+    # 在右侧缺失空格的情况插入空格：** 紧邻 汉字/字母/数字
+    line = re.sub(r'(\S)\*\*([\u4e00-\u9fa5A-Za-z0-9])', r'\1** \2', line)
+    return line
+
+
 def process_file(path: Path):
     """处理单个markdown文件"""
     original = path.read_text(encoding="utf-8").splitlines(keepends=True)
@@ -357,6 +366,7 @@ def process_file(path: Path):
         processed = clean_markdown_artifacts(processed)
         processed = fix_quotes(processed)
         processed = fix_internal_punct(processed)
+        processed = fix_bold_spacing(processed)
         processed = fix_links(processed, headings)
         processed = fix_outline(processed, headings)
         processed = normalize_outline_item(processed)

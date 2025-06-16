@@ -14,6 +14,7 @@ import re
 
 from .logger import setup_logger
 from . import config, downloader, summarizer
+from scripts.markdown_postprocess import process_file  # 自动格式化Markdown
 
 # 使用 config.py 中定义的 BASE_DIR，路径更可靠
 setup_logger(config.LOG_LEVEL)
@@ -121,7 +122,12 @@ async def summary_task_worker(url: str, task_id: str):
         output_filename = video_title
         output_path = config.OUTPUT_DIR / f"{output_filename}.md"
         output_path.write_text(summary_md, encoding="utf-8")
-        await manager.send_message(f"摘要已保存到 {output_path}", task_id)
+        # --- 新增：格式化Markdown ---
+        try:
+            process_file(output_path)
+            await manager.send_message("已自动格式化 Markdown 文件", task_id)
+        except Exception as e:
+            logger.warning(f"Markdown 格式化失败: {e}")
         
         # 6. 统计字数和费用估算（Gemini 2.5 Pro）
         # 1 token ≈ 1 字/1.3英文单词，粗略用1字=1token估算

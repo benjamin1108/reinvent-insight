@@ -203,8 +203,8 @@
       border-bottom-color: #06b6d4;
     }
 
-    .prose-tech strong {
-      color: #67e8f9; /* 科技蓝青 */
+    .prose-tech strong, .prose-tech b {
+      color: #06b6d4; /* 与大纲链接一致 */
       font-weight: 700;
     }
 
@@ -300,6 +300,42 @@
         opacity: 1;
         transform: translateY(0);
       }
+    }
+
+    .slide-in {
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(-20px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    /* 卡片优化 */
+    .summary-card {
+      display: flex;
+      flex-direction: column;
+      height: auto;
+      min-height: 160px;
+    }
+
+    .summary-card h3 {
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      hyphens: auto;
+      line-height: 1.4;
+    }
+
+    /* Grid 自动行高 */
+    .auto-rows-fr {
+      grid-auto-rows: 1fr;
     }
 
     /* 可调整大小阅读卡片 */
