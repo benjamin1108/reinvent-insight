@@ -194,13 +194,16 @@ def download_subtitles(url: str) -> tuple[str | None, Path | None, str | None]:
                 logger.info(f"使用 VTT 格式处理")
             
             logger.info(f"原始字幕长度: {len(subtitle_content)} 字符，清理后: {len(clean_text)} 字符")
+
+            # 在最前面加上视频标题，便于模型理解
+            clean_text_with_title = f"【视频标题】{video_title}\n" + clean_text
             
-            # 保存清理过时间线的纯文本字幕文件
+            # 保存清理过时间线的纯文本字幕文件（带标题）
             clean_subtitle_path = config.SUBTITLE_DIR / f"{clean_title}_clean.txt"
-            clean_subtitle_path.write_text(clean_text, encoding='utf-8')
+            clean_subtitle_path.write_text(clean_text_with_title, encoding='utf-8')
             logger.info(f"清理后的纯文本字幕已保存到: {clean_subtitle_path}")
             
-            return clean_text, subtitle_file, lang_code
+            return clean_text_with_title, subtitle_file, lang_code
 
     except yt_dlp.utils.DownloadError as e:
         logger.error(f"下载错误: {e}")
