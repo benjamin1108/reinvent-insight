@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Depends, Header
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, HttpUrl
 import logging
@@ -9,6 +9,8 @@ import base64
 from typing import Dict, Set
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
+import secrets
+import re
 
 from .logger import setup_logger
 from . import config, downloader, summarizer
@@ -55,6 +57,36 @@ class ConnectionManager:
             })
 
 manager = ConnectionManager()
+
+# --- 简易认证实现 -----------------------------------------------------------
+session_tokens: Set[str] = set()
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class LoginResponse(BaseModel):
+    token: str
+
+@app.post("/login", response_model=LoginResponse)
+def login(req: LoginRequest):
+    """验证用户名密码，返回简易 Bearer Token。"""
+    if req.username == config.ADMIN_USERNAME and req.password == config.ADMIN_PASSWORD:
+        # 生成随机 token
+        raw = f"{req.username}:{req.password}:{uuid.uuid4()}".encode()
+        token = base64.urlsafe_b64encode(hashlib.sha256(raw).digest()).decode()[:48]
+        session_tokens.add(token)
+        return LoginResponse(token=token)
+    raise HTTPException(status_code=401, detail="用户名或密码错误")
+
+def verify_token(authorization: str = None):
+    """依赖项：校验 Bearer Token"""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="未登录或令牌缺失")
+    token = authorization.split(" ", 1)[1]
+    if token not in session_tokens:
+        raise HTTPException(status_code=401, detail="令牌无效，请重新登录")
+    return True
 
 async def summary_task_worker(url: str, task_id: str):
     """实际执行摘要任务的后台工作函数"""
@@ -115,6 +147,7 @@ async def summary_task_worker(url: str, task_id: str):
     finally:
         manager.disconnect(task_id)
 
+# ------------------ 原有摘要 API ------------------
 
 class SummarizeRequest(BaseModel):
     url: HttpUrl
@@ -124,8 +157,11 @@ class SummarizeResponse(BaseModel):
     message: str
 
 @app.post("/summarize", response_model=SummarizeResponse)
-async def summarize_endpoint(req: SummarizeRequest):
+async def summarize_endpoint(req: SummarizeRequest, authorization: str = Header(None)):
     """接收 URL，创建后台任务并返回任务 ID。"""
+    # --- 鉴权 ---
+    verify_token(authorization)
+    
     task_id = str(uuid.uuid4())
     
     task = asyncio.create_task(summary_task_worker(str(req.url), task_id))
@@ -134,7 +170,6 @@ async def summarize_endpoint(req: SummarizeRequest):
     task.add_done_callback(background_tasks.discard)
     
     return SummarizeResponse(task_id=task_id, message="任务已创建，请通过 WebSocket 连接获取进度。")
-
 
 @app.websocket("/ws/{task_id}")
 async def websocket_endpoint(websocket: WebSocket, task_id: str):
@@ -156,9 +191,44 @@ async def list_summaries():
             for md_file in config.OUTPUT_DIR.glob("*.md"):
                 # 获取文件信息
                 stat = md_file.stat()
+
+                # 尝试解析文件前 40 行以提取首个 Markdown 标题
+                title_cn = ""
+                english_candidates = []
+                try:
+                    with md_file.open("r", encoding="utf-8") as f:
+                        for _ in range(40):
+                            line = f.readline()
+                            if not line:
+                                break
+                            stripped = line.lstrip()
+                            if not stripped.startswith(('#', '###', '##')):
+                                continue
+                            text = stripped.lstrip('#').strip()
+                            # 清理粗体等符号
+                            cleaned = re.sub(r'\*+', '', text).strip()
+                            # 若以数字. 开头（章节号）则跳过
+                            if re.match(r'^\d+\.\s*', cleaned):
+                                pass
+                            elif re.search(r'[\u4e00-\u9fa5]', cleaned) and len(cleaned) >= 5:
+                                title_cn = cleaned
+                            if re.search(r'[A-Za-z]{4,}', text):
+                                english_candidates.append(text)
+                            if title_cn:
+                                # 如果中文已找到且已经遍历足够行，可以 break 提前
+                                if len(english_candidates) >= 2:
+                                    break
+                except Exception:
+                    pass
+
+                # 始终用文件名（不含扩展名）作为英文标题
+                title_en = md_file.stem
+
+                title_in_file = title_en
+
                 summaries.append({
                     "filename": md_file.name,
-                    "title": md_file.stem,  # 文件名不含扩展名
+                    "title": title_in_file,
                     "size": stat.st_size,
                     "created_at": stat.st_ctime,
                     "modified_at": stat.st_mtime

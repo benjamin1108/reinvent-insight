@@ -43,6 +43,9 @@ SUBTITLE_DIR.mkdir(exist_ok=True) # 确保字幕目录存在
 OUTPUT_DIR = DOWNLOAD_DIR / "summaries"
 OUTPUT_DIR.mkdir(exist_ok=True) # 确保输出目录存在
 
+# --- 认证配置 ---
+ADMIN_USERNAME = os.getenv("USERNAME") or os.getenv("ADMIN_USERNAME") or "admin"
+ADMIN_PASSWORD = os.getenv("PASSWORD") or os.getenv("ADMIN_PASSWORD") or "password"
 
 def check_gemini_api_key():
     """检查 Gemini API Key 是否已配置"""

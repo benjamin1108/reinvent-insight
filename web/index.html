@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>reinvent Insight - AI 驱动的 YouTube 深度分析</title>
+  <title>reinvent Insight - 深度分析笔记</title>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
@@ -204,7 +204,7 @@
     }
 
     .prose-tech strong {
-      color: #67e8f9; /* 科技蓝青 */
+      color: #06b6d4; /* 与大纲链接一致 */
       font-weight: 700;
     }
 
@@ -364,6 +364,7 @@
           reinvent <span class="text-purple-400">Insight</span>
         </h1>
         <div class="hidden md:flex space-x-1">
+          <!-- 创建按钮始终可见 -->
           <button @click="currentView = 'create'"
             :class="currentView === 'create' ? 'bg-cyan-600 text-white' : 'text-gray-300 hover:text-white hover:bg-gray-700'"
             class="px-4 py-2 rounded-lg transition-all duration-200 text-sm font-medium">
@@ -378,7 +379,7 @@
       </div>
       <div class="flex items-center space-x-4">
         <div class="text-sm text-gray-400">
-          <span class="hidden sm:inline">AI 驱动的</span> YouTube 深度分析
+          <!-- <span class="hidden sm:inline">AI 驱动的</span> YouTube 深度分析 -->
         </div>
         <a href="https://github.com" target="_blank" class="text-gray-400 hover:text-cyan-400 transition-colors">
           <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -387,30 +388,39 @@
               clip-rule="evenodd"></path>
           </svg>
         </a>
+        <!-- 登录 / 退出 按钮 -->
+        <button v-if="!isAuthenticated" @click="showLogin = true"
+          class="px-3 py-1.5 text-sm bg-gray-700 hover:bg-cyan-600 text-gray-200 hover:text-white rounded-lg transition-all duration-200">
+          登录
+        </button>
+        <button v-else @click="logout"
+          class="px-3 py-1.5 text-sm bg-gray-700 hover:bg-red-600 text-gray-200 hover:text-white rounded-lg transition-all duration-200">
+          退出
+        </button>
       </div>
     </div>
   </header>
 
   <!-- App Root -->
   <div class="flex-1 overflow-auto">
-    <!-- 创建摘要页面 -->
+    <!-- 创建摘要页面：任何状态下都可见 -->
     <div v-if="currentView === 'create'" class="max-w-4xl mx-auto p-6 fade-in">
       <!-- Input Card -->
       <div class="tech-gradient border border-gray-700 rounded-xl p-8 shadow-2xl mb-8 glow-effect">
         <div class="text-center mb-6">
           <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 mb-2">
-            Deep Insights </h2>
-          <p class="text-gray-400">输入 YouTube 链接，获得专业级技术摘要</p>
+            reInvent Insights </h2>
+          <p class="text-gray-400">输入 YouTube 链接，获得深度解读</p>
         </div>
 
         <div class="space-y-4">
           <div>
             <label class="block text-sm font-medium mb-2 text-cyan-400">YouTube 视频链接</label>
-            <input v-model="url" :disabled="loading" type="url" placeholder="https://www.youtube.com/watch?v=..."
+            <input v-model="url" @keyup.enter="startSummarize" :disabled="loading" type="url" placeholder="https://www.youtube.com/watch?v=..."
               class="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent disabled:opacity-50 transition-all" />
           </div>
 
-          <button :disabled="loading || !url" @click="startSummarize"
+          <button :disabled="loading || !url || !isValidYoutubeUrl(url)" @click="startSummarize"
             class="w-full py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-white font-semibold transition-all duration-200 transform hover:scale-[1.02]">
             <span v-if="!loading" class="flex items-center justify-center">
               <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -481,7 +491,7 @@
         <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 mb-2">
           笔记库
         </h2>
-        <p class="text-gray-400">浏览和管理您的 AI 分析笔记</p>
+        <p class="text-gray-400">浏览深度分析笔记</p>
       </div>
 
       <!-- 加载状态 -->
@@ -502,8 +512,7 @@
         <div v-for="summary in summaries" :key="summary.filename" @click="loadSummary(summary.filename)"
           class="summary-card tech-gradient border border-gray-700 rounded-xl p-6 cursor-pointer hover:border-cyan-500 transition-all duration-200 glow-effect group">
           <div class="flex-1 mb-4">
-            <h3 class="text-lg font-semibold text-cyan-400 break-words leading-relaxed group-hover:text-cyan-300 transition-colors"
-                :title="summary.title">
+            <h3 class="text-lg font-semibold text-cyan-400 group-hover:text-cyan-300 break-words" :title="summary.title">
               {{ summary.title }}
             </h3>
           </div>
@@ -636,6 +645,29 @@
     </div>
   </div>
 
+  <!-- 登录模态框 -->
+  <div v-if="showLogin" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-gray-800 border border-gray-600 rounded-xl p-8 w-96 shadow-xl tech-gradient">
+      <h2 class="text-xl font-bold text-cyan-400 mb-4">登录</h2>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm text-gray-300 mb-1">用户名</label>
+          <input v-model="loginUsername" @keyup.enter="submitLogin" type="text" class="w-full px-3 py-2 rounded bg-gray-900 border border-gray-700 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+        </div>
+        <div>
+          <label class="block text-sm text-gray-300 mb-1">密码</label>
+          <input v-model="loginPassword" @keyup.enter="submitLogin" type="password" class="w-full px-3 py-2 rounded bg-gray-900 border border-gray-700 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+        </div>
+        <div class="flex justify-end space-x-2 pt-2">
+          <button @click="showLogin = false" class="px-4 py-2 text-sm text-gray-300 hover:text-white">取消</button>
+          <button @click="submitLogin" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded">
+            登录
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     const { createApp, ref, computed, onMounted } = Vue;
 
@@ -682,6 +714,17 @@
         const toastMessage = ref('');
         const toastType = ref(''); // success, error, info
         const showToastModal = ref(false);
+
+        // ---------- 认证相关 ----------
+        const token = localStorage.getItem('authToken') || '';
+        const isAuthenticated = ref(!!token);
+        if (token) {
+          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        }
+
+        const showLogin = ref(false);
+        const loginUsername = ref('');
+        const loginPassword = ref('');
 
         // 计算属性
         const rendered = computed(() => marked.parse(summary.value));
@@ -829,7 +872,22 @@
         };
 
         // API 调用
+        const isValidYoutubeUrl = (u) => {
+          const regex = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)[\w-]{11}(&.*)?$/;
+          return regex.test(u.trim());
+        };
+
         const startSummarize = async () => {
+          if (!isAuthenticated.value) {
+            showLogin.value = true;
+            return;
+          }
+          
+          if (!isValidYoutubeUrl(url.value)) {
+            showToast('请输入有效的 YouTube 视频链接', 'error');
+            return;
+          }
+          
           logs.value = [];
           summary.value = '';
           title.value = '';
@@ -950,6 +1008,28 @@
           window.addEventListener('mouseup', onUp);
         };
 
+        // 登录处理
+        const submitLogin = async () => {
+          try {
+            const res = await axios.post('/login', { username: loginUsername.value, password: loginPassword.value });
+            const tk = res.data.token;
+            axios.defaults.headers.common['Authorization'] = `Bearer ${tk}`;
+            localStorage.setItem('authToken', tk);
+            isAuthenticated.value = true;
+            showLogin.value = false;
+            showToast('登录成功', 'success');
+          } catch (e) {
+            showToast('登录失败: 用户名或密码错误', 'error');
+          }
+        };
+
+        const logout = () => {
+          localStorage.removeItem('authToken');
+          delete axios.defaults.headers.common['Authorization'];
+          isAuthenticated.value = false;
+          currentView.value = 'library';
+        };
+
         // 生命周期
         onMounted(() => {
           loadSummaries();
@@ -987,7 +1067,14 @@
           initDrag,
           progressPercent,
           currentStep,
-          totalSteps
+          totalSteps,
+          isAuthenticated,
+          showLogin,
+          loginUsername,
+          loginPassword,
+          submitLogin,
+          logout,
+          isValidYoutubeUrl
         };
       },
     }).mount('#app');
