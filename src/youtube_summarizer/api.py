@@ -1,8 +1,11 @@
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, HttpUrl
 import logging
 import asyncio
 import uuid
+import hashlib
+import base64
 from typing import Dict, Set
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -196,6 +199,76 @@ async def get_summary(filename: str):
     except Exception as e:
         logger.error(f"读取摘要文件失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="读取摘要文件失败")
+
+def generate_share_token(filename: str) -> str:
+    """生成分享令牌"""
+    # 使用文件名和当前时间戳生成简单的token
+    content = f"{filename}"
+    return base64.urlsafe_b64encode(hashlib.md5(content.encode()).digest()).decode().rstrip('=')
+
+@app.post("/share/{filename}")
+async def create_share_link(filename: str):
+    """创建分享链接"""
+    try:
+        # 安全检查：确保文件名不包含路径遍历字符
+        if ".." in filename or "/" in filename or "\\" in filename:
+            raise HTTPException(status_code=400, detail="无效的文件名")
+        
+        # 确保文件名以 .md 结尾
+        if not filename.endswith(".md"):
+            filename += ".md"
+        
+        file_path = config.OUTPUT_DIR / filename
+        
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="摘要文件未找到")
+        
+        share_token = generate_share_token(filename)
+        return {
+            "share_token": share_token,
+            "share_url": f"/share/{share_token}",
+            "filename": filename
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"创建分享链接失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="创建分享链接失败")
+
+@app.get("/api/share/{share_token}")
+async def get_shared_summary(share_token: str):
+    """通过分享令牌获取摘要内容"""
+    try:
+        # 遍历所有摘要文件，找到匹配的token
+        if not config.OUTPUT_DIR.exists():
+            raise HTTPException(status_code=404, detail="摘要文件未找到")
+            
+        for md_file in config.OUTPUT_DIR.glob("*.md"):
+            if generate_share_token(md_file.name) == share_token:
+                content = md_file.read_text(encoding="utf-8")
+                return {
+                    "filename": md_file.name,
+                    "title": md_file.stem,
+                    "content": content,
+                    "share_token": share_token
+                }
+        
+        raise HTTPException(status_code=404, detail="分享链接无效或已过期")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取分享摘要失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="获取分享摘要失败")
+
+# 分享页面路由
+@app.get("/share/{share_token}")
+async def serve_share_page(share_token: str):
+    """为分享链接提供专用的HTML页面"""
+    share_html_path = config.BASE_DIR / "web" / "share.html"
+    if share_html_path.exists():
+        return FileResponse(str(share_html_path))
+    else:
+        raise HTTPException(status_code=404, detail="分享页面未找到")
 
 # 挂载前端静态文件 - 必须放在最后，避免覆盖 API 路由
 # 使用 config.BASE_DIR 来确保路径的准确性
