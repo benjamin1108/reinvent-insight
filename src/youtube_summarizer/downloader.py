@@ -126,7 +126,7 @@ class SubtitleDownloader:
         try:
             logger.info(f"正在为链接获取标题: {self.url}")
             result = subprocess.run(
-                ['yt-dlp', '--get-title', '--skip-download', self.url],
+                ['yt-dlp', '--get-title', '--skip-download', '--no-playlist', self.url],
                 capture_output=True, text=True, check=True, encoding='utf-8'
             )
             title = result.stdout.strip()
@@ -169,6 +169,7 @@ class SubtitleDownloader:
                     '--sub-lang', 'en',
                     '--sub-format', 'vtt',
                     '--skip-download',
+                    '--no-playlist',
                     '-o', str(config.SUBTITLE_DIR / f"{self.video_title}.%(ext)s"),
                     self.url
                 ],
