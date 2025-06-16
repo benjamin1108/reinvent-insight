@@ -318,6 +318,26 @@
       }
     }
 
+    /* 卡片优化 */
+    .summary-card {
+      display: flex;
+      flex-direction: column;
+      height: auto;
+      min-height: 160px;
+    }
+
+    .summary-card h3 {
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      hyphens: auto;
+      line-height: 1.4;
+    }
+
+    /* Grid 自动行高 */
+    .auto-rows-fr {
+      grid-auto-rows: 1fr;
+    }
+
     /* 可调整大小阅读卡片 */
     .resizable {
       resize: horizontal; /* 恢复默认底角拖拽 */
@@ -478,27 +498,30 @@
       </div>
 
       <!-- 笔记列表 -->
-      <div v-else-if="summaries.length > 0" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div v-else-if="summaries.length > 0" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 auto-rows-fr">
         <div v-for="summary in summaries" :key="summary.filename" @click="loadSummary(summary.filename)"
-          class="tech-gradient border border-gray-700 rounded-xl p-6 cursor-pointer hover:border-cyan-500 transition-all duration-200 glow-effect">
-          <h3 class="text-lg font-semibold text-cyan-400 mb-3 line-clamp-2">
-            {{ summary.title }}
-          </h3>
-          <div class="space-y-2 text-sm text-gray-400">
+          class="summary-card tech-gradient border border-gray-700 rounded-xl p-6 cursor-pointer hover:border-cyan-500 transition-all duration-200 glow-effect group">
+          <div class="flex-1 mb-4">
+            <h3 class="text-lg font-semibold text-cyan-400 break-words leading-relaxed group-hover:text-cyan-300 transition-colors"
+                :title="summary.title">
+              {{ summary.title }}
+            </h3>
+          </div>
+          <div class="space-y-2 text-sm text-gray-400 mt-auto">
             <div class="flex items-center">
-              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
-              {{ formatDate(summary.modified_at) }}
+              <span class="truncate">{{ formatDate(summary.modified_at) }}</span>
             </div>
             <div class="flex items-center">
-              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
                 </path>
               </svg>
-              {{ formatSize(summary.size) }}
+              <span class="truncate">{{ formatSize(summary.size) }}</span>
             </div>
           </div>
         </div>
