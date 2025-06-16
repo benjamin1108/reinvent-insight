@@ -6,7 +6,7 @@ from rich.text import Text
 
 from . import config, downloader, summarizer
 from .logger import setup_logger
-from scripts.markdown_postprocess import process_file  # 自动格式化Markdown
+# from scripts.markdown_postprocess import process_file  # 自动格式化Markdown
 
 console = Console()
 logger = logging.getLogger(__name__)
@@ -45,13 +45,15 @@ def run():
         subtitle_text = None
         video_title = None
         with console.status("[bold green]正在下载字幕...", spinner="dots") as status:
-            subtitle_text, subtitle_path, subtitle_lang = downloader.download_subtitles(url)
+            # 使用新的 Downloader 类
+            dl = downloader.SubtitleDownloader(url)
+            subtitle_text, _, subtitle_lang = dl.download()
+
             if not subtitle_text:
                 console.print("\n[bold red]错误: 无法获取字幕，程序终止。[/bold red]")
                 return
             
-            # 从字幕文件路径中提取视频标题
-            video_title = subtitle_path.stem.split('.')[0]  # 移除语言代码和扩展名
+            video_title = dl.video_title # 从实例中获取标题
             status.update(f"[bold green]成功下载 '{subtitle_lang}' 字幕。[/bold green]")
 
         # 2. 读取 Prompt
@@ -79,12 +81,12 @@ def run():
         output_filename = video_title
         output_path = config.OUTPUT_DIR / f"{output_filename}.md"
         output_path.write_text(summary_md, encoding="utf-8")
-        # 自动格式化 Markdown
-        try:
-            process_file(output_path)
-            console.print("[green]已自动格式化 Markdown 文件[/green]")
-        except Exception as e:
-            logger.warning(f"Markdown 格式化失败: {e}")
+        # # 自动格式化 Markdown
+        # try:
+        #     process_file(output_path)
+        #     console.print("[green]已自动格式化 Markdown 文件[/green]")
+        # except Exception as e:
+        #     logger.warning(f"Markdown 格式化失败: {e}")
 
         success_message = Text.from_markup(f"""[bold green]✓ 任务完成！[/bold green]
 

@@ -14,7 +14,7 @@ import re
 
 from .logger import setup_logger
 from . import config, downloader, summarizer
-from scripts.markdown_postprocess import process_file  # 自动格式化Markdown
+# from scripts.markdown_postprocess import process_file  # 自动格式化Markdown
 
 # 使用 config.py 中定义的 BASE_DIR，路径更可靠
 setup_logger(config.LOG_LEVEL)
@@ -98,11 +98,15 @@ async def summary_task_worker(url: str, task_id: str):
     try:
         # 1. 下载字幕
         await manager.send_message("正在下载字幕...", task_id)
-        subtitle_text, subtitle_path, subtitle_lang = downloader.download_subtitles(url)
+        
+        # 使用新的 Downloader 类
+        dl = downloader.SubtitleDownloader(url)
+        subtitle_text, subtitle_path, subtitle_lang = dl.download()
+
         if not subtitle_text:
             await manager.send_message(f"错误: 无法获取字幕，请检查链接。", task_id)
             return
-        video_title = subtitle_path.stem.split('.')[0]
+        video_title = dl.video_title # 从实例中获取标题
         await manager.send_message(f"成功下载 '{subtitle_lang}' 字幕。", task_id)
 
         # 2. 读取 Prompt
@@ -122,12 +126,7 @@ async def summary_task_worker(url: str, task_id: str):
         output_filename = video_title
         output_path = config.OUTPUT_DIR / f"{output_filename}.md"
         output_path.write_text(summary_md, encoding="utf-8")
-        # --- 新增：格式化Markdown ---
-        try:
-            process_file(output_path)
-            await manager.send_message("已自动格式化 Markdown 文件", task_id)
-        except Exception as e:
-            logger.warning(f"Markdown 格式化失败: {e}")
+        await manager.send_message(f"摘要已保存到 {output_path}", task_id)
         
         # 6. 统计字数和费用估算（Gemini 2.5 Pro）
         # 1 token ≈ 1 字/1.3英文单词，粗略用1字=1token估算

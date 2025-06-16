@@ -40,7 +40,6 @@
 
 ### 标题样例
    # 深度解析 AWS 网络基础设施：从“消费”到“创新”的演进之路
-   ### AWS reInvent 2022 - Dive deep on AWS networking infrastructure (NET402) 深度解读
 
 ### 引言样例
    ### 引言
