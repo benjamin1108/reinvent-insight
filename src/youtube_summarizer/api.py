@@ -198,43 +198,30 @@ async def list_summaries():
                 # 获取文件信息
                 stat = md_file.stat()
 
-                # 尝试解析文件前 40 行以提取首个 Markdown 标题
+                # 提取中文标题：从第一个 # 标题中提取
                 title_cn = ""
-                english_candidates = []
                 try:
                     with md_file.open("r", encoding="utf-8") as f:
-                        for _ in range(40):
-                            line = f.readline()
-                            if not line:
+                        for line in f:
+                            stripped = line.strip()
+                            # 找到第一个 # 开头的标题
+                            if stripped.startswith('# '):
+                                title_cn = stripped[2:].strip()
                                 break
-                            stripped = line.lstrip()
-                            if not stripped.startswith(('#', '###', '##')):
-                                continue
-                            text = stripped.lstrip('#').strip()
-                            # 清理粗体等符号
-                            cleaned = re.sub(r'\*+', '', text).strip()
-                            # 若以数字. 开头（章节号）则跳过
-                            if re.match(r'^\d+\.\s*', cleaned):
-                                pass
-                            elif re.search(r'[\u4e00-\u9fa5]', cleaned) and len(cleaned) >= 5:
-                                title_cn = cleaned
-                            if re.search(r'[A-Za-z]{4,}', text):
-                                english_candidates.append(text)
-                            if title_cn:
-                                # 如果中文已找到且已经遍历足够行，可以 break 提前
-                                if len(english_candidates) >= 2:
-                                    break
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(f"提取中文标题失败 {md_file.name}: {e}")
 
-                # 始终用文件名（不含扩展名）作为英文标题
+                # 英文标题使用文件名（不含扩展名）
                 title_en = md_file.stem
 
-                title_in_file = title_en
+                # 如果没有提取到中文标题，使用英文标题作为默认值
+                if not title_cn:
+                    title_cn = title_en
 
                 summaries.append({
                     "filename": md_file.name,
-                    "title": title_in_file,
+                    "title_cn": title_cn,
+                    "title_en": title_en,
                     "size": stat.st_size,
                     "created_at": stat.st_ctime,
                     "modified_at": stat.st_mtime
