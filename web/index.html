@@ -798,7 +798,9 @@
         // ---------- 修改: loadSummary ----------
         const loadSummary = async (filename) => {
           try {
-            const res = await axios.get(`/summaries/${filename}`);
+            // 对文件名进行URL编码以处理特殊字符（如#）
+            const encodedFilename = encodeURIComponent(filename);
+            const res = await axios.get(`/summaries/${encodedFilename}`);
             const { html, tocHtml: tocString } = renderMarkdownWithToc(res.data.content);
             readingContent.value = html;
             tocHtml.value = tocString;
@@ -932,7 +934,9 @@
           
           try {
             shareLoading.value = true;
-            const res = await axios.post(`/share/${currentFilename.value}`);
+            // 对文件名进行URL编码以处理特殊字符（如#）
+            const encodedFilename = encodeURIComponent(currentFilename.value);
+            const res = await axios.post(`/share/${encodedFilename}`);
             const fullUrl = `${window.location.origin}/share/${res.data.share_token}`;
             
             // 直接复制到剪贴板

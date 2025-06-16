@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import secrets
 import re
+import urllib.parse
 
 from .logger import setup_logger
 from . import config, downloader, summarizer
@@ -250,6 +251,9 @@ async def list_summaries():
 async def get_summary(filename: str):
     """获取指定摘要文件的内容。"""
     try:
+        # URL解码文件名以处理特殊字符（如#）
+        filename = urllib.parse.unquote(filename)
+        
         # 安全检查：确保文件名不包含路径遍历字符
         if ".." in filename or "/" in filename or "\\" in filename:
             raise HTTPException(status_code=400, detail="无效的文件名")
@@ -285,6 +289,9 @@ def generate_share_token(filename: str) -> str:
 async def create_share_link(filename: str):
     """创建分享链接"""
     try:
+        # URL解码文件名以处理特殊字符（如#）
+        filename = urllib.parse.unquote(filename)
+        
         # 安全检查：确保文件名不包含路径遍历字符
         if ".." in filename or "/" in filename or "\\" in filename:
             raise HTTPException(status_code=400, detail="无效的文件名")
