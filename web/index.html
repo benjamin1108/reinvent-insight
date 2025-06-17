@@ -39,7 +39,7 @@
     .prose-tech {
       color: #e2e8f0;
       line-height: 1.8;
-      font-size: 18px;
+      font-size: 16px;
     }
 
     .prose-tech h1 {
@@ -439,6 +439,53 @@
       height: 4rem; /* 固定高度，适应更小字体的3行空间 */
       display: flex;
       align-items: flex-start;
+    }
+
+    /* 调整大小的手柄 */
+    #resize-handle {
+      width: 16px;
+      height: 100%;
+      position: absolute;
+      right: 0;
+      top: 0;
+      cursor: col-resize;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: transparent;
+      transition: background-color 0.2s;
+    }
+
+    #resize-handle:hover {
+      background-color: rgba(6, 182, 212, 0.1);
+    }
+
+    #resize-handle::after {
+      content: '';
+      width: 2px;
+      height: 24px;
+      background-color: #374151;
+      border-radius: 9999px;
+      transition: background-color 0.2s;
+    }
+
+    #resize-handle:hover::after {
+      background-color: #06b6d4;
+    }
+
+    /* 登录和分享模态框样式 */
+    .modal {
+      position: fixed;
+    }
+
+    .fade-enter-active,
+    .fade-leave-active {
+      transition: opacity 0.3s ease;
+    }
+
+    .fade-enter-from,
+    .fade-leave-to {
+      opacity: 0;
     }
   </style>
 </head>
