@@ -324,6 +324,7 @@
       flex-direction: column;
       height: auto;
       min-height: 160px;
+      transition: all 0.3s ease;
     }
 
     .summary-card h3 {
@@ -331,6 +332,54 @@
       overflow-wrap: break-word;
       hyphens: auto;
       line-height: 1.4;
+    }
+
+    .summary-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(6, 182, 212, 0.15), 0 4px 16px rgba(6, 182, 212, 0.1);
+    }
+
+    /* 中文标题容器优化 - 使用全宽 */
+    .chinese-title-container {
+      height: 4rem;
+      display: flex;
+      align-items: flex-start;
+      width: 100%;
+    }
+
+    /* 元数据区域优化 */
+    .metadata-area {
+      border-top: 1px solid;
+      padding-top: 0.5rem;
+      margin-top: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 1.75rem;
+    }
+
+    /* 类型标签在元数据区的样式 */
+    .metadata-badge {
+      font-size: 9px;
+      padding: 2px 6px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(4px);
+    }
+
+    .reinvent-card .metadata-badge {
+      background: linear-gradient(135deg, rgba(234, 88, 12, 0.9), rgba(220, 38, 38, 0.9));
+      border: 1px solid rgba(249, 115, 22, 0.3);
+      color: white;
+    }
+
+    .other-card .metadata-badge {
+      background: linear-gradient(135deg, rgba(8, 145, 178, 0.9), rgba(29, 78, 216, 0.9));
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      color: white;
     }
 
     /* Grid 自动行高 */
