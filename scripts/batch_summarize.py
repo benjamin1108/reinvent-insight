@@ -19,6 +19,7 @@ from rich.panel import Panel
 # 现在可以安全地从 youtube_summarizer 导入
 from youtube_summarizer import config, downloader, summarizer
 from youtube_summarizer.logger import setup_logger
+from youtube_summarizer.markdown_processor import process_markdown_file
 
 console = Console()
 logger = logging.getLogger(__name__)
@@ -86,10 +87,18 @@ def process_url(url: str):
             console.print(f"[[bold red]失败[/bold red]] 生成摘要失败: [dim]{video_title}[/dim]")
             return
             
-        # 6. 保存并格式化
+        # 6. 保存摘要
         output_path.write_text(summary_md, encoding="utf-8")
         
-        console.print(f"[[bold green]✓ 成功[/bold green]] 已保存摘要: [cyan]{output_path.name}[/cyan]")
+        # 7. 后处理：添加章节分隔符
+        try:
+            if process_markdown_file(output_path):
+                console.print(f"[[bold green]✓ 成功[/bold green]] 已保存并格式化摘要: [cyan]{output_path.name}[/cyan]")
+            else:
+                console.print(f"[[bold green]✓ 成功[/bold green]] 已保存摘要: [cyan]{output_path.name}[/cyan] [yellow](格式化失败)[/yellow]")
+        except Exception as e:
+            logger.warning(f"文档后处理失败: {e}")
+            console.print(f"[[bold green]✓ 成功[/bold green]] 已保存摘要: [cyan]{output_path.name}[/cyan] [yellow](格式化出错)[/yellow]")
         
     except Exception as e:
         logger.error(f"处理链接 {url} 时发生严重错误: {e}", exc_info=True)

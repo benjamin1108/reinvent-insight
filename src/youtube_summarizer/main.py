@@ -6,7 +6,7 @@ from rich.text import Text
 
 from . import config, downloader, summarizer
 from .logger import setup_logger
-# from scripts.markdown_postprocess import process_file  # 自动格式化Markdown
+from .markdown_processor import process_markdown_file
 
 console = Console()
 logger = logging.getLogger(__name__)
@@ -81,12 +81,16 @@ def run():
         output_filename = video_title
         output_path = config.OUTPUT_DIR / f"{output_filename}.md"
         output_path.write_text(summary_md, encoding="utf-8")
-        # # 自动格式化 Markdown
-        # try:
-        #     process_file(output_path)
-        #     console.print("[green]已自动格式化 Markdown 文件[/green]")
-        # except Exception as e:
-        #     logger.warning(f"Markdown 格式化失败: {e}")
+        
+        # 5. 后处理：添加章节分隔符
+        try:
+            if process_markdown_file(output_path):
+                console.print("[green]已完成文档格式化处理[/green]")
+            else:
+                console.print("[yellow]文档格式化处理失败，但不影响主要功能[/yellow]")
+        except Exception as e:
+            logger.warning(f"文档后处理失败: {e}")
+            console.print("[yellow]文档格式化处理出现问题，但不影响主要功能[/yellow]")
 
         success_message = Text.from_markup(f"""[bold green]✓ 任务完成！[/bold green]
 

@@ -15,7 +15,7 @@ import urllib.parse
 
 from .logger import setup_logger
 from . import config, downloader, summarizer
-# from scripts.markdown_postprocess import process_file  # 自动格式化Markdown
+from .markdown_processor import process_markdown_file
 
 # 使用 config.py 中定义的 BASE_DIR，路径更可靠
 setup_logger(config.LOG_LEVEL)
@@ -129,7 +129,17 @@ async def summary_task_worker(url: str, task_id: str):
         output_path.write_text(summary_md, encoding="utf-8")
         await manager.send_message(f"摘要已保存到 {output_path}", task_id)
         
-        # 6. 统计字数和费用估算（Gemini 2.5 Pro）
+        # 6. 后处理：添加章节分隔符
+        try:
+            if process_markdown_file(output_path):
+                await manager.send_message("已完成文档格式化处理", task_id)
+            else:
+                await manager.send_message("文档格式化处理失败，但不影响主要功能", task_id)
+        except Exception as e:
+            logger.warning(f"文档后处理失败: {e}")
+            await manager.send_message("文档格式化处理出现问题，但不影响主要功能", task_id)
+        
+        # 7. 统计字数和费用估算（Gemini 2.5 Pro）
         # 1 token ≈ 1 字/1.3英文单词，粗略用1字=1token估算
         char_count = len(summary_md)
         # 20万token以内，输出价10美元/10万token=0.0001美元/字
