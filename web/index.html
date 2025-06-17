@@ -392,6 +392,103 @@
     .summary-card {
       transition: all 0.3s ease;
       display: flex;
+    }
+
+    /* ========== 分类展示样式 ========== */
+    .section-container {
+      position: relative;
+    }
+
+    .section-header {
+      position: relative;
+      padding-bottom: 0.5rem;
+    }
+
+    .section-header::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #374151, transparent);
+    }
+
+    .reinvent-card {
+      position: relative;
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(55, 65, 81, 0.8) 50%, rgba(30, 41, 59, 0.9) 100%);
+      border: 1px solid rgba(251, 146, 60, 0.3);
+    }
+
+    .reinvent-card:hover {
+      border-color: rgba(249, 115, 22, 0.6);
+      box-shadow: 0 0 30px rgba(249, 115, 22, 0.15), 0 0 60px rgba(249, 115, 22, 0.08);
+    }
+
+    .other-card {
+      position: relative;
+    }
+
+    .category-glow {
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      border-radius: 12px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .reinvent-card .category-glow {
+      background: linear-gradient(45deg, #f97316, #ea580c, #dc2626, #f97316);
+      background-size: 300% 300%;
+      animation: gradient-shift 3s ease infinite;
+    }
+
+    .other-card .category-glow {
+      background: linear-gradient(45deg, #06b6d4, #3b82f6, #8b5cf6, #06b6d4);
+      background-size: 300% 300%;
+      animation: gradient-shift 3s ease infinite;
+    }
+
+    .summary-card:hover .category-glow {
+      opacity: 0.3;
+    }
+
+    @keyframes gradient-shift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    /* 类型标签样式增强 */
+    .category-badge {
+      font-size: 10px;
+      padding: 3px 8px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(4px);
+    }
+
+    .reinvent-card .category-badge {
+      background: linear-gradient(135deg, rgba(234, 88, 12, 0.9), rgba(220, 38, 38, 0.9));
+      border: 1px solid rgba(249, 115, 22, 0.3);
+    }
+
+    .other-card .category-badge {
+      background: linear-gradient(135deg, rgba(8, 145, 178, 0.9), rgba(29, 78, 216, 0.9));
+      border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+
+    /* 标题区域优化 */
+    .title-with-badge {
+      padding-right: 60px; /* 为标签留出空间 */
+    }
+
+    .summary-card {
       flex-direction: column;
     }
 
@@ -685,47 +782,136 @@
         </div>
       </div>
 
-      <!-- 笔记列表 -->
-      <div v-else-if="summaries.length > 0" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <div v-for="summary in summaries" :key="summary.filename" @click="loadSummary(summary.filename)"
-          class="summary-card tech-gradient border border-gray-700 rounded-xl p-6 cursor-pointer hover:border-cyan-500 transition-all duration-200 glow-effect group flex flex-col h-56">
-          
-          <!-- 中文标题区域 - 固定3行高度 -->
-          <div class="mb-3 chinese-title-container">
-            <h3 class="text-base font-bold leading-snug line-clamp-3 chinese-title" 
-                :title="summary.title_cn">
-              {{ summary.title_cn }}
-            </h3>
+      <!-- 分类展示笔记列表 -->
+      <div v-else-if="summaries.length > 0" class="space-y-12">
+        
+        <!-- AWS re:Invent 专区 -->
+        <div v-if="categorizedSummaries.reinvent.length > 0" class="section-container">
+          <div class="flex items-center mb-6 section-header">
+            <div class="flex items-center">
+              <div class="w-3 h-3 bg-gradient-to-r from-orange-500 to-red-600 rounded-full mr-3 glow-effect"></div>
+              <h3 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">
+                AWS re:Invent 深度解读
+              </h3>
+            </div>
+            <div class="ml-auto flex items-center text-sm text-gray-500">
+              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+              </svg>
+              {{ categorizedSummaries.reinvent.length }} 篇
+            </div>
           </div>
           
-          <!-- 英文标题 - 增加空间 -->
-          <div class="flex-1 mb-2 english-title-area">
-            <p class="text-xs text-gray-500 group-hover:text-gray-400 font-normal leading-relaxed break-words w-full english-subtitle" 
-               :title="summary.title_en">
-              {{ summary.title_en }}
-            </p>
-          </div>
-          
-          <!-- 元信息区域 - 固定在底部 -->
-          <div class="border-t border-gray-700/50 pt-2 mt-auto">
-            <div class="flex items-center justify-between text-xs text-gray-500">
-              <!-- 字数信息 -->
-              <div class="flex items-center">
-                <svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
-                  </path>
-                </svg>
-                <span>{{ formatWordCount(summary.size) }}</span>
+          <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div v-for="summary in categorizedSummaries.reinvent" :key="summary.filename" @click="loadSummary(summary.filename)"
+              class="summary-card tech-gradient border border-orange-700/50 rounded-xl p-6 cursor-pointer hover:border-orange-500 transition-all duration-200 glow-effect group flex flex-col h-56 reinvent-card relative">
+              
+              <!-- 类型标签 -->
+              <div class="absolute top-2 right-2 text-white rounded-full category-badge z-10">
+                reinvent
               </div>
               
-              <!-- 阅读时间 -->
-              <div class="flex items-center">
-                <svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                <span>阅读时间：{{ calculateReadTime(summary.size) }}</span>
+              <!-- 中文标题区域 - 增加右侧边距避免标签覆盖 -->
+              <div class="mb-3 chinese-title-container title-with-badge">
+                <h3 class="text-base font-bold leading-snug line-clamp-3 chinese-title text-orange-100" 
+                    :title="summary.title_cn">
+                  {{ summary.title_cn }}
+                </h3>
+              </div>
+              
+              <!-- 英文标题 -->
+              <div class="flex-1 mb-2 english-title-area">
+                <p class="text-xs text-orange-300/70 group-hover:text-orange-300 font-normal leading-relaxed break-words w-full english-subtitle" 
+                   :title="summary.title_en">
+                  {{ summary.title_en }}
+                </p>
+              </div>
+              
+              <!-- 元信息区域 -->
+              <div class="border-t border-orange-700/30 pt-2 mt-auto">
+                <div class="flex items-center justify-between text-xs text-orange-400/80">
+                  <div class="flex items-center">
+                    <svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                      </path>
+                    </svg>
+                    <span>{{ formatWordCount(summary.size) }}</span>
+                  </div>
+                  <div class="flex items-center">
+                    <svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>{{ calculateReadTime(summary.size) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 其他精选内容 -->
+        <div v-if="categorizedSummaries.other.length > 0" class="section-container">
+          <div class="flex items-center mb-6 section-header">
+            <div class="flex items-center">
+              <div class="w-3 h-3 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full mr-3 glow-effect"></div>
+              <h3 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+                其他精选内容
+              </h3>
+            </div>
+            <div class="ml-auto flex items-center text-sm text-gray-500">
+              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+              </svg>
+              {{ categorizedSummaries.other.length }} 篇
+            </div>
+          </div>
+          
+          <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div v-for="summary in categorizedSummaries.other" :key="summary.filename" @click="loadSummary(summary.filename)"
+              class="summary-card tech-gradient border border-gray-700 rounded-xl p-6 cursor-pointer hover:border-cyan-500 transition-all duration-200 glow-effect group flex flex-col h-56 other-card relative">
+              
+              <!-- 类型标签 -->
+              <div class="absolute top-2 right-2 text-white rounded-full category-badge z-10">
+                featured
+              </div>
+              
+              <!-- 中文标题区域 - 增加右侧边距避免标签覆盖 -->
+              <div class="mb-3 chinese-title-container title-with-badge">
+                <h3 class="text-base font-bold leading-snug line-clamp-3 chinese-title" 
+                    :title="summary.title_cn">
+                  {{ summary.title_cn }}
+                </h3>
+              </div>
+              
+              <!-- 英文标题 -->
+              <div class="flex-1 mb-2 english-title-area">
+                <p class="text-xs text-gray-500 group-hover:text-gray-400 font-normal leading-relaxed break-words w-full english-subtitle" 
+                   :title="summary.title_en">
+                  {{ summary.title_en }}
+                </p>
+              </div>
+              
+              <!-- 元信息区域 -->
+              <div class="border-t border-gray-700/50 pt-2 mt-auto">
+                <div class="flex items-center justify-between text-xs text-gray-500">
+                  <div class="flex items-center">
+                    <svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                      </path>
+                    </svg>
+                    <span>{{ formatWordCount(summary.size) }}</span>
+                  </div>
+                  <div class="flex items-center">
+                    <svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>阅读时间：{{ calculateReadTime(summary.size) }}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1065,9 +1251,83 @@
 
         // API 调用
         const isValidYoutubeUrl = (u) => {
-          const regex = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)[\w-]{11}(&.*)?$/;
-          return regex.test(u.trim());
+          // 支持各种 YouTube 链接格式的增强验证
+          if (!u || typeof u !== 'string') return false;
+          
+          const url = u.trim();
+          
+          // 支持的 YouTube 格式：
+          // 1. 标准格式：https://www.youtube.com/watch?v=VIDEO_ID
+          // 2. 短链接：https://youtu.be/VIDEO_ID
+          // 3. 移动端：https://m.youtube.com/watch?v=VIDEO_ID
+          // 4. 嵌入格式：https://www.youtube.com/embed/VIDEO_ID
+          // 5. 播放列表中的视频：https://www.youtube.com/watch?v=VIDEO_ID&list=...
+          // 6. 时间戳链接：https://youtu.be/VIDEO_ID?t=123s
+          // 7. 无协议格式：www.youtube.com/watch?v=VIDEO_ID
+          
+          const patterns = [
+            // 标准 YouTube 格式
+            /^(https?:\/\/)?(www\.)?youtube\.com\/watch\?v=[\w-]{11}(&.*)?$/,
+            // 短链接格式
+            /^(https?:\/\/)?youtu\.be\/[\w-]{11}(\?.*)?$/,
+            // 移动端格式
+            /^(https?:\/\/)?(m\.)?youtube\.com\/watch\?v=[\w-]{11}(&.*)?$/,
+            // 嵌入格式
+            /^(https?:\/\/)?(www\.)?youtube\.com\/embed\/[\w-]{11}(\?.*)?$/,
+            // YouTube Music 格式
+            /^(https?:\/\/)?music\.youtube\.com\/watch\?v=[\w-]{11}(&.*)?$/,
+            // 频道页面中的视频
+            /^(https?:\/\/)?(www\.)?youtube\.com\/.*[&?]v=[\w-]{11}(&.*)?$/
+          ];
+          
+          return patterns.some(pattern => pattern.test(url));
         };
+
+        // 标准化 YouTube URL 为统一格式
+        const normalizeYoutubeUrl = (url) => {
+          if (!url) return '';
+          
+          const videoIdMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/.*[&?]v=)([^"&?\/\s]{11})/);
+          
+          if (videoIdMatch && videoIdMatch[1]) {
+            return `https://www.youtube.com/watch?v=${videoIdMatch[1]}`;
+          }
+          
+          return url;
+        };
+
+        // ========== 新增：视频分类功能 ==========
+        const categorizedSummaries = computed(() => {
+          if (!summaries.value || summaries.value.length === 0) {
+            return { reinvent: [], other: [] };
+          }
+          
+          const reinvent = [];
+          const other = [];
+          
+          summaries.value.forEach(summary => {
+            // 检查文件名或标题是否包含 reInvent（不区分大小写）
+            const isReinvent = 
+              /reinvent/i.test(summary.filename) || 
+              /reinvent/i.test(summary.title_cn || '') || 
+              /reinvent/i.test(summary.title_en || '') ||
+              /aws\s+re:?invent/i.test(summary.filename) ||
+              /aws\s+re:?invent/i.test(summary.title_cn || '') ||
+              /aws\s+re:?invent/i.test(summary.title_en || '');
+            
+            if (isReinvent) {
+              reinvent.push(summary);
+            } else {
+              other.push(summary);
+            }
+          });
+          
+          // 按修改时间倒序排列
+          reinvent.sort((a, b) => b.mtime - a.mtime);
+          other.sort((a, b) => b.mtime - a.mtime);
+          
+          return { reinvent, other };
+        });
 
         const startSummarize = async () => {
           if (!isAuthenticated.value) {
@@ -1086,7 +1346,9 @@
           loading.value = true;
           
           try {
-            const res = await axios.post('/summarize', { url: url.value });
+            // 标准化 URL
+            const normalizedUrl = normalizeYoutubeUrl(url.value);
+            const res = await axios.post('/summarize', { url: normalizedUrl });
             const taskId = res.data.task_id;
             logs.value.push("任务已创建，正在连接实时日志...");
             connectWebSocket(taskId);
@@ -1275,7 +1537,9 @@
           loginPassword,
           submitLogin,
           logout,
-          isValidYoutubeUrl
+          isValidYoutubeUrl,
+          categorizedSummaries,
+          normalizeYoutubeUrl
         };
       },
     }).mount('#app');

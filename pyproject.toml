@@ -14,7 +14,7 @@ dependencies = [
     "python-dotenv",
     "questionary",
     "fastapi",
-    "uvicorn[standard]"
+    "uvicorn[standard]",
 ]
 
 [project.scripts]
