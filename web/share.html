@@ -401,13 +401,270 @@
       cursor: col-resize;
       background: rgba(100, 116, 139, 0.4);
     }
+
+    /* ========== 移动端全面优化 ========== */
+    @media (max-width: 768px) {
+      /* 1. 字体大小优化 */
+      .prose-tech {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+
+      .prose-tech h1 {
+        font-size: 1.8rem;
+        margin: 1.5rem 0 1rem 0;
+      }
+
+      .prose-tech h2 {
+        font-size: 1.5rem;
+        margin: 1.5rem 0 0.8rem 0;
+      }
+
+      .prose-tech h3 {
+        font-size: 1.3rem;
+        margin: 1.2rem 0 0.6rem 0;
+      }
+
+      .prose-tech h4 {
+        font-size: 1.1rem;
+        margin: 1rem 0 0.5rem 0;
+      }
+
+      .prose-tech h5,
+      .prose-tech h6 {
+        font-size: 1rem;
+        margin: 0.8rem 0 0.4rem 0;
+      }
+
+      .prose-tech p {
+        margin: 1rem 0;
+        line-height: 1.6;
+      }
+
+      .prose-tech ul,
+      .prose-tech ol {
+        margin: 1rem 0;
+        padding-left: 1.2rem;
+        line-height: 1.6;
+      }
+
+      .prose-tech li {
+        margin: 0.3rem 0;
+      }
+
+      .prose-tech blockquote {
+        padding: 0.6rem 1rem;
+        margin: 1.2rem 0;
+        font-size: 13px;
+      }
+
+      .prose-tech code {
+        font-size: 12px;
+        padding: 0.15rem 0.3rem;
+      }
+
+      .prose-tech pre {
+        padding: 0.8rem;
+        margin: 1.2rem 0;
+        font-size: 12px;
+      }
+
+      .prose-tech table {
+        font-size: 12px;
+        margin: 1.2rem 0;
+      }
+
+      .prose-tech th,
+      .prose-tech td {
+        padding: 0.5rem 0.7rem;
+      }
+
+      /* 2. 阅读区域优化 */
+      .resizable {
+        resize: none !important;
+        min-width: auto !important;
+        padding: 1rem !important;
+      }
+
+      /* 3. 目录移动端优化 */
+      .toc {
+        font-size: 13px;
+        padding: 1rem;
+      }
+
+      .toc h3 {
+        font-size: 1.1rem;
+        margin-bottom: 0.8rem;
+      }
+
+      .toc a {
+        padding: 0.2rem 0.4rem;
+        font-size: 12px;
+      }
+
+      /* 4. Header移动端优化 */
+      .mobile-header {
+        padding: 0.8rem 1rem !important;
+        flex-direction: column;
+        gap: 0.8rem;
+      }
+
+      .mobile-header h1 {
+        font-size: 1.3rem !important;
+      }
+
+      /* 5. 阅读页面移动端优化 */
+      .mobile-reading {
+        padding: 0.5rem !important;
+      }
+
+      .mobile-reading .tech-gradient {
+        padding: 1rem !important;
+        margin: 0.5rem 0 !important;
+      }
+
+      /* 6. 隐藏桌面版拖拽功能 */
+      .dragbar {
+        display: none !important;
+      }
+
+      /* 7. 目录侧边栏移动端优化 */
+      .mobile-toc-sidebar {
+        width: 280px !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        height: 100vh !important;
+        z-index: 40 !important;
+        background: rgba(17, 24, 39, 0.95) !important;
+        backdrop-filter: blur(10px) !important;
+      }
+
+      /* 8. 分享页面内容区域优化 */
+      .mobile-share-content {
+        padding: 0.5rem !important;
+        margin: 0 !important;
+      }
+    }
+
+    /* 超小屏幕优化 (iPhone SE等) */
+    @media (max-width: 375px) {
+      .prose-tech {
+        font-size: 13px;
+      }
+
+      .prose-tech h1 {
+        font-size: 1.6rem;
+      }
+
+      .prose-tech h2 {
+        font-size: 1.3rem;
+      }
+
+      .prose-tech h3 {
+        font-size: 1.2rem;
+      }
+
+      .mobile-header h1 {
+        font-size: 1.2rem !important;
+      }
+
+      .toc {
+        font-size: 12px;
+        padding: 0.8rem;
+      }
+    }
+
+    /* ========== 统一科技感按钮风格 ========== */
+    .tech-btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 0.875rem;
+      transition: all 0.3s ease;
+      border: 1px solid transparent;
+      backdrop-filter: blur(10px);
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .tech-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      transition: left 0.5s;
+    }
+
+    .tech-btn:hover::before {
+      left: 100%;
+    }
+
+    /* 主要按钮 - 蓝色科技风 */
+    .tech-btn-primary {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(59, 130, 246, 0.2));
+      border-color: rgba(6, 182, 212, 0.4);
+      color: #22d3ee;
+      box-shadow: 0 0 20px rgba(6, 182, 212, 0.1);
+    }
+
+    .tech-btn-primary:hover {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(59, 130, 246, 0.3));
+      border-color: rgba(6, 182, 212, 0.6);
+      color: #06b6d4;
+      box-shadow: 0 0 30px rgba(6, 182, 212, 0.2);
+      transform: translateY(-1px);
+    }
+
+    /* 次要按钮 - 灰色科技风 */
+    .tech-btn-secondary {
+      background: linear-gradient(135deg, rgba(75, 85, 99, 0.3), rgba(55, 65, 81, 0.3));
+      border-color: rgba(75, 85, 99, 0.5);
+      color: #d1d5db;
+      box-shadow: 0 0 15px rgba(75, 85, 99, 0.1);
+    }
+
+    .tech-btn-secondary:hover {
+      background: linear-gradient(135deg, rgba(75, 85, 99, 0.4), rgba(55, 65, 81, 0.4));
+      border-color: rgba(107, 114, 128, 0.6);
+      color: #f3f4f6;
+      box-shadow: 0 0 25px rgba(107, 114, 128, 0.15);
+      transform: translateY(-1px);
+    }
+
+    /* 禁用状态 */
+    .tech-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .tech-btn:disabled:hover {
+      transform: none !important;
+      box-shadow: initial !important;
+    }
+
+    /* 移动端按钮优化 */
+    @media (max-width: 768px) {
+      .tech-btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+      }
+    }
   </style>
 </head>
 
 <body class="h-full flex flex-col" id="app">
   <!-- Header - 简化版 -->
   <header class="tech-gradient border-b border-gray-800 shadow-lg">
-    <div class="max-w-full mx-auto px-4 py-4 flex items-center justify-between">
+    <div class="max-w-full mx-auto px-4 py-4 flex items-center justify-between mobile-header">
       <div class="flex items-center space-x-4">
         <h1 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
           reinvent <span class="text-purple-400">Insight</span>
@@ -436,16 +693,16 @@
           </div>
           <div class="flex items-center space-x-4">
             <button @click="toggleToc"
-              class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white transition-colors">
+              class="tech-btn tech-btn-secondary">
               {{ showToc ? '隐藏目录' : '显示目录' }}
             </button>
           </div>
         </div>
       </div>
 
-      <div class="flex">
+      <div class="flex mobile-reading">
         <!-- 目录侧边栏 -->
-        <div v-if="showToc" :style="{ width: tocWidth + 'px' }" class="w-[26rem] flex-shrink-0 border-r border-gray-800 bg-gray-900/30">
+        <div v-if="showToc" :style="{ width: tocWidth + 'px' }" class="w-[26rem] flex-shrink-0 border-r border-gray-800 bg-gray-900/30 mobile-toc-sidebar">
           <div class="sticky top-20 p-6">
             <div class="toc">
               <h3>目录</h3>
@@ -459,7 +716,7 @@
 
         <!-- 文章内容 - 全宽 -->
         <div class="flex-1 min-w-0">
-          <div class="max-w-none px-4 py-8">
+          <div class="max-w-none px-4 py-8 mobile-share-content">
             <div v-if="readingContent" class="tech-gradient border border-gray-700 rounded-xl p-10 shadow-2xl backdrop-blur-sm resizable">
               <div v-html="readingContent" class="prose-tech max-w-none"></div>
             </div>
