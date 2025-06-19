@@ -12,1220 +12,45 @@
   <script src="https://unpkg.com/@highlightjs/cdn-assets@11.9.0/highlight.min.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.9.0/styles/github-dark.min.css">
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    /* 科技风格背景 */
-    body {
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-      background-attachment: fixed;
-      min-height: 100vh;
-      font-family: 'JetBrains Mono', 'Consolas', 'SFMono-Regular', Menlo, monospace, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-    }
-
-    .tech-gradient {
-      background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.8) 50%, rgba(15, 23, 42, 0.9) 100%);
-      backdrop-filter: blur(10px);
-    }
-
-    .glow-effect {
-      box-shadow: 0 0 20px rgba(6, 182, 212, 0.1), 0 0 40px rgba(6, 182, 212, 0.05);
-    }
-
-    .glow-effect:hover {
-      box-shadow: 0 0 30px rgba(6, 182, 212, 0.2), 0 0 60px rgba(6, 182, 212, 0.1);
-      transition: box-shadow 0.3s ease;
-    }
-
-    /* 增强的 Markdown 样式 */
-    .prose-tech {
-      color: #e2e8f0;
-      line-height: 1.8;
-      font-size: 16px;
-    }
-
-    .prose-tech h1 {
-      color: #06b6d4;
-      font-size: 2.5rem;
-      font-weight: 700;
-      margin: 2rem 0 1.5rem 0;
-      padding-bottom: 0.5rem;
-      border-bottom: none;
-      line-height: 1.2;
-    }
-
-    .prose-tech h2 {
-      color: #0ea5e9;
-      font-size: 2rem;
-      font-weight: 600;
-      margin: 2rem 0 1rem 0;
-      line-height: 1.3;
-      scroll-margin-top: 100px;
-    }
-
-    .prose-tech h3 {
-      color: #38bdf8;
-      font-size: 1.5rem;
-      font-weight: 600;
-      margin: 1.5rem 0 0.75rem 0;
-      line-height: 1.4;
-      scroll-margin-top: 100px;
-    }
-
-    .prose-tech h4 {
-      color: #7dd3fc;
-      font-size: 1.25rem;
-      font-weight: 600;
-      margin: 1.25rem 0 0.5rem 0;
-      line-height: 1.4;
-      scroll-margin-top: 100px;
-    }
-
-    .prose-tech h5 {
-      color: #bae6fd;
-      font-size: 1.125rem;
-      font-weight: 600;
-      margin: 1rem 0 0.5rem 0;
-      line-height: 1.4;
-      scroll-margin-top: 100px;
-    }
-
-    .prose-tech h6 {
-      color: #e0f2fe;
-      font-size: 1rem;
-      font-weight: 600;
-      margin: 1rem 0 0.5rem 0;
-      line-height: 1.4;
-      scroll-margin-top: 100px;
-    }
-
-    /* === 新增: 统一标题渐变色 & 章节分隔符 === */
-    .prose-tech h1,
-    .prose-tech h2,
-    .prose-tech h3,
-    .prose-tech h4,
-    .prose-tech h5,
-    .prose-tech h6 {
-      background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 50%, #9333ea 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-    }
-
-    /* 为一级标题添加科技感分隔符 */
-    .prose-tech h1::after {
-      content: '';
-      display: block;
-      height: 2px;
-      margin-top: 1rem;
-      background: linear-gradient(90deg, transparent, #3b82f6, transparent);
-      border-radius: 9999px;
-      opacity: 0.6;
-    }
-
-    .prose-tech p {
-      margin: 1.25rem 0;
-      line-height: 1.8;
-    }
-
-    .prose-tech ul,
-    .prose-tech ol {
-      margin: 1.25rem 0;
-      padding-left: 1.5rem;
-      line-height: 1.7;
-    }
-
-    .prose-tech li {
-      margin: 0.5rem 0;
-    }
-
-    .prose-tech blockquote {
-      border-left: 3px solid #334155;
-      background: rgba(51,65,85,0.10);
-      color: #b6c2d1;
-      padding: 0.85rem 1.2rem;
-      margin: 1.5rem 0;
-      border-radius: 0 8px 8px 0;
-      font-style: italic;
-    }
-
-    .prose-tech code {
-      background: rgba(6, 182, 212, 0.1);
-      color: #06b6d4;
-      padding: 0.2rem 0.4rem;
-      border-radius: 4px;
-      font-size: 0.9em;
-    }
-
-    .prose-tech pre {
-      background: #1e293b;
-      border: 1px solid #374151;
-      border-radius: 8px;
-      padding: 1rem;
-      margin: 1.5rem 0;
-      overflow-x: auto;
-    }
-
-    .prose-tech pre code {
-      background: none;
-      color: inherit;
-      padding: 0;
-    }
-
-    .prose-tech table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 1.5rem 0;
-      background: rgba(30, 41, 59, 0.5);
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    .prose-tech th,
-    .prose-tech td {
-      border: 1px solid #374151;
-      padding: 0.75rem 1rem;
-      text-align: left;
-    }
-
-    .prose-tech th {
-      background: rgba(6, 182, 212, 0.1);
-      color: #06b6d4;
-      font-weight: 600;
-    }
-
-    .prose-tech a {
-      color: #06b6d4;
-      text-decoration: none;
-      border-bottom: 1px solid transparent;
-      transition: border-color 0.2s;
-    }
-
-    .prose-tech a:hover {
-      border-bottom-color: #06b6d4;
-    }
-
-    .prose-tech strong, .prose-tech b {
-      color: #06b6d4;
-      font-weight: 700;
-    }
-
-    .prose-tech em {
-      color: #cbd5e1;
-      font-style: italic;
-    }
-
-    .prose-tech hr {
-      border: none;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, #374151, transparent);
-      margin: 2rem 0;
-    }
-
-    /* 目录样式 */
-    .toc {
-      background: rgba(30, 41, 59, 0.6);
-      border: 1px solid #374151;
-      border-radius: 12px;
-      padding: 1.5rem;
-      backdrop-filter: blur(10px);
-      height: 100%;
-      overflow-y: auto;
-    }
-
-    .toc h3 {
-      color: #06b6d4;
-      margin-bottom: 1rem;
-      font-size: 1.25rem;
-    }
-
-    .toc ul {
-      list-style: none;
-      padding: 0;
-    }
-
-    .toc li {
-      margin: 0.5rem 0;
-    }
-
-    .toc a {
-      color: #94a3b8;
-      text-decoration: none;
-      transition: all 0.2s;
-      display: block;
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
-      cursor: pointer;
-      white-space: nowrap; /* Prevent text wrapping */
-    }
-
-    .toc a:hover {
-      color: #06b6d4;
-      background: rgba(6, 182, 212, 0.1);
-    }
-
-    .toc ul ul {
-      margin-left: 1rem;
-      border-left: 1px solid #374151;
-      padding-left: 0.5rem;
-    }
-
-    /* 定制暗色滚动条，避免覆盖圆角背景 */
-    .tech-gradient::-webkit-scrollbar,
-    .toc::-webkit-scrollbar,
-    .resizable::-webkit-scrollbar {
-      width: 8px;
-    }
-    .tech-gradient::-webkit-scrollbar-track,
-    .toc::-webkit-scrollbar-track,
-    .resizable::-webkit-scrollbar-track {
-      background: transparent;
-      border-radius: 6px;
-    }
-    .tech-gradient::-webkit-scrollbar-thumb,
-    .toc::-webkit-scrollbar-thumb,
-    .resizable::-webkit-scrollbar-thumb {
-      background: rgba(148, 163, 184, 0.4);
-      border-radius: 6px;
-    }
-    .tech-gradient::-webkit-scrollbar-thumb:hover,
-    .toc::-webkit-scrollbar-thumb:hover,
-    .resizable::-webkit-scrollbar-thumb:hover {
-      background: rgba(148, 163, 184, 0.6);
-    }
-
-    /* 调整 resizable 底部拖拽手柄颜色（WebKit） */
-    .resizable::-webkit-resizer {
-      background: rgba(148, 163, 184, 0.35);
-    }
-
-    /* 隐藏默认滚动条角落在 Firefox 等浏览器上的溢出覆盖 */
-    .tech-gradient {
-      scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
-      scrollbar-width: thin;
-    }
-
-    /* 目录收起时在桌面端使文档保持原宽度并居中 */
-    @media (min-width: 1024px) {
-      .no-toc-centered {
-        width: 72%;
-        margin-left: auto;
-        margin-right: auto;
-        transition: all 0.4s ease-in-out;
-      }
-    }
-
-    /* ========== 移动端全面优化 ========== */
-    @media (max-width: 768px) {
-      /* 1. 字体大小优化 */
-      .prose-tech {
-        font-size: 14px;
-        line-height: 1.7;
-      }
-
-      .prose-tech h1 {
-        font-size: 1.8rem;
-        margin: 1.5rem 0 1rem 0;
-      }
-
-      .prose-tech h2 {
-        font-size: 1.5rem;
-        margin: 1.5rem 0 0.8rem 0;
-      }
-
-      .prose-tech h3 {
-        font-size: 1.3rem;
-        margin: 1.2rem 0 0.6rem 0;
-      }
-
-      .prose-tech h4 {
-        font-size: 1.1rem;
-        margin: 1rem 0 0.5rem 0;
-      }
-
-      .prose-tech h5,
-      .prose-tech h6 {
-        font-size: 1rem;
-        margin: 0.8rem 0 0.4rem 0;
-      }
-
-      .prose-tech p {
-        margin: 1rem 0;
-        line-height: 1.6;
-      }
-
-      .prose-tech ul,
-      .prose-tech ol {
-        margin: 1rem 0;
-        padding-left: 1.2rem;
-        line-height: 1.6;
-      }
-
-      .prose-tech li {
-        margin: 0.3rem 0;
-      }
-
-      .prose-tech blockquote {
-        padding: 0.6rem 1rem;
-        margin: 1.2rem 0;
-        font-size: 13px;
-      }
-
-      .prose-tech code {
-        font-size: 12px;
-        padding: 0.15rem 0.3rem;
-      }
-
-      .prose-tech pre {
-        padding: 0.8rem;
-        margin: 1.2rem 0;
-        font-size: 12px;
-      }
-
-      .prose-tech table {
-        font-size: 12px;
-        margin: 1.2rem 0;
-      }
-
-      .prose-tech th,
-      .prose-tech td {
-        padding: 0.5rem 0.7rem;
-      }
-
-      /* 2. 阅读区域优化 */
-      .resizable {
-        resize: none !important;
-        min-width: auto !important;
-        padding: 1rem !important;
-      }
-
-      /* 3. 目录移动端优化 */
-      .toc {
-        font-size: 13px;
-        padding: 1rem;
-      }
-
-      .toc h3 {
-        font-size: 1.1rem;
-        margin-bottom: 0.8rem;
-      }
-
-      .toc a {
-        padding: 0.2rem 0.4rem;
-        font-size: 12px;
-      }
-
-      /* 4. 卡片布局优化 */
-      .summary-card {
-        height: auto !important;
-        min-height: auto !important;
-        padding: 1rem !important;
-      }
-
-      .chinese-title-container {
-        height: auto !important;
-        min-height: 3rem;
-      }
-
-      .chinese-title {
-        font-size: 14px !important;
-        line-height: 1.4 !important;
-      }
-
-      .english-subtitle {
-        font-size: 11px !important;
-        line-height: 1.3 !important;
-      }
-
-      .english-title-area {
-        min-height: 2.5rem !important;
-      }
-
-      .metadata-area {
-        font-size: 10px !important;
-        min-height: 1.5rem !important;
-        padding-top: 0.4rem !important;
-      }
-
-      .metadata-badge {
-        font-size: 8px !important;
-        padding: 1px 4px !important;
-      }
-
-      /* 5. 导航栏移动端优化 */
-      .mobile-nav {
-        display: flex !important;
-        flex-direction: column;
-        gap: 0.5rem;
-        width: 100%;
-      }
-
-      .mobile-nav button {
-        padding: 0.6rem 1rem !important;
-        font-size: 13px !important;
-        text-align: center;
-      }
-
-      /* 6. 输入区域优化 */
-      .mobile-input-card {
-        padding: 1.5rem !important;
-        margin: 1rem !important;
-      }
-
-      .mobile-input-card h2 {
-        font-size: 1.5rem !important;
-      }
-
-      .mobile-input-card p {
-        font-size: 13px !important;
-      }
-
-      .mobile-input-card input {
-        padding: 0.7rem !important;
-        font-size: 14px !important;
-      }
-
-      .mobile-input-card button {
-        padding: 0.8rem !important;
-        font-size: 14px !important;
-      }
-
-      /* 7. Header移动端优化 */
-      .mobile-header {
-        padding: 0.8rem 1rem !important;
-        flex-direction: column;
-        gap: 0.8rem;
-      }
-
-      .mobile-header h1 {
-        font-size: 1.3rem !important;
-      }
-
-      /* 8. 网格布局移动端优化 */
-      .mobile-grid {
-        grid-template-columns: 1fr !important;
-        gap: 1rem !important;
-        padding: 0 1rem !important;
-      }
-
-      /* 9. 页面容器优化 */
-      .mobile-container {
-        max-width: 100% !important;
-        padding: 1rem !important;
-      }
-
-      /* 10. 阅读页面移动端优化 */
-      .mobile-reading {
-        padding: 0.5rem !important;
-      }
-
-      .mobile-reading .tech-gradient {
-        padding: 1rem !important;
-        margin: 0.5rem 0 !important;
-      }
-
-      /* 11. 进度条区域优化 */
-      .mobile-progress {
-        padding: 1rem !important;
-        margin: 1rem !important;
-      }
-
-      .mobile-progress h3 {
-        font-size: 1.1rem !important;
-      }
-
-      .mobile-progress .text-sm {
-        font-size: 12px !important;
-      }
-
-      /* 12. 隐藏桌面版拖拽功能 */
-      .dragbar {
-        display: none !important;
-      }
-
-      /* 13. 移动端完全隐藏目录功能 */
-      .mobile-hide-toc .toc-sidebar,
-      .mobile-hide-toc .dragbar {
-        display: none !important;
-      }
-
-      /* 14. 移动端阅读页面header极致优化 */
-      .mobile-reading-header {
-        padding: 0.5rem 1rem !important;
-        min-height: auto !important;
-        border-bottom: 1px solid #374151;
-      }
-
-      .mobile-reading-header h1 {
-        font-size: 1.1rem !important;
-        margin: 0 !important;
-        line-height: 1.2 !important;
-      }
-
-      .mobile-reading-header .header-content {
-        flex-direction: row !important;
-        justify-content: space-between !important;
-        align-items: center !important;
-        gap: 0.5rem !important;
-        width: 100% !important;
-      }
-
-      .mobile-reading-header .mobile-back-btn {
-        font-size: 12px !important;
-        padding: 0.4rem 0.8rem !important;
-        border-radius: 6px !important;
-      }
-
-      .mobile-reading-header .mobile-share-btn {
-        padding: 0.4rem !important;
-        border-radius: 6px !important;
-      }
-
-      .mobile-reading-header .mobile-share-btn svg {
-        width: 16px !important;
-        height: 16px !important;
-      }
-
-      /* 15. 移动端阅读内容区域最大化 */
-      .mobile-reading-content {
-        height: calc(100vh - 60px) !important; /* 减去极简header的高度 */
-        overflow-y: auto !important;
-      }
-
-      .mobile-reading-content .tech-gradient {
-        height: 100% !important;
-        padding: 1rem !important;
-        margin: 0 !important;
-        border: none !important;
-        border-radius: 0 !important;
-        background: transparent !important;
-      }
-
-      /* 16. 移动端完全隐藏目录按钮 */
-      .mobile-hide-toc-btn {
-        display: none !important;
-      }
-
-      /* 17. Toast优化 */
-      .mobile-toast {
-        bottom: 2rem !important;
-        left: 1rem !important;
-        right: 1rem !important;
-        width: auto !important;
-      }
-    }
-
-    /* 超小屏幕优化 (iPhone SE等) */
-    @media (max-width: 375px) {
-      .prose-tech {
-        font-size: 13px;
-      }
-
-      .prose-tech h1 {
-        font-size: 1.6rem;
-      }
-
-      .prose-tech h2 {
-        font-size: 1.3rem;
-      }
-
-      .prose-tech h3 {
-        font-size: 1.2rem;
-      }
-
-      .chinese-title {
-        font-size: 13px !important;
-      }
-
-      .english-subtitle {
-        font-size: 10px !important;
-      }
-
-      .mobile-input-card {
-        padding: 1rem !important;
-        margin: 0.5rem !important;
-      }
-
-      .mobile-nav button {
-        padding: 0.5rem 0.8rem !important;
-        font-size: 12px !important;
-      }
-    }
-
-    /* 动画效果 */
-    .fade-in {
-      animation: fadeIn 0.5s ease-in;
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .slide-in {
-      animation: slideIn 0.3s ease-out;
-    }
-
-    @keyframes slideIn {
-      from {
-        transform: translateX(-20px);
-        opacity: 0;
-      }
-
-      to {
-        transform: translateX(0);
-        opacity: 1;
-      }
-    }
-
-    /* 卡片优化 */
-    .summary-card {
-      display: flex;
-      flex-direction: column;
-      height: auto;
-      min-height: 160px;
-    }
-
-    .summary-card h3 {
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      hyphens: auto;
-      line-height: 1.4;
-    }
-
-    /* Grid 自动行高 */
-    .auto-rows-fr {
-      grid-auto-rows: 1fr;
-    }
-
-    /* 可调整大小阅读卡片 */
-    .resizable {
-      resize: horizontal; /* 恢复默认底角拖拽 */
-      overflow: auto;
-      max-width: 100%;
-      min-width: 400px;
-    }
-
-    /* 目录拖拽分隔条 */
-    .dragbar {
-      width: 6px;
-      cursor: col-resize;
-      background: rgba(100, 116, 139, 0.4);
-    }
-
-    /* 多行文本截断 */
-    .line-clamp-3 {
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-    /* 卡片布局优化 */
-    .summary-card {
-      transition: all 0.3s ease;
-      display: flex;
-    }
-
-    /* ========== 分类展示样式 ========== */
-    .section-container {
-      position: relative;
-    }
-
-    .section-header {
-      position: relative;
-      padding-bottom: 0.5rem;
-    }
-
-    .section-header::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, #374151, transparent);
-    }
-
-    .reinvent-card {
-      position: relative;
-      background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(55, 65, 81, 0.8) 50%, rgba(30, 41, 59, 0.9) 100%);
-      border: 1px solid rgba(251, 146, 60, 0.3);
-    }
-
-    .reinvent-card:hover {
-      border-color: rgba(249, 115, 22, 0.6);
-      box-shadow: 0 0 30px rgba(249, 115, 22, 0.15), 0 0 60px rgba(249, 115, 22, 0.08);
-    }
-
-    .other-card {
-      position: relative;
-    }
-
-    .category-glow {
-      position: absolute;
-      top: -2px;
-      left: -2px;
-      right: -2px;
-      bottom: -2px;
-      border-radius: 12px;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      pointer-events: none;
-    }
-
-    .reinvent-card .category-glow {
-      background: linear-gradient(45deg, #f97316, #ea580c, #dc2626, #f97316);
-      background-size: 300% 300%;
-      animation: gradient-shift 3s ease infinite;
-    }
-
-    .other-card .category-glow {
-      background: linear-gradient(45deg, #06b6d4, #3b82f6, #8b5cf6, #06b6d4);
-      background-size: 300% 300%;
-      animation: gradient-shift 3s ease infinite;
-    }
-
-    .summary-card:hover .category-glow {
-      opacity: 0.3;
-    }
-
-    @keyframes gradient-shift {
-      0%, 100% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-    }
-
-    /* 已移除：原右上角类型标签样式，现在使用元数据区的metadata-badge */
-
-    /* 标题区域优化 */
-    .title-with-badge {
-      padding-right: 0; /* 移除为标签预留的右边距 */
-    }
-
-    .summary-card {
-      flex-direction: column;
-    }
-
-    .summary-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 32px rgba(6, 182, 212, 0.15), 0 4px 16px rgba(6, 182, 212, 0.1);
-    }
-
-    /* 英文标题区域优化 */
-    .summary-card .english-title-area {
-      min-height: 3.5rem; /* 给英文标题更多空间 */
-      display: flex;
-      align-items: flex-start;
-    }
-
-    /* 中文标题样式 - 默认科技感 */
-    .chinese-title {
-      color: rgb(12, 175, 193); /* 提高饱和度、降低明度的蓝色 */
-      transition: all 0.3s ease;
-    }
-
-    .summary-card:hover .chinese-title {
-      background: linear-gradient(135deg, #22d3ee 0%, #3b82f6 35%, #8b5cf6 70%, #ec4899 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-    }
-
-    /* 英文副标题样式 */
-    .english-subtitle {
-      color: #64748b; /* 更低饱和度的灰色 */
-      opacity: 0.8;
-      font-weight: 400;
-      letter-spacing: 0.01em;
-      transition: all 0.3s ease;
-    }
-
-    .summary-card:hover .english-subtitle {
-      color: #6b7280; /* hover时稍微提亮但仍然低调 */
-      opacity: 0.9;
-    }
-
-    /* 中文标题容器优化 - 使用全宽 */
-    .chinese-title-container {
-      height: 4rem; /* 固定高度，适应更小字体的3行空间 */
-      display: flex;
-      align-items: flex-start;
-      width: 100%; /* 使用全宽 */
-    }
-
-    /* 元数据区域优化 */
-    .metadata-area {
-      border-top: 1px solid;
-      padding-top: 0.5rem;
-      margin-top: auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      min-height: 1.75rem; /* 固定最小高度 */
-    }
-
-    /* 类型标签在元数据区的样式 */
-    .metadata-badge {
-      font-size: 9px;
-      padding: 2px 6px;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-      text-transform: uppercase;
-      border-radius: 6px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-      backdrop-filter: blur(4px);
-    }
-
-    .reinvent-card .metadata-badge {
-      background: linear-gradient(135deg, rgba(234, 88, 12, 0.9), rgba(220, 38, 38, 0.9));
-      border: 1px solid rgba(249, 115, 22, 0.3);
-      color: white;
-    }
-
-    .other-card .metadata-badge {
-      background: linear-gradient(135deg, rgba(8, 145, 178, 0.9), rgba(29, 78, 216, 0.9));
-      border: 1px solid rgba(6, 182, 212, 0.3);
-      color: white;
-    }
-
-    /* 调整大小的手柄 */
-    #resize-handle {
-      width: 16px;
-      height: 100%;
-      position: absolute;
-      right: 0;
-      top: 0;
-      cursor: col-resize;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-color: transparent;
-      transition: background-color 0.2s;
-    }
-
-    #resize-handle:hover {
-      background-color: rgba(6, 182, 212, 0.1);
-    }
-
-    #resize-handle::after {
-      content: '';
-      width: 2px;
-      height: 24px;
-      background-color: #374151;
-      border-radius: 9999px;
-      transition: background-color 0.2s;
-    }
-
-    #resize-handle:hover::after {
-      background-color: #06b6d4;
-    }
-
-    /* 登录和分享模态框样式 */
-    .modal {
-      position: fixed;
-    }
-
-    .fade-enter-active,
-    .fade-leave-active {
-      transition: opacity 0.3s ease;
-    }
-
-    .fade-enter-from,
-    .fade-leave-to {
-      opacity: 0;
-    }
-
-    /* ========== 统一科技感按钮风格 ========== */
-    .tech-btn {
-      position: relative;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0.5rem 1rem;
-      border-radius: 8px;
-      font-weight: 500;
-      font-size: 0.875rem;
-      transition: all 0.3s ease;
-      border: 1px solid transparent;
-      backdrop-filter: blur(10px);
-      cursor: pointer;
-      overflow: hidden;
-      /* 统一固定尺寸 */
-      min-width: 120px;
-      height: 40px;
-      white-space: nowrap;
-    }
-
-    .tech-btn::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-      transition: left 0.5s;
-    }
-
-    .tech-btn:hover::before {
-      left: 100%;
-    }
-
-    /* 主要按钮 - 蓝色科技风 */
-    .tech-btn-primary {
-      background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(59, 130, 246, 0.2));
-      border-color: rgba(6, 182, 212, 0.4);
-      color: #22d3ee;
-      box-shadow: 0 0 20px rgba(6, 182, 212, 0.1);
-    }
-
-    .tech-btn-primary:hover {
-      background: linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(59, 130, 246, 0.3));
-      border-color: rgba(6, 182, 212, 0.6);
-      color: #06b6d4;
-      box-shadow: 0 0 30px rgba(6, 182, 212, 0.2);
-      transform: translateY(-1px);
-    }
-
-    .tech-btn-primary:active {
-      transform: translateY(0);
-    }
-
-    /* 次要按钮 - 灰色科技风 */
-    .tech-btn-secondary {
-      background: linear-gradient(135deg, rgba(75, 85, 99, 0.3), rgba(55, 65, 81, 0.3));
-      border-color: rgba(75, 85, 99, 0.5);
-      color: #d1d5db;
-      box-shadow: 0 0 15px rgba(75, 85, 99, 0.1);
-    }
-
-    .tech-btn-secondary:hover {
-      background: linear-gradient(135deg, rgba(75, 85, 99, 0.4), rgba(55, 65, 81, 0.4));
-      border-color: rgba(107, 114, 128, 0.6);
-      color: #f3f4f6;
-      box-shadow: 0 0 25px rgba(107, 114, 128, 0.15);
-      transform: translateY(-1px);
-    }
-
-    /* 成功按钮 - 绿色科技风 */
-    .tech-btn-success {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(34, 197, 94, 0.2));
-      border-color: rgba(16, 185, 129, 0.4);
-      color: #34d399;
-      box-shadow: 0 0 20px rgba(16, 185, 129, 0.1);
-    }
-
-    .tech-btn-success:hover {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(34, 197, 94, 0.3));
-      border-color: rgba(16, 185, 129, 0.6);
-      color: #10b981;
-      box-shadow: 0 0 30px rgba(16, 185, 129, 0.2);
-      transform: translateY(-1px);
-    }
-
-    /* 警告按钮 - 橙色科技风 */
-    .tech-btn-warning {
-      background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(251, 146, 60, 0.2));
-      border-color: rgba(245, 158, 11, 0.4);
-      color: #fbbf24;
-      box-shadow: 0 0 20px rgba(245, 158, 11, 0.1);
-    }
-
-    .tech-btn-warning:hover {
-      background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(251, 146, 60, 0.3));
-      border-color: rgba(245, 158, 11, 0.6);
-      color: #f59e0b;
-      box-shadow: 0 0 30px rgba(245, 158, 11, 0.2);
-      transform: translateY(-1px);
-    }
-
-    /* 危险按钮 - 红色科技风 */
-    .tech-btn-danger {
-      background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2));
-      border-color: rgba(239, 68, 68, 0.4);
-      color: #f87171;
-      box-shadow: 0 0 20px rgba(239, 68, 68, 0.1);
-    }
-
-    .tech-btn-danger:hover {
-      background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.3));
-      border-color: rgba(239, 68, 68, 0.6);
-      color: #ef4444;
-      box-shadow: 0 0 30px rgba(239, 68, 68, 0.2);
-      transform: translateY(-1px);
-    }
-
-    /* 小尺寸按钮 */
-    .tech-btn-sm {
-      padding: 0.375rem 0.75rem;
-      font-size: 0.8rem;
-      border-radius: 6px;
-    }
-
-    /* 大尺寸按钮 */
-    .tech-btn-lg {
-      padding: 0.75rem 1.5rem;
-      font-size: 1rem;
-      border-radius: 10px;
-    }
-
-    /* 禁用状态 */
-    .tech-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none !important;
-    }
-
-    .tech-btn:disabled:hover {
-      transform: none !important;
-      box-shadow: initial !important;
-    }
-
-    /* 图标按钮 */
-    .tech-btn-icon {
-      padding: 0.5rem;
-      width: 2.5rem;
-      height: 2.5rem;
-      border-radius: 8px;
-    }
-
-    .tech-btn-icon svg {
-      width: 1.25rem;
-      height: 1.25rem;
-      transition: transform 0.3s ease;
-    }
-
-    .tech-btn-icon:hover svg {
-      transform: scale(1.1);
-    }
-
-    /* 阅读页面专用按钮组 */
-    .reading-controls {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .reading-controls .tech-btn {
-      min-width: auto;
-    }
-
-    /* 移动端按钮优化 */
-    @media (max-width: 768px) {
-      .tech-btn {
-        padding: 0.4rem 0.8rem;
-        font-size: 0.8rem;
-        /* 移动端也保持固定尺寸 */
-        min-width: 100px;
-        height: 36px;
-      }
-
-      /* 移动端导航按钮平分宽度 */
-      .mobile-nav .tech-btn.flex-1 {
-        min-width: 0;
-        flex: 1;
-      }
-
-      .tech-btn-sm {
-        padding: 0.3rem 0.6rem;
-        font-size: 0.75rem;
-        min-width: 100px;
-        height: 36px;
-      }
-
-      .tech-btn-icon {
-        width: 100px;
-        height: 36px;
-        padding: 0.4rem;
-      }
-
-      .tech-btn-icon svg {
-        width: 1.1rem;
-        height: 1.1rem;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="/css/style.css">
 </head>
 
 <body class="h-full">
-  <div id="app" class="h-full flex flex-col">
-    <!-- 普通页面Header -->
-    <header v-if="currentView !== 'read' && !isShareView" class="tech-gradient border-b border-gray-800 shadow-lg">
+  <div id="app" class="h-full flex flex-col bg-gray-900 text-gray-200">
+    <!-- ======================================================================= -->
+    <!--                                 Header                                  -->
+    <!-- ======================================================================= -->
+    <header v-if="currentView !== 'read' && !isShareView" class="tech-gradient border-b border-gray-800 shadow-lg sticky top-0 z-40">
       <div class="max-w-full mx-auto px-4 py-4 md:flex md:items-center md:justify-between mobile-header">
         <div class="flex items-center justify-between w-full md:w-auto">
-          <!-- 品牌标识和PC端导航按钮组 -->
           <div class="flex items-center space-x-4">
             <a href="/" @click.prevent="goHome" class="cursor-pointer">
               <h1 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
                 reinvent <span class="text-purple-400">Insight</span>
               </h1>
             </a>
-            
-            <!-- PC端紧贴品牌标识的导航按钮 -->
-            <div class="hidden md:flex space-x-2">
-              <button @click="currentView = 'create'"
-                :class="currentView === 'create' ? 'tech-btn tech-btn-secondary' : 'tech-btn tech-btn-secondary'">
-                创建深度解读
-              </button>
-              <button @click="currentView = 'library'"
-                :class="currentView === 'library' ? 'tech-btn tech-btn-secondary' : 'tech-btn tech-btn-secondary'">
-                浏览笔记库
-              </button>
+            <div v-if="isAuthenticated" class="hidden md:flex space-x-2">
+              <button @click="currentView = 'create'" class="tech-btn tech-btn-secondary">创建深度解读</button>
+              <button @click="currentView = 'library'" class="tech-btn tech-btn-secondary">浏览笔记库</button>
             </div>
           </div>
-          
-          <!-- 移动端登录/退出按钮 -->
           <div class="md:hidden">
-            <button v-if="!isAuthenticated" @click="showLogin = true"
-              class="tech-btn tech-btn-secondary">
-              登录
-            </button>
-            <button v-else @click="logout"
-              class="tech-btn tech-btn-danger">
-              退出
-            </button>
+            <button v-if="!isAuthenticated" @click="showLogin = true" class="tech-btn tech-btn-secondary">登录</button>
+            <button v-else @click="logout" class="tech-btn tech-btn-danger">退出</button>
           </div>
         </div>
-        
-        <!-- 移动端导航按钮 -->
-        <div class="md:hidden mobile-nav flex gap-2 mt-3">
-          <button @click="currentView = 'create'"
-            :class="currentView === 'create' ? 'tech-btn tech-btn-secondary flex-1' : 'tech-btn tech-btn-secondary flex-1'">
-            创建深度解读
-          </button>
-          <button @click="currentView = 'library'"
-            :class="currentView === 'library' ? 'tech-btn tech-btn-secondary flex-1' : 'tech-btn tech-btn-secondary flex-1'">
-            浏览笔记库
-          </button>
+        <div v-if="isAuthenticated" class="md:hidden mobile-nav flex gap-2 mt-3">
+          <button @click="currentView = 'create'" class="tech-btn tech-btn-secondary flex-1">创建深度解读</button>
+          <button @click="currentView = 'library'" class="tech-btn tech-btn-secondary flex-1">浏览笔记库</button>
         </div>
-
-        <!-- 桌面端右侧内容 -->
         <div class="hidden md:flex items-center space-x-4">
-          <div class="text-sm text-gray-400">
-          </div>
-          
-          <!-- 桌面端登录/退出按钮独立容器 -->
-          <div class="flex items-center">
-            <button v-if="!isAuthenticated" @click="showLogin = true"
-              class="tech-btn tech-btn-secondary">
-              登录
-            </button>
-            <button v-else @click="logout"
-              class="tech-btn tech-btn-danger">
-              退出
-            </button>
-          </div>
+          <button v-if="!isAuthenticated" @click="showLogin = true" class="tech-btn tech-btn-secondary">登录</button>
+          <button v-else @click="logout" class="tech-btn tech-btn-danger">退出</button>
         </div>
       </div>
     </header>
 
-    <!-- 阅读页面专用Header -->
-    <header v-if="currentView === 'read'" class="tech-gradient border-b border-gray-800 shadow-lg mobile-reading-header">
+    <header v-if="currentView === 'read'" class="tech-gradient border-b border-gray-800 shadow-lg sticky top-0 z-40 mobile-reading-header">
       <div class="max-w-full mx-auto px-4 py-3 flex items-center justify-between header-content">
         <div class="flex items-center space-x-4">
           <a href="/" @click.prevent="goHome" class="cursor-pointer">
@@ -1300,267 +125,245 @@
       </div>
     </header>
 
-    <!-- App Root -->
+    <!-- ======================================================================= -->
+    <!--                               App Content                               -->
+    <!-- ======================================================================= -->
     <div class="flex-1 overflow-auto">
-      <!-- 创建摘要页面：任何状态下都可见 -->
-      <div v-if="currentView === 'create' && !isShareView" class="max-w-4xl mx-auto p-6 fade-in mobile-container">
-        <!-- Input Card -->
-        <div class="tech-gradient border border-gray-700 rounded-xl p-8 shadow-2xl mb-8 glow-effect mobile-input-card">
-          <div class="text-center mb-6">
-            <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 mb-2">
-              reInvent Insights </h2>
-            <p class="text-gray-400">输入 YouTube 链接，获得深度解读</p>
-          </div>
-
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium mb-2 text-cyan-400">YouTube 视频链接</label>
-              <input v-model="url" @keyup.enter="startSummarize" :disabled="loading" type="url" placeholder="https://www.youtube.com/watch?v=..."
-                class="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent disabled:opacity-50 transition-all" />
+      <!-- ##### Logged-in User View ##### -->
+      <div v-if="isAuthenticated">
+        <!-- Create View -->
+        <div v-if="currentView === 'create' && !isShareView" class="max-w-4xl mx-auto p-6 fade-in mobile-container">
+          <!-- Input Card -->
+          <div class="tech-gradient border border-gray-700 rounded-xl p-8 shadow-2xl mb-8 glow-effect mobile-input-card">
+            <div class="text-center mb-6">
+              <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 mb-2">
+                reInvent Insights </h2>
+              <p class="text-gray-400">输入 YouTube 链接，获得深度解读</p>
             </div>
 
-            <button :disabled="loading || !url || !isValidYoutubeUrl(url)" @click="startSummarize"
-              class="w-full tech-btn tech-btn-secondary">
-              <span v-if="!loading" class="flex items-center justify-center">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z">
-                  </path>
-                </svg>
-                开始分析
-              </span>
-              <span v-else class="flex items-center justify-center">
-                <svg class="w-5 h-5 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                  </path>
-                </svg>
-                AI 分析中...
-              </span>
-          </button>
-          </div>
-        </div>
-        
-        <!-- Progress & Logs -->
-        <div v-if="loading || logs.length"
-          class="bg-gray-900/50 border border-gray-700 rounded-xl p-6 shadow-xl mb-8 backdrop-blur-sm mobile-progress">
-          <!-- 进度条 -->
-          <div class="w-full h-2 bg-gray-800 rounded-full overflow-hidden mb-4">
-            <div class="h-full bg-gradient-to-r from-cyan-500 to-blue-600 transition-all duration-300" :style="{ width: progressPercent + '%' }"></div>
-          </div>
-          <h3 class="text-xl font-semibold mb-4 text-cyan-400 flex items-center">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-            处理进度
-          </h3>
-          <div class="space-y-2">
-            <div v-for="(log, index) in logs" :key="index" class="flex items-center text-sm slide-in">
-              <div class="w-2 h-2 bg-green-500 rounded-full mr-3 flex-shrink-0"></div>
-              <span class="text-gray-300">{{ log }}</span>
-            </div>
-            <div v-if="loading && currentStep < totalSteps" class="flex items-center text-sm text-gray-400">
-              <div class="w-2 h-2 bg-cyan-500 rounded-full mr-3 animate-pulse flex-shrink-0"></div>
-              <span>AI 正在处理，请稍候...</span>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium mb-2 text-cyan-400">YouTube 视频链接</label>
+                <input v-model="url" @keyup.enter="startSummarize" :disabled="loading" type="url" placeholder="https://www.youtube.com/watch?v=..."
+                  class="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent disabled:opacity-50 transition-all" />
+              </div>
+
+              <button :disabled="loading || !url || !isValidYoutubeUrl(url)" @click="startSummarize"
+                class="w-full tech-btn tech-btn-secondary">
+                <span v-if="!loading" class="flex items-center justify-center">
+                  <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z">
+                    </path>
+                  </svg>
+                  开始分析
+                </span>
+                <span v-else class="flex items-center justify-center">
+                  <svg class="w-5 h-5 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                  </svg>
+                  AI 分析中...
+                </span>
+            </button>
             </div>
           </div>
-        </div>
-
-        <!-- Result -->
-        <div v-if="summary" class="fade-in">
-          <div class="bg-gray-900/30 border border-gray-700 rounded-xl p-8 shadow-2xl backdrop-blur-sm">
-            <div class="flex items-center justify-between mb-6">
-              <h2 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
-                {{ title }}
-              </h2>
-              <button @click="viewSummary(title, summary)"
-                class="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-lg text-white font-medium transition-all duration-200 transform hover:scale-105">
-                全屏阅读
-              </button>
-            </div>
-            <div v-html="rendered" class="prose-tech"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 笔记库页面 -->
-      <div v-if="currentView === 'library' && !isShareView" class="max-w-6xl mx-auto p-6 fade-in mobile-container">
-        <div class="mb-8">
-          <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 mb-2">
-            笔记库
-          </h2>
-          <p class="text-gray-400">浏览深度分析笔记</p>
-        </div>
-
-        <!-- 加载状态 -->
-        <div v-if="libraryLoading" class="flex items-center justify-center py-12">
-          <div class="text-center">
-            <svg class="w-8 h-8 animate-spin text-cyan-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-              </path>
-            </svg>
-            <p class="text-gray-400">加载笔记中...</p>
-          </div>
-        </div>
-
-        <!-- 分类展示笔记列表 -->
-        <div v-else-if="summaries.length > 0" class="space-y-12">
           
-          <!-- AWS re:Invent 专区 -->
-          <div v-if="categorizedSummaries.reinvent.length > 0" class="section-container">
-            <div class="flex items-center mb-6 section-header">
-              <div class="flex items-center">
-                <div class="w-3 h-3 bg-gradient-to-r from-orange-500 to-red-600 rounded-full mr-3 glow-effect"></div>
-                <h3 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">
-                  AWS re:Invent 深度解读
-              </h3>
+          <!-- Progress & Logs -->
+          <div v-if="loading || logs.length"
+            class="bg-gray-900/50 border border-gray-700 rounded-xl p-6 shadow-xl mb-8 backdrop-blur-sm mobile-progress">
+            <!-- 进度条 -->
+            <div class="w-full h-2 bg-gray-800 rounded-full overflow-hidden mb-4">
+              <div class="h-full bg-gradient-to-r from-cyan-500 to-blue-600 transition-all duration-300" :style="{ width: progressPercent + '%' }"></div>
             </div>
-              <div class="ml-auto flex items-center text-sm text-gray-500">
-                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                {{ categorizedSummaries.reinvent.length }} 篇
+            <h3 class="text-xl font-semibold mb-4 text-cyan-400 flex items-center">
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              处理进度
+            </h3>
+            <div class="space-y-2">
+              <div v-for="(log, index) in logs" :key="index" class="flex items-center text-sm slide-in">
+                <div class="w-2 h-2 bg-green-500 rounded-full mr-3 flex-shrink-0"></div>
+                <span class="text-gray-300">{{ log }}</span>
               </div>
-            </div>
-            
-            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mobile-grid">
-              <div v-for="summary in categorizedSummaries.reinvent" :key="summary.filename" @click="loadSummary(summary.filename)"
-                class="summary-card tech-gradient border border-orange-700/50 rounded-xl p-6 cursor-pointer hover:border-orange-500 transition-all duration-200 glow-effect group flex flex-col h-56 reinvent-card relative">
-                
-                <!-- 中文标题区域 - 使用全宽 -->
-                <div class="mb-3 chinese-title-container">
-                  <h3 class="text-base font-bold leading-snug line-clamp-3 chinese-title text-orange-100" 
-                      :title="summary.title_cn">
-                    {{ summary.title_cn }}
-                  </h3>
-                </div>
-                
-                <!-- 英文标题 -->
-                <div class="flex-1 mb-2 english-title-area">
-                  <p class="text-xs text-orange-300/70 group-hover:text-orange-300 font-normal leading-relaxed break-words w-full english-subtitle" 
-                     :title="summary.title_en">
-                    {{ summary.title_en }}
-                  </p>
-                </div>
-                
-                <!-- 元信息区域 -->
-                <div class="metadata-area border-orange-700/30 text-xs text-orange-400/80">
-                  <div class="flex items-center space-x-3">
-                    <div class="flex items-center">
-                      <svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
-                        </path>
-                      </svg>
-                      <span>{{ formatWordCount(summary.size) }}</span>
-                    </div>
-                    <div class="flex items-center">
-                      <svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                      </svg>
-                      <span>{{ calculateReadTime(summary.size) }}</span>
-                    </div>
-                  </div>
-                  
-                  <!-- 类型标签移到元数据区右侧 -->
-                  <div class="metadata-badge">
-                    reinvent
-                  </div>
-                </div>
+              <div v-if="loading && currentStep < totalSteps" class="flex items-center text-sm text-gray-400">
+                <div class="w-2 h-2 bg-cyan-500 rounded-full mr-3 animate-pulse flex-shrink-0"></div>
+                <span>AI 正在处理，请稍候...</span>
               </div>
             </div>
           </div>
 
-          <!-- 其他精选内容 -->
-          <div v-if="categorizedSummaries.other.length > 0" class="section-container">
-            <div class="flex items-center mb-6 section-header">
-              <div class="flex items-center">
-                <div class="w-3 h-3 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full mr-3 glow-effect"></div>
-                <h3 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
-                  其他精选内容
-                </h3>
+          <!-- Result -->
+          <div v-if="summary" class="fade-in">
+            <div class="bg-gray-900/30 border border-gray-700 rounded-xl p-8 shadow-2xl backdrop-blur-sm">
+              <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+                  {{ title }}
+                </h2>
+                <button @click="viewSummary(title, summary)"
+                  class="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-lg text-white font-medium transition-all duration-200 transform hover:scale-105">
+                  全屏阅读
+                </button>
               </div>
-              <div class="ml-auto flex items-center text-sm text-gray-500">
-                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                </svg>
-                {{ categorizedSummaries.other.length }} 篇
-              </div>
-            </div>
-            
-            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mobile-grid">
-              <div v-for="summary in categorizedSummaries.other" :key="summary.filename" @click="loadSummary(summary.filename)"
-                class="summary-card tech-gradient border border-gray-700 rounded-xl p-6 cursor-pointer hover:border-cyan-500 transition-all duration-200 glow-effect group flex flex-col h-56 other-card relative">
-                
-                <!-- 中文标题区域 - 使用全宽 -->
-                <div class="mb-3 chinese-title-container">
-                  <h3 class="text-base font-bold leading-snug line-clamp-3 chinese-title text-slate-100"
-                      :title="summary.title_cn">
-                    {{ summary.title_cn }}
-                  </h3>
-                </div>
-                
-                <!-- 英文标题 -->
-                <div class="flex-1 mb-2 english-title-area">
-                  <p class="text-xs text-slate-400 group-hover:text-slate-300 font-normal leading-relaxed break-words w-full english-subtitle"
-                     :title="summary.title_en">
-                    {{ summary.title_en }}
-                  </p>
-                </div>
-
-                <!-- 元信息区域 -->
-                <div class="metadata-area border-gray-700/50 text-xs text-gray-400">
-                  <div class="flex items-center space-x-3">
-                    <div class="flex items-center">
-                      <svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
-                        </path>
-                      </svg>
-                      <span>{{ formatWordCount(summary.size) }}</span>
-                    </div>
-                    <div class="flex items-center">
-                      <svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                      </svg>
-                      <span>{{ calculateReadTime(summary.size) }}</span>
-                    </div>
-                  </div>
-                  
-                  <!-- 类型标签 -->
-                  <div class="metadata-badge">
-                    精选
-                  </div>
-                </div>
-              </div>
+              <div v-html="rendered" class="prose-tech"></div>
             </div>
           </div>
         </div>
+        <!-- Library View -->
+        <div v-if="currentView === 'library' && !isShareView" class="max-w-6xl mx-auto p-6 fade-in mobile-container">
+          <div class="mb-8">
+            <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 mb-2">笔记库</h2>
+            <p class="text-gray-400">浏览深度分析笔记</p>
+          </div>
+          <div v-if="libraryLoading" class="flex items-center justify-center py-12">
+            <div class="text-center">
+              <svg class="w-8 h-8 animate-spin text-cyan-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
+              </svg>
+              <p class="text-gray-400">加载笔记中...</p>
+            </div>
+          </div>
+          <div v-else-if="summaries.length > 0" class="space-y-12">
+            <!-- REINVENT CARDS -->
+            <div v-if="categorizedSummaries.reinvent.length > 0" class="section-container">
+              <div class="flex items-center mb-6 section-header">
+                <div class="flex items-center"><div class="w-3 h-3 bg-gradient-to-r from-orange-500 to-red-600 rounded-full mr-3 glow-effect"></div><h3 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">AWS re:Invent 深度解读</h3></div>
+                <div class="ml-auto flex items-center text-sm text-gray-500">{{ categorizedSummaries.reinvent.length }} 篇</div>
+              </div>
+              <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mobile-grid">
+                <div v-for="summary in categorizedSummaries.reinvent" :key="summary.filename" @click="loadSummary(summary.filename)" class="summary-card tech-gradient border border-orange-700/50 rounded-xl p-6 cursor-pointer hover:border-orange-500 transition-all duration-200 glow-effect group flex flex-col h-56 reinvent-card relative">
+                  <div class="mb-3 chinese-title-container"><h3 class="text-base font-bold leading-snug line-clamp-3 chinese-title text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 group-hover:text-white group-hover:bg-none" :title="summary.title_cn">{{ summary.title_cn }}</h3></div>
+                  <div class="flex-1 mb-2 english-title-area"><p class="text-xs text-orange-400/90 group-hover:text-white/90 transition-colors font-normal leading-relaxed break-words w-full english-subtitle" :title="summary.title_en">{{ summary.title_en }}</p></div>
+                  <div class="metadata-area border-orange-700/30 text-xs text-orange-400/80 group-hover:text-white/80 transition-colors"><div class="flex items-center space-x-3"><div class="flex items-center"><svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span>{{ formatWordCount(summary.size) }}</span></div><div class="flex items-center"><svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>{{ calculateReadTime(summary.size) }}</span></div></div><div class="metadata-badge">reinvent</div></div>
+                </div>
+              </div>
+            </div>
+            <!-- OTHER CARDS -->
+            <div v-if="categorizedSummaries.other.length > 0" class="section-container">
+              <div class="flex items-center mb-6 section-header">
+                <div class="flex items-center"><div class="w-3 h-3 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full mr-3 glow-effect"></div><h3 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">其他精选内容</h3></div>
+                <div class="ml-auto flex items-center text-sm text-gray-500">{{ categorizedSummaries.other.length }} 篇</div>
+              </div>
+              <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mobile-grid">
+                <div v-for="summary in categorizedSummaries.other" :key="summary.filename" @click="loadSummary(summary.filename)" class="summary-card tech-gradient border border-gray-700 rounded-xl p-6 cursor-pointer hover:border-cyan-500 transition-all duration-200 glow-effect group flex flex-col h-56 other-card relative">
+                  <div class="mb-3 chinese-title-container"><h3 class="text-base font-bold leading-snug line-clamp-3 chinese-title text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 group-hover:text-white group-hover:bg-none" :title="summary.title_cn">{{ summary.title_cn }}</h3></div>
+                  <div class="flex-1 mb-2 english-title-area"><p class="text-xs text-cyan-400/90 group-hover:text-white/90 transition-colors font-normal leading-relaxed break-words w-full english-subtitle" :title="summary.title_en">{{ summary.title_en }}</p></div>
+                  <div class="metadata-area border-gray-700/50 text-xs text-cyan-500/80 group-hover:text-white/80 transition-colors"><div class="flex items-center space-x-3"><div class="flex items-center"><svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span>{{ formatWordCount(summary.size) }}</span></div><div class="flex items-center"><svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>{{ calculateReadTime(summary.size) }}</span></div></div><div class="metadata-badge">精选</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-else class="text-center py-12">
+            <h3 class="text-xl font-semibold text-gray-300">笔记库为空</h3>
+            <p class="text-gray-500 mt-2">创建您的第一篇深度解读笔记吧！</p>
+          </div>
+        </div>
 
-        <!-- 空状态 -->
-        <div v-else class="text-center py-12">
-          <svg class="w-12 h-12 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
-            </path>
-          </svg>
-          <h3 class="text-xl font-semibold text-gray-300">笔记库为空</h3>
-          <p class="text-gray-500 mt-2">创建您的第一篇深度解读笔记吧！</p>
+        <!-- 阅读视图 -->
+        <div v-if="currentView === 'read'" class="h-full fade-in mobile-reading-content">
+          <div v-if="readingError" class="flex items-center justify-center h-full text-red-400">
+            {{ readingError }}
+          </div>
+          <div v-else class="flex h-full mobile-reading">
+            <!-- 目录侧边栏 -->
+            <div v-if="showToc" :style="{ width: tocWidth + 'px' }" class="relative toc-sidebar flex-shrink-0 h-full border-r border-gray-800 mobile-hide-toc">
+              <div class="sticky top-0 p-6 h-full">
+                <div class="toc">
+                  <h3 class="text-lg font-bold text-cyan-400">目录</h3>
+                  <div v-html="tocHtml" @click="handleTocClick" class="mt-4"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 拖拽分隔条 -->
+            <div v-if="showToc" class="dragbar h-full" @mousedown="initDrag"></div>
+
+            <!-- 文章内容 -->
+            <div class="flex-1 min-w-0 h-full overflow-y-auto" :class="{ 'no-toc-centered': !showToc }">
+              <div class="max-w-none px-4 py-8">
+                <div v-if="readingContent" class="tech-gradient border border-gray-700 rounded-xl p-10 shadow-2xl backdrop-blur-sm">
+                  <div v-html="readingContent" class="prose-tech max-w-none"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- 阅读视图 -->
+      <!-- ##### Public Visitor View ##### -->
+      <div v-else-if="!isShareView">
+        <div class="relative text-white text-center py-20 px-6 overflow-hidden">
+           <div class="absolute inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm"></div>
+           <div class="absolute inset-0 z-0 opacity-20" style="background-image: url('https://www.transparenttextures.com/patterns/cubes.png'), linear-gradient(to right bottom, #051937, #004d7a, #008793, #00bf72, #a8eb12); background-size: auto, cover;"></div>
+           <div class="relative z-10">
+              <h1 class="text-5xl md:text-6xl font-extrabold mb-4 leading-tight"><span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">与顶尖架构师</span><span class="block md:inline">思维同步</span></h1>
+              <p class="text-xl md:text-2xl max-w-3xl mx-auto text-gray-300 mb-8">洞悉架构取舍，解码设计精髓。行业最前沿思考,云计算必读洞见。</p>
+              <button @click="showLogin = true" class="tech-btn tech-btn-primary text-lg px-8 py-4">即刻登录，开启洞察之旅</button>
+            </div>
+        </div>
+        <div class="max-w-6xl mx-auto p-6 mobile-container">
+            <div class="mb-8 text-center"><h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 mb-2"></h2></div>
+            <div v-if="libraryLoading" class="flex items-center justify-center py-12">
+                <div class="text-center">
+                    <svg class="w-8 h-8 animate-spin text-cyan-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <p class="text-gray-400">加载洞察中...</p>
+                </div>
+            </div>
+            <div v-else-if="summaries.length > 0" class="space-y-12">
+                <!-- REINVENT CARDS -->
+                <div v-if="categorizedSummaries.reinvent.length > 0" class="section-container">
+                    <div class="flex items-center mb-6 section-header">
+                        <div class="flex items-center"><div class="w-3 h-3 bg-gradient-to-r from-orange-500 to-red-600 rounded-full mr-3 glow-effect"></div><h3 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">AWS re:Invent 深度解读</h3></div>
+                        <div class="ml-auto flex items-center text-sm text-gray-500">{{ categorizedSummaries.reinvent.length }} 篇</div>
+                    </div>
+                    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mobile-grid">
+                        <div v-for="summary in categorizedSummaries.reinvent" :key="summary.filename" @click="loadSummary(summary.filename)" class="summary-card tech-gradient border border-orange-700/50 rounded-xl p-6 cursor-pointer hover:border-orange-500 transition-all duration-200 glow-effect group flex flex-col h-56 reinvent-card relative">
+                            <div class="mb-3 chinese-title-container"><h3 class="text-base font-bold leading-snug line-clamp-3 chinese-title text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 group-hover:text-white group-hover:bg-none" :title="summary.title_cn">{{ summary.title_cn }}</h3></div>
+                            <div class="flex-1 mb-2 english-title-area"><p class="text-xs text-orange-400/90 group-hover:text-white/90 transition-colors font-normal leading-relaxed break-words w-full english-subtitle" :title="summary.title_en">{{ summary.title_en }}</p></div>
+                            <div class="metadata-area border-orange-700/30 text-xs text-orange-400/80 group-hover:text-white/80 transition-colors"><div class="flex items-center space-x-3"><div class="flex items-center"><svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span>{{ formatWordCount(summary.size) }}</span></div><div class="flex items-center"><svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>{{ calculateReadTime(summary.size) }}</span></div></div><div class="metadata-badge">reinvent</div></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- OTHER CARDS -->
+                <div v-if="categorizedSummaries.other.length > 0" class="section-container">
+                    <div class="flex items-center mb-6 section-header">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full mr-3 glow-effect"></div>
+                            <h3 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">其他精选内容</h3>
+                        </div>
+                        <div class="ml-auto flex items-center text-sm text-gray-500">{{ categorizedSummaries.other.length }} 篇</div>
+                    </div>
+                    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mobile-grid">
+                        <div v-for="summary in categorizedSummaries.other" :key="summary.filename" @click="loadSummary(summary.filename)" class="summary-card tech-gradient border border-gray-700 rounded-xl p-6 cursor-pointer hover:border-cyan-500 transition-all duration-200 glow-effect group flex flex-col h-56 other-card relative">
+                            <div class="mb-3 chinese-title-container"><h3 class="text-base font-bold leading-snug line-clamp-3 chinese-title text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 group-hover:text-white group-hover:bg-none" :title="summary.title_cn">{{ summary.title_cn }}</h3></div>
+                            <div class="flex-1 mb-2 english-title-area"><p class="text-xs text-cyan-400/90 group-hover:text-white/90 transition-colors font-normal leading-relaxed break-words w-full english-subtitle" :title="summary.title_en">{{ summary.title_en }}</p></div>
+                            <div class="metadata-area border-gray-700/50 text-xs text-cyan-500/80 group-hover:text-white/80 transition-colors"><div class="flex items-center space-x-3"><div class="flex items-center"><svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span>{{ formatWordCount(summary.size) }}</span></div><div class="flex items-center"><svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>{{ calculateReadTime(summary.size) }}</span></div></div><div class="metadata-badge">精选</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div v-else class="text-center py-12">
+                <h3 class="text-xl font-semibold text-gray-300">暂无公开内容</h3><p class="text-gray-500 mt-2">敬请期待更多深度解读！</p>
+            </div>
+        </div>
+      </div>
+      
+      <!-- ##### Universal Reading View ##### -->
       <div v-if="currentView === 'read'" class="h-full fade-in mobile-reading-content">
         <div v-if="readingError" class="flex items-center justify-center h-full text-red-400">
           {{ readingError }}
         </div>
         <div v-else class="flex h-full mobile-reading">
-          <!-- 目录侧边栏 -->
+          <!-- TOC Sidebar -->
           <div v-if="showToc" :style="{ width: tocWidth + 'px' }" class="relative toc-sidebar flex-shrink-0 h-full border-r border-gray-800 mobile-hide-toc">
             <div class="sticky top-0 p-6 h-full">
               <div class="toc">
@@ -1569,11 +372,9 @@
               </div>
             </div>
           </div>
-
-          <!-- 拖拽分隔条 -->
+          <!-- Drag Bar -->
           <div v-if="showToc" class="dragbar h-full" @mousedown="initDrag"></div>
-
-          <!-- 文章内容 -->
+          <!-- Article -->
           <div class="flex-1 min-w-0 h-full overflow-y-auto" :class="{ 'no-toc-centered': !showToc }">
             <div class="max-w-none px-4 py-8">
               <div v-if="readingContent" class="tech-gradient border border-gray-700 rounded-xl p-10 shadow-2xl backdrop-blur-sm">
@@ -1585,648 +386,43 @@
       </div>
     </div>
 
-    <!-- 登录模态框 -->
+    <!-- ======================================================================= -->
+    <!--                           Modals and Toasts                             -->
+    <!-- ======================================================================= -->
     <transition name="fade">
-      <div v-if="showLogin" class="modal inset-0 fixed bg-black/70 z-50 flex items-center justify-center">
-        <div class="tech-gradient border border-gray-700 rounded-xl p-8 shadow-2xl glow-effect relative max-w-sm w-full m-4">
-          <button @click="showLogin = false" class="absolute top-4 right-4 text-gray-500 hover:text-white">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
-          <h2 class="text-2xl font-bold text-center text-cyan-400 mb-6">管理员登录</h2>
-          <form @submit.prevent="login" class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium mb-2 text-cyan-400">用户名</label>
-              <input v-model="loginUsername" type="text" required
-                class="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all" />
+        <div v-if="showLogin" class="modal inset-0 fixed bg-black/70 z-50 flex items-center justify-center">
+            <div class="tech-gradient border border-gray-700 rounded-xl p-8 shadow-2xl glow-effect relative max-w-sm w-full m-4">
+              <button @click="showLogin = false" class="absolute top-4 right-4 text-gray-500 hover:text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+              <h2 class="text-2xl font-bold text-center text-cyan-400 mb-6">用户登录</h2>
+              <form @submit.prevent="login" class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium mb-2 text-cyan-400">用户名</label>
+                  <input v-model="loginUsername" type="text" required
+                    class="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-2 text-cyan-400">密码</label>
+                  <input v-model="loginPassword" type="password" required
+                    class="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all" />
+                </div>
+                <button type="submit" class="w-full tech-btn tech-btn-primary">
+                  登录
+                </button>
+              </form>
             </div>
-            <div>
-              <label class="block text-sm font-medium mb-2 text-cyan-400">密码</label>
-              <input v-model="loginPassword" type="password" required
-                class="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all" />
-            </div>
-            <button type="submit" class="w-full tech-btn tech-btn-primary">
-              登录
-            </button>
-          </form>
         </div>
-      </div>
     </transition>
-    
-    <!-- Toast 提示 -->
     <transition name="fade">
-        <div v-if="toast.show" 
-             :class="{
-                 'border-green-500 text-green-300': toast.type === 'success',
-                 'border-red-500 text-red-300': toast.type === 'danger',
-                 'border-yellow-500 text-yellow-300': toast.type === 'warning',
-             }"
-             class="fixed bottom-5 right-5 tech-gradient border rounded-lg px-6 py-4 shadow-2xl z-50 mobile-toast">
+        <div v-if="toast.show" :class="{ '...': toast.type === '...'}" class="fixed ...">
             {{ toast.message }}
         </div>
     </transition>
   </div>
-
-  <script>
-    const { createApp, ref, onMounted, computed, nextTick, watch } = Vue;
-
-    // 配置 marked 和 highlight.js
-    marked.setOptions({
-      highlight: function (code, lang) {
-        if (lang && hljs.getLanguage(lang)) {
-          try {
-            return hljs.highlight(code, { language: lang }).value;
-          } catch (__) { }
-        }
-        return hljs.highlightAuto(code).value;
-      },
-      breaks: true,
-      gfm: true
-    });
-
-    createApp({
-      setup() {
-        // --- 状态管理 ---
-        const url = ref('');
-        const summary = ref('');
-        const title = ref('');
-        const rendered = ref('');
-        const logs = ref([]);
-        const loading = ref(false);
-        const progressPercent = ref(0);
-        const currentStep = ref(0);
-        const totalSteps = 7; // 根据后端逻辑调整
-
-        // 笔记库状态
-        const summaries = ref([]);
-        const libraryLoading = ref(false);
-
-        // 阅读视图状态
-        const readingContent = ref('');
-        const documentTitle = ref('');
-        const readingError = ref('');
-        const showToc = ref(true);
-        const tocHtml = ref('');
-        const tocWidth = ref(416); // 26rem = 416px
-        const readingFilename = ref(''); // 新增：当前阅读的文件名
-
-        // 视图控制
-        const currentView = ref('library'); // 默认视图 'create', 'library', 'read'
-        const isShareView = ref(false); // 新增：是否为分享视图
-        
-        // 认证状态
-        const isAuthenticated = ref(false);
-        const showLogin = ref(false);
-        const loginUsername = ref('');
-        const loginPassword = ref('');
-
-        // 分享状态
-        const shareLoading = ref(false);
-        
-        // Toast 状态
-        const toast = ref({
-            show: false,
-            message: '',
-            type: 'success' // 'success', 'danger', 'warning'
-        });
-
-        // --- 路由处理 ---
-        const handleRouting = () => {
-          const path = window.location.pathname;
-          const params = new URLSearchParams(window.location.search);
-          const shareHash = params.get('share');
-
-          if (shareHash) {
-            isShareView.value = true;
-            loadSharedSummary(shareHash);
-          } else {
-            isShareView.value = false;
-            const docMatch = path.match(/\/documents\/(.+)/);
-
-            if (docMatch) {
-              const filename = decodeURIComponent(docMatch[1]);
-              loadSummary(filename, false); // false: 不要推入历史记录，因为我们已经在这个URL上
-            } else {
-              // 如果不是文档URL，则显示笔记库
-              currentView.value = 'library';
-              if (isAuthenticated.value && summaries.value.length === 0) {
-                loadSummaries();
-              }
-            }
-          }
-        };
-        
-        // 监听浏览器前进后退
-        window.addEventListener('popstate', handleRouting);
-
-
-        // --- 认证 ---
-        const login = async () => {
-          try {
-            const res = await axios.post('/login', {
-              username: loginUsername.value,
-              password: loginPassword.value
-            });
-            const token = res.data.token;
-            localStorage.setItem('authToken', token);
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            isAuthenticated.value = true;
-            showLogin.value = false;
-            showToast('登录成功', 'success');
-            // 登录后，如果当前在笔记库视图，则加载笔记
-            if(currentView.value === 'library'){
-                loadSummaries();
-            }
-          } catch (error) {
-            console.error('登录失败:', error);
-            showToast(error.response?.data?.detail || '登录失败', 'danger');
-          }
-        };
-
-        const logout = () => {
-          localStorage.removeItem('authToken');
-          delete axios.defaults.headers.common['Authorization'];
-          isAuthenticated.value = false;
-          currentView.value = 'library'; // 退出后返回笔记库
-          summaries.value = []; // 清空笔记库数据
-          showLogin.value = true; // 显示登录框
-          showToast('会话已过期，请重新登录', 'warning');
-        };
-
-        const checkAuth = () => {
-          const token = localStorage.getItem('authToken');
-          if (token) {
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            isAuthenticated.value = true;
-          } else {
-            isAuthenticated.value = false;
-          }
-        };
-
-        // --- Axios Interceptor for 401 Handling ---
-        axios.interceptors.response.use(
-          response => response,
-          error => {
-            if (error.response && error.response.status === 401) {
-              // 检查这是否是登录请求本身失败，避免无限循环
-              if (error.config.url !== '/login') {
-                logout();
-              }
-            }
-            return Promise.reject(error);
-          }
-        );
-
-        // --- UI & 交互 ---
-        const showToast = (message, type = 'success', duration = 3000) => {
-          toast.value = { show: true, message, type };
-          setTimeout(() => {
-            toast.value.show = false;
-          }, duration);
-        };
-        
-        const goHome = () => {
-          if (isShareView.value) {
-            window.location.href = '/';
-            return;
-          }
-          history.pushState(null, '', '/');
-          currentView.value = 'library';
-          // 清理阅读视图状态
-          readingContent.value = '';
-          documentTitle.value = '';
-          readingFilename.value = '';
-          tocHtml.value = '';
-        };
-
-        const goBackToLibrary = () => {
-          history.pushState(null, '', '/');
-          currentView.value = 'library';
-          // 清理阅读视图状态
-          readingContent.value = '';
-          documentTitle.value = '';
-          readingFilename.value = '';
-          tocHtml.value = '';
-        };
-
-        const toggleToc = () => {
-          showToc.value = !showToc.value;
-        };
-
-        // 处理目录点击
-        const handleTocClick = (event) => {
-          const target = event.target;
-          if (target.tagName.toLowerCase() === 'a' && target.dataset.target) {
-            event.preventDefault();
-            const id = target.dataset.target;
-            const el = document.getElementById(id);
-            if (el) {
-              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-          }
-        };
-
-        // 拖拽侧栏分隔条
-        let isDragging = false;
-
-        const initDrag = (e) => {
-          isDragging = true;
-          document.addEventListener('mousemove', doDrag);
-          document.addEventListener('mouseup', stopDrag);
-          e.preventDefault();
-        };
-
-        const doDrag = (e) => {
-          if (!isDragging) return;
-          const newWidth = Math.max(300, Math.min(800, e.clientX));
-          tocWidth.value = newWidth;
-        };
-
-        const stopDrag = () => {
-          isDragging = false;
-          document.removeEventListener('mousemove', doDrag);
-          document.removeEventListener('mouseup', stopDrag);
-        };
-        
-        // ---------- 动态调整TOC宽度 ----------
-        const adjustTocWidth = () => {
-          const tocElement = document.querySelector('.toc-sidebar .toc'); // Target specifically within the sidebar
-          if (!tocElement) return;
-
-          const links = tocElement.querySelectorAll('a');
-          if (!links || links.length === 0) return;
-
-          let maxWidth = 0;
-          links.forEach(link => {
-            if (link.scrollWidth > maxWidth) {
-              maxWidth = link.scrollWidth;
-            }
-          });
-
-          if (maxWidth > 0) {
-            const newTocWidth = Math.min(maxWidth + 60, Math.max(300, window.innerWidth * 0.5)); 
-            tocWidth.value = newTocWidth;
-          }
-        };
-
-        // ---------- 渲染 Markdown 并生成目录 ----------
-        const slugify = (str) => {
-          return str.toLowerCase()
-            .replace(/[^\w\u4e00-\u9fa5\s-]/g, '')
-            .replace(/\s+/g, '-')
-            .replace(/-+/g, '-')
-            .replace(/^-|-$/g, '');
-        };
-        
-        const renderMarkdownWithToc = (markdown) => {
-          const rawHtml = marked.parse(markdown);
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(rawHtml, 'text/html');
-          
-          // 首先，确保所有标题都有ID，以便能够链接到它们
-          const allHeadings = [...doc.body.querySelectorAll('h1,h2,h3,h4,h5,h6')];
-          allHeadings.forEach(h => {
-            const text = h.textContent.replace(/\s*\(#.+\)$/g, '').trim();
-            h.id = slugify(text);
-          });
-          
-          // 现在，仅使用 H3 元素构建目录
-          const h3Headings = [...doc.body.querySelectorAll('h3')];
-          
-          if (h3Headings.length > 0) {
-            let tocHtmlContent = '<ul>';
-            h3Headings.forEach(h => {
-                const text = h.textContent.replace(/\s*\(#.+\)$/g, '').trim();
-                const id = h.id; // 使用我们刚刚分配的ID
-                tocHtmlContent += `<li><a data-target="${id}">${text}</a></li>`;
-            });
-            tocHtmlContent += '</ul>';
-            return { html: doc.body.innerHTML, tocHtml: tocHtmlContent };
-          }
-          
-          // 如果没有找到H3，则返回不带TOC的内容
-          return { html: doc.body.innerHTML, tocHtml: '' };
-        };
-
-
-        // --- 主要功能方法 ---
-
-        const isValidYoutubeUrl = (str) => {
-          if (!str || typeof str !== 'string') return false;
-          const url = str.trim();
-          const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+$/;
-          return youtubeRegex.test(url);
-        };
-
-        const clearActiveTask = () => {
-            localStorage.removeItem('active_task_id');
-            localStorage.removeItem('active_task_url');
-        };
-
-        const startSummarize = async () => {
-          if (loading.value || !url.value) return;
-
-          logs.value = [];
-          summary.value = '';
-          title.value = '';
-          rendered.value = '';
-          loading.value = true;
-          progressPercent.value = 0;
-          currentStep.value = 0;
-
-          try {
-            const res = await axios.post('/summarize', { url: url.value });
-            const taskId = res.data.task_id;
-            
-            // --- 新增：保存任务状态到localStorage ---
-            localStorage.setItem('active_task_id', taskId);
-            localStorage.setItem('active_task_url', url.value);
-            
-            connectWebSocket(taskId);
-          } catch (error) {
-            console.error('任务创建失败:', error);
-            loading.value = false;
-            logs.value.push(`错误: ${error.response?.data?.detail || error.message}`);
-            clearActiveTask(); // 创建失败时清理
-          }
-        };
-        
-        const connectWebSocket = (taskId) => {
-            const wsUrl = `ws://${window.location.host}/ws/${taskId}`;
-            const ws = new WebSocket(wsUrl);
-
-            ws.onopen = () => {
-                loading.value = true;
-                logs.value.push('已连接到分析服务...');
-            };
-
-            ws.onmessage = (event) => {
-              const data = JSON.parse(event.data);
-              
-              if (data.type === 'result') {
-                title.value = data.title;
-                summary.value = data.summary;
-                rendered.value = marked.parse(data.summary);
-                
-                // --- 关键修改: 收到结果后立即解除加载状态 ---
-                loading.value = false;
-                progressPercent.value = 100;
-                
-                ws.close();
-                clearActiveTask();
-              } else {
-                logs.value.push(data.message);
-                currentStep.value += 1;
-                progressPercent.value = Math.min(99, (currentStep.value / totalSteps) * 100);
-              }
-            };
-            ws.onerror = (event) => {
-              console.error("WebSocket error:", event);
-              logs.value.push("错误: WebSocket 连接中断。");
-              loading.value = false;
-              // 错误发生时也清理，避免卡住
-              clearActiveTask();
-            };
-            ws.onclose = () => {
-              loading.value = false;
-              progressPercent.value = 100;
-              console.log("WebSocket connection closed or task finished.");
-              // 正常关闭（任务完成）时，localStorage已在onmessage中清理
-            };
-        };
-
-        const loadSummaries = async () => {
-          libraryLoading.value = true;
-          try {
-            const res = await axios.get('/summaries');
-            summaries.value = res.data.summaries;
-          } catch (err) {
-            console.error('加载摘要列表失败:', err);
-            if (err.response && err.response.status === 401) {
-              showToast('请先登录以浏览笔记库', 'warning');
-              showLogin.value = true;
-            }
-          } finally {
-            libraryLoading.value = false;
-          }
-        };
-
-        const loadSummary = async (filename, pushState = true) => {
-          try {
-            readingError.value = '';
-            // URL编码文件名以处理特殊字符
-            const encodedFilename = encodeURIComponent(filename);
-            const res = await axios.get(`/summaries/${encodedFilename}`);
-            
-            if (pushState) {
-              history.pushState({ filename }, '', `/documents/${encodedFilename}`);
-            }
-            viewSummary(res.data.title, res.data.content, filename);
-          } catch (err) {
-            console.error('加载摘要失败:', err);
-            readingError.value = err.response?.data?.detail || '加载摘要失败';
-            goBackToLibrary(); // 失败时返回库
-          }
-        };
-        
-        const viewSummary = (title, content, filename) => {
-          documentTitle.value = title;
-          readingFilename.value = filename; // 跟踪当前文件名
-          
-          const { html, tocHtml: tocString } = renderMarkdownWithToc(content);
-          readingContent.value = html;
-          tocHtml.value = tocString;
-          currentView.value = 'read';
-
-          nextTick(() => {
-            // Re-run highlight.js on the new content
-            document.querySelectorAll('.prose-tech pre code').forEach((block) => {
-                hljs.highlightElement(block);
-            });
-            adjustTocWidth();
-          });
-        };
-        
-        const loadSharedSummary = async (shareHash) => {
-          try {
-            readingError.value = '';
-            const res = await axios.get(`/api/share/${shareHash}`);
-            viewSummary(res.data.title, res.data.content, res.data.filename);
-          } catch (err) {
-            console.error('加载分享内容失败:', err);
-            readingError.value = err.response?.data?.detail || '加载分享内容失败';
-            currentView.value = 'read'; // 确保在阅读视图中显示错误
-          }
-        };
-
-        const shareDocument = async () => {
-          if (!readingFilename.value || !isAuthenticated.value) return;
-          shareLoading.value = true;
-          
-          let shareUrl = '';
-          try {
-            // Step 1: Get the share link from the backend
-            const res = await axios.post('/api/share', { filename: readingFilename.value });
-            const shareHash = res.data.share_hash;
-            shareUrl = `${window.location.origin}/?share=${shareHash}`;
-
-            // Step 2: Try to copy to clipboard
-            if (navigator.clipboard && window.isSecureContext) {
-              await navigator.clipboard.writeText(shareUrl);
-              showToast('分享链接已复制到剪贴板！', 'success');
-            } else {
-              // Fallback for insecure contexts (HTTP) or older browsers
-              showToast('已生成链接，请手动复制', 'success');
-              prompt("请手动复制链接:", shareUrl);
-            }
-          } catch (err) {
-            console.error('创建或复制分享链接失败: ', err);
-            
-            // If the error happened during copy, shareUrl will be available.
-            // If it happened during API call, it won't.
-            if (shareUrl) {
-                showToast('自动复制失败，请手动复制', 'warning');
-                prompt("请手动复制链接:", shareUrl);
-            } else {
-                showToast(err.response?.data?.detail || '创建分享链接失败', 'danger');
-            }
-          } finally {
-            shareLoading.value = false;
-          }
-        };
-
-
-        // --- 计算属性和工具函数 ---
-        const categorizedSummaries = computed(() => {
-          const reinvent = [];
-          const other = [];
-          summaries.value.forEach(s => {
-            if (s.title_en.toLowerCase().includes('reinvent') || s.title_cn.toLowerCase().includes('reinvent')) {
-              reinvent.push(s);
-            } else {
-              other.push(s);
-            }
-          });
-          return { reinvent, other };
-        });
-
-        const formatWordCount = (bytes) => {
-          if (!bytes) return '0 字';
-          // 假设一个中文字符平均占3个字节
-          const wordCount = Math.round(bytes / 3);
-          if (wordCount > 1000) {
-            return `${(wordCount / 1000).toFixed(1)}k 字`;
-          }
-          return `${wordCount} 字`;
-        };
-
-        const calculateReadTime = (wordCount) => {
-            if (!wordCount || wordCount < 100) return '不到 1 分钟';
-            const minutes = Math.ceil(wordCount / 200); // 按每分钟200字估算
-            return `${minutes} 分钟`;
-        };
-
-        // --- 新增: 任务恢复逻辑 ---
-        const restoreTask = async () => {
-            const taskId = localStorage.getItem('active_task_id');
-            const taskUrl = localStorage.getItem('active_task_url');
-            if (taskId && taskUrl) {
-                try {
-                    showToast('检测到未完成的分析任务，正在尝试恢复...', 'warning');
-                    url.value = taskUrl;
-                    logs.value = ['正在恢复任务...'];
-                    loading.value = true;
-                    
-                    // 通知后端我们要重连
-                    await axios.post('/summarize', { url: taskUrl, task_id: taskId });
-                    
-                    // 连接 WebSocket
-                    connectWebSocket(taskId);
-                } catch(e) {
-                    console.error('任务恢复失败:', e);
-                    showToast('任务恢复失败', 'danger');
-                    clearActiveTask();
-                    loading.value = false;
-                }
-            }
-        };
-
-        // --- 生命周期钩子 ---
-        onMounted(() => {
-          checkAuth();
-          handleRouting(); // 处理初始URL路由
-          restoreTask(); // 检查是否有任务需要恢复
-
-          // 移动端优化
-          if (window.innerWidth < 768) {
-            showToc.value = false;
-          }
-        });
-
-        watch(currentView, (newView, oldView) => {
-          // 仅当从非笔记库视图切换到笔记库时才加载
-          if (newView === 'library' && isAuthenticated.value) {
-            loadSummaries();
-          }
-        });
-        
-        watch(isAuthenticated, (isAuth) => {
-          if (isAuth && currentView.value === 'library') {
-            loadSummaries();
-          }
-          if (!isAuth) {
-            summaries.value = [];
-          }
-        });
-
-        return {
-          url,
-          summary,
-          title,
-          rendered,
-          logs,
-          loading,
-          progressPercent,
-          startSummarize,
-          isValidYoutubeUrl,
-          summaries,
-          libraryLoading,
-          loadSummaries,
-          loadSummary,
-          categorizedSummaries,
-          formatWordCount,
-          calculateReadTime,
-          readingContent,
-          documentTitle,
-          readingError,
-          viewSummary,
-          currentView,
-          goBackToLibrary,
-          showToc,
-          toggleToc,
-          tocHtml,
-          handleTocClick,
-          tocWidth,
-          initDrag,
-          isAuthenticated,
-          showLogin,
-          login,
-          logout,
-          shareDocument,
-          shareLoading,
-          toast,
-          showToast,
-          loginUsername,
-          loginPassword,
-          currentStep,
-          totalSteps,
-          isShareView,
-          goHome
-        };
-      }
-    }).mount('#app');
-  </script>
+  <script src="/js/app.js"></script>
 </body>
 
 </html> 

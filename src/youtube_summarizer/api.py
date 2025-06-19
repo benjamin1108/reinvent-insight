@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Header
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Header, Request, Response
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, HttpUrl
 import logging
@@ -140,6 +140,41 @@ async def get_shared_summary(share_hash: str):
         logger.error(f"读取分享文件 '{filename}' (hash: {share_hash}) 失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="读取分享内容失败")
 
+@app.get("/api/public/summaries")
+async def list_public_summaries():
+    """获取所有已生成的摘要文件列表供公开展示，无需认证。"""
+    try:
+        summaries = []
+        if config.OUTPUT_DIR.exists():
+            for md_file in config.OUTPUT_DIR.glob("*.md"):
+                stat = md_file.stat()
+                title_cn = ""
+                try:
+                    with md_file.open("r", encoding="utf-8") as f:
+                        for line in f:
+                            stripped = line.strip()
+                            if stripped.startswith('# '):
+                                title_cn = stripped[2:].strip()
+                                break
+                except Exception as e:
+                    logger.warning(f"为公共接口提取中文标题失败 {md_file.name}: {e}")
+                title_en = md_file.stem
+                if not title_cn:
+                    title_cn = title_en
+                summaries.append({
+                    "filename": md_file.name,
+                    "title_cn": title_cn,
+                    "title_en": title_en,
+                    "size": stat.st_size,
+                    "created_at": stat.st_ctime,
+                    "modified_at": stat.st_mtime
+                })
+        summaries.sort(key=lambda x: x["modified_at"], reverse=True)
+        return {"summaries": summaries}
+    except Exception as e:
+        logger.error(f"获取公共摘要列表失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="获取公共摘要列表失败")
+
 @app.websocket("/ws/{task_id}")
 async def websocket_endpoint(websocket: WebSocket, task_id: str):
     await manager.connect(websocket, task_id)
@@ -211,17 +246,29 @@ async def get_summary(filename: str, authorization: str = Header(None)):
         logger.error(f"读取摘要文件失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="读取摘要文件失败")
 
-@app.get("/documents/{path:path}")
-async def serve_spa(path: str):
-    """为文档页面URL返回主 index.html，以支持前端路由刷新。"""
-    index_path = config.BASE_DIR / "web" / "index.html"
-    if not index_path.exists():
-        raise HTTPException(status_code=404, detail="主应用文件未找到")
-    return FileResponse(str(index_path))
-
+# --- Frontend Serving ---
 web_dir = config.BASE_DIR / "web"
-if web_dir.exists():
-    app.mount("/", StaticFiles(directory=str(web_dir), html=True), name="static")
-    logger.info(f"成功挂载前端静态文件目录: {web_dir}")
+
+if web_dir.is_dir():
+    # Mount static file directories first.
+    # This ensures that requests for /js/* and /css/* are handled by StaticFiles.
+    # Any other static assets in the root of /web can be added here too.
+    app.mount("/js", StaticFiles(directory=web_dir / "js"), name="js")
+    app.mount("/css", StaticFiles(directory=web_dir / "css"), name="css")
+
+    # This catch-all route must be defined *after* all other API routes and mounts.
+    # It serves the main index.html for any other path, enabling client-side routing.
+    @app.get("/{full_path:path}", response_class=FileResponse, include_in_schema=False)
+    async def serve_vue_app(request: Request):
+        """
+        Serve the Vue.js application.
+        This allows the client-side router to handle all non-API, non-static-file paths.
+        """
+        index_path = web_dir / "index.html"
+        if index_path.is_file():
+            return FileResponse(index_path)
+        else:
+            logger.error(f"Frontend entry point not found at: {index_path}")
+            raise HTTPException(status_code=404, detail="Web application not found.")
 else:
-    logger.warning(f"前端目录 'web' 未找到于 {web_dir}，将只提供 API 服务。") 
+    logger.warning(f"Frontend directory 'web' not found at {web_dir}, will only serve API.") 
