@@ -1155,14 +1155,16 @@
 <body class="h-full">
   <div id="app" class="h-full flex flex-col">
     <!-- 普通页面Header -->
-    <header v-if="currentView !== 'read'" class="tech-gradient border-b border-gray-800 shadow-lg">
+    <header v-if="currentView !== 'read' && !isShareView" class="tech-gradient border-b border-gray-800 shadow-lg">
       <div class="max-w-full mx-auto px-4 py-4 md:flex md:items-center md:justify-between mobile-header">
         <div class="flex items-center justify-between w-full md:w-auto">
           <!-- 品牌标识和PC端导航按钮组 -->
           <div class="flex items-center space-x-4">
-            <h1 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
-              reinvent <span class="text-purple-400">Insight</span>
-            </h1>
+            <a href="/" @click.prevent="goHome" class="cursor-pointer">
+              <h1 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+                reinvent <span class="text-purple-400">Insight</span>
+              </h1>
+            </a>
             
             <!-- PC端紧贴品牌标识的导航按钮 -->
             <div class="hidden md:flex space-x-2">
@@ -1226,14 +1228,16 @@
     <header v-if="currentView === 'read'" class="tech-gradient border-b border-gray-800 shadow-lg mobile-reading-header">
       <div class="max-w-full mx-auto px-4 py-3 flex items-center justify-between header-content">
         <div class="flex items-center space-x-4">
-          <h1 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
-            reinvent <span class="text-purple-400">Insight</span>
-          </h1>
+          <a href="/" @click.prevent="goHome" class="cursor-pointer">
+            <h1 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+              reinvent <span class="text-purple-400">Insight</span>
+            </h1>
+          </a>
           
           <!-- PC端紧贴品牌标识的按钮组 -->
           <div class="hidden md:flex reading-controls">
             <!-- 返回按钮 -->
-            <button @click="goBackToLibrary"
+            <button @click="goBackToLibrary" v-if="!isShareView"
               class="tech-btn tech-btn-secondary">
               <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -1242,7 +1246,7 @@
             </button>
             
             <!-- 分享按钮 -->
-            <button @click="shareDocument" :disabled="shareLoading"
+            <button @click="shareDocument" :disabled="shareLoading" v-if="!isShareView"
               class="tech-btn tech-btn-secondary"
               :title="shareLoading ? '生成中...' : '分享文档'">
               <svg v-if="!shareLoading" class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1271,7 +1275,7 @@
         <!-- 移动端按钮组 -->
         <div class="md:hidden flex items-center space-x-2">
           <!-- 返回按钮 -->
-          <button @click="goBackToLibrary"
+          <button @click="goBackToLibrary" v-if="!isShareView"
             class="tech-btn tech-btn-secondary mobile-back-btn">
             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -1280,7 +1284,7 @@
           </button>
           
           <!-- 分享按钮 -->
-          <button @click="shareDocument" :disabled="shareLoading"
+          <button @click="shareDocument" :disabled="shareLoading" v-if="!isShareView"
             class="tech-btn tech-btn-secondary mobile-share-btn"
             :title="shareLoading ? '生成中...' : '分享文档'">
             <svg v-if="!shareLoading" class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1299,7 +1303,7 @@
     <!-- App Root -->
     <div class="flex-1 overflow-auto">
       <!-- 创建摘要页面：任何状态下都可见 -->
-      <div v-if="currentView === 'create'" class="max-w-4xl mx-auto p-6 fade-in mobile-container">
+      <div v-if="currentView === 'create' && !isShareView" class="max-w-4xl mx-auto p-6 fade-in mobile-container">
         <!-- Input Card -->
         <div class="tech-gradient border border-gray-700 rounded-xl p-8 shadow-2xl mb-8 glow-effect mobile-input-card">
           <div class="text-center mb-6">
@@ -1381,7 +1385,7 @@
       </div>
 
       <!-- 笔记库页面 -->
-      <div v-if="currentView === 'library'" class="max-w-6xl mx-auto p-6 fade-in mobile-container">
+      <div v-if="currentView === 'library' && !isShareView" class="max-w-6xl mx-auto p-6 fade-in mobile-container">
         <div class="mb-8">
           <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 mb-2">
             笔记库
@@ -1669,6 +1673,7 @@
 
         // 视图控制
         const currentView = ref('library'); // 默认视图 'create', 'library', 'read'
+        const isShareView = ref(false); // 新增：是否为分享视图
         
         // 认证状态
         const isAuthenticated = ref(false);
@@ -1689,16 +1694,25 @@
         // --- 路由处理 ---
         const handleRouting = () => {
           const path = window.location.pathname;
-          const docMatch = path.match(/\/documents\/(.+)/);
+          const params = new URLSearchParams(window.location.search);
+          const shareHash = params.get('share');
 
-          if (docMatch) {
-            const filename = decodeURIComponent(docMatch[1]);
-            loadSummary(filename, false); // false: 不要推入历史记录，因为我们已经在这个URL上
+          if (shareHash) {
+            isShareView.value = true;
+            loadSharedSummary(shareHash);
           } else {
-            // 如果不是文档URL，则显示笔记库
-            currentView.value = 'library';
-            if (isAuthenticated.value && summaries.value.length === 0) {
-              loadSummaries();
+            isShareView.value = false;
+            const docMatch = path.match(/\/documents\/(.+)/);
+
+            if (docMatch) {
+              const filename = decodeURIComponent(docMatch[1]);
+              loadSummary(filename, false); // false: 不要推入历史记录，因为我们已经在这个URL上
+            } else {
+              // 如果不是文档URL，则显示笔记库
+              currentView.value = 'library';
+              if (isAuthenticated.value && summaries.value.length === 0) {
+                loadSummaries();
+              }
             }
           }
         };
@@ -1772,6 +1786,20 @@
           }, duration);
         };
         
+        const goHome = () => {
+          if (isShareView.value) {
+            window.location.href = '/';
+            return;
+          }
+          history.pushState(null, '', '/');
+          currentView.value = 'library';
+          // 清理阅读视图状态
+          readingContent.value = '';
+          documentTitle.value = '';
+          readingFilename.value = '';
+          tocHtml.value = '';
+        };
+
         const goBackToLibrary = () => {
           history.pushState(null, '', '/');
           currentView.value = 'library';
@@ -2020,18 +2048,49 @@
           });
         };
         
+        const loadSharedSummary = async (shareHash) => {
+          try {
+            readingError.value = '';
+            const res = await axios.get(`/api/share/${shareHash}`);
+            viewSummary(res.data.title, res.data.content, res.data.filename);
+          } catch (err) {
+            console.error('加载分享内容失败:', err);
+            readingError.value = err.response?.data?.detail || '加载分享内容失败';
+            currentView.value = 'read'; // 确保在阅读视图中显示错误
+          }
+        };
+
         const shareDocument = async () => {
-          if (!readingFilename.value) return;
+          if (!readingFilename.value || !isAuthenticated.value) return;
           shareLoading.value = true;
           
-          const shareUrl = `${window.location.origin}/documents/${encodeURIComponent(readingFilename.value)}`;
+          let shareUrl = '';
           try {
-            await navigator.clipboard.writeText(shareUrl);
-            showToast('分享链接已复制到剪贴板！', 'success');
+            // Step 1: Get the share link from the backend
+            const res = await axios.post('/api/share', { filename: readingFilename.value });
+            const shareHash = res.data.share_hash;
+            shareUrl = `${window.location.origin}/?share=${shareHash}`;
+
+            // Step 2: Try to copy to clipboard
+            if (navigator.clipboard && window.isSecureContext) {
+              await navigator.clipboard.writeText(shareUrl);
+              showToast('分享链接已复制到剪贴板！', 'success');
+            } else {
+              // Fallback for insecure contexts (HTTP) or older browsers
+              showToast('已生成链接，请手动复制', 'success');
+              prompt("请手动复制链接:", shareUrl);
+            }
           } catch (err) {
-            console.error('复制失败: ', err);
-            showToast('复制链接失败，请手动复制', 'danger');
-            prompt("请手动复制链接:", shareUrl);
+            console.error('创建或复制分享链接失败: ', err);
+            
+            // If the error happened during copy, shareUrl will be available.
+            // If it happened during API call, it won't.
+            if (shareUrl) {
+                showToast('自动复制失败，请手动复制', 'warning');
+                prompt("请手动复制链接:", shareUrl);
+            } else {
+                showToast(err.response?.data?.detail || '创建分享链接失败', 'danger');
+            }
           } finally {
             shareLoading.value = false;
           }
@@ -2161,7 +2220,9 @@
           loginUsername,
           loginPassword,
           currentStep,
-          totalSteps
+          totalSteps,
+          isShareView,
+          goHome
         };
       }
     }).mount('#app');

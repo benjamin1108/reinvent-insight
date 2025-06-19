@@ -22,6 +22,10 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Reinvent Insight API", description="YouTube 字幕深度摘要后端服务", version="0.1.0")
 
+# --- 存储分享链接 ---
+# { "hash": "filename.md" }
+share_links = {}
+
 # --- 简易认证实现 ---
 session_tokens: Set[str] = set()
 
@@ -68,6 +72,9 @@ class SummarizeResponse(BaseModel):
     message: str
     status: str # "created", "reconnected"
 
+class ShareRequest(BaseModel):
+    filename: str
+    
 @app.post("/summarize", response_model=SummarizeResponse)
 async def summarize_endpoint(req: SummarizeRequest, authorization: str = Header(None)):
     """
@@ -86,6 +93,53 @@ async def summarize_endpoint(req: SummarizeRequest, authorization: str = Header(
     
     return SummarizeResponse(task_id=task_id, message="任务已创建，请连接 WebSocket。", status="created")
 
+@app.post("/api/share")
+async def create_share_link(req: ShareRequest, authorization: str = Header(None)):
+    """为指定文件创建分享链接"""
+    verify_token(authorization)
+    
+    filename = req.filename
+    if ".." in filename or "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=400, detail="无效的文件名")
+        
+    file_path = config.OUTPUT_DIR / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="无法分享不存在的文件")
+
+    # 使用文件名和时间戳生成稳定的、短小的哈希
+    hasher = hashlib.sha1(f"{filename}:{file_path.stat().st_mtime}".encode())
+    share_hash = base64.urlsafe_b64encode(hasher.digest()).decode()[:8]
+
+    # 存储映射
+    share_links[share_hash] = filename
+    logger.info(f"为文件 '{filename}' 创建分享链接, hash: {share_hash}")
+    
+    return {"share_hash": share_hash}
+
+@app.get("/api/share/{share_hash}")
+async def get_shared_summary(share_hash: str):
+    """通过分享哈希获取摘要内容"""
+    filename = share_links.get(share_hash)
+    if not filename:
+        raise HTTPException(status_code=404, detail="分享链接不存在或已失效")
+    
+    # 复用现有的 get_summary 逻辑，但这里直接实现以避免token检查
+    try:
+        file_path = config.OUTPUT_DIR / filename
+        if not file_path.exists():
+            # 哈希存在但文件被删除
+            raise HTTPException(status_code=404, detail="分享的原文已不存在")
+        
+        content = file_path.read_text(encoding="utf-8")
+        return {
+            "filename": filename,
+            "title": file_path.stem,
+            "content": content
+        }
+    except Exception as e:
+        logger.error(f"读取分享文件 '{filename}' (hash: {share_hash}) 失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="读取分享内容失败")
+
 @app.websocket("/ws/{task_id}")
 async def websocket_endpoint(websocket: WebSocket, task_id: str):
     await manager.connect(websocket, task_id)
@@ -97,8 +151,9 @@ async def websocket_endpoint(websocket: WebSocket, task_id: str):
         logger.info(f"客户端 {task_id} 断开连接。")
 
 @app.get("/summaries")
-async def list_summaries():
+async def list_summaries(authorization: str = Header(None)):
     """获取所有已生成的摘要文件列表。"""
+    verify_token(authorization)
     try:
         summaries = []
         if config.OUTPUT_DIR.exists():
@@ -132,8 +187,9 @@ async def list_summaries():
         raise HTTPException(status_code=500, detail="获取摘要列表失败")
 
 @app.get("/summaries/{filename}")
-async def get_summary(filename: str):
+async def get_summary(filename: str, authorization: str = Header(None)):
     """获取指定摘要文件的内容。"""
+    verify_token(authorization)
     try:
         filename = urllib.parse.unquote(filename)
         if ".." in filename or "/" in filename or "\\" in filename:
