@@ -44,7 +44,7 @@
           <button @click="currentView = 'library'" class="tech-btn tech-btn-secondary flex-1">浏览笔记库</button>
         </div>
         <div class="hidden md:flex items-center space-x-4">
-          <button v-if="!isAuthenticated" @click="showLogin = true" class="tech-btn tech-btn-secondary">登录</button>
+          <button v-if="!isAuthenticated" @click="showLogin = true" class="tech-btn tech-btn-primary">登录</button>
           <button v-else @click="logout" class="tech-btn tech-btn-danger">退出</button>
         </div>
       </div>
@@ -128,7 +128,7 @@
     <!-- ======================================================================= -->
     <!--                               App Content                               -->
     <!-- ======================================================================= -->
-    <div class="flex-1 overflow-auto">
+    <div class="flex-1" :class="{'overflow-auto': currentView !== 'read', 'overflow-y-hidden': currentView === 'read'}">
       <!-- ##### Logged-in User View ##### -->
       <div v-if="isAuthenticated">
         <!-- Create View -->
@@ -238,9 +238,9 @@
               </div>
               <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mobile-grid">
                 <div v-for="summary in categorizedSummaries.reinvent" :key="summary.filename" @click="loadSummary(summary.filename)" class="summary-card tech-gradient border border-orange-700/50 rounded-xl p-6 cursor-pointer hover:border-orange-500 transition-all duration-200 glow-effect group flex flex-col h-56 reinvent-card relative">
-                  <div class="mb-3 chinese-title-container"><h3 class="text-base font-bold leading-snug line-clamp-3 chinese-title text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 group-hover:text-white group-hover:bg-none" :title="summary.title_cn">{{ summary.title_cn }}</h3></div>
+                  <div class="mb-3 chinese-title-container"><h3 class="text-base font-bold leading-snug line-clamp-3 chinese-title text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 group-hover:text-white group-hover:bg-none" :title="summary.title_cn">{{ summary.title_cn }}</h3></div>
                   <div class="flex-1 mb-2 english-title-area"><p class="text-xs text-orange-400/90 group-hover:text-white/90 transition-colors font-normal leading-relaxed break-words w-full english-subtitle" :title="summary.title_en">{{ summary.title_en }}</p></div>
-                  <div class="metadata-area border-orange-700/30 text-xs text-orange-400/80 group-hover:text-white/80 transition-colors"><div class="flex items-center space-x-3"><div class="flex items-center"><svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span>{{ formatWordCount(summary.size) }}</span></div><div class="flex items-center"><svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>{{ calculateReadTime(summary.size) }}</span></div></div><div class="metadata-badge">reinvent</div></div>
+                  <div class="metadata-area border-orange-700/30 text-xs text-orange-400 group-hover:text-white/80 transition-colors"><div class="flex items-center space-x-3"><div class="flex items-center"><svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span>{{ formatWordCount(summary.word_count || summary.size) }}</span></div><div class="flex items-center"><svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>{{ calculateReadTime(summary.word_count || summary.size) }}</span></div></div><div class="metadata-badge">reinvent</div></div>
                 </div>
               </div>
             </div>
@@ -254,7 +254,7 @@
                 <div v-for="summary in categorizedSummaries.other" :key="summary.filename" @click="loadSummary(summary.filename)" class="summary-card tech-gradient border border-gray-700 rounded-xl p-6 cursor-pointer hover:border-cyan-500 transition-all duration-200 glow-effect group flex flex-col h-56 other-card relative">
                   <div class="mb-3 chinese-title-container"><h3 class="text-base font-bold leading-snug line-clamp-3 chinese-title text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 group-hover:text-white group-hover:bg-none" :title="summary.title_cn">{{ summary.title_cn }}</h3></div>
                   <div class="flex-1 mb-2 english-title-area"><p class="text-xs text-cyan-400/90 group-hover:text-white/90 transition-colors font-normal leading-relaxed break-words w-full english-subtitle" :title="summary.title_en">{{ summary.title_en }}</p></div>
-                  <div class="metadata-area border-gray-700/50 text-xs text-cyan-500/80 group-hover:text-white/80 transition-colors"><div class="flex items-center space-x-3"><div class="flex items-center"><svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span>{{ formatWordCount(summary.size) }}</span></div><div class="flex items-center"><svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>{{ calculateReadTime(summary.size) }}</span></div></div><div class="metadata-badge">精选</div></div>
+                  <div class="metadata-area border-gray-700/50 text-xs text-cyan-500 group-hover:text-white/80 transition-colors"><div class="flex items-center space-x-3"><div class="flex items-center"><svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span>{{ formatWordCount(summary.word_count || summary.size) }}</span></div><div class="flex items-center"><svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>{{ calculateReadTime(summary.word_count || summary.size) }}</span></div></div><div class="metadata-badge">精选</div></div>
                 </div>
               </div>
             </div>
@@ -265,46 +265,17 @@
           </div>
         </div>
 
-        <!-- 阅读视图 -->
-        <div v-if="currentView === 'read'" class="h-full fade-in mobile-reading-content">
-          <div v-if="readingError" class="flex items-center justify-center h-full text-red-400">
-            {{ readingError }}
-          </div>
-          <div v-else class="flex h-full mobile-reading">
-            <!-- 目录侧边栏 -->
-            <div v-if="showToc" :style="{ width: tocWidth + 'px' }" class="relative toc-sidebar flex-shrink-0 h-full border-r border-gray-800 mobile-hide-toc">
-              <div class="sticky top-0 p-6 h-full">
-                <div class="toc">
-                  <h3 class="text-lg font-bold text-cyan-400">目录</h3>
-                  <div v-html="tocHtml" @click="handleTocClick" class="mt-4"></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 拖拽分隔条 -->
-            <div v-if="showToc" class="dragbar h-full" @mousedown="initDrag"></div>
-
-            <!-- 文章内容 -->
-            <div class="flex-1 min-w-0 h-full overflow-y-auto" :class="{ 'no-toc-centered': !showToc }">
-              <div class="max-w-none px-4 py-8">
-                <div v-if="readingContent" class="tech-gradient border border-gray-700 rounded-xl p-10 shadow-2xl backdrop-blur-sm">
-                  <div v-html="readingContent" class="prose-tech max-w-none"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- ##### Public Visitor View ##### -->
-      <div v-else-if="!isShareView">
+      <div v-else-if="!isShareView && currentView !== 'read'">
         <div class="relative text-white text-center py-20 px-6 overflow-hidden">
            <div class="absolute inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm"></div>
            <div class="absolute inset-0 z-0 opacity-20" style="background-image: url('https://www.transparenttextures.com/patterns/cubes.png'), linear-gradient(to right bottom, #051937, #004d7a, #008793, #00bf72, #a8eb12); background-size: auto, cover;"></div>
            <div class="relative z-10">
               <h1 class="text-5xl md:text-6xl font-extrabold mb-4 leading-tight"><span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">与顶尖架构师</span><span class="block md:inline">思维同步</span></h1>
               <p class="text-xl md:text-2xl max-w-3xl mx-auto text-gray-300 mb-8">洞悉架构取舍，解码设计精髓。行业最前沿思考,云计算必读洞见。</p>
-              <button @click="showLogin = true" class="tech-btn tech-btn-primary text-lg px-8 py-4">即刻登录，开启洞察之旅</button>
+              <button @click="showLogin = true" class="tech-btn tech-btn-primary tech-btn-lg text-lg px-8 py-4">即刻登录，开启洞察之旅</button>
             </div>
         </div>
         <div class="max-w-6xl mx-auto p-6 mobile-container">
@@ -327,9 +298,9 @@
                     </div>
                     <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mobile-grid">
                         <div v-for="summary in categorizedSummaries.reinvent" :key="summary.filename" @click="loadSummary(summary.filename)" class="summary-card tech-gradient border border-orange-700/50 rounded-xl p-6 cursor-pointer hover:border-orange-500 transition-all duration-200 glow-effect group flex flex-col h-56 reinvent-card relative">
-                            <div class="mb-3 chinese-title-container"><h3 class="text-base font-bold leading-snug line-clamp-3 chinese-title text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 group-hover:text-white group-hover:bg-none" :title="summary.title_cn">{{ summary.title_cn }}</h3></div>
+                            <div class="mb-3 chinese-title-container"><h3 class="text-base font-bold leading-snug line-clamp-3 chinese-title text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 group-hover:text-white group-hover:bg-none" :title="summary.title_cn">{{ summary.title_cn }}</h3></div>
                             <div class="flex-1 mb-2 english-title-area"><p class="text-xs text-orange-400/90 group-hover:text-white/90 transition-colors font-normal leading-relaxed break-words w-full english-subtitle" :title="summary.title_en">{{ summary.title_en }}</p></div>
-                            <div class="metadata-area border-orange-700/30 text-xs text-orange-400/80 group-hover:text-white/80 transition-colors"><div class="flex items-center space-x-3"><div class="flex items-center"><svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span>{{ formatWordCount(summary.size) }}</span></div><div class="flex items-center"><svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>{{ calculateReadTime(summary.size) }}</span></div></div><div class="metadata-badge">reinvent</div></div>
+                            <div class="metadata-area border-orange-700/30 text-xs text-orange-400 group-hover:text-white/80 transition-colors"><div class="flex items-center space-x-3"><div class="flex items-center"><svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span>{{ formatWordCount(summary.word_count || summary.size) }}</span></div><div class="flex items-center"><svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>{{ calculateReadTime(summary.word_count || summary.size) }}</span></div></div><div class="metadata-badge">reinvent</div></div>
                         </div>
                     </div>
                 </div>
@@ -346,7 +317,7 @@
                         <div v-for="summary in categorizedSummaries.other" :key="summary.filename" @click="loadSummary(summary.filename)" class="summary-card tech-gradient border border-gray-700 rounded-xl p-6 cursor-pointer hover:border-cyan-500 transition-all duration-200 glow-effect group flex flex-col h-56 other-card relative">
                             <div class="mb-3 chinese-title-container"><h3 class="text-base font-bold leading-snug line-clamp-3 chinese-title text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 group-hover:text-white group-hover:bg-none" :title="summary.title_cn">{{ summary.title_cn }}</h3></div>
                             <div class="flex-1 mb-2 english-title-area"><p class="text-xs text-cyan-400/90 group-hover:text-white/90 transition-colors font-normal leading-relaxed break-words w-full english-subtitle" :title="summary.title_en">{{ summary.title_en }}</p></div>
-                            <div class="metadata-area border-gray-700/50 text-xs text-cyan-500/80 group-hover:text-white/80 transition-colors"><div class="flex items-center space-x-3"><div class="flex items-center"><svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span>{{ formatWordCount(summary.size) }}</span></div><div class="flex items-center"><svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>{{ calculateReadTime(summary.size) }}</span></div></div><div class="metadata-badge">精选</div></div>
+                            <div class="metadata-area border-gray-700/50 text-xs text-cyan-500 group-hover:text-white/80 transition-colors"><div class="flex items-center space-x-3"><div class="flex items-center"><svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span>{{ formatWordCount(summary.word_count || summary.size) }}</span></div><div class="flex items-center"><svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>{{ calculateReadTime(summary.word_count || summary.size) }}</span></div></div><div class="metadata-badge">精选</div></div>
                         </div>
                     </div>
                 </div>
@@ -364,9 +335,9 @@
         </div>
         <div v-else class="flex h-full mobile-reading">
           <!-- TOC Sidebar -->
-          <div v-if="showToc" :style="{ width: tocWidth + 'px' }" class="relative toc-sidebar flex-shrink-0 h-full border-r border-gray-800 mobile-hide-toc">
-            <div class="sticky top-0 p-6 h-full">
-              <div class="toc">
+          <div v-if="showToc" :style="{ width: tocWidth + 'px' }" class="relative toc-sidebar flex-shrink-0 h-full border-r border-gray-800 mobile-hide-toc overflow-y-auto py-8">
+            <div class="px-6 h-full">
+              <div class="toc h-full">
                 <h3 class="text-lg font-bold text-cyan-400">目录</h3>
                 <div v-html="tocHtml" @click="handleTocClick" class="mt-4"></div>
               </div>

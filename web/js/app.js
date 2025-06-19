@@ -501,20 +501,23 @@ createApp({
       return { reinvent, other };
     });
 
-    const formatWordCount = (bytes) => {
-      if (!bytes) return '0 字';
-      // 假设一个中文字符平均占3个字节
-      const wordCount = Math.round(bytes / 3);
-      if (wordCount > 1000) {
-        return `${(wordCount / 1000).toFixed(1)}k 字`;
+    // --- 数据转换与格式化 ---
+    const formatWordCount = (wordCount) => {
+      if (!wordCount) return '0 字';
+      if (wordCount < 1000) {
+        return `${wordCount} 字`;
       }
-      return `${wordCount} 字`;
+      return `${(wordCount / 1000).toFixed(1)}k 字`;
     };
 
     const calculateReadTime = (wordCount) => {
-        if (!wordCount || wordCount < 100) return '不到 1 分钟';
-        const minutes = Math.ceil(wordCount / 200); // 按每分钟200字估算
-        return `${minutes} 分钟`;
+      if (!wordCount) return '小于 1 分钟';
+      
+      const wordsPerMinute = 500; // 设定中文阅读速度为 500 字/分钟
+      const minutes = Math.ceil(wordCount / wordsPerMinute);
+      
+      if (minutes < 1) return '小于 1 分钟';
+      return `约 ${minutes} 分钟`;
     };
 
     // --- 新增: 任务恢复逻辑 ---

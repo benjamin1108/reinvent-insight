@@ -29,6 +29,47 @@ share_links = {}
 # --- 简易认证实现 ---
 session_tokens: Set[str] = set()
 
+def extract_text_from_markdown(content: str) -> str:
+    """从 Markdown 内容中提取纯文本，用于准确计算字数"""
+    # 移除代码块
+    content = re.sub(r'```[^`]*```', '', content, flags=re.DOTALL)
+    content = re.sub(r'`[^`]+`', '', content)
+    
+    # 移除链接
+    content = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', content)
+    
+    # 移除图片
+    content = re.sub(r'!\[([^\]]*)\]\([^\)]+\)', '', content)
+    
+    # 移除标题标记
+    content = re.sub(r'^#{1,6}\s+', '', content, flags=re.MULTILINE)
+    
+    # 移除粗体和斜体标记
+    content = re.sub(r'\*{1,3}([^\*]+)\*{1,3}', r'\1', content)
+    content = re.sub(r'_{1,3}([^_]+)_{1,3}', r'\1', content)
+    
+    # 移除列表标记
+    content = re.sub(r'^[\*\-\+]\s+', '', content, flags=re.MULTILINE)
+    content = re.sub(r'^\d+\.\s+', '', content, flags=re.MULTILINE)
+    
+    # 移除引用标记
+    content = re.sub(r'^>\s+', '', content, flags=re.MULTILINE)
+    
+    # 移除水平线
+    content = re.sub(r'^[-\*_]{3,}$', '', content, flags=re.MULTILINE)
+    
+    # 移除表格分隔符
+    content = re.sub(r'\|', '', content)
+    
+    # 移除多余的空白字符
+    content = re.sub(r'\n{3,}', '\n\n', content)
+    content = re.sub(r'[ \t]+', ' ', content)
+    
+    # 去除首尾空白
+    content = content.strip()
+    
+    return content
+
 class LoginRequest(BaseModel):
     username: str
     password: str
@@ -161,11 +202,22 @@ async def list_public_summaries():
                 title_en = md_file.stem
                 if not title_cn:
                     title_cn = title_en
+                    
+                # 读取文件内容并计算纯文本字符数
+                try:
+                    content = md_file.read_text(encoding="utf-8")
+                    pure_text = extract_text_from_markdown(content)
+                    word_count = len(pure_text)
+                except Exception as e:
+                    logger.warning(f"计算字数失败 {md_file.name}: {e}")
+                    word_count = 0
+                    
                 summaries.append({
                     "filename": md_file.name,
                     "title_cn": title_cn,
                     "title_en": title_en,
                     "size": stat.st_size,
+                    "word_count": word_count,  # 新增：纯文本字符数
                     "created_at": stat.st_ctime,
                     "modified_at": stat.st_mtime
                 })
@@ -207,11 +259,22 @@ async def list_summaries(authorization: str = Header(None)):
                 title_en = md_file.stem
                 if not title_cn:
                     title_cn = title_en
+                    
+                # 读取文件内容并计算纯文本字符数
+                try:
+                    content = md_file.read_text(encoding="utf-8")
+                    pure_text = extract_text_from_markdown(content)
+                    word_count = len(pure_text)
+                except Exception as e:
+                    logger.warning(f"计算字数失败 {md_file.name}: {e}")
+                    word_count = 0
+                    
                 summaries.append({
                     "filename": md_file.name,
                     "title_cn": title_cn,
                     "title_en": title_en,
                     "size": stat.st_size,
+                    "word_count": word_count,  # 新增：纯文本字符数
                     "created_at": stat.st_ctime,
                     "modified_at": stat.st_mtime
                 })
