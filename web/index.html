@@ -1777,25 +1777,19 @@
           const headings = [...doc.body.querySelectorAll('h1,h2,h3,h4,h5,h6')];
 
           let tocHtml = '<ul>';
-          let currentLevel = 1;
 
           headings.forEach(h => {
-            const level = parseInt(h.tagName.substring(1));
             const text = h.textContent.replace(/\s*\(#.+\)$/g, '').trim();
             const id = slugify(text);
-            // 给标题添加 id
+            // 给所有标题添加 id
             h.id = id;
 
-            // 构建目录 HTML
-            if (level > currentLevel) {
-              tocHtml += '<ul>'.repeat(level - currentLevel);
-            } else if (level < currentLevel) {
-              tocHtml += '</ul>'.repeat(currentLevel - level);
+            // 只为h3构建目录，作为章节的第一级
+            if (h.tagName.toLowerCase() === 'h3') {
+              tocHtml += `<li><a data-target="${id}">${text}</a></li>`;
             }
-            tocHtml += `<li><a data-target="${id}">${text}</a></li>`;
-            currentLevel = level;
           });
-          tocHtml += '</ul>'.repeat(currentLevel);
+          tocHtml += '</ul>';
 
           return { html: doc.body.innerHTML, tocHtml };
         };
