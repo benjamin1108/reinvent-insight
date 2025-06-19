@@ -254,6 +254,7 @@
       padding: 0.25rem 0.5rem;
       border-radius: 4px;
       cursor: pointer;
+      white-space: nowrap; /* Prevent text wrapping */
     }
 
     .toc a:hover {
@@ -1151,108 +1152,136 @@
   </style>
 </head>
 
-<body class="h-full flex flex-col" id="app">
-  <!-- 普通页面Header -->
-  <header v-if="currentView !== 'read'" class="tech-gradient border-b border-gray-800 shadow-lg">
-    <div class="max-w-full mx-auto px-4 py-4 md:flex md:items-center md:justify-between mobile-header">
-      <div class="flex items-center justify-between w-full md:w-auto">
-        <!-- 品牌标识和PC端导航按钮组 -->
-        <div class="flex items-center space-x-4">
-          <h1 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
-            reinvent <span class="text-purple-400">Insight</span>
-          </h1>
+<body class="h-full">
+  <div id="app" class="h-full flex flex-col">
+    <!-- 普通页面Header -->
+    <header v-if="currentView !== 'read'" class="tech-gradient border-b border-gray-800 shadow-lg">
+      <div class="max-w-full mx-auto px-4 py-4 md:flex md:items-center md:justify-between mobile-header">
+        <div class="flex items-center justify-between w-full md:w-auto">
+          <!-- 品牌标识和PC端导航按钮组 -->
+          <div class="flex items-center space-x-4">
+            <h1 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+              reinvent <span class="text-purple-400">Insight</span>
+            </h1>
+            
+            <!-- PC端紧贴品牌标识的导航按钮 -->
+            <div class="hidden md:flex space-x-2">
+              <button @click="currentView = 'create'"
+                :class="currentView === 'create' ? 'tech-btn tech-btn-secondary' : 'tech-btn tech-btn-secondary'">
+                创建深度解读
+              </button>
+              <button @click="currentView = 'library'"
+                :class="currentView === 'library' ? 'tech-btn tech-btn-secondary' : 'tech-btn tech-btn-secondary'">
+                浏览笔记库
+              </button>
+            </div>
+          </div>
           
-          <!-- PC端紧贴品牌标识的导航按钮 -->
-          <div class="hidden md:flex space-x-2">
-            <button @click="currentView = 'create'"
-              :class="currentView === 'create' ? 'tech-btn tech-btn-secondary' : 'tech-btn tech-btn-secondary'">
-              创建深度解读
+          <!-- 移动端登录/退出按钮 -->
+          <div class="md:hidden">
+            <button v-if="!isAuthenticated" @click="showLogin = true"
+              class="tech-btn tech-btn-secondary">
+              登录
             </button>
-            <button @click="currentView = 'library'"
-              :class="currentView === 'library' ? 'tech-btn tech-btn-secondary' : 'tech-btn tech-btn-secondary'">
-              浏览笔记库
+            <button v-else @click="logout"
+              class="tech-btn tech-btn-danger">
+              退出
             </button>
           </div>
         </div>
         
-        <!-- 移动端登录/退出按钮 -->
-        <div class="md:hidden">
-          <button v-if="!isAuthenticated" @click="showLogin = true"
-            class="tech-btn tech-btn-secondary">
-            登录
+        <!-- 移动端导航按钮 -->
+        <div class="md:hidden mobile-nav flex gap-2 mt-3">
+          <button @click="currentView = 'create'"
+            :class="currentView === 'create' ? 'tech-btn tech-btn-secondary flex-1' : 'tech-btn tech-btn-secondary flex-1'">
+            创建深度解读
           </button>
-          <button v-else @click="logout"
-            class="tech-btn tech-btn-danger">
-            退出
-          </button>
-        </div>
-      </div>
-      
-      <!-- 移动端导航按钮 -->
-      <div class="md:hidden mobile-nav flex gap-2 mt-3">
-        <button @click="currentView = 'create'"
-          :class="currentView === 'create' ? 'tech-btn tech-btn-secondary flex-1' : 'tech-btn tech-btn-secondary flex-1'">
-          创建深度解读
-        </button>
-        <button @click="currentView = 'library'"
-          :class="currentView === 'library' ? 'tech-btn tech-btn-secondary flex-1' : 'tech-btn tech-btn-secondary flex-1'">
-          浏览笔记库
-        </button>
-      </div>
-
-      <!-- 桌面端右侧内容 -->
-      <div class="hidden md:flex items-center space-x-4">
-        <div class="text-sm text-gray-400">
-          <!-- <span class="hidden sm:inline">AI 驱动的</span> YouTube 深度分析 -->
-        </div>
-        <!--  GitHub 图标独立容器 -->
-        <!-- <div class="flex items-center">
-          <a href="https://github.com" target="_blank" class="text-gray-400 hover:text-cyan-400 transition-colors p-2 hover:bg-gray-800/50 rounded-lg">
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd"
-                d="M10 0C4.477 0 0 4.484 0 10.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0710 4.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0020 10.017C20 4.484 15.522 0 10 0z"
-                clip-rule="evenodd"></path>
-            </svg>
-          </a>
-        </div>  -->
-        
-        <!-- 桌面端登录/退出按钮独立容器 -->
-        <div class="flex items-center">
-          <button v-if="!isAuthenticated" @click="showLogin = true"
-            class="tech-btn tech-btn-secondary">
-            登录
-          </button>
-          <button v-else @click="logout"
-            class="tech-btn tech-btn-danger">
-            退出
-          </button>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <!-- 阅读页面专用Header -->
-  <header v-if="currentView === 'read'" class="tech-gradient border-b border-gray-800 shadow-lg mobile-reading-header">
-    <div class="max-w-full mx-auto px-4 py-3 flex items-center justify-between header-content">
-      <div class="flex items-center space-x-4">
-        <h1 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
-          reinvent <span class="text-purple-400">Insight</span>
-        </h1>
-        
-        <!-- PC端紧贴品牌标识的按钮组 -->
-        <div class="hidden md:flex reading-controls">
-          <!-- 返回按钮 -->
           <button @click="currentView = 'library'"
-            class="tech-btn tech-btn-secondary">
+            :class="currentView === 'library' ? 'tech-btn tech-btn-secondary flex-1' : 'tech-btn tech-btn-secondary flex-1'">
+            浏览笔记库
+          </button>
+        </div>
+
+        <!-- 桌面端右侧内容 -->
+        <div class="hidden md:flex items-center space-x-4">
+          <div class="text-sm text-gray-400">
+          </div>
+          
+          <!-- 桌面端登录/退出按钮独立容器 -->
+          <div class="flex items-center">
+            <button v-if="!isAuthenticated" @click="showLogin = true"
+              class="tech-btn tech-btn-secondary">
+              登录
+            </button>
+            <button v-else @click="logout"
+              class="tech-btn tech-btn-danger">
+              退出
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- 阅读页面专用Header -->
+    <header v-if="currentView === 'read'" class="tech-gradient border-b border-gray-800 shadow-lg mobile-reading-header">
+      <div class="max-w-full mx-auto px-4 py-3 flex items-center justify-between header-content">
+        <div class="flex items-center space-x-4">
+          <h1 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+            reinvent <span class="text-purple-400">Insight</span>
+          </h1>
+          
+          <!-- PC端紧贴品牌标识的按钮组 -->
+          <div class="hidden md:flex reading-controls">
+            <!-- 返回按钮 -->
+            <button @click="goBackToLibrary"
+              class="tech-btn tech-btn-secondary">
+              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+              </svg>
+              返回笔记库
+            </button>
+            
+            <!-- 分享按钮 -->
+            <button @click="shareDocument" :disabled="shareLoading"
+              class="tech-btn tech-btn-secondary"
+              :title="shareLoading ? '生成中...' : '分享文档'">
+              <svg v-if="!shareLoading" class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
+              </svg>
+              <svg v-else class="w-4 h-4 mr-1 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              分享文档
+            </button>
+            
+            <!-- 目录切换按钮 -->
+            <button @click="toggleToc"
+              class="tech-btn tech-btn-secondary mobile-hide-toc-btn"
+              :title="showToc ? '隐藏目录' : '显示目录'">
+              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      :d="showToc ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h7'"></path>
+              </svg>
+              {{ showToc ? '隐藏目录' : '显示目录' }}
+            </button>
+          </div>
+        </div>
+        
+        <!-- 移动端按钮组 -->
+        <div class="md:hidden flex items-center space-x-2">
+          <!-- 返回按钮 -->
+          <button @click="goBackToLibrary"
+            class="tech-btn tech-btn-secondary mobile-back-btn">
             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
             </svg>
-            返回笔记库
+            返回
           </button>
           
           <!-- 分享按钮 -->
           <button @click="shareDocument" :disabled="shareLoading"
-            class="tech-btn tech-btn-secondary"
+            class="tech-btn tech-btn-secondary mobile-share-btn"
             :title="shareLoading ? '生成中...' : '分享文档'">
             <svg v-if="!shareLoading" class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
@@ -1261,393 +1290,342 @@
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            分享文档
+            分享
           </button>
-          
-          <!-- 目录切换按钮 -->
-          <button @click="toggleToc"
-            class="tech-btn tech-btn-secondary mobile-hide-toc-btn"
-            :title="showToc ? '隐藏目录' : '显示目录'">
-            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                    :d="showToc ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h7'"></path>
+        </div>
+      </div>
+    </header>
+
+    <!-- App Root -->
+    <div class="flex-1 overflow-auto">
+      <!-- 创建摘要页面：任何状态下都可见 -->
+      <div v-if="currentView === 'create'" class="max-w-4xl mx-auto p-6 fade-in mobile-container">
+        <!-- Input Card -->
+        <div class="tech-gradient border border-gray-700 rounded-xl p-8 shadow-2xl mb-8 glow-effect mobile-input-card">
+          <div class="text-center mb-6">
+            <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 mb-2">
+              reInvent Insights </h2>
+            <p class="text-gray-400">输入 YouTube 链接，获得深度解读</p>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium mb-2 text-cyan-400">YouTube 视频链接</label>
+              <input v-model="url" @keyup.enter="startSummarize" :disabled="loading" type="url" placeholder="https://www.youtube.com/watch?v=..."
+                class="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent disabled:opacity-50 transition-all" />
+            </div>
+
+            <button :disabled="loading || !url || !isValidYoutubeUrl(url)" @click="startSummarize"
+              class="w-full tech-btn tech-btn-secondary">
+              <span v-if="!loading" class="flex items-center justify-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z">
+                  </path>
+                </svg>
+                开始分析
+              </span>
+              <span v-else class="flex items-center justify-center">
+                <svg class="w-5 h-5 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                  </path>
+                </svg>
+                AI 分析中...
+              </span>
+          </button>
+          </div>
+        </div>
+        
+        <!-- Progress & Logs -->
+        <div v-if="loading || logs.length"
+          class="bg-gray-900/50 border border-gray-700 rounded-xl p-6 shadow-xl mb-8 backdrop-blur-sm mobile-progress">
+          <!-- 进度条 -->
+          <div class="w-full h-2 bg-gray-800 rounded-full overflow-hidden mb-4">
+            <div class="h-full bg-gradient-to-r from-cyan-500 to-blue-600 transition-all duration-300" :style="{ width: progressPercent + '%' }"></div>
+          </div>
+          <h3 class="text-xl font-semibold mb-4 text-cyan-400 flex items-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
-            {{ showToc ? '隐藏目录' : '显示目录' }}
-          </button>
+            处理进度
+          </h3>
+          <div class="space-y-2">
+            <div v-for="(log, index) in logs" :key="index" class="flex items-center text-sm slide-in">
+              <div class="w-2 h-2 bg-green-500 rounded-full mr-3 flex-shrink-0"></div>
+              <span class="text-gray-300">{{ log }}</span>
+            </div>
+            <div v-if="loading && currentStep < totalSteps" class="flex items-center text-sm text-gray-400">
+              <div class="w-2 h-2 bg-cyan-500 rounded-full mr-3 animate-pulse flex-shrink-0"></div>
+              <span>AI 正在处理，请稍候...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Result -->
+        <div v-if="summary" class="fade-in">
+          <div class="bg-gray-900/30 border border-gray-700 rounded-xl p-8 shadow-2xl backdrop-blur-sm">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+                {{ title }}
+              </h2>
+              <button @click="viewSummary(title, summary)"
+                class="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-lg text-white font-medium transition-all duration-200 transform hover:scale-105">
+                全屏阅读
+              </button>
+            </div>
+            <div v-html="rendered" class="prose-tech"></div>
+          </div>
         </div>
       </div>
-      
-      <!-- 移动端按钮组 -->
-      <div class="md:hidden flex items-center space-x-2">
-        <!-- 返回按钮 -->
-        <button @click="currentView = 'library'"
-          class="tech-btn tech-btn-secondary mobile-back-btn">
-          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-          </svg>
-          返回
-        </button>
-        
-        <!-- 分享按钮 -->
-        <button @click="shareDocument" :disabled="shareLoading"
-          class="tech-btn tech-btn-secondary mobile-share-btn"
-          :title="shareLoading ? '生成中...' : '分享文档'">
-          <svg v-if="!shareLoading" class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
-          </svg>
-          <svg v-else class="w-4 h-4 mr-1 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          分享
-        </button>
-      </div>
-    </div>
-  </header>
 
-  <!-- App Root -->
-  <div class="flex-1 overflow-auto">
-    <!-- 创建摘要页面：任何状态下都可见 -->
-    <div v-if="currentView === 'create'" class="max-w-4xl mx-auto p-6 fade-in mobile-container">
-      <!-- Input Card -->
-      <div class="tech-gradient border border-gray-700 rounded-xl p-8 shadow-2xl mb-8 glow-effect mobile-input-card">
-        <div class="text-center mb-6">
+      <!-- 笔记库页面 -->
+      <div v-if="currentView === 'library'" class="max-w-6xl mx-auto p-6 fade-in mobile-container">
+        <div class="mb-8">
           <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 mb-2">
-            reInvent Insights </h2>
-          <p class="text-gray-400">输入 YouTube 链接，获得深度解读</p>
+            笔记库
+          </h2>
+          <p class="text-gray-400">浏览深度分析笔记</p>
         </div>
 
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium mb-2 text-cyan-400">YouTube 视频链接</label>
-            <input v-model="url" @keyup.enter="startSummarize" :disabled="loading" type="url" placeholder="https://www.youtube.com/watch?v=..."
-              class="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent disabled:opacity-50 transition-all" />
-          </div>
-
-          <button :disabled="loading || !url || !isValidYoutubeUrl(url)" @click="startSummarize"
-            class="w-full tech-btn tech-btn-secondary">
-            <span v-if="!loading" class="flex items-center justify-center">
-              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z">
-                </path>
-              </svg>
-              开始分析
-            </span>
-            <span v-else class="flex items-center justify-center">
-              <svg class="w-5 h-5 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                </path>
-              </svg>
-              AI 分析中...
-            </span>
-        </button>
-        </div>
-      </div>
-      
-      <!-- Progress & Logs -->
-      <div v-if="loading || logs.length"
-        class="bg-gray-900/50 border border-gray-700 rounded-xl p-6 shadow-xl mb-8 backdrop-blur-sm mobile-progress">
-        <!-- 进度条 -->
-        <div class="w-full h-2 bg-gray-800 rounded-full overflow-hidden mb-4">
-          <div class="h-full bg-gradient-to-r from-cyan-500 to-blue-600 transition-all duration-300" :style="{ width: progressPercent + '%' }"></div>
-        </div>
-        <h3 class="text-xl font-semibold mb-4 text-cyan-400 flex items-center">
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
-          处理进度
-        </h3>
-        <div class="space-y-2">
-          <div v-for="(log, index) in logs" :key="index" class="flex items-center text-sm slide-in">
-            <div class="w-2 h-2 bg-green-500 rounded-full mr-3 flex-shrink-0"></div>
-            <span class="text-gray-300">{{ log }}</span>
-          </div>
-          <div v-if="loading && currentStep < totalSteps" class="flex items-center text-sm text-gray-400">
-            <div class="w-2 h-2 bg-cyan-500 rounded-full mr-3 animate-pulse flex-shrink-0"></div>
-            <span>AI 正在处理，请稍候...</span>
+        <!-- 加载状态 -->
+        <div v-if="libraryLoading" class="flex items-center justify-center py-12">
+          <div class="text-center">
+            <svg class="w-8 h-8 animate-spin text-cyan-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+              </path>
+            </svg>
+            <p class="text-gray-400">加载笔记中...</p>
           </div>
         </div>
-      </div>
 
-      <!-- Result -->
-      <div v-if="summary" class="fade-in">
-        <div class="bg-gray-900/30 border border-gray-700 rounded-xl p-8 shadow-2xl backdrop-blur-sm">
-          <div class="flex items-center justify-between mb-6">
-            <h2 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
-              {{ title }}
-            </h2>
-            <button @click="viewSummary(title, summary)"
-              class="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-lg text-white font-medium transition-all duration-200 transform hover:scale-105">
-              全屏阅读
-            </button>
-          </div>
-          <div v-html="rendered" class="prose-tech"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 笔记库页面 -->
-    <div v-if="currentView === 'library'" class="max-w-6xl mx-auto p-6 fade-in mobile-container">
-      <div class="mb-8">
-        <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 mb-2">
-          笔记库
-        </h2>
-        <p class="text-gray-400">浏览深度分析笔记</p>
-      </div>
-
-      <!-- 加载状态 -->
-      <div v-if="libraryLoading" class="flex items-center justify-center py-12">
-        <div class="text-center">
-          <svg class="w-8 h-8 animate-spin text-cyan-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-            </path>
-          </svg>
-          <p class="text-gray-400">加载笔记中...</p>
-        </div>
-      </div>
-
-      <!-- 分类展示笔记列表 -->
-      <div v-else-if="summaries.length > 0" class="space-y-12">
-        
-        <!-- AWS re:Invent 专区 -->
-        <div v-if="categorizedSummaries.reinvent.length > 0" class="section-container">
-          <div class="flex items-center mb-6 section-header">
-            <div class="flex items-center">
-              <div class="w-3 h-3 bg-gradient-to-r from-orange-500 to-red-600 rounded-full mr-3 glow-effect"></div>
-              <h3 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">
-                AWS re:Invent 深度解读
-            </h3>
-          </div>
-            <div class="ml-auto flex items-center text-sm text-gray-500">
-              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-              </svg>
-              {{ categorizedSummaries.reinvent.length }} 篇
-            </div>
-          </div>
+        <!-- 分类展示笔记列表 -->
+        <div v-else-if="summaries.length > 0" class="space-y-12">
           
-          <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mobile-grid">
-            <div v-for="summary in categorizedSummaries.reinvent" :key="summary.filename" @click="loadSummary(summary.filename)"
-              class="summary-card tech-gradient border border-orange-700/50 rounded-xl p-6 cursor-pointer hover:border-orange-500 transition-all duration-200 glow-effect group flex flex-col h-56 reinvent-card relative">
-              
-              <!-- 中文标题区域 - 使用全宽 -->
-              <div class="mb-3 chinese-title-container">
-                <h3 class="text-base font-bold leading-snug line-clamp-3 chinese-title text-orange-100" 
-                    :title="summary.title_cn">
-                  {{ summary.title_cn }}
-                </h3>
-              </div>
-              
-              <!-- 英文标题 -->
-              <div class="flex-1 mb-2 english-title-area">
-                <p class="text-xs text-orange-300/70 group-hover:text-orange-300 font-normal leading-relaxed break-words w-full english-subtitle" 
-                   :title="summary.title_en">
-                  {{ summary.title_en }}
-                </p>
-              </div>
-              
-              <!-- 元信息区域 -->
-              <div class="metadata-area border-orange-700/30 text-xs text-orange-400/80">
-                <div class="flex items-center space-x-3">
-                  <div class="flex items-center">
-                    <svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
-                      </path>
-                    </svg>
-                    <span>{{ formatWordCount(summary.size) }}</span>
-                  </div>
-                  <div class="flex items-center">
-                    <svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    <span>{{ calculateReadTime(summary.size) }}</span>
-                  </div>
-                </div>
-                
-                <!-- 类型标签移到元数据区右侧 -->
-                <div class="metadata-badge">
-                  reinvent
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 其他精选内容 -->
-        <div v-if="categorizedSummaries.other.length > 0" class="section-container">
-          <div class="flex items-center mb-6 section-header">
-            <div class="flex items-center">
-              <div class="w-3 h-3 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full mr-3 glow-effect"></div>
-              <h3 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
-                其他精选内容
+          <!-- AWS re:Invent 专区 -->
+          <div v-if="categorizedSummaries.reinvent.length > 0" class="section-container">
+            <div class="flex items-center mb-6 section-header">
+              <div class="flex items-center">
+                <div class="w-3 h-3 bg-gradient-to-r from-orange-500 to-red-600 rounded-full mr-3 glow-effect"></div>
+                <h3 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">
+                  AWS re:Invent 深度解读
               </h3>
             </div>
-            <div class="ml-auto flex items-center text-sm text-gray-500">
-              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-              </svg>
-              {{ categorizedSummaries.other.length }} 篇
+              <div class="ml-auto flex items-center text-sm text-gray-500">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                {{ categorizedSummaries.reinvent.length }} 篇
+              </div>
             </div>
-          </div>
-          
-          <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mobile-grid">
-            <div v-for="summary in categorizedSummaries.other" :key="summary.filename" @click="loadSummary(summary.filename)"
-              class="summary-card tech-gradient border border-gray-700 rounded-xl p-6 cursor-pointer hover:border-cyan-500 transition-all duration-200 glow-effect group flex flex-col h-56 other-card relative">
-              
-              <!-- 中文标题区域 - 使用全宽 -->
-              <div class="mb-3 chinese-title-container">
-                <h3 class="text-base font-bold leading-snug line-clamp-3 chinese-title" 
-                    :title="summary.title_cn">
-                  {{ summary.title_cn }}
-                </h3>
-              </div>
-              
-              <!-- 英文标题 -->
-              <div class="flex-1 mb-2 english-title-area">
-                <p class="text-xs text-gray-500 group-hover:text-gray-400 font-normal leading-relaxed break-words w-full english-subtitle" 
-                   :title="summary.title_en">
-                  {{ summary.title_en }}
-                </p>
-              </div>
-              
-              <!-- 元信息区域 -->
-              <div class="metadata-area border-gray-700/50 text-xs text-gray-500">
-                <div class="flex items-center space-x-3">
-                  <div class="flex items-center">
-                    <svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
-                      </path>
-                    </svg>
-                    <span>{{ formatWordCount(summary.size) }}</span>
-                  </div>
-                  <div class="flex items-center">
-                    <svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    <span>{{ calculateReadTime(summary.size) }}</span>
-                  </div>
+            
+            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mobile-grid">
+              <div v-for="summary in categorizedSummaries.reinvent" :key="summary.filename" @click="loadSummary(summary.filename)"
+                class="summary-card tech-gradient border border-orange-700/50 rounded-xl p-6 cursor-pointer hover:border-orange-500 transition-all duration-200 glow-effect group flex flex-col h-56 reinvent-card relative">
+                
+                <!-- 中文标题区域 - 使用全宽 -->
+                <div class="mb-3 chinese-title-container">
+                  <h3 class="text-base font-bold leading-snug line-clamp-3 chinese-title text-orange-100" 
+                      :title="summary.title_cn">
+                    {{ summary.title_cn }}
+                  </h3>
                 </div>
                 
-                <!-- 类型标签移到元数据区右侧 -->
-                <div class="metadata-badge">
-                  featured
+                <!-- 英文标题 -->
+                <div class="flex-1 mb-2 english-title-area">
+                  <p class="text-xs text-orange-300/70 group-hover:text-orange-300 font-normal leading-relaxed break-words w-full english-subtitle" 
+                     :title="summary.title_en">
+                    {{ summary.title_en }}
+                  </p>
+                </div>
+                
+                <!-- 元信息区域 -->
+                <div class="metadata-area border-orange-700/30 text-xs text-orange-400/80">
+                  <div class="flex items-center space-x-3">
+                    <div class="flex items-center">
+                      <svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                        </path>
+                      </svg>
+                      <span>{{ formatWordCount(summary.size) }}</span>
+                    </div>
+                    <div class="flex items-center">
+                      <svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                      <span>{{ calculateReadTime(summary.size) }}</span>
+                    </div>
+                  </div>
+                  
+                  <!-- 类型标签移到元数据区右侧 -->
+                  <div class="metadata-badge">
+                    reinvent
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 其他精选内容 -->
+          <div v-if="categorizedSummaries.other.length > 0" class="section-container">
+            <div class="flex items-center mb-6 section-header">
+              <div class="flex items-center">
+                <div class="w-3 h-3 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full mr-3 glow-effect"></div>
+                <h3 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+                  其他精选内容
+                </h3>
+              </div>
+              <div class="ml-auto flex items-center text-sm text-gray-500">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+                {{ categorizedSummaries.other.length }} 篇
+              </div>
+            </div>
+            
+            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mobile-grid">
+              <div v-for="summary in categorizedSummaries.other" :key="summary.filename" @click="loadSummary(summary.filename)"
+                class="summary-card tech-gradient border border-gray-700 rounded-xl p-6 cursor-pointer hover:border-cyan-500 transition-all duration-200 glow-effect group flex flex-col h-56 other-card relative">
+                
+                <!-- 中文标题区域 - 使用全宽 -->
+                <div class="mb-3 chinese-title-container">
+                  <h3 class="text-base font-bold leading-snug line-clamp-3 chinese-title text-slate-100"
+                      :title="summary.title_cn">
+                    {{ summary.title_cn }}
+                  </h3>
+                </div>
+                
+                <!-- 英文标题 -->
+                <div class="flex-1 mb-2 english-title-area">
+                  <p class="text-xs text-slate-400 group-hover:text-slate-300 font-normal leading-relaxed break-words w-full english-subtitle"
+                     :title="summary.title_en">
+                    {{ summary.title_en }}
+                  </p>
+                </div>
+
+                <!-- 元信息区域 -->
+                <div class="metadata-area border-gray-700/50 text-xs text-gray-400">
+                  <div class="flex items-center space-x-3">
+                    <div class="flex items-center">
+                      <svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                        </path>
+                      </svg>
+                      <span>{{ formatWordCount(summary.size) }}</span>
+                    </div>
+                    <div class="flex items-center">
+                      <svg class="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                      <span>{{ calculateReadTime(summary.size) }}</span>
+                    </div>
+                  </div>
+                  
+                  <!-- 类型标签 -->
+                  <div class="metadata-badge">
+                    精选
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+        <!-- 空状态 -->
+        <div v-else class="text-center py-12">
+          <svg class="w-12 h-12 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+            </path>
+          </svg>
+          <h3 class="text-xl font-semibold text-gray-300">笔记库为空</h3>
+          <p class="text-gray-500 mt-2">创建您的第一篇深度解读笔记吧！</p>
+        </div>
       </div>
 
-      <!-- 空状态 -->
-      <div v-else class="text-center py-12">
-        <svg class="w-16 h-16 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
-          </path>
-        </svg>
-        <h3 class="text-xl font-semibold text-gray-400 mb-2">暂无笔记</h3>
-        <p class="text-gray-500 mb-6">开始创建您的第一个 AI 分析笔记</p>
-        <button @click="currentView = 'create'"
-          class="tech-btn tech-btn-secondary">
-          创建摘要
-        </button>
-      </div>
-    </div>
+      <!-- 阅读视图 -->
+      <div v-if="currentView === 'read'" class="h-full fade-in mobile-reading-content">
+        <div v-if="readingError" class="flex items-center justify-center h-full text-red-400">
+          {{ readingError }}
+        </div>
+        <div v-else class="flex h-full mobile-reading">
+          <!-- 目录侧边栏 -->
+          <div v-if="showToc" :style="{ width: tocWidth + 'px' }" class="relative toc-sidebar flex-shrink-0 h-full border-r border-gray-800 mobile-hide-toc">
+            <div class="sticky top-0 p-6 h-full">
+              <div class="toc">
+                <h3 class="text-lg font-bold text-cyan-400">目录</h3>
+                <div v-html="tocHtml" @click="handleTocClick" class="mt-4"></div>
+              </div>
+            </div>
+          </div>
 
-    <!-- 阅读页面 - 全宽布局 -->
-    <div v-if="currentView === 'read'" class="w-full h-full fade-in flex mobile-reading mobile-hide-toc mobile-reading-content">
-        <!-- 目录侧边栏 - 移动端完全隐藏 -->
-      <div v-if="showToc" :style="{ width: tocWidth + 'px' }" class="toc-sidebar flex-shrink-0 border-r border-gray-800 bg-gray-900/30 px-6 py-4 h-full flex flex-col">
-        <div class="h-full overflow-y-auto">
-            <div class="toc">
-              <h3>目录</h3>
-              <div v-html="tocHtml" @click="handleTocClick"></div>
+          <!-- 拖拽分隔条 -->
+          <div v-if="showToc" class="dragbar h-full" @mousedown="initDrag"></div>
+
+          <!-- 文章内容 -->
+          <div class="flex-1 min-w-0 h-full overflow-y-auto" :class="{ 'no-toc-centered': !showToc }">
+            <div class="max-w-none px-4 py-8">
+              <div v-if="readingContent" class="tech-gradient border border-gray-700 rounded-xl p-10 shadow-2xl backdrop-blur-sm">
+                <div v-html="readingContent" class="prose-tech max-w-none"></div>
+              </div>
             </div>
           </div>
         </div>
-
-        <!-- 拖拽分隔条 - 移动端完全隐藏 -->
-        <div v-if="showToc" class="dragbar" @mousedown="initDrag"></div>
-
-        <!-- 文章内容 - 全宽 -->
-      <div class="flex-1 min-w-0 px-4 py-4">
-        <div v-if="readingContent" :class="['tech-gradient border border-gray-700 rounded-xl p-10 shadow-2xl backdrop-blur-sm resizable h-full overflow-y-auto', !showToc ? 'no-toc-centered' : '']">
-              <div v-html="readingContent" class="prose-tech max-w-none"></div>
-            </div>
-        <div v-else class="h-full flex items-center justify-center">
-          <div class="text-center">
-              <svg class="w-8 h-8 animate-spin text-cyan-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                </path>
-              </svg>
-              <p class="text-gray-400">加载中...</p>
-          </div>
-        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Toast 提示 -->
-  <div v-if="showToastModal" class="fixed top-4 right-4 z-50 max-w-sm mobile-toast">
-    <div 
-      :class="{
-        'bg-green-600 border-green-500': toastType === 'success',
-        'bg-red-600 border-red-500': toastType === 'error',
-        'bg-blue-600 border-blue-500': toastType === 'info'
-      }"
-      class="border rounded-lg p-4 shadow-lg text-white fade-in"
-    >
-      <div class="flex items-center">
-        <svg v-if="toastType === 'success'" class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-        </svg>
-        <svg v-else-if="toastType === 'error'" class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-        </svg>
-        <svg v-else class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-        </svg>
-        <span class="text-sm font-medium">{{ toastMessage }}</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- 登录模态框 -->
-  <div v-if="showLogin" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-    <div class="bg-gray-800 border border-gray-600 rounded-xl p-8 w-96 shadow-xl tech-gradient">
-      <h2 class="text-xl font-bold text-cyan-400 mb-4">登录</h2>
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm text-gray-300 mb-1">用户名</label>
-          <input v-model="loginUsername" @keyup.enter="submitLogin" type="text" class="w-full px-3 py-2 rounded bg-gray-900 border border-gray-700 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500" />
-        </div>
-        <div>
-          <label class="block text-sm text-gray-300 mb-1">密码</label>
-          <input v-model="loginPassword" @keyup.enter="submitLogin" type="password" class="w-full px-3 py-2 rounded bg-gray-900 border border-gray-700 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500" />
-        </div>
-        <div class="flex justify-end space-x-2 pt-2">
-          <button @click="showLogin = false" class="tech-btn tech-btn-secondary">取消</button>
-          <button @click="submitLogin" class="tech-btn tech-btn-secondary">
-            登录
+    <!-- 登录模态框 -->
+    <transition name="fade">
+      <div v-if="showLogin" class="modal inset-0 fixed bg-black/70 z-50 flex items-center justify-center">
+        <div class="tech-gradient border border-gray-700 rounded-xl p-8 shadow-2xl glow-effect relative max-w-sm w-full m-4">
+          <button @click="showLogin = false" class="absolute top-4 right-4 text-gray-500 hover:text-white">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
           </button>
+          <h2 class="text-2xl font-bold text-center text-cyan-400 mb-6">管理员登录</h2>
+          <form @submit.prevent="login" class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium mb-2 text-cyan-400">用户名</label>
+              <input v-model="loginUsername" type="text" required
+                class="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2 text-cyan-400">密码</label>
+              <input v-model="loginPassword" type="password" required
+                class="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all" />
+            </div>
+            <button type="submit" class="w-full tech-btn tech-btn-primary">
+              登录
+            </button>
+          </form>
         </div>
       </div>
-    </div>
+    </transition>
+    
+    <!-- Toast 提示 -->
+    <transition name="fade">
+        <div v-if="toast.show" 
+             :class="{
+                 'border-green-500 text-green-300': toast.type === 'success',
+                 'border-red-500 text-red-300': toast.type === 'danger',
+                 'border-yellow-500 text-yellow-300': toast.type === 'warning',
+             }"
+             class="fixed bottom-5 right-5 tech-gradient border rounded-lg px-6 py-4 shadow-2xl z-50 mobile-toast">
+            {{ toast.message }}
+        </div>
+    </transition>
   </div>
 
   <script>
-    const { createApp, ref, computed, onMounted } = Vue;
+    const { createApp, ref, onMounted, computed, nextTick, watch } = Vue;
 
     // 配置 marked 和 highlight.js
     marked.setOptions({
@@ -1665,449 +1643,147 @@
 
     createApp({
       setup() {
-        // 状态管理
-        const currentView = ref('library');
+        // --- 状态管理 ---
         const url = ref('');
-        const loading = ref(false);
-        const logs = ref([]);
-        const totalSteps = 4;
-        const currentStep = ref(0); // 0-4
         const summary = ref('');
         const title = ref('');
+        const rendered = ref('');
+        const logs = ref([]);
+        const loading = ref(false);
+        const progressPercent = ref(0);
+        const currentStep = ref(0);
+        const totalSteps = 7; // 根据后端逻辑调整
 
-        // 笔记库相关
+        // 笔记库状态
         const summaries = ref([]);
         const libraryLoading = ref(false);
 
-        // 阅读页面相关
+        // 阅读视图状态
         const readingContent = ref('');
+        const documentTitle = ref('');
+        const readingError = ref('');
         const showToc = ref(true);
         const tocHtml = ref('');
-        const currentFilename = ref('');
-        
-        // 分享相关状态  
-        const shareLoading = ref(false);
-        
-        // Toast 提示相关状态
-        const toastMessage = ref('');
-        const toastType = ref(''); // success, error, info
-        const showToastModal = ref(false);
+        const tocWidth = ref(416); // 26rem = 416px
+        const readingFilename = ref(''); // 新增：当前阅读的文件名
 
-        // ---------- 认证相关 ----------
-        const token = localStorage.getItem('authToken') || '';
-        const isAuthenticated = ref(!!token);
-        if (token) {
-          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        }
-
+        // 视图控制
+        const currentView = ref('library'); // 默认视图 'create', 'library', 'read'
+        
+        // 认证状态
+        const isAuthenticated = ref(false);
         const showLogin = ref(false);
         const loginUsername = ref('');
         const loginPassword = ref('');
 
-        // 计算属性
-        const rendered = computed(() => marked.parse(summary.value));
-        const progressPercent = computed(() => {
-          return ((currentStep.value) / totalSteps) * 100;
+        // 分享状态
+        const shareLoading = ref(false);
+        
+        // Toast 状态
+        const toast = ref({
+            show: false,
+            message: '',
+            type: 'success' // 'success', 'danger', 'warning'
         });
 
-        // 工具函数
-        const formatDate = (timestamp) => {
-          return new Date(timestamp * 1000).toLocaleDateString('zh-CN', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          });
-        };
+        // --- 路由处理 ---
+        const handleRouting = () => {
+          const path = window.location.pathname;
+          const docMatch = path.match(/\/documents\/(.+)/);
 
-        const formatSize = (bytes) => {
-          if (bytes === 0) return '0 B';
-          const k = 1024;
-          const sizes = ['B', 'KB', 'MB', 'GB'];
-          const i = Math.floor(Math.log(bytes) / Math.log(k));
-          return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-        };
-
-        // 格式化字数显示
-        const formatWordCount = (bytes) => {
-          // 估算中文字符数（假设平均每个中文字符占用3个字节）
-          const estimatedChars = Math.round(bytes / 3);
-          if (estimatedChars < 1000) {
-            return `${estimatedChars}字`;
-          } else if (estimatedChars < 10000) {
-            return `${(estimatedChars / 1000).toFixed(1)}k字`;
+          if (docMatch) {
+            const filename = decodeURIComponent(docMatch[1]);
+            loadSummary(filename, false); // false: 不要推入历史记录，因为我们已经在这个URL上
           } else {
-            return `${(estimatedChars / 10000).toFixed(1)}万字`;
-          }
-        };
-
-        // 计算阅读时间（按照每分钟300字的阅读速度）
-        const calculateReadTime = (bytes) => {
-          const estimatedChars = Math.round(bytes / 3);
-          const readingSpeed = 300; // 每分钟300字
-          const minutes = Math.ceil(estimatedChars / readingSpeed);
-          if (minutes < 60) {
-            return `${minutes}分钟`;
-          } else {
-            const hours = Math.floor(minutes / 60);
-            const remainingMinutes = minutes % 60;
-            return remainingMinutes > 0 ? `${hours}小时${remainingMinutes}分钟` : `${hours}小时`;
-          }
-        };
-
-        // ---------- 新增: 渲染 Markdown 并生成目录 ----------
-        const slugify = (str) => {
-          return str.toLowerCase()
-            .replace(/[^\w\u4e00-\u9fa5\s-]/g, '')
-            .replace(/\s+/g, '-')
-            .replace(/-+/g, '-')
-            .replace(/^-|-$/g, '');
-        };
-
-        const renderMarkdownWithToc = (markdown) => {
-          // 使用 marked 渲染 Markdown -> HTML
-          const rawHtml = marked.parse(markdown);
-
-          // 使用 DOMParser 解析 HTML
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(rawHtml, 'text/html');
-
-          // 收集所有标题
-          const headings = [...doc.body.querySelectorAll('h1,h2,h3,h4,h5,h6')];
-
-          let tocHtml = '<ul>';
-
-          headings.forEach(h => {
-            const text = h.textContent.replace(/\s*\(#.+\)$/g, '').trim();
-            const id = slugify(text);
-            // 给所有标题添加 id
-            h.id = id;
-
-            // 只为h3构建目录，作为章节的第一级
-            if (h.tagName.toLowerCase() === 'h3') {
-              tocHtml += `<li><a data-target="${id}">${text}</a></li>`;
-            }
-          });
-          tocHtml += '</ul>';
-
-          return { html: doc.body.innerHTML, tocHtml };
-        };
-
-        // ---------- 修改: loadSummary ----------
-        const loadSummary = async (filename) => {
-          try {
-            // 对文件名进行URL编码以处理特殊字符（如#）
-            const encodedFilename = encodeURIComponent(filename);
-            const res = await axios.get(`/summaries/${encodedFilename}`);
-            const { html, tocHtml: tocString } = renderMarkdownWithToc(res.data.content);
-            readingContent.value = html;
-            tocHtml.value = tocString;
-            currentFilename.value = filename;
-            currentView.value = 'read';
-          } catch (e) {
-            console.error('加载摘要失败:', e);
-          }
-        };
-
-        // ---------- 修改: viewSummary ----------
-        const viewSummary = (summaryTitle, summaryContent) => {
-          const { html, tocHtml: tocString } = renderMarkdownWithToc(summaryContent);
-          readingContent.value = html;
-          tocHtml.value = tocString;
-          // 从标题推断文件名
-          currentFilename.value = summaryTitle + ".md";
-          currentView.value = 'read';
-        };
-
-        // WebSocket 连接
-        const connectWebSocket = (taskId) => {
-          const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-          const wsUrl = `${wsProtocol}//${window.location.host}/ws/${taskId}`;
-          const ws = new WebSocket(wsUrl);
-
-          ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'result') {
-              summary.value = data.summary;
-              title.value = data.title;
-              loading.value = false;
-              currentStep.value = totalSteps; // 完成
-              // 刷新笔记库
+            // 如果不是文档URL，则显示笔记库
+            currentView.value = 'library';
+            if (isAuthenticated.value && summaries.value.length === 0) {
               loadSummaries();
-            } else if (data.message) {
-              // 根据关键字映射简洁步骤并更新进度
-              const msg = data.message;
-              if (msg.includes('下载字幕')) {
-                currentStep.value = 1;
-                logs.value = ['下载字幕中...'];
-              } else if (msg.includes('成功下载')) {
-                currentStep.value = 2;
-                logs.value = ['字幕下载完成'];
-              } else if (msg.includes('调用')) {
-                currentStep.value = 3;
-                logs.value = ['生成摘要中...'];
-              } else if (msg.includes('摘要已保存')) {
-                currentStep.value = 4;
-                logs.value = ['摘要已保存'];
-              } else if (msg.includes('摘要完成')) {
-                currentStep.value = totalSteps;
-                logs.value = ['完成'];
-              } else if (msg.startsWith('错误')) {
-                logs.value.push(msg);
+            }
+          }
+        };
+        
+        // 监听浏览器前进后退
+        window.addEventListener('popstate', handleRouting);
+
+
+        // --- 认证 ---
+        const login = async () => {
+          try {
+            const res = await axios.post('/login', {
+              username: loginUsername.value,
+              password: loginPassword.value
+            });
+            const token = res.data.token;
+            localStorage.setItem('authToken', token);
+            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            isAuthenticated.value = true;
+            showLogin.value = false;
+            showToast('登录成功', 'success');
+            // 登录后，如果当前在笔记库视图，则加载笔记
+            if(currentView.value === 'library'){
+                loadSummaries();
+            }
+          } catch (error) {
+            console.error('登录失败:', error);
+            showToast(error.response?.data?.detail || '登录失败', 'danger');
+          }
+        };
+
+        const logout = () => {
+          localStorage.removeItem('authToken');
+          delete axios.defaults.headers.common['Authorization'];
+          isAuthenticated.value = false;
+          currentView.value = 'library'; // 退出后返回笔记库
+          summaries.value = []; // 清空笔记库数据
+          showLogin.value = true; // 显示登录框
+          showToast('会话已过期，请重新登录', 'warning');
+        };
+
+        const checkAuth = () => {
+          const token = localStorage.getItem('authToken');
+          if (token) {
+            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            isAuthenticated.value = true;
+          } else {
+            isAuthenticated.value = false;
+          }
+        };
+
+        // --- Axios Interceptor for 401 Handling ---
+        axios.interceptors.response.use(
+          response => response,
+          error => {
+            if (error.response && error.response.status === 401) {
+              // 检查这是否是登录请求本身失败，避免无限循环
+              if (error.config.url !== '/login') {
+                logout();
               }
             }
-          };
+            return Promise.reject(error);
+          }
+        );
 
-          ws.onerror = (event) => {
-            logs.value.push("WebSocket 连接错误。");
-            loading.value = false;
-          };
-
-          ws.onclose = (event) => {
-            logs.value.push("连接已关闭。");
-            if (!summary.value) {
-              loading.value = false;
-            }
-          };
+        // --- UI & 交互 ---
+        const showToast = (message, type = 'success', duration = 3000) => {
+          toast.value = { show: true, message, type };
+          setTimeout(() => {
+            toast.value.show = false;
+          }, duration);
         };
-
-        // API 调用
-        const isValidYoutubeUrl = (u) => {
-          // 支持各种 YouTube 链接格式的增强验证
-          if (!u || typeof u !== 'string') return false;
-          
-          const url = u.trim();
-          
-          // 支持的 YouTube 格式：
-          // 1. 标准格式：https://www.youtube.com/watch?v=VIDEO_ID
-          // 2. 短链接：https://youtu.be/VIDEO_ID
-          // 3. 移动端：https://m.youtube.com/watch?v=VIDEO_ID
-          // 4. 嵌入格式：https://www.youtube.com/embed/VIDEO_ID
-          // 5. 播放列表中的视频：https://www.youtube.com/watch?v=VIDEO_ID&list=...
-          // 6. 时间戳链接：https://youtu.be/VIDEO_ID?t=123s
-          // 7. 无协议格式：www.youtube.com/watch?v=VIDEO_ID
-          
-          const patterns = [
-            // 标准 YouTube 格式
-            /^(https?:\/\/)?(www\.)?youtube\.com\/watch\?v=[\w-]{11}(&.*)?$/,
-            // 短链接格式
-            /^(https?:\/\/)?youtu\.be\/[\w-]{11}(\?.*)?$/,
-            // 移动端格式
-            /^(https?:\/\/)?(m\.)?youtube\.com\/watch\?v=[\w-]{11}(&.*)?$/,
-            // 嵌入格式
-            /^(https?:\/\/)?(www\.)?youtube\.com\/embed\/[\w-]{11}(\?.*)?$/,
-            // YouTube Music 格式
-            /^(https?:\/\/)?music\.youtube\.com\/watch\?v=[\w-]{11}(&.*)?$/,
-            // 频道页面中的视频
-            /^(https?:\/\/)?(www\.)?youtube\.com\/.*[&?]v=[\w-]{11}(&.*)?$/
-          ];
-          
-          return patterns.some(pattern => pattern.test(url));
-        };
-
-        // 标准化 YouTube URL 为统一格式
-        const normalizeYoutubeUrl = (url) => {
-          if (!url) return '';
-          
-          const videoIdMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/.*[&?]v=)([^"&?\/\s]{11})/);
-          
-          if (videoIdMatch && videoIdMatch[1]) {
-            return `https://www.youtube.com/watch?v=${videoIdMatch[1]}`;
-          }
-          
-          return url;
-        };
-
-        // ========== 新增：视频分类功能 ==========
-        const categorizedSummaries = computed(() => {
-          if (!summaries.value || summaries.value.length === 0) {
-            return { reinvent: [], other: [] };
-          }
-          
-          const reinvent = [];
-          const other = [];
-          
-          summaries.value.forEach(summary => {
-            // 检查文件名或标题是否包含 reInvent（不区分大小写）
-            const isReinvent = 
-              /reinvent/i.test(summary.filename) || 
-              /reinvent/i.test(summary.title_cn || '') || 
-              /reinvent/i.test(summary.title_en || '') ||
-              /aws\s+re:?invent/i.test(summary.filename) ||
-              /aws\s+re:?invent/i.test(summary.title_cn || '') ||
-              /aws\s+re:?invent/i.test(summary.title_en || '');
-            
-            if (isReinvent) {
-              reinvent.push(summary);
-            } else {
-              other.push(summary);
-            }
-          });
-          
-          // 按修改时间倒序排列
-          reinvent.sort((a, b) => b.mtime - a.mtime);
-          other.sort((a, b) => b.mtime - a.mtime);
-          
-          return { reinvent, other };
-        });
-
-        const startSummarize = async () => {
-          if (!isAuthenticated.value) {
-            showLogin.value = true;
-            return;
-          }
-          
-          if (!isValidYoutubeUrl(url.value)) {
-            showToast('请输入有效的 YouTube 视频链接', 'error');
-            return;
-          }
-          
-          logs.value = [];
-          summary.value = '';
-          title.value = '';
-          loading.value = true;
-          
-          try {
-            // 标准化 URL
-            const normalizedUrl = normalizeYoutubeUrl(url.value);
-            const res = await axios.post('/summarize', { url: normalizedUrl });
-            const taskId = res.data.task_id;
-            logs.value.push("任务已创建，正在连接实时日志...");
-            connectWebSocket(taskId);
-          } catch (e) {
-            const errorMsg = e.response?.data?.detail || '创建任务失败';
-            logs.value.push(`错误: ${errorMsg}`);
-            loading.value = false;
-          }
-        };
-
-        const loadSummaries = async () => {
-          libraryLoading.value = true;
-          try {
-            const res = await axios.get('/summaries');
-            summaries.value = res.data.summaries;
-          } catch (e) {
-            console.error('加载摘要列表失败:', e);
-          } finally {
-            libraryLoading.value = false;
-          }
+        
+        const goBackToLibrary = () => {
+          history.pushState(null, '', '/');
+          currentView.value = 'library';
+          // 清理阅读视图状态
+          readingContent.value = '';
+          documentTitle.value = '';
+          readingFilename.value = '';
+          tocHtml.value = '';
         };
 
         const toggleToc = () => {
           showToc.value = !showToc.value;
-        };
-
-        // 分享功能 - 优化版
-        const shareDocument = async () => {
-          if (!currentFilename.value) {
-            showToast('请先选择要分享的文档', 'error');
-            return;
-          }
-          
-          if (shareLoading.value) return;
-          
-          try {
-            shareLoading.value = true;
-            // 对文件名进行URL编码以处理特殊字符（如#）
-            const encodedFilename = encodeURIComponent(currentFilename.value);
-            const res = await axios.post(`/share/${encodedFilename}`);
-            const fullUrl = `${window.location.origin}/share/${res.data.share_token}`;
-            
-            // 复制到剪贴板
-            try {
-              await copyToClipboard(fullUrl);
-              showToast('分享链接已复制到剪贴板！', 'success');
-            } catch (copyError) {
-              // 如果复制失败，降级处理已在 copyToClipboard 函数中处理
-              showToast('分享链接生成成功，请手动复制', 'warning');
-            }
-          } catch (e) {
-            console.error('创建分享链接失败:', e);
-            const errorMsg = e.response?.data?.detail || e.message || '创建分享链接失败';
-            showToast(`分享失败: ${errorMsg}`, 'error');
-          } finally {
-            shareLoading.value = false;
-          }
-        };
-
-        // 复制到剪贴板的通用函数
-        const copyToClipboard = async (text) => {
-          try {
-            // 优先使用现代 Clipboard API
-            if (navigator.clipboard && window.isSecureContext) {
-              await navigator.clipboard.writeText(text);
-              return;
-            }
-            
-            // 降级处理：使用传统方法
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            textArea.style.position = 'fixed';
-            textArea.style.left = '-999999px';
-            textArea.style.top = '-999999px';
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            
-            try {
-              const successful = document.execCommand('copy');
-              if (!successful) {
-                throw new Error('复制命令执行失败');
-              }
-            } finally {
-              document.body.removeChild(textArea);
-            }
-          } catch (e) {
-            console.error('复制到剪贴板失败:', e);
-            // 如果都失败了，至少给用户一个手动复制的选项
-            const fallbackModal = document.createElement('div');
-            fallbackModal.style.cssText = `
-              position: fixed;
-              top: 50%;
-              left: 50%;
-              transform: translate(-50%, -50%);
-              background: #1f2937;
-              border: 1px solid #374151;
-              border-radius: 8px;
-              padding: 20px;
-              z-index: 9999;
-              max-width: 90%;
-              box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            `;
-            fallbackModal.innerHTML = `
-              <h3 style="color: #06b6d4; margin-bottom: 10px;">请手动复制链接</h3>
-              <input type="text" value="${text}" style="width: 100%; padding: 8px; margin-bottom: 10px; background: #374151; border: 1px solid #4b5563; border-radius: 4px; color: white;" readonly>
-              <button onclick="this.parentElement.remove()" style="background: #06b6d4; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">关闭</button>
-            `;
-            document.body.appendChild(fallbackModal);
-            
-            // 选中文本
-            const input = fallbackModal.querySelector('input');
-            input.focus();
-            input.select();
-            
-            // 5秒后自动关闭
-            setTimeout(() => {
-              if (fallbackModal.parentElement) {
-                fallbackModal.remove();
-              }
-            }, 5000);
-            
-            throw e;
-          }
-        };
-
-        // Toast 提示功能
-        const showToast = (message, type = 'info') => {
-          toastMessage.value = message;
-          toastType.value = type;
-          showToastModal.value = true;
-          
-          // 3秒后自动隐藏
-          setTimeout(() => {
-            showToastModal.value = false;
-          }, 3000);
         };
 
         // 处理目录点击
@@ -2124,105 +1800,370 @@
         };
 
         // 拖拽侧栏分隔条
-        const tocWidth = ref(Math.round(window.innerWidth / 3.55));
-
-        // 移动端默认隐藏目录
-        if (window.innerWidth < 768) {
-          showToc.value = false;
-        }
+        let isDragging = false;
 
         const initDrag = (e) => {
+          isDragging = true;
+          document.addEventListener('mousemove', doDrag);
+          document.addEventListener('mouseup', stopDrag);
           e.preventDefault();
-          const startX = e.clientX;
-          const startW = tocWidth.value;
-
-          const onMove = (ev) => {
-            const newW = Math.max(280, startW + (ev.clientX - startX));
-            tocWidth.value = newW;
-          };
-
-          const onUp = () => {
-            window.removeEventListener('mousemove', onMove);
-            window.removeEventListener('mouseup', onUp);
-          };
-
-          window.addEventListener('mousemove', onMove);
-          window.addEventListener('mouseup', onUp);
         };
 
-        // 登录处理
-        const submitLogin = async () => {
-          try {
-            const res = await axios.post('/login', { username: loginUsername.value, password: loginPassword.value });
-            const tk = res.data.token;
-            axios.defaults.headers.common['Authorization'] = `Bearer ${tk}`;
-            localStorage.setItem('authToken', tk);
-            isAuthenticated.value = true;
-            showLogin.value = false;
-            showToast('登录成功', 'success');
-          } catch (e) {
-            showToast('登录失败: 用户名或密码错误', 'error');
+        const doDrag = (e) => {
+          if (!isDragging) return;
+          const newWidth = Math.max(300, Math.min(800, e.clientX));
+          tocWidth.value = newWidth;
+        };
+
+        const stopDrag = () => {
+          isDragging = false;
+          document.removeEventListener('mousemove', doDrag);
+          document.removeEventListener('mouseup', stopDrag);
+        };
+        
+        // ---------- 动态调整TOC宽度 ----------
+        const adjustTocWidth = () => {
+          const tocElement = document.querySelector('.toc-sidebar .toc'); // Target specifically within the sidebar
+          if (!tocElement) return;
+
+          const links = tocElement.querySelectorAll('a');
+          if (!links || links.length === 0) return;
+
+          let maxWidth = 0;
+          links.forEach(link => {
+            if (link.scrollWidth > maxWidth) {
+              maxWidth = link.scrollWidth;
+            }
+          });
+
+          if (maxWidth > 0) {
+            const newTocWidth = Math.min(maxWidth + 60, Math.max(300, window.innerWidth * 0.5)); 
+            tocWidth.value = newTocWidth;
           }
         };
 
-        const logout = () => {
-          localStorage.removeItem('authToken');
-          delete axios.defaults.headers.common['Authorization'];
-          isAuthenticated.value = false;
-          currentView.value = 'library';
+        // ---------- 渲染 Markdown 并生成目录 ----------
+        const slugify = (str) => {
+          return str.toLowerCase()
+            .replace(/[^\w\u4e00-\u9fa5\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '');
+        };
+        
+        const renderMarkdownWithToc = (markdown) => {
+          const rawHtml = marked.parse(markdown);
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(rawHtml, 'text/html');
+          
+          // 首先，确保所有标题都有ID，以便能够链接到它们
+          const allHeadings = [...doc.body.querySelectorAll('h1,h2,h3,h4,h5,h6')];
+          allHeadings.forEach(h => {
+            const text = h.textContent.replace(/\s*\(#.+\)$/g, '').trim();
+            h.id = slugify(text);
+          });
+          
+          // 现在，仅使用 H3 元素构建目录
+          const h3Headings = [...doc.body.querySelectorAll('h3')];
+          
+          if (h3Headings.length > 0) {
+            let tocHtmlContent = '<ul>';
+            h3Headings.forEach(h => {
+                const text = h.textContent.replace(/\s*\(#.+\)$/g, '').trim();
+                const id = h.id; // 使用我们刚刚分配的ID
+                tocHtmlContent += `<li><a data-target="${id}">${text}</a></li>`;
+            });
+            tocHtmlContent += '</ul>';
+            return { html: doc.body.innerHTML, tocHtml: tocHtmlContent };
+          }
+          
+          // 如果没有找到H3，则返回不带TOC的内容
+          return { html: doc.body.innerHTML, tocHtml: '' };
         };
 
-        // 生命周期
+
+        // --- 主要功能方法 ---
+
+        const isValidYoutubeUrl = (str) => {
+          if (!str || typeof str !== 'string') return false;
+          const url = str.trim();
+          const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+$/;
+          return youtubeRegex.test(url);
+        };
+
+        const clearActiveTask = () => {
+            localStorage.removeItem('active_task_id');
+            localStorage.removeItem('active_task_url');
+        };
+
+        const startSummarize = async () => {
+          if (loading.value || !url.value) return;
+
+          logs.value = [];
+          summary.value = '';
+          title.value = '';
+          rendered.value = '';
+          loading.value = true;
+          progressPercent.value = 0;
+          currentStep.value = 0;
+
+          try {
+            const res = await axios.post('/summarize', { url: url.value });
+            const taskId = res.data.task_id;
+            
+            // --- 新增：保存任务状态到localStorage ---
+            localStorage.setItem('active_task_id', taskId);
+            localStorage.setItem('active_task_url', url.value);
+            
+            connectWebSocket(taskId);
+          } catch (error) {
+            console.error('任务创建失败:', error);
+            loading.value = false;
+            logs.value.push(`错误: ${error.response?.data?.detail || error.message}`);
+            clearActiveTask(); // 创建失败时清理
+          }
+        };
+        
+        const connectWebSocket = (taskId) => {
+            const wsUrl = `ws://${window.location.host}/ws/${taskId}`;
+            const ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                loading.value = true;
+                logs.value.push('已连接到分析服务...');
+            };
+
+            ws.onmessage = (event) => {
+              const data = JSON.parse(event.data);
+              
+              if (data.type === 'result') {
+                title.value = data.title;
+                summary.value = data.summary;
+                rendered.value = marked.parse(data.summary);
+                
+                // --- 关键修改: 收到结果后立即解除加载状态 ---
+                loading.value = false;
+                progressPercent.value = 100;
+                
+                ws.close();
+                clearActiveTask();
+              } else {
+                logs.value.push(data.message);
+                currentStep.value += 1;
+                progressPercent.value = Math.min(99, (currentStep.value / totalSteps) * 100);
+              }
+            };
+            ws.onerror = (event) => {
+              console.error("WebSocket error:", event);
+              logs.value.push("错误: WebSocket 连接中断。");
+              loading.value = false;
+              // 错误发生时也清理，避免卡住
+              clearActiveTask();
+            };
+            ws.onclose = () => {
+              loading.value = false;
+              progressPercent.value = 100;
+              console.log("WebSocket connection closed or task finished.");
+              // 正常关闭（任务完成）时，localStorage已在onmessage中清理
+            };
+        };
+
+        const loadSummaries = async () => {
+          libraryLoading.value = true;
+          try {
+            const res = await axios.get('/summaries');
+            summaries.value = res.data.summaries;
+          } catch (err) {
+            console.error('加载摘要列表失败:', err);
+            if (err.response && err.response.status === 401) {
+              showToast('请先登录以浏览笔记库', 'warning');
+              showLogin.value = true;
+            }
+          } finally {
+            libraryLoading.value = false;
+          }
+        };
+
+        const loadSummary = async (filename, pushState = true) => {
+          try {
+            readingError.value = '';
+            // URL编码文件名以处理特殊字符
+            const encodedFilename = encodeURIComponent(filename);
+            const res = await axios.get(`/summaries/${encodedFilename}`);
+            
+            if (pushState) {
+              history.pushState({ filename }, '', `/documents/${encodedFilename}`);
+            }
+            viewSummary(res.data.title, res.data.content, filename);
+          } catch (err) {
+            console.error('加载摘要失败:', err);
+            readingError.value = err.response?.data?.detail || '加载摘要失败';
+            goBackToLibrary(); // 失败时返回库
+          }
+        };
+        
+        const viewSummary = (title, content, filename) => {
+          documentTitle.value = title;
+          readingFilename.value = filename; // 跟踪当前文件名
+          
+          const { html, tocHtml: tocString } = renderMarkdownWithToc(content);
+          readingContent.value = html;
+          tocHtml.value = tocString;
+          currentView.value = 'read';
+
+          nextTick(() => {
+            // Re-run highlight.js on the new content
+            document.querySelectorAll('.prose-tech pre code').forEach((block) => {
+                hljs.highlightElement(block);
+            });
+            adjustTocWidth();
+          });
+        };
+        
+        const shareDocument = async () => {
+          if (!readingFilename.value) return;
+          shareLoading.value = true;
+          
+          const shareUrl = `${window.location.origin}/documents/${encodeURIComponent(readingFilename.value)}`;
+          try {
+            await navigator.clipboard.writeText(shareUrl);
+            showToast('分享链接已复制到剪贴板！', 'success');
+          } catch (err) {
+            console.error('复制失败: ', err);
+            showToast('复制链接失败，请手动复制', 'danger');
+            prompt("请手动复制链接:", shareUrl);
+          } finally {
+            shareLoading.value = false;
+          }
+        };
+
+
+        // --- 计算属性和工具函数 ---
+        const categorizedSummaries = computed(() => {
+          const reinvent = [];
+          const other = [];
+          summaries.value.forEach(s => {
+            if (s.title_en.toLowerCase().includes('reinvent') || s.title_cn.toLowerCase().includes('reinvent')) {
+              reinvent.push(s);
+            } else {
+              other.push(s);
+            }
+          });
+          return { reinvent, other };
+        });
+
+        const formatWordCount = (bytes) => {
+          if (!bytes) return '0 字';
+          // 假设一个中文字符平均占3个字节
+          const wordCount = Math.round(bytes / 3);
+          if (wordCount > 1000) {
+            return `${(wordCount / 1000).toFixed(1)}k 字`;
+          }
+          return `${wordCount} 字`;
+        };
+
+        const calculateReadTime = (wordCount) => {
+            if (!wordCount || wordCount < 100) return '不到 1 分钟';
+            const minutes = Math.ceil(wordCount / 200); // 按每分钟200字估算
+            return `${minutes} 分钟`;
+        };
+
+        // --- 新增: 任务恢复逻辑 ---
+        const restoreTask = async () => {
+            const taskId = localStorage.getItem('active_task_id');
+            const taskUrl = localStorage.getItem('active_task_url');
+            if (taskId && taskUrl) {
+                try {
+                    showToast('检测到未完成的分析任务，正在尝试恢复...', 'warning');
+                    url.value = taskUrl;
+                    logs.value = ['正在恢复任务...'];
+                    loading.value = true;
+                    
+                    // 通知后端我们要重连
+                    await axios.post('/summarize', { url: taskUrl, task_id: taskId });
+                    
+                    // 连接 WebSocket
+                    connectWebSocket(taskId);
+                } catch(e) {
+                    console.error('任务恢复失败:', e);
+                    showToast('任务恢复失败', 'danger');
+                    clearActiveTask();
+                    loading.value = false;
+                }
+            }
+        };
+
+        // --- 生命周期钩子 ---
         onMounted(() => {
-          loadSummaries();
+          checkAuth();
+          handleRouting(); // 处理初始URL路由
+          restoreTask(); // 检查是否有任务需要恢复
+
+          // 移动端优化
+          if (window.innerWidth < 768) {
+            showToc.value = false;
+          }
+        });
+
+        watch(currentView, (newView, oldView) => {
+          // 仅当从非笔记库视图切换到笔记库时才加载
+          if (newView === 'library' && isAuthenticated.value) {
+            loadSummaries();
+          }
+        });
+        
+        watch(isAuthenticated, (isAuth) => {
+          if (isAuth && currentView.value === 'library') {
+            loadSummaries();
+          }
+          if (!isAuth) {
+            summaries.value = [];
+          }
         });
 
         return {
-          currentView,
           url,
-          loading,
-          logs,
           summary,
           title,
           rendered,
+          logs,
+          loading,
+          progressPercent,
+          startSummarize,
+          isValidYoutubeUrl,
           summaries,
           libraryLoading,
-          readingContent,
-          showToc,
-          tocHtml,
-          currentFilename,
-          shareLoading,
-          toastMessage,
-          toastType,
-          showToastModal,
-          formatDate,
-          formatSize,
-          formatWordCount,
-          calculateReadTime,
-          startSummarize,
           loadSummaries,
           loadSummary,
+          categorizedSummaries,
+          formatWordCount,
+          calculateReadTime,
+          readingContent,
+          documentTitle,
+          readingError,
           viewSummary,
+          currentView,
+          goBackToLibrary,
+          showToc,
           toggleToc,
-          shareDocument,
-          showToast,
+          tocHtml,
           handleTocClick,
           tocWidth,
           initDrag,
-          progressPercent,
-          currentStep,
-          totalSteps,
           isAuthenticated,
           showLogin,
+          login,
+          logout,
+          shareDocument,
+          shareLoading,
+          toast,
+          showToast,
           loginUsername,
           loginPassword,
-          submitLogin,
-          logout,
-          isValidYoutubeUrl,
-          categorizedSummaries,
-          normalizeYoutubeUrl
+          currentStep,
+          totalSteps
         };
-      },
+      }
     }).mount('#app');
   </script>
 </body>

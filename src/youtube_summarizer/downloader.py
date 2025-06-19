@@ -157,10 +157,6 @@ class SubtitleDownloader:
 
         logger.info(f"尝试下载英文 ('en') 字幕（优先人工，后备自动）...")
         try:
-            # 使用更智能的单次调用，让 yt-dlp 自行选择最佳可用字幕
-            # 'en,en-US,en-GB' 是尝试不同变体的英文
-            # --sub-langs "en.*" 也可以，但明确指定更可靠
-            # --write-subs 优先于 --write-auto-subs
             subprocess.run(
                 [
                     'yt-dlp',
@@ -181,7 +177,6 @@ class SubtitleDownloader:
                 logger.info(f"清理字幕文件: {expected_vtt_path.name}")
                 subtitle_text = self.clean_vtt(expected_vtt_path.read_text(encoding="utf-8"))
                 
-                # 无法从单次调用中精确判断是人工还是自动，但通常质量是最好的那个
                 return subtitle_text, expected_vtt_path, "en (best available)"
 
         except subprocess.CalledProcessError as e:

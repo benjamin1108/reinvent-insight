@@ -52,7 +52,6 @@ class GeminiSummarizer(Summarizer):
         
         logger.info("开始使用 Gemini Pro 进行摘要（已开启推理模式）...")
         
-        # 增强 prompt 以促进推理
         reasoning_prompt = f"""请先进行深入分析，再撰写最终摘要。
 
 <thinking>
@@ -80,10 +79,10 @@ class GeminiSummarizer(Summarizer):
             response = self.model.generate_content(
                 reasoning_prompt,
                 generation_config=genai.types.GenerationConfig(
-                    temperature=0.7,  # 适中的创造性
-                    top_p=0.9,        # 核采样参数
-                    top_k=40,         # 限制候选词数量
-                    max_output_tokens=128000,  # 根据用户要求调高输出长度上限
+                    temperature=0.7,
+                    top_p=0.9,
+                    top_k=40,
+                    max_output_tokens=128000,
                     response_mime_type="text/plain",
                 )
             )
@@ -92,7 +91,6 @@ class GeminiSummarizer(Summarizer):
             return summary
         except Exception as e:
             logger.error(f"调用 Gemini API 时发生错误: {e}", exc_info=True)
-            # 可以在这里根据具体的 API 错误类型给出更详细的提示
             if "API key not valid" in str(e):
                 logger.error("您的 Gemini API 密钥无效，请检查 .env 文件。")
             return None
