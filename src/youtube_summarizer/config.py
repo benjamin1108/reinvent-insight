@@ -42,6 +42,7 @@ SUBTITLE_DIR = DOWNLOAD_DIR / "subtitles"
 SUBTITLE_DIR.mkdir(exist_ok=True) # 确保字幕目录存在
 OUTPUT_DIR = DOWNLOAD_DIR / "summaries"
 OUTPUT_DIR.mkdir(exist_ok=True) # 确保输出目录存在
+COOKIES_FILE = os.getenv("cookie") # 从 .env 读取 cookie 文件路径
 
 # --- 认证配置 ---
 ADMIN_USERNAME = os.getenv("USERNAME") or os.getenv("ADMIN_USERNAME") or "admin"
