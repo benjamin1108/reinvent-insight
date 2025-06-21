@@ -115,3 +115,4 @@ venv.bak/
 
 # uv
 .uv/
+.cookies
