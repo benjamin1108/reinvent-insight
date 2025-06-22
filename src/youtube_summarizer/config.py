@@ -5,12 +5,15 @@ from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
+# 加载 .env 文件
+load_dotenv()
+
 # 项目的根目录 (youtube-summarizer/)
 # Path(__file__) -> .../src/youtube_summarizer/config.py
 # .parent -> .../src/youtube_summarizer
 # .parent -> .../src
 # .parent -> .../
-BASE_DIR = Path(__file__).parent.parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # 加载 .env 文件
 # 它会自动寻找项目根目录下的 .env 文件
@@ -46,6 +49,19 @@ OUTPUT_DIR.mkdir(exist_ok=True) # 确保输出目录存在
 # --- 认证配置 ---
 ADMIN_USERNAME = os.getenv("USERNAME") or os.getenv("ADMIN_USERNAME") or "admin"
 ADMIN_PASSWORD = os.getenv("PASSWORD") or os.getenv("ADMIN_PASSWORD") or "password"
+
+# --- 基础路径 ---
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+# 定义输出目录
+OUTPUT_DIR = BASE_DIR / "downloads" / "summaries"
+# 定义字幕下载目录
+SUBTITLE_DIR = BASE_DIR / "downloads" / "subtitles"
+# 定义 Cookies 文件路径 (即使文件不存在也没关系，程序会检查)
+COOKIES_FILE = BASE_DIR / "cookies.txt"
+
+# --- 并发控制 ---
+# 在并行生成章节时，每个API调用之间的延迟（秒）
+CHAPTER_GENERATION_DELAY_SECONDS = 0.5
 
 def check_gemini_api_key():
     """检查 Gemini API Key 是否已配置"""

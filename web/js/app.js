@@ -274,7 +274,8 @@ createApp({
       const h3Headings = [...doc.body.querySelectorAll('h3')];
       
       if (h3Headings.length > 0) {
-        let tocHtmlContent = '<ul>';
+        // 在列表前手动添加目录标题
+        let tocHtmlContent = '<h3>主要目录</h3><ul>';
         h3Headings.forEach(h => {
             const text = h.textContent.replace(/\s*\(#.+\)$/g, '').trim();
             const id = h.id; // 使用我们刚刚分配的ID

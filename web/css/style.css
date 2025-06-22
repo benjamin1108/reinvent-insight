@@ -222,9 +222,19 @@ body {
   font-size: 1.25rem;
 }
 
+.toc ul,
+.toc ol {
+  padding-left: 1.5rem; /* 为所有列表统一左边距 */
+  margin: 0;
+}
+
 .toc ul {
   list-style: none;
-  padding: 0;
+  padding-left: 0; /* 无序列表不需要额外边距 */
+}
+
+.toc ol {
+  list-style: decimal; /* 确保有序列表显示数字 */
 }
 
 .toc li {

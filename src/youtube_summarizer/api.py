@@ -15,7 +15,7 @@ import urllib.parse
 from .logger import setup_logger
 from . import config
 from .task_manager import manager # 导入共享的任务管理器
-from .worker import summary_task_worker_sync # 导入同步工作流
+from .worker import summary_task_worker_async # 导入新的异步工作流
 
 setup_logger(config.LOG_LEVEL)
 logger = logging.getLogger(__name__)
@@ -129,7 +129,8 @@ async def summarize_endpoint(req: SummarizeRequest, authorization: str = Header(
         return SummarizeResponse(task_id=task_id, message="任务恢复中，请连接 WebSocket。", status="reconnected")
 
     task_id = str(uuid.uuid4())
-    task = asyncio.create_task(summary_task_worker(str(req.url), task_id))
+    # 直接创建并运行新的异步 worker
+    task = asyncio.create_task(summary_task_worker_async(str(req.url), task_id))
     manager.create_task(task_id, task)
     
     return SummarizeResponse(task_id=task_id, message="任务已创建，请连接 WebSocket。", status="created")
@@ -334,4 +335,14 @@ if web_dir.is_dir():
             logger.error(f"Frontend entry point not found at: {index_path}")
             raise HTTPException(status_code=404, detail="Web application not found.")
 else:
-    logger.warning(f"Frontend directory 'web' not found at {web_dir}, will only serve API.") 
+    logger.warning(f"Frontend directory 'web' not found at {web_dir}, will only serve API.")
+
+def serve(host: str = "0.0.0.0", port: int = 8001, reload: bool = False):
+    """使用 uvicorn 启动 Web 服务器。"""
+    import uvicorn
+    uvicorn.run(
+        "src.youtube_summarizer.api:app",
+        host=host,
+        port=port,
+        reload=reload
+    ) 

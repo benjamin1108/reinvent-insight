@@ -11,16 +11,16 @@ class Summarizer(ABC):
         self.api_key = api_key
 
     @abstractmethod
-    def summarize(self, text: str, prompt: str) -> str | None:
+    async def generate_content(self, prompt: str, is_json: bool = False) -> str | None:
         """
-        对给定的文本进行摘要。
+        根据给定的提示词生成内容。
 
         Args:
-            text (str): 需要摘要的源文本 (字幕)。
-            prompt (str): 用于指导模型生成内容的提示词。
+            prompt (str): 用于指导模型生成内容的完整提示词。
+            is_json (bool): 是否要求返回 JSON 格式的内容。
 
         Returns:
-            str | None: 生成的摘要文本，如果失败则返回 None。
+            str | None: 生成的文本内容，如果失败则返回 None。
         """
         pass
 
@@ -30,65 +30,46 @@ class GeminiSummarizer(Summarizer):
         super().__init__(api_key)
         if self.api_key:
             genai.configure(api_key=self.api_key)
-        # 使用系统指令来增强推理能力
-        system_instruction = """你是一名专业的技术内容分析师。在处理任何内容时，请：
-1. 首先深入理解内容的核心主题和关键概念
-2. 分析内容的逻辑结构和论证过程  
-3. 识别重要的技术细节、数据和案例
-4. 进行批判性思考，评估信息的重要性和相关性
-5. 基于以上分析，生成结构化、深度的摘要
-
-请始终采用逐步推理的方式，确保输出的质量和深度。"""
         
+        # 移除了固定的 system_instruction，使其更灵活
         self.model = genai.GenerativeModel(
             'gemini-2.5-pro-preview-06-05',
-            system_instruction=system_instruction
         )
 
-    def summarize(self, text: str, prompt: str) -> str | None:
+    async def generate_content(self, prompt: str, is_json: bool = False) -> str | None:
         if not self.api_key:
             logger.error("Gemini API Key 未配置。")
             return None
         
-        logger.info("开始使用 Gemini Pro 进行摘要（已开启推理模式）...")
+        logger.info("开始使用 Gemini Pro 生成内容...")
         
-        reasoning_prompt = f"""请先进行深入分析，再撰写最终摘要。
-
-<thinking>
-1. 主题识别：本内容的核心主题是什么？
-2. 结构分析：内容由哪些主要部分组成？
-3. 关键信息提取：最重要的技术点、数据、案例是什么？
-4. 逻辑关系：信息之间的联系如何？
-5. 价值评估：哪些信息对读者最有价值？
-</thinking>
-
-以下 **写作规范** 仅供你参考，**请不要将写作规范本身出现在最终输出中**。
-### 写作规范开始
-{prompt}
-### 写作规范结束
-
-# 输入素材
-- 提供材料：
-```
-{text}
-```
-
-请根据上面的分析与写作规范，生成一份深度且结构化的技术摘要。仅输出正文，不要输出其他无关内容"""
+        generation_config = genai.types.GenerationConfig(
+            temperature=0.7,
+            top_p=0.9,
+            top_k=40,
+            max_output_tokens=128000,
+            response_mime_type="application/json" if is_json else "text/plain",
+        )
 
         try:
-            response = self.model.generate_content(
-                reasoning_prompt,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=0.7,
-                    top_p=0.9,
-                    top_k=40,
-                    max_output_tokens=128000,
-                    response_mime_type="text/plain",
-                )
+            # 使用异步 generate_content_async
+            response = await self.model.generate_content_async(
+                prompt,
+                generation_config=generation_config
             )
-            summary = response.text
-            logger.success("Gemini Pro 摘要完成（推理模式）。")
-            return summary
+            # 检查是否有候选内容
+            if not response.candidates:
+                logger.warning("Gemini API 返回了空的候选内容。")
+                return None
+            
+            # 改进对 response.text 的访问，增加错误处理
+            content = ''.join(part.text for part in response.candidates[0].content.parts)
+            if not content:
+                 logger.warning("Gemini API 返回的内容为空文本。")
+                 return None
+            
+            logger.success("Gemini Pro 内容生成完成。")
+            return content
         except Exception as e:
             logger.error(f"调用 Gemini API 时发生错误: {e}", exc_info=True)
             if "API key not valid" in str(e):
@@ -97,13 +78,13 @@ class GeminiSummarizer(Summarizer):
 
 class XaiSummarizer(Summarizer):
     """XAI 模型摘要器 (占位符)。"""
-    def summarize(self, text: str, prompt: str) -> str | None:
+    async def generate_content(self, prompt: str, is_json: bool = False) -> str | None:
         logger.warning("XAI 模型功能尚未实现。")
         raise NotImplementedError("XAI summarizer is not implemented yet.")
 
 class AlibabaSummarizer(Summarizer):
     """Alibaba 模型摘要器 (占位符)。"""
-    def summarize(self, text: str, prompt: str) -> str | None:
+    async def generate_content(self, prompt: str, is_json: bool = False) -> str | None:
         logger.warning("Alibaba 模型功能尚未实现。")
         raise NotImplementedError("Alibaba summarizer is not implemented yet.")
 
