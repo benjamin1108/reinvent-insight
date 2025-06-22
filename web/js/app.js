@@ -501,6 +501,21 @@ createApp({
       return { reinvent, other };
     });
 
+    const showHeroSection = computed(() => {
+      if (isShareView.value || currentView.value === 'read') {
+        return false;
+      }
+      // 为未登录用户显示
+      if (!isAuthenticated.value) {
+        return true;
+      }
+      // 为已登录用户在创建和库视图中显示
+      if (isAuthenticated.value && (currentView.value === 'create' || currentView.value === 'library')) {
+        return true;
+      }
+      return false;
+    });
+
     // --- 数据转换与格式化 ---
     const formatWordCount = (wordCount) => {
       if (!wordCount) return '0 字';
@@ -622,7 +637,8 @@ createApp({
       totalSteps,
       isShareView,
       goHome,
-      requireAuth
+      requireAuth,
+      showHeroSection
     };
   }
 }).mount('#app'); 
