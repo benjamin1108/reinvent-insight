@@ -12,6 +12,7 @@ from pathlib import Path
 import re
 import urllib.parse
 from zhon import hanzi
+import yaml
 
 from .logger import setup_logger
 from . import config
@@ -22,10 +23,6 @@ setup_logger(config.LOG_LEVEL)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Reinvent Insight API", description="YouTube 字幕深度摘要后端服务", version="0.1.0")
-
-# --- 存储分享链接 ---
-# { "hash": "filename.md" }
-share_links = {}
 
 # --- 简易认证实现 ---
 session_tokens: Set[str] = set()
@@ -70,6 +67,20 @@ def extract_text_from_markdown(content: str) -> str:
     content = content.strip()
     
     return content
+
+def parse_metadata_from_md(md_content: str) -> dict:
+    """从 Markdown 文件内容中解析 YAML front matter。"""
+    try:
+        # 使用正则表达式匹配 front matter
+        match = re.match(r'^---\s*\n(.*?)\n---\s*\n', md_content, re.DOTALL)
+        if match:
+            front_matter_str = match.group(1)
+            metadata = yaml.safe_load(front_matter_str)
+            if isinstance(metadata, dict):
+                return metadata
+    except (yaml.YAMLError, IndexError) as e:
+        logger.warning(f"解析 YAML front matter 失败: {e}")
+    return {}
 
 def count_chinese_words(text: str) -> int:
     """
@@ -124,9 +135,6 @@ class SummarizeResponse(BaseModel):
     message: str
     status: str # "created", "reconnected"
 
-class ShareRequest(BaseModel):
-    filename: str
-    
 @app.post("/summarize", response_model=SummarizeResponse)
 async def summarize_endpoint(req: SummarizeRequest, authorization: str = Header(None)):
     """
@@ -146,53 +154,6 @@ async def summarize_endpoint(req: SummarizeRequest, authorization: str = Header(
     
     return SummarizeResponse(task_id=task_id, message="任务已创建，请连接 WebSocket。", status="created")
 
-@app.post("/api/share")
-async def create_share_link(req: ShareRequest, authorization: str = Header(None)):
-    """为指定文件创建分享链接"""
-    verify_token(authorization)
-    
-    filename = req.filename
-    if ".." in filename or "/" in filename or "\\" in filename:
-        raise HTTPException(status_code=400, detail="无效的文件名")
-        
-    file_path = config.OUTPUT_DIR / filename
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="无法分享不存在的文件")
-
-    # 使用文件名和时间戳生成稳定的、短小的哈希
-    hasher = hashlib.sha1(f"{filename}:{file_path.stat().st_mtime}".encode())
-    share_hash = base64.urlsafe_b64encode(hasher.digest()).decode()[:8]
-
-    # 存储映射
-    share_links[share_hash] = filename
-    logger.info(f"为文件 '{filename}' 创建分享链接, hash: {share_hash}")
-    
-    return {"share_hash": share_hash}
-
-@app.get("/api/share/{share_hash}")
-async def get_shared_summary(share_hash: str):
-    """通过分享哈希获取摘要内容"""
-    filename = share_links.get(share_hash)
-    if not filename:
-        raise HTTPException(status_code=404, detail="分享链接不存在或已失效")
-    
-    # 复用现有的 get_summary 逻辑，但这里直接实现以避免token检查
-    try:
-        file_path = config.OUTPUT_DIR / filename
-        if not file_path.exists():
-            # 哈希存在但文件被删除
-            raise HTTPException(status_code=404, detail="分享的原文已不存在")
-        
-        content = file_path.read_text(encoding="utf-8")
-        return {
-            "filename": filename,
-            "title": file_path.stem,
-            "content": content
-        }
-    except Exception as e:
-        logger.error(f"读取分享文件 '{filename}' (hash: {share_hash}) 失败: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="读取分享内容失败")
-
 @app.get("/api/public/summaries")
 async def list_public_summaries():
     """获取所有已生成的摘要文件列表供公开展示，无需认证。"""
@@ -200,40 +161,45 @@ async def list_public_summaries():
         summaries = []
         if config.OUTPUT_DIR.exists():
             for md_file in config.OUTPUT_DIR.glob("*.md"):
-                stat = md_file.stat()
-                title_cn = ""
                 try:
-                    with md_file.open("r", encoding="utf-8") as f:
-                        for line in f:
+                    content = md_file.read_text(encoding="utf-8")
+                    metadata = parse_metadata_from_md(content)
+                    
+                    # 优先从 metadata 获取标题，其次才是 H1
+                    title_cn = metadata.get("title")
+                    if not title_cn:
+                         for line in content.splitlines():
                             stripped = line.strip()
                             if stripped.startswith('# '):
                                 title_cn = stripped[2:].strip()
                                 break
-                except Exception as e:
-                    logger.warning(f"为公共接口提取中文标题失败 {md_file.name}: {e}")
-                title_en = md_file.stem
-                if not title_cn:
-                    title_cn = title_en
+                    if not title_cn:
+                        title_cn = md_file.stem
                     
-                # 读取文件内容并计算纯文本字符数
-                try:
-                    content = md_file.read_text(encoding="utf-8")
                     pure_text = extract_text_from_markdown(content)
                     word_count = count_chinese_words(pure_text)
-                except Exception as e:
-                    logger.warning(f"计算字数失败 {md_file.name}: {e}")
-                    word_count = 0
+                    stat = md_file.stat()
                     
-                summaries.append({
-                    "filename": md_file.name,
-                    "title_cn": title_cn,
-                    "title_en": title_en,
-                    "size": stat.st_size,
-                    "word_count": word_count,  # 新增：纯文本字符数
-                    "created_at": stat.st_ctime,
-                    "modified_at": stat.st_mtime
-                })
-        summaries.sort(key=lambda x: x["modified_at"], reverse=True)
+                    summary_data = {
+                        "filename": md_file.name,
+                        "title_cn": title_cn,
+                        "size": stat.st_size,
+                        "word_count": word_count,
+                        "created_at": stat.st_ctime,
+                        "modified_at": stat.st_mtime,
+                        # 从 metadata 中添加新字段
+                        "upload_date": metadata.get("upload_date", "1970-01-01"),
+                        "video_url": metadata.get("video_url", ""),
+                        "is_reinvent": metadata.get("is_reinvent", False),
+                        "course_code": metadata.get("course_code"),
+                        "level": metadata.get("level")
+                    }
+                    summaries.append(summary_data)
+                except Exception as e:
+                    logger.warning(f"处理文件 {md_file.name} 时出错: {e}")
+
+        # 按上传日期排序，最新的在最前
+        summaries.sort(key=lambda x: x.get("upload_date", "1970-01-01"), reverse=True)
         return {"summaries": summaries}
     except Exception as e:
         logger.error(f"获取公共摘要列表失败: {e}", exc_info=True)
@@ -256,18 +222,24 @@ async def get_public_summary(filename: str):
             raise HTTPException(status_code=404, detail="摘要文件未找到")
         
         content = file_path.read_text(encoding="utf-8")
+        metadata = parse_metadata_from_md(content)
         
-        # 从内容中提取 H1 标题
-        title = file_path.stem  # 默认为文件名
-        for line in content.splitlines():
-            if line.startswith("# "):
-                title = line[2:].strip()
-                break
+        # 优先从 metadata 获取标题，其次才是 H1
+        title = metadata.get("title")
+        if not title:
+             for line in content.splitlines():
+                stripped = line.strip()
+                if stripped.startswith('# '):
+                    title = stripped[2:].strip()
+                    break
+        if not title:
+            title = file_path.stem
 
         return {
             "filename": filename,
             "title": title,
-            "content": content
+            "content": content,
+            "video_url": metadata.get("video_url", "")
         }
     except HTTPException:
         raise
@@ -289,48 +261,8 @@ async def websocket_endpoint(websocket: WebSocket, task_id: str):
 async def list_summaries(authorization: str = Header(None)):
     """获取所有已生成的摘要文件列表。"""
     verify_token(authorization)
-    try:
-        summaries = []
-        if config.OUTPUT_DIR.exists():
-            for md_file in config.OUTPUT_DIR.glob("*.md"):
-                stat = md_file.stat()
-                title_cn = ""
-                try:
-                    with md_file.open("r", encoding="utf-8") as f:
-                        for line in f:
-                            stripped = line.strip()
-                            if stripped.startswith('# '):
-                                title_cn = stripped[2:].strip()
-                                break
-                except Exception as e:
-                    logger.warning(f"提取中文标题失败 {md_file.name}: {e}")
-                title_en = md_file.stem
-                if not title_cn:
-                    title_cn = title_en
-                    
-                # 读取文件内容并计算纯文本字符数
-                try:
-                    content = md_file.read_text(encoding="utf-8")
-                    pure_text = extract_text_from_markdown(content)
-                    word_count = count_chinese_words(pure_text)
-                except Exception as e:
-                    logger.warning(f"计算字数失败 {md_file.name}: {e}")
-                    word_count = 0
-                    
-                summaries.append({
-                    "filename": md_file.name,
-                    "title_cn": title_cn,
-                    "title_en": title_en,
-                    "size": stat.st_size,
-                    "word_count": word_count,  # 新增：纯文本字符数
-                    "created_at": stat.st_ctime,
-                    "modified_at": stat.st_mtime
-                })
-        summaries.sort(key=lambda x: x["modified_at"], reverse=True)
-        return {"summaries": summaries}
-    except Exception as e:
-        logger.error(f"获取摘要列表失败: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="获取摘要列表失败")
+    # 复用公共列表的逻辑
+    return await list_public_summaries()
 
 @app.get("/summaries/{filename}")
 async def get_summary(filename: str, authorization: str = Header(None)):
@@ -346,10 +278,24 @@ async def get_summary(filename: str, authorization: str = Header(None)):
         if not file_path.exists():
             raise HTTPException(status_code=404, detail="摘要文件未找到")
         content = file_path.read_text(encoding="utf-8")
+        metadata = parse_metadata_from_md(content)
+        
+        # 优先从 metadata 获取标题，其次才是 H1
+        title = metadata.get("title")
+        if not title:
+             for line in content.splitlines():
+                stripped = line.strip()
+                if stripped.startswith('# '):
+                    title = stripped[2:].strip()
+                    break
+        if not title:
+            title = file_path.stem
+
         return {
             "filename": filename,
-            "title": file_path.stem,
-            "content": content
+            "title": title,
+            "content": content,
+            "video_url": metadata.get("video_url", "")
         }
     except HTTPException:
         raise

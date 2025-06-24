@@ -35,6 +35,7 @@ createApp({
     const readingContent = ref('');
     const documentTitle = ref('');
     const readingError = ref('');
+    const readingVideoUrl = ref(''); // 新增：当前阅读文章的视频链接
     const showToc = ref(true);
     const tocHtml = ref('');
     const tocWidth = ref(416); // 26rem = 416px
@@ -42,16 +43,12 @@ createApp({
 
     // 视图控制
     const currentView = ref('library'); // 默认视图 'create', 'library', 'read'
-    const isShareView = ref(false); // 新增：是否为分享视图
     
     // 认证状态
     const isAuthenticated = ref(false);
     const showLogin = ref(false);
     const loginUsername = ref('');
     const loginPassword = ref('');
-
-    // 分享状态
-    const shareLoading = ref(false);
     
     // Toast 状态
     const toast = ref({
@@ -63,25 +60,17 @@ createApp({
     // --- 路由处理 ---
     const handleRouting = () => {
       const path = window.location.pathname;
-      const params = new URLSearchParams(window.location.search);
-      const shareHash = params.get('share');
+      
+      const docMatch = path.match(/\/documents\/(.+)/);
 
-      if (shareHash) {
-        isShareView.value = true;
-        loadSharedSummary(shareHash);
+      if (docMatch) {
+        const filename = decodeURIComponent(docMatch[1]);
+        loadSummary(filename, false); // false: 不要推入历史记录，因为我们已经在这个URL上
       } else {
-        isShareView.value = false;
-        const docMatch = path.match(/\/documents\/(.+)/);
-
-        if (docMatch) {
-          const filename = decodeURIComponent(docMatch[1]);
-          loadSummary(filename, false); // false: 不要推入历史记录，因为我们已经在这个URL上
-        } else {
-          // 如果不是文档URL，则显示笔记库
-          currentView.value = 'library';
-          if (isAuthenticated.value && summaries.value.length === 0) {
+        // 如果不是文档URL，则显示笔记库
+        currentView.value = 'library';
+        if (isAuthenticated.value && summaries.value.length === 0) {
             loadSummaries();
-          }
         }
       }
     };
@@ -166,10 +155,6 @@ createApp({
     };
     
     const goHome = () => {
-      if (isShareView.value) {
-        window.location.href = '/';
-        return;
-      }
       history.pushState(null, '', '/');
       currentView.value = 'library';
       // 清理阅读视图状态
@@ -394,20 +379,14 @@ createApp({
 
     const loadSummaries = async () => {
       libraryLoading.value = true;
+      const endpoint = isAuthenticated.value ? '/api/summaries' : '/api/public/summaries';
       try {
-        const endpoint = isAuthenticated.value ? '/summaries' : '/api/public/summaries';
         const res = await axios.get(endpoint);
-        summaries.value = res.data.summaries;
+        summaries.value = res.data.summaries || [];
       } catch (err) {
         console.error('加载摘要列表失败:', err);
-        if (isAuthenticated.value) {
-          if (err.response && err.response.status === 401) {
-            showToast('请先登录以浏览笔记库', 'warning');
-            showLogin.value = true;
-          } else {
-            showToast('加载笔记列表失败', 'danger');
-          }
-        }
+        toast.value.message = '加载摘要列表失败。';
+        toast.value.show = true;
       } finally {
         libraryLoading.value = false;
       }
@@ -431,11 +410,11 @@ createApp({
         
         if (pushState) {
           // 在非分享视图中，更新URL
-          if (!isShareView.value) {
+          if (!isAuthenticated.value) {
             history.pushState({ filename }, '', `/documents/${encodedFilename}`);
           }
         }
-        viewSummary(res.data.title, res.data.content, filename);
+        viewSummary(res.data.title, res.data.content, filename, res.data.video_url);
       } catch (err) {
         console.error('加载摘要失败:', err);
         const errorMessage = err.response?.data?.detail || '加载文章失败';
@@ -445,11 +424,15 @@ createApp({
       }
     };
     
-    const viewSummary = (title, content, filename) => {
+    const viewSummary = (title, content, filename, videoUrl = '') => {
       documentTitle.value = title;
       readingFilename.value = filename; // 跟踪当前文件名
+      readingVideoUrl.value = videoUrl; // 保存视频链接
+
+      // 在解析前，移除 YAML Front Matter
+      const cleanContent = content.replace(/^---[\s\S]*?---/, '').trim();
       
-      const { html, tocHtml: tocString } = renderMarkdownWithToc(content);
+      const { html, tocHtml: tocString } = renderMarkdownWithToc(cleanContent);
       readingContent.value = html;
       tocHtml.value = tocString;
       currentView.value = 'read';
@@ -462,74 +445,33 @@ createApp({
         adjustTocWidth();
       });
     };
-    
-    const loadSharedSummary = async (shareHash) => {
-      try {
-        readingError.value = '';
-        const res = await axios.get(`/api/share/${shareHash}`);
-        viewSummary(res.data.title, res.data.content, res.data.filename);
-      } catch (err) {
-        console.error('加载分享内容失败:', err);
-        readingError.value = err.response?.data?.detail || '加载分享内容失败';
-        currentView.value = 'read'; // 确保在阅读视图中显示错误
-      }
-    };
-
-    const shareDocument = async () => {
-      requireAuth(async () => {
-        if (!readingFilename.value) return;
-        shareLoading.value = true;
-        
-        let shareUrl = '';
-        try {
-          // Step 1: Get the share link from the backend
-          const res = await axios.post('/api/share', { filename: readingFilename.value });
-          const shareHash = res.data.share_hash;
-          shareUrl = `${window.location.origin}/?share=${shareHash}`;
-
-          // Step 2: Try to copy to clipboard
-          if (navigator.clipboard && window.isSecureContext) {
-            await navigator.clipboard.writeText(shareUrl);
-            showToast('分享链接已复制到剪贴板！', 'success');
-          } else {
-            // Fallback for insecure contexts (HTTP) or older browsers
-            showToast('已生成链接，请手动复制', 'success');
-            prompt("请手动复制链接:", shareUrl);
-          }
-        } catch (err) {
-          console.error('创建或复制分享链接失败: ', err);
-          
-          // If the error happened during copy, shareUrl will be available.
-          // If it happened during API call, it won't.
-          if (shareUrl) {
-              showToast('自动复制失败，请手动复制', 'warning');
-              prompt("请手动复制链接:", shareUrl);
-          } else {
-              showToast(err.response?.data?.detail || '创建分享链接失败', 'danger');
-          }
-        } finally {
-          shareLoading.value = false;
-        }
-      });
-    };
-
 
     // --- 计算属性和工具函数 ---
     const categorizedSummaries = computed(() => {
       const reinvent = [];
       const other = [];
-      summaries.value.forEach(s => {
-        if (s.title_en.toLowerCase().includes('reinvent') || s.title_cn.toLowerCase().includes('reinvent')) {
-          reinvent.push(s);
-        } else {
-          other.push(s);
-        }
-      });
+      if (summaries.value && Array.isArray(summaries.value)) {
+        summaries.value.forEach(summary => {
+          let isReinvent = false;
+          // 增加健壮性检查，确保在调用 toLowerCase 之前属性是字符串
+          if (summary && typeof summary.title_en === 'string' && summary.title_en.toLowerCase().includes('reinvent')) {
+              isReinvent = true;
+          } else if (summary && typeof summary.title_cn === 'string' && summary.title_cn.toLowerCase().includes('reinvent')) {
+              isReinvent = true;
+          }
+          
+          if (isReinvent) {
+              reinvent.push(summary);
+          } else if (summary) { // 确保 summary 对象存在
+              other.push(summary);
+          }
+        });
+      }
       return { reinvent, other };
     });
 
     const showHeroSection = computed(() => {
-      if (isShareView.value || currentView.value === 'read') {
+      if (currentView.value === 'read') {
         return false;
       }
       // 为未登录用户显示
@@ -631,7 +573,7 @@ createApp({
       checkAuth();
       handleRouting(); // 处理初始URL路由
       restoreTask(); // 检查是否有任务需要恢复
-      loadSummaries(); // **重要：始终加载摘要**
+      // loadSummaries() 将由 watch(isAuthenticated) 触发，此处不再需要
 
       // 移动端优化
       if (window.innerWidth < 768) {
@@ -642,23 +584,26 @@ createApp({
     watch(currentView, (newView, oldView) => {
       // 仅当从非笔记库视图切换到笔记库时才加载
       if (newView === 'library' && isAuthenticated.value) {
-        loadSummaries();
+        // 如果笔记库是空的，则加载
+        if (summaries.value.length === 0) {
+            loadSummaries();
+        }
       }
     });
     
-    watch(isAuthenticated, (isAuth, wasAuth) => {
-       // 仅当状态从未认证变为认证时执行
-      if (isAuth && !wasAuth) {
-        currentView.value = 'library'; // 登录后跳转到库
+    watch(isAuthenticated, (isAuth) => {
+       // 这个 watch 会在 isAuthenticated 状态变化时触发
+       // 并且由于下面的 { immediate: true }，它会在组件初始化时立即执行一次
+       if (isAuth) {
+        // 如果已认证，并且笔记库是空的，则加载
+        if (summaries.value.length === 0) {
+            loadSummaries();
+        }
+       } else {
+        // 如果未认证（登出或初始状态），加载公共摘要
         loadSummaries();
-      }
-      // 当从认证变为未认证时（登出）
-      if (!isAuth && wasAuth) {
-        summaries.value = []; // 清空可能存在的私人数据
-        loadSummaries(); // 重新加载公共数据
-        currentView.value = 'library'; // 指向公共展示页
-      }
-    });
+       }
+    }, { immediate: true });
 
     return {
       url,
@@ -693,19 +638,17 @@ createApp({
       showLogin,
       login,
       logout,
-      shareDocument,
-      shareLoading,
       toast,
       showToast,
       loginUsername,
       loginPassword,
       currentStep,
       totalSteps,
-      isShareView,
       goHome,
       requireAuth,
       showHeroSection,
-      handleArticleClick
+      handleArticleClick,
+      readingVideoUrl
     };
   }
 }).mount('#app'); 

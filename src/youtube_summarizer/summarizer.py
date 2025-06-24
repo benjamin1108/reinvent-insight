@@ -2,6 +2,8 @@ import logging
 from abc import ABC, abstractmethod
 import google.generativeai as genai
 from . import config
+import asyncio
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +28,12 @@ class Summarizer(ABC):
 
 class GeminiSummarizer(Summarizer):
     """使用 Google Gemini Pro 模型进行摘要。"""
+    
+    # 全局速率限制器
+    _api_lock = asyncio.Lock()
+    _last_api_call_time: float = 0.0
+    API_CALL_INTERVAL_SECONDS: float = 0.5  # 每两次调用之间至少间隔 0.5 秒
+
     def __init__(self, api_key: str):
         super().__init__(api_key)
         if self.api_key:
@@ -33,13 +41,26 @@ class GeminiSummarizer(Summarizer):
         
         # 移除了固定的 system_instruction，使其更灵活
         self.model = genai.GenerativeModel(
-            'gemini-2.5-pro-preview-06-05',
+            'gemini-2.5-pro',
         )
 
     async def generate_content(self, prompt: str, is_json: bool = False) -> str | None:
         if not self.api_key:
             logger.error("Gemini API Key 未配置。")
             return None
+        
+        # --- 全局速率限制逻辑 ---
+        async with self.__class__._api_lock:
+            now = time.monotonic()
+            elapsed = now - self.__class__._last_api_call_time
+            
+            if elapsed < self.API_CALL_INTERVAL_SECONDS:
+                sleep_time = self.API_CALL_INTERVAL_SECONDS - elapsed
+                logger.debug(f"触发API速率限制，将休眠 {sleep_time:.2f} 秒。")
+                await asyncio.sleep(sleep_time)
+            
+            # 更新时间戳，为下一次调用做准备
+            self.__class__._last_api_call_time = time.monotonic()
         
         logger.info("开始使用 Gemini Pro 生成内容...")
         

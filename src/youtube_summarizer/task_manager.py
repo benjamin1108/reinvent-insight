@@ -14,6 +14,7 @@ class TaskState:
     progress: int = 0  # 进度百分比
     result_title: Optional[str] = None
     result_summary: Optional[str] = None
+    result_path: Optional[str] = None # 最终报告的文件路径
     websocket: Optional[WebSocket] = None
     task: Optional[asyncio.Task] = None
 
@@ -64,6 +65,12 @@ class TaskManager:
                     })
                 except Exception as e:
                     logger.warning(f"向客户端 {task_id} 发送最终结果失败 (可能已断开): {e}")
+
+    def set_task_result(self, task_id: str, file_path: str):
+        """当任务完成时，由工作流调用，用于记录最终产物路径。"""
+        if task_id in self.tasks:
+            self.tasks[task_id].result_path = file_path
+            logger.info(f"任务 {task_id} 结果路径已记录: {file_path}")
 
     async def send_history(self, task_id: str):
         if task_id in self.tasks:

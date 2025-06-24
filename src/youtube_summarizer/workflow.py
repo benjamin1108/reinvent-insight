@@ -10,12 +10,36 @@ from .summarizer import get_summarizer
 from .task_manager import manager as task_manager
 from . import prompts
 from . import config
+from .downloader import VideoMetadata, sanitize_filename
 
 logger = logging.getLogger(__name__)
 
 # 定义一个任务根目录
-TASKS_ROOT_DIR = "./tasks"
+TASKS_ROOT_DIR = "./downloads/tasks"
 BASE_PROMPT_PATH = "./prompt/youtbe-deep-summary.txt"
+
+def create_anchor(text: str) -> str:
+    """根据给定的标题文本创建一个 Markdown 锚点链接。"""
+    # 转换为小写
+    text = text.lower()
+    # 移除 Markdown 标题标记, e.g., '### '
+    text = text.strip().lstrip('#').strip()
+    # 移除大部分标点符号, 但保留连字符. \w 匹配字母、数字、下划线.
+    # 添加了中文字符范围 \u4e00-\u9fa5
+    text = re.sub(r'[^\w\s\-\u4e00-\u9fa5]', '', text, flags=re.UNICODE)
+    # 将一个或多个空格替换为单个连字符
+    text = re.sub(r'\s+', '-', text)
+    return text
+
+def generate_toc_with_links(chapters: List[str]) -> str:
+    """根据章节列表生成带锚点链接的 Markdown 目录。"""
+    toc_md_lines = ["### 主要目录"]
+    for i, chapter_title in enumerate(chapters):
+        # 最终报告中的标题格式是 "1. Chapter Title"
+        heading_for_anchor = f"{i + 1}. {chapter_title}"
+        anchor = create_anchor(heading_for_anchor)
+        toc_md_lines.append(f"{i + 1}. [{chapter_title}](#{anchor})")
+    return "\n".join(toc_md_lines)
 
 # ---- Helper Functions ----
 def load_base_prompt() -> str:
@@ -42,12 +66,11 @@ def parse_outline(content: str) -> Tuple[Optional[str], Optional[List[str]]]:
 
 # ---- Main Workflow Class ----
 class DeepSummaryWorkflow:
-    def __init__(self, task_id: str, model_name: str, transcript: str, video_title: str | None = None):
+    def __init__(self, task_id: str, model_name: str, transcript: str, video_metadata: VideoMetadata):
         self.task_id = task_id
         self.model_name = model_name
         self.transcript = transcript
-        # 原始视频标题（已过 sanitize，可直接用于文件名）
-        self.video_title = video_title
+        self.metadata = video_metadata
         self.task_dir = os.path.join(TASKS_ROOT_DIR, self.task_id)
         self.summarizer = get_summarizer(model_name)
         self.base_prompt = load_base_prompt()
@@ -67,12 +90,18 @@ class DeepSummaryWorkflow:
             if not outline_content:
                 raise Exception("生成大纲失败")
 
-            title, chapters = parse_outline(outline_content)
-            if not title or not chapters:
+            title, chapters_raw = parse_outline(outline_content)
+            if not title or not chapters_raw:
                 raise Exception("解析大纲失败")
             
+            # 清理章节标题，移除所有方括号，作为保险措施
+            chapters = [re.sub(r'[\[\]]', '', c).strip() for c in chapters_raw]
+
             await self._log(f"成功解析出标题: {title}")
             await self._log(f"成功解析出 {len(chapters)} 个章节。")
+            
+            # 生成带链接的目录
+            toc_md = generate_toc_with_links(chapters)
 
             # 步骤 2: 并行生成章节内容
             success = await self._generate_chapters_parallel(chapters, title, outline_content)
@@ -85,7 +114,7 @@ class DeepSummaryWorkflow:
                 raise Exception("生成收尾内容失败")
             
             # 步骤 4: 组装最终报告
-            final_report = await self._assemble_final_report(title, outline_content, conclusion_content, len(chapters))
+            final_report = await self._assemble_final_report(title, toc_md, conclusion_content, len(chapters), self.metadata)
             if not final_report:
                 raise Exception("组装最终报告失败")
 
@@ -125,25 +154,56 @@ class DeepSummaryWorkflow:
         return successful_chapters == len(chapters)
 
     async def _generate_single_chapter(self, index: int, chapter_title: str, outline_content: str) -> str:
-        """为单个章节生成内容，包含重试逻辑"""
+        """为单个章节生成内容，包含重试和标题校验修复逻辑"""
         prompt = prompts.CHAPTER_PROMPT_TEMPLATE.format(
             base_prompt=self.base_prompt,
             full_transcript=self.transcript,
             full_outline=outline_content,
+            chapter_number=index + 1,
             current_chapter_title=chapter_title
         )
 
         for attempt in range(self.max_retries + 1):
             try:
                 chapter_content = await self.summarizer.generate_content(prompt)
-                if chapter_content:
-                    chapter_path = os.path.join(self.task_dir, f"chapter_{index + 1}.md")
-                    with open(chapter_path, "w", encoding="utf-8") as f:
-                        f.write(chapter_content)
-                    return chapter_content
                 
-                raise ValueError("模型返回了空内容")
+                if not chapter_content or not chapter_content.strip():
+                    raise ValueError("模型返回了空内容")
 
+                # ---- Start: 标题校验和修复逻辑 ----
+                # 移除 chapter_title 中可能存在的 Markdown 链接语法
+                clean_chapter_title = re.sub(r'\[(.*?)\]\(.*?\)', r'\1', chapter_title).strip()
+                
+                expected_title_prefix = f"### {index + 1}. {clean_chapter_title}"
+                
+                # 为了稳健比较，将实际内容的第一行提取出来处理
+                content_lines = chapter_content.strip().split('\n')
+                first_line = content_lines[0].strip()
+                
+                # 如果第一行不是以 '###' 开头，或者与预期的标题不符（忽略前后空格和末尾标点）
+                # 检查时不考虑标题末尾的微小差异，比如中英文句号
+                if not first_line.startswith("###") or \
+                   not first_line.lstrip('# ').lstrip(f"{index + 1}.").strip().startswith(clean_chapter_title):
+                    
+                    logger.warning(
+                        f"任务 {self.task_id} - 章节 '{chapter_title}' 的标题格式不正确。 "
+                        f"预期开头: '{expected_title_prefix}', "
+                        f"实际开头: '{first_line}'. "
+                        "正在自动修复..."
+                    )
+                    # 移除可能存在的错误标题
+                    if first_line.startswith("###"):
+                        chapter_content = '\n'.join(content_lines[1:]).lstrip()
+
+                    # 添加正确的标题
+                    chapter_content = f"{expected_title_prefix}\n\n{chapter_content}"
+                # ---- End: 标题校验和修复逻辑 ----
+
+                chapter_path = os.path.join(self.task_dir, f"chapter_{index + 1}.md")
+                with open(chapter_path, "w", encoding="utf-8") as f:
+                    f.write(chapter_content)
+                return chapter_content
+                
             except Exception as e:
                 logger.warning(f"任务 {self.task_id} - 生成章节 '{chapter_title}' 失败 (尝试 {attempt + 1}/{self.max_retries + 1}): {e}")
                 if attempt == self.max_retries:
@@ -228,7 +288,7 @@ class DeepSummaryWorkflow:
                 await asyncio.sleep(2)
         return None
 
-    async def _assemble_final_report(self, title: str, outline_md: str, conclusion_md: str, chapter_count: int) -> Optional[str]:
+    async def _assemble_final_report(self, title: str, toc_md: str, conclusion_md: str, chapter_count: int, metadata: VideoMetadata) -> Optional[str]:
         """步骤4：在本地组装所有部分以生成最终的Markdown文件"""
         await self._log("步骤 4/4: 正在组装最终报告...")
         try:
@@ -238,7 +298,7 @@ class DeepSummaryWorkflow:
                 with open(chapter_path, 'r', encoding='utf-8') as f:
                     chapter_contents.append(f.read().strip())
             
-            final_report = _perform_assembly(title, outline_md, conclusion_md, chapter_contents)
+            final_report = _perform_assembly(title, toc_md, conclusion_md, chapter_contents, metadata)
 
             # 先保存在任务目录
             temp_report_path = os.path.join(self.task_dir, "final_report.md")
@@ -246,13 +306,14 @@ class DeepSummaryWorkflow:
                 f.write(final_report)
             
             # 移动并重命名到最终的输出目录
-            preferred_title = self.video_title or title
-            final_filename = f"{preferred_title}.md"
+            final_filename = f"{metadata.sanitized_title}.md"
             final_path = config.OUTPUT_DIR / final_filename
             config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True) # 确保目录存在
             shutil.move(temp_report_path, final_path)
 
             await self._log(f"最终报告已成功组装并移动到: {final_path}")
+            # 更新任务状态，包含最终文件路径
+            task_manager.set_task_result(self.task_id, str(final_path))
             return final_report
         except Exception as e:
             logger.error(f"任务 {self.task_id} - 组装最终报告时出错: {e}", exc_info=True)
@@ -269,12 +330,39 @@ class DeepSummaryWorkflow:
         if error:
              await task_manager.set_task_error(self.task_id, message)
 
-def _perform_assembly(title: str, outline_md: str, conclusion_md: str, chapter_contents: List[str]) -> str:
+def _perform_assembly(title: str, toc_md: str, conclusion_md: str, chapter_contents: List[str], metadata: Optional[VideoMetadata] = None) -> str:
     """
     可复用的核心拼接逻辑。
     接收所有内容的字符串，返回最终的报告字符串。
     """
-    # 1. 从 conclusion.md 中更稳健地解析出引言、洞见和金句
+    # 1. 生成 YAML Front Matter
+    metadata_yaml = ""
+    if metadata:
+        # 使用PyYAML来生成格式规范的YAML
+        try:
+            import yaml
+            from dataclasses import asdict
+            
+            # 创建一个字典，只包含我们想输出的字段
+            metadata_dict = {
+                "title": metadata.title,
+                "upload_date": metadata.upload_date,
+                "video_url": metadata.video_url,
+                "is_reinvent": metadata.is_reinvent,
+                "course_code": metadata.course_code,
+                "level": metadata.level
+            }
+            # allow_unicode=True 保证中文字符正确显示
+            metadata_yaml = f"---\n{yaml.dump(metadata_dict, allow_unicode=True, sort_keys=False)}---\n\n"
+        except ImportError:
+            logger.warning("PyYAML 未安装，无法生成 YAML front matter。请运行 'pip install pyyaml'。")
+            metadata_yaml = ""
+        except Exception as e:
+            logger.error(f"生成 YAML front matter 时出错: {e}")
+            metadata_yaml = ""
+
+
+    # 2. 从 conclusion.md 中更稳健地解析出引言、洞见和金句
     introduction = ""
     insights = ""
     quotes = ""
@@ -298,16 +386,14 @@ def _perform_assembly(title: str, outline_md: str, conclusion_md: str, chapter_c
         elif part.lower().startswith('金句&原声引用'):
             quotes = full_part
 
-    # 2. 从 outline.md 中提取目录
-    # 我们只想要 '### 主要目录' 及之后的部分
-    toc_parts = re.split(r"###\s*主要目录\s*", outline_md, flags=re.IGNORECASE)
-    toc = "### 主要目录\n" + toc_parts[1].strip() if len(toc_parts) > 1 else ""
+    # 3. 从 outline.md 中提取目录 - > 已被废弃，现在直接使用传入的 toc_md
 
-    # 3. 按正确的顺序拼接
+    # 4. 按正确的顺序拼接
     final_report_parts = [
+        metadata_yaml, # 在最前面加入元数据
         f"# {title}",
         introduction,
-        toc,
+        toc_md, # 使用预先生成的、带链接的目录
         "\n\n---\n\n".join(chapter_contents),
         insights,
         quotes
@@ -332,9 +418,13 @@ async def reassemble_from_task_id(task_id: str):
         with open(os.path.join(task_dir, "conclusion.md"), "r", encoding="utf-8") as f:
             conclusion_md = f.read()
 
-        title, _ = parse_outline(outline_md)
-        if not title:
+        title, chapters_raw = parse_outline(outline_md)
+        if not title or not chapters_raw:
             raise ValueError("无法从 outline.md 解析出标题")
+        
+        # 清理并生成带链接的目录
+        chapters = [re.sub(r'[\[\]]', '', c).strip() for c in chapters_raw]
+        toc_md = generate_toc_with_links(chapters)
         
         def natural_sort_key(path):
             # 从文件名 chapter_1.md 中提取数字 1 用于排序
@@ -350,7 +440,7 @@ async def reassemble_from_task_id(task_id: str):
         logger.info(f"加载了 {len(chapter_contents)} 个章节文件。")
 
         # 调用核心拼接逻辑
-        final_report = _perform_assembly(title, outline_md, conclusion_md, chapter_contents)
+        final_report = _perform_assembly(title, toc_md, conclusion_md, chapter_contents) # reassemble 时 metadata 为 None
         
         # 保存为新文件
         temp_output_path = os.path.join(task_dir, "final_report_reassembled.md")
@@ -363,11 +453,16 @@ async def reassemble_from_task_id(task_id: str):
         if video_title_path.exists():
             try:
                 preferred_title = video_title_path.read_text(encoding="utf-8").strip() or title
+                # 重新组装时，我们没有完整的 metadata，但可以创建一个临时的
+                # 注意：这部分可能需要未来进一步完善，如果需要 reassemble 也有完整 metadata 的话
+                reassembled_metadata = VideoMetadata(title=preferred_title, upload_date="N/A", video_url="N/A")
+                final_filename = f"{reassembled_metadata.sanitized_title} (Reassembled).md"
             except Exception:
-                pass
+                final_filename = f"{sanitize_filename(preferred_title)} (Reassembled).md"
+        else:
+             final_filename = f"{sanitize_filename(preferred_title)} (Reassembled).md"
 
         # 移动并重命名到最终的输出目录
-        final_filename = f"{preferred_title} (Reassembled).md"
         final_path = config.OUTPUT_DIR / final_filename
         config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         shutil.move(temp_output_path, final_path)
@@ -379,7 +474,7 @@ async def reassemble_from_task_id(task_id: str):
     except Exception as e:
         logger.error(f"重新组装时发生未知错误: {e}", exc_info=True)
 
-async def run_deep_summary_workflow(task_id: str, model_name: str, transcript: str, video_title: str | None = None):
+async def run_deep_summary_workflow(task_id: str, model_name: str, transcript: str, video_metadata: VideoMetadata):
     """工作流的入口函数"""
-    workflow = DeepSummaryWorkflow(task_id, model_name, transcript, video_title=video_title)
+    workflow = DeepSummaryWorkflow(task_id, model_name, transcript, video_metadata=video_metadata)
     await workflow.run() 
