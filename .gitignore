@@ -117,3 +117,4 @@ venv.bak/
 .uv/
 .cookies
 tasks/
+*.pdf
