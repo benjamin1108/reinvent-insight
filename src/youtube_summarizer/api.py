@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import re
 import urllib.parse
+from zhon import hanzi
 
 from .logger import setup_logger
 from . import config
@@ -69,6 +70,16 @@ def extract_text_from_markdown(content: str) -> str:
     content = content.strip()
     
     return content
+
+def count_chinese_words(text: str) -> int:
+    """
+    使用 zhon 库统计中文字符和中文标点。
+    """
+    # 统计汉字 (不包含标点)
+    hanzi_chars = re.findall(f'[{hanzi.characters}]', text)
+    # 统计中文标点
+    punctuation_chars = re.findall(f'[{hanzi.punctuation}]', text)
+    return len(hanzi_chars) + len(punctuation_chars)
 
 class LoginRequest(BaseModel):
     username: str
@@ -208,7 +219,7 @@ async def list_public_summaries():
                 try:
                     content = md_file.read_text(encoding="utf-8")
                     pure_text = extract_text_from_markdown(content)
-                    word_count = len(pure_text)
+                    word_count = count_chinese_words(pure_text)
                 except Exception as e:
                     logger.warning(f"计算字数失败 {md_file.name}: {e}")
                     word_count = 0
@@ -227,6 +238,42 @@ async def list_public_summaries():
     except Exception as e:
         logger.error(f"获取公共摘要列表失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="获取公共摘要列表失败")
+
+@app.get("/api/public/summaries/{filename}")
+async def get_public_summary(filename: str):
+    """获取指定摘要文件的公开内容，无需认证。"""
+    try:
+        # 安全性：解码并验证文件名
+        filename = urllib.parse.unquote(filename)
+        if ".." in filename or "/" in filename or "\\" in filename:
+            raise HTTPException(status_code=400, detail="无效的文件名")
+            
+        if not filename.endswith(".md"):
+            filename += ".md"
+            
+        file_path = config.OUTPUT_DIR / filename
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="摘要文件未找到")
+        
+        content = file_path.read_text(encoding="utf-8")
+        
+        # 从内容中提取 H1 标题
+        title = file_path.stem  # 默认为文件名
+        for line in content.splitlines():
+            if line.startswith("# "):
+                title = line[2:].strip()
+                break
+
+        return {
+            "filename": filename,
+            "title": title,
+            "content": content
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"读取公共摘要文件 '{filename}' 失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="读取摘要文件失败")
 
 @app.websocket("/ws/{task_id}")
 async def websocket_endpoint(websocket: WebSocket, task_id: str):
@@ -265,7 +312,7 @@ async def list_summaries(authorization: str = Header(None)):
                 try:
                     content = md_file.read_text(encoding="utf-8")
                     pure_text = extract_text_from_markdown(content)
-                    word_count = len(pure_text)
+                    word_count = count_chinese_words(pure_text)
                 except Exception as e:
                     logger.warning(f"计算字数失败 {md_file.name}: {e}")
                     word_count = 0

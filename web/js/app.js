@@ -400,23 +400,35 @@ createApp({
     };
 
     const loadSummary = async (filename, pushState = true) => {
-      requireAuth(async () => {
-        try {
-          readingError.value = '';
-          // URL编码文件名以处理特殊字符
-          const encodedFilename = encodeURIComponent(filename);
-          const res = await axios.get(`/summaries/${encodedFilename}`);
-          
-          if (pushState) {
+      try {
+        readingError.value = '';
+        readingContent.value = ''; // 清空旧内容
+        currentView.value = 'read'; // 切换到阅读视图以显示加载状态
+
+        // URL编码文件名以处理特殊字符
+        const encodedFilename = encodeURIComponent(filename);
+
+        // 根据认证状态选择端点
+        const endpoint = isAuthenticated.value 
+          ? `/summaries/${encodedFilename}` 
+          : `/api/public/summaries/${encodedFilename}`;
+        
+        const res = await axios.get(endpoint);
+        
+        if (pushState) {
+          // 在非分享视图中，更新URL
+          if (!isShareView.value) {
             history.pushState({ filename }, '', `/documents/${encodedFilename}`);
           }
-          viewSummary(res.data.title, res.data.content, filename);
-        } catch (err) {
-          console.error('加载摘要失败:', err);
-          readingError.value = err.response?.data?.detail || '加载摘要失败';
-          goBackToLibrary(); // 失败时返回库
         }
-      });
+        viewSummary(res.data.title, res.data.content, filename);
+      } catch (err) {
+        console.error('加载摘要失败:', err);
+        const errorMessage = err.response?.data?.detail || '加载文章失败';
+        readingError.value = errorMessage;
+        showToast(errorMessage, 'danger');
+        currentView.value = 'read'; // 确保停留在阅读视图显示错误
+      }
     };
     
     const viewSummary = (title, content, filename) => {
