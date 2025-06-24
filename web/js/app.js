@@ -201,7 +201,21 @@ createApp({
         const id = target.dataset.target;
         const el = document.getElementById(id);
         if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          const articleContainer = document.querySelector('.mobile-reading .flex-1.overflow-y-auto');
+          if (articleContainer) {
+            const containerRect = articleContainer.getBoundingClientRect();
+            const elementRect = el.getBoundingClientRect();
+            const relativeTop = elementRect.top - containerRect.top;
+            
+            const newScrollTop = articleContainer.scrollTop + relativeTop - 20; // 预留20px顶部空间
+
+            articleContainer.scrollTo({
+              top: newScrollTop,
+              behavior: 'smooth'
+            });
+          } else {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
         }
       }
     };
@@ -573,6 +587,45 @@ createApp({
         }
     };
 
+    const handleArticleClick = (event) => {
+      // We only care about clicks on <a> tags
+      if (event.target.tagName.toLowerCase() !== 'a') {
+        return;
+      }
+
+      const link = event.target;
+      const href = link.getAttribute('href');
+
+      // We only care about internal anchor links (e.g., href="#some-id")
+      if (!href || !href.startsWith('#')) {
+        return;
+      }
+
+      event.preventDefault(); // Stop the browser's default jump
+      const id = decodeURIComponent(href.substring(1)); // Decode the ID from URL-encoding
+      
+      const el = document.getElementById(id);
+      if (!el) {
+        return;
+      }
+      
+      const articleContainer = document.querySelector('.mobile-reading .flex-1.overflow-y-auto');
+      if (articleContainer) {
+        const containerRect = articleContainer.getBoundingClientRect();
+        const elementRect = el.getBoundingClientRect();
+        const relativeTop = elementRect.top - containerRect.top;
+        const newScrollTop = articleContainer.scrollTop + relativeTop - 20;
+
+        articleContainer.scrollTo({
+          top: newScrollTop,
+          behavior: 'smooth'
+        });
+      } else {
+        // Fallback if the container is not found for some reason
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+
     // --- 生命周期钩子 ---
     onMounted(() => {
       checkAuth();
@@ -651,7 +704,8 @@ createApp({
       isShareView,
       goHome,
       requireAuth,
-      showHeroSection
+      showHeroSection,
+      handleArticleClick
     };
   }
 }).mount('#app'); 

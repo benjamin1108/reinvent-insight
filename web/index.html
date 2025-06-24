@@ -349,7 +349,7 @@
           <!-- Article -->
           <div class="flex-1 min-w-0 h-full overflow-y-auto" :class="{ 'no-toc-centered': !showToc }">
             <div class="max-w-none px-4 py-8">
-              <div v-if="readingContent" class="tech-gradient border border-gray-700 rounded-xl p-10 shadow-2xl backdrop-blur-sm">
+              <div v-if="readingContent" @click="handleArticleClick" class="tech-gradient border border-gray-700 rounded-xl p-10 shadow-2xl backdrop-blur-sm">
                 <div v-html="readingContent" class="prose-tech max-w-none"></div>
               </div>
             </div>
