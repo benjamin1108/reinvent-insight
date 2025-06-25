@@ -278,18 +278,17 @@ createApp({
       });
       
       // 现在，仅使用 H3 元素构建目录
-      const h3Headings = [...doc.body.querySelectorAll('h3')];
-      
-      if (h3Headings.length > 0) {
-        // 在列表前手动添加目录标题
-        let tocHtmlContent = '<h3>主要目录</h3><ul>';
-        h3Headings.forEach(h => {
-            const text = h.textContent.replace(/\s*\(#.+\)$/g, '').trim();
-            const id = h.id; // 使用我们刚刚分配的ID
-            tocHtmlContent += `<li><a data-target="${id}">${text}</a></li>`;
-        });
-        tocHtmlContent += '</ul>';
-        return { html: doc.body.innerHTML, tocHtml: tocHtmlContent };
+      const h3Elements = doc.querySelectorAll('h3');
+      if (h3Elements.length > 0) {
+          // 构建目录列表，不添加额外的标题
+          let tocHtmlContent = '<ul>';
+          h3Elements.forEach((h3) => {
+              const text = h3.textContent.replace(/\s*\(#.+\)$/g, '').trim();
+              const id = h3.id; // 使用已分配的ID
+              tocHtmlContent += `<li><a data-target="${id}">${text}</a></li>`;
+          });
+          tocHtmlContent += '</ul>';
+          return { html: doc.body.innerHTML, tocHtml: tocHtmlContent };
       }
       
       // 如果没有找到H3，则返回不带TOC的内容

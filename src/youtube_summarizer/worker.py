@@ -19,21 +19,21 @@ async def summary_task_worker_async(url: str, task_id: str):
         
         # 使用 to_thread 将同步的下载操作放入后台线程
         dl = downloader.SubtitleDownloader(url)
-        subtitle_text, _, subtitle_lang = await loop.run_in_executor(None, dl.download)
+        subtitle_text, metadata = await loop.run_in_executor(None, dl.download)
 
-        if not subtitle_text:
+        if not subtitle_text or not metadata:
             raise ValueError("无法获取字幕，请检查链接。")
             
-        video_title = dl.video_title
+        video_title = metadata.title
         # 将原始视频标题写入任务目录，供后续重新拼接等操作使用
-        task_dir = f"./tasks/{task_id}"
+        task_dir = f"./downloads/tasks/{task_id}"
         try:
             Path(task_dir).mkdir(parents=True, exist_ok=True)
             (Path(task_dir) / "video_title.txt").write_text(video_title, encoding="utf-8")
         except Exception as e:
             logger.warning(f"无法写入 video_title.txt: {e}")
 
-        await manager.send_message(f"成功下载 '{subtitle_lang}' 字幕。", task_id)
+        await manager.send_message(f"成功下载字幕。", task_id)
 
     except Exception as e:
         logger.error(f"任务 {task_id} 下载字幕失败: {e}", exc_info=True)
@@ -49,7 +49,7 @@ async def summary_task_worker_async(url: str, task_id: str):
         task_id=task_id,
         model_name=config.PREFERRED_MODEL,
         transcript=content_for_summary,
-        video_title=video_title
+        video_metadata=metadata
     )
 
     logger.info(f"任务 {task_id} 的工作流已在后台完成。") 

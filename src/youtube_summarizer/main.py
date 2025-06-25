@@ -8,12 +8,11 @@ from rich.panel import Panel
 from rich.text import Text
 from rich.markup import escape
 
-from . import config, downloader
+from . import config
 from .api import serve as serve_web
 from .logger import setup_logger
 from .task_manager import manager as task_manager
-from .workflow import run_deep_summary_workflow, reassemble_from_task_id
-from .downloader import VideoMetadata
+from .workflow import reassemble_from_task_id
 
 console = Console()
 logger = logging.getLogger(__name__)
@@ -29,47 +28,39 @@ async def process_single_video(url: str, show_status: bool = True):
     url = url.strip()
     console.print(Panel(f"开始处理视频链接: [link={url}]{url}[/link]", style="bold blue", expand=False))
 
-    subtitle_text, metadata = None, None
-    
-    def download_action():
-        nonlocal subtitle_text, metadata
-        try:
-            dl = downloader.SubtitleDownloader(url)
-            subtitle_text, metadata = dl.download()
-
-            if not subtitle_text or not metadata:
-                console.print(f"\n[bold red]错误: 无法获取 '{url}' 的字幕或元数据，已跳过。[/bold red]")
-                return False
-            console.print(f"[bold green]成功为 '{escape(metadata.title)}' 下载字幕。[/bold green]")
-            return True
-        except Exception as e:
-            console.print(f"\n[bold red]处理 '{url}' 时发生下载错误: {e}[/bold red]")
-            return False
-
-    if show_status:
-        with console.status("[bold green]正在下载字幕...", spinner="dots"):
-            success = download_action()
-    else:
-        console.print(f"开始下载 '{url}' 的字幕...")
-        success = download_action()
-
-    if not success:
-        return
-    
-    if not metadata or not subtitle_text:
-         console.print(f"\n[bold red]错误: 未能获取到 '{url}' 的视频元数据或字幕内容。[/bold red]")
-         return
-
+    # 统一逻辑：先创建task_id，不提前下载字幕
     task_id = str(uuid.uuid4())
     model_name = config.PREFERRED_MODEL
-    content_for_summary = f"视频标题: {metadata.title}\n\n{subtitle_text}"
     
-    await summary_workflow_async(task_id, model_name, content_for_summary, metadata, show_status=show_status)
+    # 创建异步任务（与Web API保持一致）
+    from .worker import summary_task_worker_async
+    task = asyncio.create_task(summary_task_worker_async(url, task_id))
+    task_manager.create_task(task_id, task)
+    
+    # 显示任务创建信息
+    console.print(Panel(f"任务ID: [bold cyan]{task_id}[/bold cyan]", 
+                        title="[bold green]任务已创建[/bold green]", expand=False))
+    
+    # 等待任务完成
+    if show_status:
+        with console.status(f"[bold green]正在使用 {model_name} 进行处理...", spinner="earth") as status:
+            while not task.done():
+                task_state = task_manager.get_task_state(task_id)
+                if task_state and task_state.logs:
+                    latest_log = task_state.logs[-1]
+                    status.update(f"[bold green]{latest_log}[/bold green]")
+                await asyncio.sleep(1)
+    else:
+        # 在非状态显示模式下，我们只等待任务完成
+        await task
 
+    # 获取最终状态并显示结果
     final_state = task_manager.get_task_state(task_id)
     if final_state and final_state.status == 'completed':
         output_path = final_state.result_path
-        success_message = Text.from_markup(f"""[bold green]✓ 视频 '{escape(metadata.title)}' 处理完成！[/bold green]
+        # 从路径中提取标题
+        title = output_path.split('/')[-1].replace('.md', '') if output_path else "Unknown"
+        success_message = Text.from_markup(f"""[bold green]✓ 视频处理完成！[/bold green]
 摘要已成功保存到: [cyan]{escape(output_path)}[/cyan]
 """)
         console.print(Panel(success_message, title="[bold]任务成功[/bold]", border_style="green"))
@@ -77,7 +68,7 @@ async def process_single_video(url: str, show_status: bool = True):
         error_message = "未知错误，任务未成功完成。"
         if final_state and final_state.logs:
             error_message = final_state.logs[-1]
-        console.print(Panel(f"""[bold red]✗ 视频 '{escape(metadata.title)}' 处理失败。[/bold red]
+        console.print(Panel(f"""[bold red]✗ 视频处理失败。[/bold red]
 原因: {escape(error_message)}""", title="[bold]任务失败[/bold]", border_style="red"))
         console.print("[yellow]请检查日志文件获取更详细的调试信息。[/yellow]")
     
@@ -99,35 +90,6 @@ def get_user_input():
         return None
         
     return url
-
-async def summary_workflow_async(task_id: str, model_name: str, transcript: str, metadata: VideoMetadata, show_status: bool = True):
-    """仅包含异步工作流的协程。"""
-    safe_title = escape(metadata.title)
-    console.print(Panel(f"任务ID: [bold cyan]{task_id}[/bold cyan]\n视频标题: [bold yellow]{safe_title}[/bold yellow]", 
-                        title="[bold green]任务已创建[/bold green]", expand=False))
-    
-    # 创建异步任务
-    workflow_task = asyncio.create_task(
-        run_deep_summary_workflow(
-            task_id=task_id,
-            model_name=model_name,
-            transcript=transcript,
-            video_metadata=metadata
-        )
-    )
-    task_manager.create_task(task_id, workflow_task)
-    
-    if show_status:
-        with console.status(f"[bold green]正在使用 {model_name} 进行深度摘要...", spinner="earth") as status:
-            while not workflow_task.done():
-                task_state = task_manager.get_task_state(task_id)
-                if task_state and task_state.logs:
-                    latest_log = task_state.logs[-1]
-                    status.update(f"[bold green]{latest_log}[/bold green]")
-                await asyncio.sleep(1)
-    else:
-        # 在非状态显示模式下，我们只等待任务完成
-        await workflow_task
 
 def run_interactive_mode():
     """仅运行交互式模式的函数。"""
