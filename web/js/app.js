@@ -32,6 +32,7 @@ createApp({
     const libraryLoading = ref(false);
     const isShareView = ref(false);
     const readingVideoUrl = ref('');
+    const pdfDownloading = ref(false); // 新增：PDF下载状态
     
     // 阅读视图状态
     const readingContent = ref('');
@@ -475,6 +476,41 @@ createApp({
       });
     };
 
+    // 下载PDF功能
+    const downloadPDF = async () => {
+      if (!readingFilename.value) {
+        showToast('无法下载：文件名未找到', 'danger');
+        return;
+      }
+
+      pdfDownloading.value = true;
+      
+      try {
+        // URL编码文件名
+        const encodedFilename = encodeURIComponent(readingFilename.value);
+        const pdfUrl = `/api/public/summaries/${encodedFilename}/pdf`;
+        
+        // 创建临时链接并触发下载
+        const link = document.createElement('a');
+        link.href = pdfUrl;
+        link.download = readingFilename.value.replace('.md', '.pdf');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // 显示成功提示
+        showToast('PDF下载开始', 'success');
+      } catch (err) {
+        console.error('下载PDF失败:', err);
+        showToast('下载PDF失败', 'danger');
+      } finally {
+        // 延迟重置状态，让用户看到加载效果
+        setTimeout(() => {
+          pdfDownloading.value = false;
+        }, 2000);
+      }
+    };
+
     // --- 计算属性和工具函数 ---
     const categorizedSummaries = computed(() => {
       const reinvent = [];
@@ -676,7 +712,9 @@ createApp({
       showHeroSection,
       handleArticleClick,
       readingVideoUrl,
-      isShareView
+      isShareView,
+      pdfDownloading,
+      downloadPDF
     };
   }
 }).mount('#app'); 

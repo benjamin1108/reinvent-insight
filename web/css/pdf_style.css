@@ -93,24 +93,68 @@ html, body {
 
 #nice ul, #nice ol { 
     margin: 8px 0;
-    padding-left: 25px; 
+    padding-left: 30px; /* 增加左边距，给数字和符号留出空间 */
     /* 【優化二 - 核心修改】: 移除此處的 page-break-inside: avoid; 
        允許長列表自然地跨頁，這是解決大段空白的最主要手段。 */
 }
-#nice ul { list-style-type: disc; }
-#nice ul ul { list-style-type: square; }
-#nice ol { list-style-type: decimal; }
+
+/* 有序列表样式修复 */
+#nice ol { 
+    list-style-type: decimal;
+    list-style-position: outside; /* 确保数字在内容外部 */
+    margin: 8px 0;
+    padding-left: 35px; /* 给数字留出足够空间 */
+}
+
+#nice ol > li {
+    margin-bottom: 5px;
+    padding-left: 5px; /* 内容稍微缩进 */
+}
+
+/* 无序列表样式修复 */
+#nice ul { 
+    list-style-type: disc;
+    list-style-position: outside;
+}
+
+#nice ul > li {
+    list-style-type: disc;
+    margin-bottom: 5px;
+}
+
+/* 调整无序列表的圆点大小 */
+#nice ul > li::marker {
+    font-size: 1.2em; /* 增大圆点 */
+    line-height: 1;
+}
+
+/* 二级无序列表使用方块 */
+#nice ul ul { 
+    list-style-type: square;
+    margin-top: 5px;
+}
+
+#nice ul ul > li::marker {
+    font-size: 1em; /* 二级列表符号稍小 */
+}
+
+/* 三级及以下使用圆圈 */
+#nice ul ul ul { 
+    list-style-type: circle;
+}
 
 #nice li {
-    /* 將孤行寡行控制應用到列表項上 */
+    /* 将孤行寡行控制应用到列表项上 */
     orphans: 2;
     widows: 2;
+    line-height: 26px;
 }
 
 #nice li section { 
     margin: 5px 0;
     line-height: 26px; 
     text-align: left;
+    display: inline; /* 改为inline以避免换行问题 */
 } 
 
 #nice blockquote { 
@@ -183,4 +227,87 @@ html, body {
    vertical-align: bottom;
    border-bottom: 22px solid #e0f7fa; /* 高度與字號匹配, 同样使用主题色的浅色背景 */
    border-right: 15px solid transparent;
+}
+
+/* === 英文副标题样式 === */
+.english-subtitle {
+    display: block;
+    margin: -5px 0 20px 0;
+    font-size: 16px;
+    line-height: 1.4;
+    color: #666;
+}
+
+.english-subtitle a {
+    color: #666;
+    text-decoration: none;
+    border-bottom: 1px solid #ddd;
+    font-weight: 400;
+}
+
+.english-subtitle a:hover {
+    color: #06b6d4;
+    border-bottom-color: #06b6d4;
+}
+
+/* Hero Section for PDF */
+.pdf-hero {
+    padding: 60px 40px 40px 40px;
+    text-align: center;
+    margin: -40px -40px 30px -40px;
+    position: relative;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.pdf-hero-content {
+    position: relative;
+}
+
+.pdf-hero h1 {
+    font-size: 56px;
+    font-weight: 800;
+    margin: 0;
+    line-height: 1.2;
+    letter-spacing: -1px;
+}
+
+.pdf-hero .reinvent {
+    color: #1e293b;
+    font-weight: 900;
+}
+
+.pdf-hero .insight {
+    color: #7c3aed;
+    font-weight: 300;
+    font-style: italic;
+}
+
+/* English title link styling - H3 size */
+.english-title-link,
+#nice .english-title-link,
+#nice a.english-title-link {
+    display: block;
+    margin-top: 8px;
+    margin-bottom: 16px;
+    font-size: 14px;  /* 缩小字体 */
+    line-height: 1.4;
+    font-weight: 600 !important;  /* 加粗字体 */
+    font-family: Helvetica, Arial, sans-serif;  /* 使用无衬线字体 */
+    color: #ea580c !important;  /* 暖橙色 */
+    text-decoration: none !important;
+    border: none !important;  /* 移除所有边框 */
+    border-bottom: none !important;  /* 确保移除底部边框 */
+    white-space: nowrap;  /* 防止换行 */
+    overflow: hidden;  /* 超出部分隐藏 */
+    text-overflow: ellipsis;  /* 显示省略号 */
+}
+
+.english-title-link:hover,
+#nice .english-title-link:hover,
+#nice a.english-title-link:hover {
+    color: #dc2626 !important;  /* hover时更深的红橙色 */
+    text-decoration: none !important;
+    border: none !important;
+    border-bottom: none !important;
+    border-top: none !important;  /* 确保没有顶部边框 */
 }

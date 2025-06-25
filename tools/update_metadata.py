@@ -142,8 +142,12 @@ def main():
     """
     主函数
     """
+    # 获取项目根目录
+    script_dir = Path(__file__).parent
+    project_root = script_dir.parent  # 脚本在tools目录下，向上一级是项目根目录
+    
     # 设置要处理的目录
-    summaries_dir = Path("downloads/summaries")
+    summaries_dir = project_root / "downloads" / "summaries"
     
     if not summaries_dir.exists():
         logger.error(f"目录不存在: {summaries_dir}")

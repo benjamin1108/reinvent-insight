@@ -6,6 +6,8 @@ import asyncio
 import uuid
 import hashlib
 import base64
+import subprocess
+import tempfile
 from typing import Set, Optional
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -262,6 +264,81 @@ async def get_public_summary(filename: str):
         logger.error(f"读取公共摘要文件 '{filename}' 失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="读取摘要文件失败")
 
+@app.get("/api/public/summaries/{filename}/pdf")
+async def get_summary_pdf(filename: str, response: Response):
+    """生成并下载指定摘要的PDF文件，无需认证。"""
+    try:
+        # 安全性：解码并验证文件名
+        filename = urllib.parse.unquote(filename)
+        if ".." in filename or "/" in filename or "\\" in filename:
+            raise HTTPException(status_code=400, detail="无效的文件名")
+            
+        if not filename.endswith(".md"):
+            filename += ".md"
+            
+        md_file_path = config.OUTPUT_DIR / filename
+        if not md_file_path.exists():
+            raise HTTPException(status_code=404, detail="摘要文件未找到")
+        
+        # 构建PDF文件路径
+        pdf_filename = filename.replace('.md', '.pdf')
+        pdf_dir = config.OUTPUT_DIR.parent / "pdfs"
+        pdf_dir.mkdir(exist_ok=True)
+        pdf_file_path = pdf_dir / pdf_filename
+        
+        # 如果PDF文件不存在，则生成
+        if not pdf_file_path.exists():
+            logger.info(f"生成PDF文件: {pdf_filename}")
+            
+            # 构建生成PDF的命令
+            script_path = config.BASE_DIR / "tools" / "generate_pdfs.py"
+            if not script_path.exists():
+                raise HTTPException(status_code=500, detail="PDF生成工具不存在")
+            
+            # 使用临时目录作为输出目录
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_pdf_path = Path(temp_dir) / pdf_filename
+                
+                # 执行PDF生成命令
+                cmd = [
+                    "python",
+                    str(script_path),
+                    "-f", str(md_file_path),
+                    "-o", str(temp_dir)
+                ]
+                
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                
+                if result.returncode != 0:
+                    logger.error(f"PDF生成失败: {result.stderr}")
+                    raise HTTPException(status_code=500, detail="PDF生成失败")
+                
+                # 将生成的PDF移动到目标位置
+                if temp_pdf_path.exists():
+                    temp_pdf_path.rename(pdf_file_path)
+                else:
+                    raise HTTPException(status_code=500, detail="PDF文件生成后未找到")
+        
+        # 返回PDF文件
+        if pdf_file_path.exists():
+            logger.info(f"返回PDF文件: {pdf_filename}")
+            return FileResponse(
+                path=str(pdf_file_path),
+                media_type="application/pdf",
+                filename=pdf_filename,
+                headers={
+                    "Content-Disposition": f"attachment; filename=\"{pdf_filename}\""
+                }
+            )
+        else:
+            raise HTTPException(status_code=500, detail="PDF文件不存在")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取PDF文件失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"获取PDF文件失败: {str(e)}")
+
 @app.websocket("/ws/{task_id}")
 async def websocket_endpoint(websocket: WebSocket, task_id: str):
     await manager.connect(websocket, task_id)
@@ -334,6 +411,11 @@ if web_dir.is_dir():
     # Any other static assets in the root of /web can be added here too.
     app.mount("/js", StaticFiles(directory=web_dir / "js"), name="js")
     app.mount("/css", StaticFiles(directory=web_dir / "css"), name="css")
+    
+    # Mount fonts directory for PDF generation
+    fonts_dir = web_dir / "fonts"
+    if fonts_dir.is_dir():
+        app.mount("/fonts", StaticFiles(directory=fonts_dir), name="fonts")
 
     # This catch-all route must be defined *after* all other API routes and mounts.
     # It serves the main index.html for any other path, enabling client-side routing.
