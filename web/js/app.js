@@ -955,7 +955,8 @@ createApp({
       e.preventDefault();
       e.stopPropagation();
       
-      if (videoPlayerMinimized.value) return;
+      // 移除最小化时不能拖动的限制
+      // if (videoPlayerMinimized.value) return;
 
       playerElement = e.target.closest('.floating-video-player');
       if (!playerElement) return;
