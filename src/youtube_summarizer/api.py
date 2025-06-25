@@ -15,6 +15,7 @@ import re
 import urllib.parse
 from zhon import hanzi
 import yaml
+from urllib.parse import quote
 
 from .logger import setup_logger
 from . import config
@@ -322,12 +323,18 @@ async def get_summary_pdf(filename: str, response: Response):
         # 返回PDF文件
         if pdf_file_path.exists():
             logger.info(f"返回PDF文件: {pdf_filename}")
+            
+            # 对文件名进行URL编码，处理非ASCII字符
+            # 使用RFC 5987格式处理包含非ASCII字符的文件名
+            encoded_filename = quote(pdf_filename, safe='')
+            
             return FileResponse(
                 path=str(pdf_file_path),
                 media_type="application/pdf",
                 filename=pdf_filename,
                 headers={
-                    "Content-Disposition": f"attachment; filename=\"{pdf_filename}\""
+                    # 使用filename*参数来支持UTF-8编码的文件名
+                    "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
                 }
             )
         else:
