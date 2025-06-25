@@ -344,8 +344,11 @@ def _perform_assembly(title: str, toc_md: str, conclusion_md: str, chapter_conte
             from dataclasses import asdict
             
             # 创建一个字典，只包含我们想输出的字段
+            # 注意：这里我们假设title是AI生成的中文标题（在上面的_assemble_final_report中传入）
+            # metadata.title是原始的英文视频标题
             metadata_dict = {
-                "title": metadata.title,
+                "title_en": metadata.title,  # 原始英文视频标题
+                "title_cn": title,  # AI生成的中文标题
                 "upload_date": metadata.upload_date,
                 "video_url": metadata.video_url,
                 "is_reinvent": metadata.is_reinvent,

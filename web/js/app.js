@@ -30,15 +30,13 @@ createApp({
     // 笔记库状态
     const summaries = ref([]);
     const libraryLoading = ref(false);
-
+    const isShareView = ref(false);
+    const readingVideoUrl = ref('');
+    
     // 阅读视图状态
     const readingContent = ref('');
     const documentTitle = ref('');
     const readingError = ref('');
-    const readingVideoUrl = ref(''); // 新增：当前阅读文章的视频链接
-    const showToc = ref(true);
-    const tocHtml = ref('');
-    const tocWidth = ref(416); // 26rem = 416px
     const readingFilename = ref(''); // 新增：当前阅读的文件名
 
     // 视图控制
@@ -56,6 +54,14 @@ createApp({
         message: '',
         type: 'success' // 'success', 'danger', 'warning'
     });
+
+    // 添加一个标志来防止重复加载
+    let loadingPromise = null;
+
+    // TOC 相关状态
+    const showToc = ref(true);
+    const tocHtml = ref('');
+    const tocWidth = ref(416); // 26rem = 416px
 
     // --- 路由处理 ---
     const handleRouting = () => {
@@ -92,10 +98,11 @@ createApp({
         isAuthenticated.value = true;
         showLogin.value = false;
         showToast('登录成功', 'success');
-        // 登录后，如果当前在笔记库视图，则加载笔记
-        // 登录后总是切换到笔记库视图并加载
+        // 登录后切换到笔记库视图并加载数据
         currentView.value = 'library';
-        loadSummaries();
+        // 使用 nextTick 确保视图更新后再加载数据
+        await nextTick();
+        await loadSummaries();
       } catch (error) {
         console.error('登录失败:', error);
         showToast(error.response?.data?.detail || '登录失败', 'danger');
@@ -378,18 +385,40 @@ createApp({
     };
 
     const loadSummaries = async () => {
-      libraryLoading.value = true;
-      const endpoint = isAuthenticated.value ? '/api/summaries' : '/api/public/summaries';
-      try {
-        const res = await axios.get(endpoint);
-        summaries.value = res.data.summaries || [];
-      } catch (err) {
-        console.error('加载摘要列表失败:', err);
-        toast.value.message = '加载摘要列表失败。';
-        toast.value.show = true;
-      } finally {
-        libraryLoading.value = false;
+      // 如果已经有正在进行的加载，返回现有的 Promise
+      if (loadingPromise) {
+        console.log('loadSummaries: 已有加载进行中，跳过');
+        return loadingPromise;
       }
+      
+      console.log('loadSummaries: 开始加载，isAuthenticated =', isAuthenticated.value);
+      libraryLoading.value = true;
+      const endpoint = isAuthenticated.value ? '/summaries' : '/api/public/summaries';
+      console.log('loadSummaries: 使用端点', endpoint);
+      
+      // 创建新的加载 Promise
+      loadingPromise = axios.get(endpoint)
+        .then(res => {
+          console.log('loadSummaries: 收到响应', res.data);
+          if (res.data && res.data.summaries) {
+            summaries.value = res.data.summaries;
+            console.log('loadSummaries: 加载成功，获得', summaries.value.length, '篇文章');
+          } else {
+            console.warn('loadSummaries: 响应格式异常', res.data);
+            summaries.value = [];
+          }
+        })
+        .catch(err => {
+          console.error('加载摘要列表失败:', err);
+          showToast('加载摘要列表失败', 'danger');
+          // 保持现有数据不变，避免清空列表
+        })
+        .finally(() => {
+          libraryLoading.value = false;
+          loadingPromise = null; // 清除 Promise 引用
+        });
+      
+      return loadingPromise;
     };
 
     const loadSummary = async (filename, pushState = true) => {
@@ -452,17 +481,12 @@ createApp({
       const other = [];
       if (summaries.value && Array.isArray(summaries.value)) {
         summaries.value.forEach(summary => {
-          let isReinvent = false;
-          // 增加健壮性检查，确保在调用 toLowerCase 之前属性是字符串
-          if (summary && typeof summary.title_en === 'string' && summary.title_en.toLowerCase().includes('reinvent')) {
-              isReinvent = true;
-          } else if (summary && typeof summary.title_cn === 'string' && summary.title_cn.toLowerCase().includes('reinvent')) {
-              isReinvent = true;
-          }
+          if (!summary) return; // 跳过空对象
           
-          if (isReinvent) {
+          // 使用后端提供的 is_reinvent 字段来判断
+          if (summary.is_reinvent === true) {
               reinvent.push(summary);
-          } else if (summary) { // 确保 summary 对象存在
+          } else {
               other.push(summary);
           }
         });
@@ -573,7 +597,11 @@ createApp({
       checkAuth();
       handleRouting(); // 处理初始URL路由
       restoreTask(); // 检查是否有任务需要恢复
-      // loadSummaries() 将由 watch(isAuthenticated) 触发，此处不再需要
+      
+      // 初始加载数据
+      if (currentView.value === 'library' || !isAuthenticated.value) {
+        loadSummaries();
+      }
 
       // 移动端优化
       if (window.innerWidth < 768) {
@@ -582,28 +610,27 @@ createApp({
     });
 
     watch(currentView, (newView, oldView) => {
-      // 仅当从非笔记库视图切换到笔记库时才加载
-      if (newView === 'library' && isAuthenticated.value) {
-        // 如果笔记库是空的，则加载
-        if (summaries.value.length === 0) {
-            loadSummaries();
-        }
+      // 当切换到笔记库视图时加载数据
+      if (newView === 'library') {
+        // 使用 nextTick 确保所有状态更新完成后再加载
+        nextTick(() => {
+          loadSummaries();
+        });
       }
     });
     
-    watch(isAuthenticated, (isAuth) => {
+    watch(isAuthenticated, (isAuth, wasAuth) => {
        // 这个 watch 会在 isAuthenticated 状态变化时触发
-       // 并且由于下面的 { immediate: true }，它会在组件初始化时立即执行一次
-       if (isAuth) {
-        // 如果已认证，并且笔记库是空的，则加载
-        if (summaries.value.length === 0) {
-            loadSummaries();
-        }
-       } else {
-        // 如果未认证（登出或初始状态），加载公共摘要
-        loadSummaries();
+       // 只有在认证状态真正发生变化时才重新加载
+       if (isAuth !== wasAuth && wasAuth !== undefined) {
+         // 如果当前在笔记库视图，立即加载
+         if (currentView.value === 'library') {
+           nextTick(() => {
+             loadSummaries();
+           });
+         }
        }
-    }, { immediate: true });
+    });
 
     return {
       url,
@@ -648,7 +675,8 @@ createApp({
       requireAuth,
       showHeroSection,
       handleArticleClick,
-      readingVideoUrl
+      readingVideoUrl,
+      isShareView
     };
   }
 }).mount('#app'); 

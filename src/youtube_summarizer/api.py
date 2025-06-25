@@ -165,16 +165,23 @@ async def list_public_summaries():
                     content = md_file.read_text(encoding="utf-8")
                     metadata = parse_metadata_from_md(content)
                     
-                    # 优先从 metadata 获取标题，其次才是 H1
-                    title_cn = metadata.get("title")
+                    # 处理新旧两种格式
+                    # 新格式：有title_cn和title_en
+                    # 旧格式：只有title
+                    title_cn = metadata.get("title_cn")
+                    title_en = metadata.get("title_en", metadata.get("title", ""))  # 兼容旧格式
+                    
+                    # 如果metadata中没有title_cn，从H1获取
                     if not title_cn:
                          for line in content.splitlines():
                             stripped = line.strip()
                             if stripped.startswith('# '):
                                 title_cn = stripped[2:].strip()
                                 break
+                    
+                    # 如果还是没有，使用英文标题或文件名
                     if not title_cn:
-                        title_cn = md_file.stem
+                        title_cn = title_en if title_en else md_file.stem
                     
                     pure_text = extract_text_from_markdown(content)
                     word_count = count_chinese_words(pure_text)
@@ -183,6 +190,7 @@ async def list_public_summaries():
                     summary_data = {
                         "filename": md_file.name,
                         "title_cn": title_cn,
+                        "title_en": title_en,  # 添加英文标题
                         "size": stat.st_size,
                         "word_count": word_count,
                         "created_at": stat.st_ctime,
@@ -224,20 +232,27 @@ async def get_public_summary(filename: str):
         content = file_path.read_text(encoding="utf-8")
         metadata = parse_metadata_from_md(content)
         
-        # 优先从 metadata 获取标题，其次才是 H1
-        title = metadata.get("title")
-        if not title:
+        # 处理新旧两种格式
+        title_cn = metadata.get("title_cn")
+        title_en = metadata.get("title_en", metadata.get("title", ""))  # 兼容旧格式
+        
+        # 如果metadata中没有title_cn，从H1获取
+        if not title_cn:
              for line in content.splitlines():
                 stripped = line.strip()
                 if stripped.startswith('# '):
-                    title = stripped[2:].strip()
+                    title_cn = stripped[2:].strip()
                     break
-        if not title:
-            title = file_path.stem
+        
+        # 如果还是没有，使用英文标题或文件名
+        if not title_cn:
+            title_cn = title_en if title_en else file_path.stem
 
         return {
             "filename": filename,
-            "title": title,
+            "title": title_cn,  # 保持向后兼容
+            "title_cn": title_cn,
+            "title_en": title_en,
             "content": content,
             "video_url": metadata.get("video_url", "")
         }
@@ -280,20 +295,27 @@ async def get_summary(filename: str, authorization: str = Header(None)):
         content = file_path.read_text(encoding="utf-8")
         metadata = parse_metadata_from_md(content)
         
-        # 优先从 metadata 获取标题，其次才是 H1
-        title = metadata.get("title")
-        if not title:
+        # 处理新旧两种格式
+        title_cn = metadata.get("title_cn")
+        title_en = metadata.get("title_en", metadata.get("title", ""))  # 兼容旧格式
+        
+        # 如果metadata中没有title_cn，从H1获取
+        if not title_cn:
              for line in content.splitlines():
                 stripped = line.strip()
                 if stripped.startswith('# '):
-                    title = stripped[2:].strip()
+                    title_cn = stripped[2:].strip()
                     break
-        if not title:
-            title = file_path.stem
+        
+        # 如果还是没有，使用英文标题或文件名
+        if not title_cn:
+            title_cn = title_en if title_en else file_path.stem
 
         return {
             "filename": filename,
-            "title": title,
+            "title": title_cn,  # 保持向后兼容
+            "title_cn": title_cn,
+            "title_en": title_en,
             "content": content,
             "video_url": metadata.get("video_url", "")
         }
