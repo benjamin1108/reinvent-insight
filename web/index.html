@@ -274,11 +274,11 @@
                       <div class="flex justify-between items-center">
                           <div class="flex items-center space-x-3">
                               <div class="flex items-center" title="字数"><svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span>{{ formatWordCount(summary.word_count || summary.size) }}</span></div>
-                              <div class="flex items-center" title="阅读时间"><svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>{{ calculateReadTime(summary.word_count || summary.size) }}</span></div>
                           </div>
                           <div class="flex items-center space-x-2">
                               <div class="metadata-badge">re:Invent</div>
                               <div class="metadata-badge">{{ (summary.title_en && summary.title_en.match(/\b(20\d{2})\b/)) ? summary.title_en.match(/\b(20\d{2})\b/)[1] : (summary.upload_date ? summary.upload_date.substring(0,4) : '') }}</div>
+                              <div v-if="summary.level" class="level-badge" :class="'level-' + (summary.level.match(/\d+/) ? summary.level.match(/\d+/)[0] : '100')">{{ summary.level.split(' - ')[0] }}</div>
                           </div>
                       </div>
                   </div>
@@ -312,20 +312,20 @@
                   </div>
                   <div
                     class="metadata-area border-gray-700/50 text-xs text-cyan-500 group-hover:text-white/80 transition-colors">
-                    <div class="flex items-center space-x-3">
-                      <div class="flex items-center"><svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="none"
-                          stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
-                          </path>
-                        </svg><span>{{ formatWordCount(summary.word_count || summary.size) }}</span></div>
-                      <div class="flex items-center"><svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="none"
-                          stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg><span>{{ calculateReadTime(summary.word_count || summary.size) }}</span></div>
+                    <div class="flex justify-between items-center">
+                      <div class="flex items-center space-x-3">
+                        <div class="flex items-center"><svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                            </path>
+                          </svg><span>{{ formatWordCount(summary.word_count || summary.size) }}</span></div>
+                      </div>
+                      <div class="flex items-center space-x-2">
+                        <div class="metadata-badge">精选</div>
+                        <div v-if="summary.level" class="level-badge" :class="'level-' + (summary.level.match(/\d+/) ? summary.level.match(/\d+/)[0] : '100')">{{ summary.level.split(' - ')[0] }}</div>
+                      </div>
                     </div>
-                    <div class="metadata-badge">精选</div>
                   </div>
                 </div>
               </div>
@@ -390,11 +390,11 @@
                       <div class="flex justify-between items-center">
                           <div class="flex items-center space-x-3">
                               <div class="flex items-center" title="字数"><svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span>{{ formatWordCount(summary.word_count || summary.size) }}</span></div>
-                              <div class="flex items-center" title="阅读时间"><svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>{{ calculateReadTime(summary.word_count || summary.size) }}</span></div>
                           </div>
                           <div class="flex items-center space-x-2">
                               <div class="metadata-badge">re:Invent</div>
                               <div class="metadata-badge">{{ (summary.title_en && summary.title_en.match(/\b(20\d{2})\b/)) ? summary.title_en.match(/\b(20\d{2})\b/)[1] : (summary.upload_date ? summary.upload_date.substring(0,4) : '') }}</div>
+                              <div v-if="summary.level" class="level-badge" :class="'level-' + (summary.level.match(/\d+/) ? summary.level.match(/\d+/)[0] : '100')">{{ summary.level.split(' - ')[0] }}</div>
                           </div>
                       </div>
                   </div>
@@ -428,20 +428,20 @@
                   </div>
                   <div
                     class="metadata-area border-gray-700/50 text-xs text-cyan-500 group-hover:text-white/80 transition-colors">
-                    <div class="flex items-center space-x-3">
-                      <div class="flex items-center"><svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="none"
-                          stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
-                          </path>
-                        </svg><span>{{ formatWordCount(summary.word_count || summary.size) }}</span></div>
-                      <div class="flex items-center"><svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="none"
-                          stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg><span>{{ calculateReadTime(summary.word_count || summary.size) }}</span></div>
+                    <div class="flex justify-between items-center">
+                      <div class="flex items-center space-x-3">
+                        <div class="flex items-center"><svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                            </path>
+                          </svg><span>{{ formatWordCount(summary.word_count || summary.size) }}</span></div>
+                      </div>
+                      <div class="flex items-center space-x-2">
+                        <div class="metadata-badge">精选</div>
+                        <div v-if="summary.level" class="level-badge" :class="'level-' + (summary.level.match(/\d+/) ? summary.level.match(/\d+/)[0] : '100')">{{ summary.level.split(' - ')[0] }}</div>
+                      </div>
                     </div>
-                    <div class="metadata-badge">精选</div>
                   </div>
                 </div>
               </div>

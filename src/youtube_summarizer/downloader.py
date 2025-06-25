@@ -37,24 +37,39 @@ class VideoMetadata:
         if main_pattern.search(self.title):
             self.is_reinvent = True
 
-            # 可选匹配：尝试解析课程代码和级别
-            course_pattern = re.compile(
-                r"\(([A-Z]{3,}(\d{2,3})[A-Z-]*)\)",
-                re.IGNORECASE
-            )
-            course_match = course_pattern.search(self.title)
-            if course_match:
-                self.course_code = course_match.group(1).upper()
-                level_digit = course_match.group(2)
-                # 根据课程编号的第一个数字判断级别
-                if level_digit.startswith('2'):
-                    self.level = "200 - Intermediate"
-                elif level_digit.startswith('3'):
-                    self.level = "300 - Advanced"
-                elif level_digit.startswith('4'):
-                    self.level = "400 - Expert"
-                else:
-                    self.level = "100 - Foundational"
+            # 首先检查是否为Keynote
+            if re.search(r"keynote", self.title, re.IGNORECASE):
+                self.level = "Keynote"
+                # Keynote可能没有课程代码，但尝试解析
+                course_pattern = re.compile(
+                    r"\(([A-Z]{3,}\d{2,3}[A-Z0-9-]*)\)",
+                    re.IGNORECASE
+                )
+                course_match = course_pattern.search(self.title)
+                if course_match:
+                    self.course_code = course_match.group(1).upper()
+            else:
+                # 非Keynote视频，尝试解析课程代码和级别
+                course_pattern = re.compile(
+                    r"\(([A-Z]{3,}(\d{2,3})[A-Z0-9-]*)\)",
+                    re.IGNORECASE
+                )
+                course_match = course_pattern.search(self.title)
+                if course_match:
+                    self.course_code = course_match.group(1).upper()
+                    level_digits = course_match.group(2)
+                    # 根据课程编号的第一个数字判断级别
+                    first_digit = level_digits[0]
+                    if first_digit == '1':
+                        self.level = "100"
+                    elif first_digit == '2':
+                        self.level = "200"
+                    elif first_digit == '3':
+                        self.level = "300"
+                    elif first_digit == '4':
+                        self.level = "400"
+                    else:
+                        self.level = "100"  # 默认为基础级别
 
 
 def sanitize_filename(filename: str) -> str:
