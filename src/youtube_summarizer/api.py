@@ -8,7 +8,7 @@ import hashlib
 import base64
 import subprocess
 import tempfile
-from typing import Set, Optional
+from typing import Set, Optional, Dict
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import re
@@ -29,6 +29,28 @@ app = FastAPI(title="Reinvent Insight API", description="YouTube 字幕深度摘
 
 # --- 简易认证实现 ---
 session_tokens: Set[str] = set()
+
+# --- 短链接映射 ---
+# 存储 hash -> filename 的映射
+hash_to_filename: Dict[str, str] = {}
+filename_to_hash: Dict[str, str] = {}
+
+def generate_doc_hash(filename: str) -> str:
+    """为文档生成一个短的唯一hash"""
+    # 使用MD5生成hash，取前8位
+    return hashlib.md5(filename.encode()).hexdigest()[:8]
+
+def init_hash_mappings():
+    """初始化已有文档的hash映射"""
+    if config.OUTPUT_DIR.exists():
+        for md_file in config.OUTPUT_DIR.glob("*.md"):
+            filename = md_file.name
+            doc_hash = generate_doc_hash(filename)
+            hash_to_filename[doc_hash] = filename
+            filename_to_hash[filename] = doc_hash
+            
+# 启动时初始化映射
+init_hash_mappings()
 
 def extract_text_from_markdown(content: str) -> str:
     """从 Markdown 内容中提取纯文本，用于准确计算字数"""
@@ -186,6 +208,12 @@ async def list_public_summaries():
                     if not title_cn:
                         title_cn = title_en if title_en else md_file.stem
                     
+                    # 确保hash映射是最新的
+                    if md_file.name not in filename_to_hash:
+                        doc_hash = generate_doc_hash(md_file.name)
+                        hash_to_filename[doc_hash] = md_file.name
+                        filename_to_hash[md_file.name] = doc_hash
+                    
                     pure_text = extract_text_from_markdown(content)
                     word_count = count_chinese_words(pure_text)
                     stat = md_file.stat()
@@ -203,7 +231,8 @@ async def list_public_summaries():
                         "video_url": metadata.get("video_url", ""),
                         "is_reinvent": metadata.get("is_reinvent", False),
                         "course_code": metadata.get("course_code"),
-                        "level": metadata.get("level")
+                        "level": metadata.get("level"),
+                        "hash": filename_to_hash.get(md_file.name, generate_doc_hash(md_file.name))  # 添加hash
                     }
                     summaries.append(summary_data)
                 except Exception as e:
@@ -264,6 +293,17 @@ async def get_public_summary(filename: str):
     except Exception as e:
         logger.error(f"读取公共摘要文件 '{filename}' 失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="读取摘要文件失败")
+
+@app.get("/api/public/doc/{doc_hash}")
+async def get_public_summary_by_hash(doc_hash: str):
+    """通过hash获取指定摘要文件的公开内容，无需认证。"""
+    # 查找对应的文件名
+    filename = hash_to_filename.get(doc_hash)
+    if not filename:
+        raise HTTPException(status_code=404, detail="文档未找到")
+    
+    # 复用现有的获取文档逻辑
+    return await get_public_summary(filename)
 
 @app.get("/api/public/summaries/{filename}/pdf")
 async def get_summary_pdf(filename: str, response: Response):
@@ -427,11 +467,85 @@ if web_dir.is_dir():
     # This catch-all route must be defined *after* all other API routes and mounts.
     # It serves the main index.html for any other path, enabling client-side routing.
     @app.get("/{full_path:path}", response_class=FileResponse, include_in_schema=False)
-    async def serve_vue_app(request: Request):
+    async def serve_vue_app(request: Request, full_path: str):
         """
         Serve the Vue.js application.
         This allows the client-side router to handle all non-API, non-static-file paths.
         """
+        # 检查是否是文档URL
+        if full_path.startswith("d/"):
+            # 提取hash
+            doc_hash = full_path[2:].split('/')[0] if '/' in full_path[2:] else full_path[2:]
+            
+            # 查找对应的文档
+            filename = hash_to_filename.get(doc_hash)
+            if filename:
+                try:
+                    # 读取文档内容以获取标题和描述
+                    file_path = config.OUTPUT_DIR / filename
+                    content = file_path.read_text(encoding="utf-8")
+                    metadata = parse_metadata_from_md(content)
+                    
+                    # 获取标题
+                    title_cn = metadata.get("title_cn")
+                    title_en = metadata.get("title_en", metadata.get("title", ""))
+                    
+                    if not title_cn:
+                        for line in content.splitlines():
+                            stripped = line.strip()
+                            if stripped.startswith('# '):
+                                title_cn = stripped[2:].strip()
+                                break
+                    
+                    if not title_cn:
+                        title_cn = title_en if title_en else file_path.stem
+                    
+                    # 提取摘要作为描述（前200个字符）
+                    pure_text = extract_text_from_markdown(content)
+                    description = pure_text[:200] + "..." if len(pure_text) > 200 else pure_text
+                    
+                    # 生成带有meta标签的HTML
+                    index_path = web_dir / "index.html"
+                    if index_path.is_file():
+                        html_content = index_path.read_text(encoding="utf-8")
+                        
+                        # 构建meta标签
+                        meta_tags = f'''
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="{request.url}">
+  <meta property="og:title" content="{title_cn} - reinvent Insight">
+  <meta property="og:description" content="{description}">
+  <meta property="og:site_name" content="reinvent Insight">
+  
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="{request.url}">
+  <meta property="twitter:title" content="{title_cn} - reinvent Insight">
+  <meta property="twitter:description" content="{description}">
+  
+  <!-- 基础meta标签 -->
+  <meta name="description" content="{description}">
+  <title>{title_cn} - reinvent Insight</title>'''
+                        
+                        # 替换原有的title标签和插入meta标签
+                        import re
+                        # 替换title
+                        html_content = re.sub(
+                            r'<title>.*?</title>',
+                            '',
+                            html_content,
+                            flags=re.IGNORECASE | re.DOTALL
+                        )
+                        # 在</head>前插入meta标签
+                        html_content = html_content.replace('</head>', meta_tags + '\n</head>')
+                        
+                        from fastapi.responses import HTMLResponse
+                        return HTMLResponse(content=html_content)
+                except Exception as e:
+                    logger.error(f"生成文档meta标签失败: {e}")
+        
+        # 默认返回index.html
         index_path = web_dir / "index.html"
         if index_path.is_file():
             return FileResponse(index_path)

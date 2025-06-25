@@ -39,6 +39,7 @@ createApp({
     const documentTitle = ref('');
     const readingError = ref('');
     const readingFilename = ref(''); // 新增：当前阅读的文件名
+    const readingHash = ref(''); // 新增：当前阅读文档的hash
 
     // 视图控制
     const currentView = ref('library'); // 默认视图 'create', 'library', 'read'
@@ -68,9 +69,14 @@ createApp({
     const handleRouting = () => {
       const path = window.location.pathname;
       
+      // 检查是否是短链接格式 /d/hash
+      const hashMatch = path.match(/^\/d\/([a-zA-Z0-9]+)$/);
       const docMatch = path.match(/\/documents\/(.+)/);
 
-      if (docMatch) {
+      if (hashMatch) {
+        const docHash = hashMatch[1];
+        loadSummaryByHash(docHash, false); // false: 不要推入历史记录
+      } else if (docMatch) {
         const filename = decodeURIComponent(docMatch[1]);
         loadSummary(filename, false); // false: 不要推入历史记录，因为我们已经在这个URL上
       } else {
@@ -437,13 +443,20 @@ createApp({
         
         const res = await axios.get(endpoint);
         
+        // 查找当前文档的hash（从summaries列表中查找）
+        let docHash = '';
+        const summary = summaries.value.find(s => s.filename === filename);
+        if (summary && summary.hash) {
+          docHash = summary.hash;
+        }
+        
         if (pushState) {
           // 在非分享视图中，更新URL
           if (!isAuthenticated.value) {
             history.pushState({ filename }, '', `/documents/${encodedFilename}`);
           }
         }
-        viewSummary(res.data.title, res.data.content, filename, res.data.video_url);
+        viewSummary(res.data.title, res.data.content, filename, res.data.video_url, docHash);
       } catch (err) {
         console.error('加载摘要失败:', err);
         const errorMessage = err.response?.data?.detail || '加载文章失败';
@@ -453,10 +466,36 @@ createApp({
       }
     };
     
-    const viewSummary = (title, content, filename, videoUrl = '') => {
+    const loadSummaryByHash = async (docHash, pushState = true) => {
+      try {
+        readingError.value = '';
+        readingContent.value = ''; // 清空旧内容
+        currentView.value = 'read'; // 切换到阅读视图以显示加载状态
+
+        // 根据认证状态选择端点，使用hash端点
+        const endpoint = `/api/public/doc/${docHash}`;
+        
+        const res = await axios.get(endpoint);
+        
+        if (pushState) {
+          // 更新URL为短链接格式
+          history.pushState({ hash: docHash }, '', `/d/${docHash}`);
+        }
+        viewSummary(res.data.title, res.data.content, res.data.filename, res.data.video_url, docHash);
+      } catch (err) {
+        console.error('加载摘要失败:', err);
+        const errorMessage = err.response?.data?.detail || '加载文章失败';
+        readingError.value = errorMessage;
+        showToast(errorMessage, 'danger');
+        currentView.value = 'read'; // 确保停留在阅读视图显示错误
+      }
+    };
+    
+    const viewSummary = (title, content, filename, videoUrl = '', docHash) => {
       documentTitle.value = title;
       readingFilename.value = filename; // 跟踪当前文件名
       readingVideoUrl.value = videoUrl; // 保存视频链接
+      readingHash.value = docHash; // 保存文档的hash
 
       // 在解析前，移除 YAML Front Matter
       const cleanContent = content.replace(/^---[\s\S]*?---/, '').trim();
@@ -498,15 +537,12 @@ createApp({
         document.body.removeChild(link);
         
         // 显示成功提示
-        showToast('PDF下载开始', 'success');
-      } catch (err) {
-        console.error('下载PDF失败:', err);
+        showToast('PDF下载已开始', 'success');
+      } catch (error) {
+        console.error('下载PDF失败:', error);
         showToast('下载PDF失败', 'danger');
       } finally {
-        // 延迟重置状态，让用户看到加载效果
-        setTimeout(() => {
-          pdfDownloading.value = false;
-        }, 2000);
+        pdfDownloading.value = false;
       }
     };
 
@@ -681,6 +717,7 @@ createApp({
       libraryLoading,
       loadSummaries,
       loadSummary,
+      loadSummaryByHash,
       categorizedSummaries,
       formatWordCount,
       calculateReadTime,

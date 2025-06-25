@@ -311,6 +311,16 @@ class DeepSummaryWorkflow:
             config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True) # 确保目录存在
             shutil.move(temp_report_path, final_path)
 
+            # 更新hash映射（如果API模块已导入）
+            try:
+                from .api import generate_doc_hash, hash_to_filename, filename_to_hash
+                doc_hash = generate_doc_hash(final_filename)
+                hash_to_filename[doc_hash] = final_filename
+                filename_to_hash[final_filename] = doc_hash
+                logger.info(f"文档 {final_filename} 的hash已生成: {doc_hash}")
+            except ImportError:
+                pass  # API模块未运行，跳过hash映射更新
+
             await self._log(f"最终报告已成功组装并移动到: {final_path}")
             # 更新任务状态，包含最终文件路径
             task_manager.set_task_result(self.task_id, str(final_path))
