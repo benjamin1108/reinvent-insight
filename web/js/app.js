@@ -1,4 +1,4 @@
-const { createApp, ref, onMounted, computed, nextTick, watch } = Vue;
+const { createApp, ref, onMounted, computed, nextTick, watch, onUnmounted } = Vue;
 
 // 配置 marked 和 highlight.js
 marked.setOptions({
@@ -33,6 +33,12 @@ createApp({
     const isShareView = ref(false);
     const readingVideoUrl = ref('');
     const pdfDownloading = ref(false); // 新增：PDF下载状态
+    
+    // 筛选器状态
+    const selectedLevel = ref('');
+    const selectedYear = ref('');
+    const showLevelDropdown = ref(false);
+    const showYearDropdown = ref(false);
     
     // 阅读视图状态
     const readingContent = ref('');
@@ -190,6 +196,44 @@ createApp({
 
     const toggleToc = () => {
       showToc.value = !showToc.value;
+    };
+
+    // 下拉菜单方法
+    const toggleLevelDropdown = () => {
+      showLevelDropdown.value = !showLevelDropdown.value;
+      showYearDropdown.value = false; // 关闭其他下拉菜单
+    };
+
+    const toggleYearDropdown = () => {
+      showYearDropdown.value = !showYearDropdown.value;
+      showLevelDropdown.value = false; // 关闭其他下拉菜单
+    };
+
+    const selectLevel = (level) => {
+      selectedLevel.value = level;
+      showLevelDropdown.value = false;
+    };
+
+    const selectYear = (year) => {
+      selectedYear.value = year;
+      showYearDropdown.value = false;
+    };
+
+    // 点击外部关闭下拉菜单
+    const handleClickOutside = (event) => {
+      const dropdowns = document.querySelectorAll('.custom-dropdown');
+      let clickedInsideDropdown = false;
+      
+      dropdowns.forEach(dropdown => {
+        if (dropdown.contains(event.target)) {
+          clickedInsideDropdown = true;
+        }
+      });
+      
+      if (!clickedInsideDropdown) {
+        showLevelDropdown.value = false;
+        showYearDropdown.value = false;
+      }
     };
 
     // 处理目录点击
@@ -565,6 +609,56 @@ createApp({
       return { reinvent, other };
     });
 
+    // 可用年份列表（从re:Invent文章中提取）
+    const availableYears = computed(() => {
+      const years = new Set();
+      categorizedSummaries.value.reinvent.forEach(summary => {
+        // 从title_en中提取年份
+        const yearMatch = summary.title_en && summary.title_en.match(/\b(20\d{2})\b/);
+        if (yearMatch) {
+          years.add(yearMatch[1]);
+        } else if (summary.upload_date) {
+          // 如果title没有年份，从upload_date获取
+          years.add(summary.upload_date.substring(0, 4));
+        }
+      });
+      // 将Set转换为数组并排序（降序）
+      return Array.from(years).sort((a, b) => b - a);
+    });
+
+    // 筛选后的re:Invent文章
+    const filteredReinventSummaries = computed(() => {
+      let filtered = categorizedSummaries.value.reinvent;
+      
+      // 按级别筛选
+      if (selectedLevel.value) {
+        filtered = filtered.filter(summary => {
+          if (!summary.level) return false;
+          // 提取level中的数字部分
+          const levelMatch = summary.level.match(/\d+/);
+          const levelNum = levelMatch ? levelMatch[0] : '';
+          return selectedLevel.value === 'Keynote' 
+            ? summary.level === 'Keynote' 
+            : levelNum === selectedLevel.value;
+        });
+      }
+      
+      // 按年份筛选
+      if (selectedYear.value) {
+        filtered = filtered.filter(summary => {
+          const yearMatch = summary.title_en && summary.title_en.match(/\b(20\d{2})\b/);
+          if (yearMatch) {
+            return yearMatch[1] === selectedYear.value;
+          } else if (summary.upload_date) {
+            return summary.upload_date.substring(0, 4) === selectedYear.value;
+          }
+          return false;
+        });
+      }
+      
+      return filtered;
+    });
+
     const showHeroSection = computed(() => {
       if (currentView.value === 'read') {
         return false;
@@ -678,6 +772,14 @@ createApp({
       if (window.innerWidth < 768) {
         showToc.value = false;
       }
+      
+      // 添加点击外部关闭下拉菜单的监听器
+      document.addEventListener('click', handleClickOutside);
+    });
+
+    // 组件卸载时移除监听器
+    onUnmounted(() => {
+      document.removeEventListener('click', handleClickOutside);
     });
 
     watch(currentView, (newView, oldView) => {
@@ -750,7 +852,18 @@ createApp({
       readingVideoUrl,
       isShareView,
       pdfDownloading,
-      downloadPDF
+      downloadPDF,
+      availableYears,
+      filteredReinventSummaries,
+      selectedLevel,
+      selectedYear,
+      showLevelDropdown,
+      showYearDropdown,
+      toggleLevelDropdown,
+      toggleYearDropdown,
+      handleClickOutside,
+      selectLevel,
+      selectYear
     };
   }
 }).mount('#app'); 

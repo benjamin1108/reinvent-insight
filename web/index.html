@@ -252,11 +252,55 @@
                     class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">
                     AWS re:Invent 深度解读</h3>
                 </div>
-                <div class="ml-auto flex items-center text-sm text-gray-500">{{ categorizedSummaries.reinvent.length }}
-                  篇</div>
+                <div class="ml-auto flex items-center space-x-3">
+                  <!-- 课程级别筛选器 -->
+                  <div class="custom-dropdown" :class="{ active: showLevelDropdown }">
+                    <div @click="toggleLevelDropdown" class="custom-dropdown-trigger">
+                      <span>{{ selectedLevel ? (selectedLevel === 'Keynote' ? 'Keynote' : selectedLevel + ' 级') : '全部级别' }}</span>
+                    </div>
+                    <div class="custom-dropdown-menu">
+                      <div @click="selectLevel('')" class="custom-dropdown-option" :class="{ selected: selectedLevel === '' }">
+                        全部级别
+                      </div>
+                      <div @click="selectLevel('100')" class="custom-dropdown-option" :class="{ selected: selectedLevel === '100' }">
+                        100-基础
+                      </div>
+                      <div @click="selectLevel('200')" class="custom-dropdown-option" :class="{ selected: selectedLevel === '200' }">
+                        200-中级
+                      </div>
+                      <div @click="selectLevel('300')" class="custom-dropdown-option" :class="{ selected: selectedLevel === '300' }">
+                        300-高级
+                      </div>
+                      <div @click="selectLevel('400')" class="custom-dropdown-option" :class="{ selected: selectedLevel === '400' }">
+                        400-专家
+                      </div>
+                      <div @click="selectLevel('Keynote')" class="custom-dropdown-option" :class="{ selected: selectedLevel === 'Keynote' }">
+                        Keynote演讲
+                      </div>
+                    </div>
+                  </div>
+                  <!-- 年份筛选器 -->
+                  <div class="custom-dropdown" :class="{ active: showYearDropdown }">
+                    <div @click="toggleYearDropdown" class="custom-dropdown-trigger">
+                      <span>{{ selectedYear || '全部年份' }}</span>
+                    </div>
+                    <div class="custom-dropdown-menu">
+                      <div @click="selectYear('')" class="custom-dropdown-option" :class="{ selected: selectedYear === '' }">
+                        全部年份
+                      </div>
+                      <div v-for="year in availableYears" :key="year" 
+                           @click="selectYear(year)" 
+                           class="custom-dropdown-option" 
+                           :class="{ selected: selectedYear === year }">
+                        {{ year }}
+                      </div>
+                    </div>
+                  </div>
+                  <span class="article-count">{{ filteredReinventSummaries.length }} 篇</span>
+                </div>
               </div>
               <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mobile-grid">
-                <div v-for="summary in categorizedSummaries.reinvent" :key="summary.filename"
+                <div v-for="summary in filteredReinventSummaries" :key="summary.filename"
                   class="summary-card tech-gradient border border-orange-700/50 rounded-xl p-6 transition-all duration-200 glow-effect group flex flex-col justify-between h-64 reinvent-card relative">
 
                   <!-- Main clickable area -->
@@ -368,11 +412,55 @@
                     class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">
                     AWS re:Invent 深度解读</h3>
                 </div>
-                <div class="ml-auto flex items-center text-sm text-gray-500">{{ categorizedSummaries.reinvent.length }}
-                  篇</div>
+                <div class="ml-auto flex items-center space-x-3">
+                  <!-- 课程级别筛选器 -->
+                  <div class="custom-dropdown" :class="{ active: showLevelDropdown }">
+                    <div @click="toggleLevelDropdown" class="custom-dropdown-trigger">
+                      <span>{{ selectedLevel ? (selectedLevel === 'Keynote' ? 'Keynote' : selectedLevel + ' 级') : '全部级别' }}</span>
+                    </div>
+                    <div class="custom-dropdown-menu">
+                      <div @click="selectLevel('')" class="custom-dropdown-option" :class="{ selected: selectedLevel === '' }">
+                        全部级别
+                      </div>
+                      <div @click="selectLevel('100')" class="custom-dropdown-option" :class="{ selected: selectedLevel === '100' }">
+                        100-基础
+                      </div>
+                      <div @click="selectLevel('200')" class="custom-dropdown-option" :class="{ selected: selectedLevel === '200' }">
+                        200-中级
+                      </div>
+                      <div @click="selectLevel('300')" class="custom-dropdown-option" :class="{ selected: selectedLevel === '300' }">
+                        300-高级
+                      </div>
+                      <div @click="selectLevel('400')" class="custom-dropdown-option" :class="{ selected: selectedLevel === '400' }">
+                        400-专家
+                      </div>
+                      <div @click="selectLevel('Keynote')" class="custom-dropdown-option" :class="{ selected: selectedLevel === 'Keynote' }">
+                        Keynote演讲
+                      </div>
+                    </div>
+                  </div>
+                  <!-- 年份筛选器 -->
+                  <div class="custom-dropdown" :class="{ active: showYearDropdown }">
+                    <div @click="toggleYearDropdown" class="custom-dropdown-trigger">
+                      <span>{{ selectedYear || '全部年份' }}</span>
+                    </div>
+                    <div class="custom-dropdown-menu">
+                      <div @click="selectYear('')" class="custom-dropdown-option" :class="{ selected: selectedYear === '' }">
+                        全部年份
+                      </div>
+                      <div v-for="year in availableYears" :key="year" 
+                           @click="selectYear(year)" 
+                           class="custom-dropdown-option" 
+                           :class="{ selected: selectedYear === year }">
+                        {{ year }}
+                      </div>
+                    </div>
+                  </div>
+                  <span class="article-count">{{ filteredReinventSummaries.length }} 篇</span>
+                </div>
               </div>
               <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mobile-grid">
-                <div v-for="summary in categorizedSummaries.reinvent" :key="summary.filename"
+                <div v-for="summary in filteredReinventSummaries" :key="summary.filename"
                   class="summary-card tech-gradient border border-orange-700/50 rounded-xl p-6 transition-all duration-200 glow-effect group flex flex-col justify-between h-64 reinvent-card relative">
 
                   <!-- Main clickable area -->
