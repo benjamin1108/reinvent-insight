@@ -40,6 +40,14 @@ createApp({
     const showLevelDropdown = ref(false);
     const showYearDropdown = ref(false);
     
+    // 视频播放器状态
+    const showVideoPlayer = ref(false);
+    const videoPlayerMinimized = ref(false);
+    const videoPlayerPosition = ref({ x: null, y: null });
+    const videoPlayerSize = ref({ width: 480, height: 320 });
+    const currentVideoId = ref('');
+    const currentVideoTitle = ref('');
+    
     // 阅读视图状态
     const readingContent = ref('');
     const documentTitle = ref('');
@@ -70,6 +78,8 @@ createApp({
     const showToc = ref(true);
     const tocHtml = ref('');
     const tocWidth = ref(416); // 26rem = 416px
+    const isVideoResizing = ref(false); // 添加响应式状态
+    const isVideoDragging = ref(false); // 添加拖动响应式状态
 
     // --- 路由处理 ---
     const handleRouting = () => {
@@ -540,6 +550,11 @@ createApp({
       readingFilename.value = filename; // 跟踪当前文件名
       readingVideoUrl.value = videoUrl; // 保存视频链接
       readingHash.value = docHash; // 保存文档的hash
+      
+      // 切换文档时关闭视频播放器
+      if (showVideoPlayer.value) {
+        closeVideoPlayer();
+      }
 
       // 在解析前，移除 YAML Front Matter
       const cleanContent = content.replace(/^---[\s\S]*?---/, '').trim();
@@ -757,6 +772,263 @@ createApp({
       }
     };
 
+    // 视频播放器相关方法
+    const extractYoutubeVideoId = (url) => {
+      if (!url) return null;
+      
+      const patterns = [
+        /youtube\.com\/watch\?v=([^&]+)/,
+        /youtu\.be\/([^?]+)/,
+        /youtube\.com\/embed\/([^?]+)/,
+        /youtube\.com\/v\/([^?]+)/
+      ];
+      
+      for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match) return match[1];
+      }
+      
+      return null;
+    };
+
+    const openVideoPlayer = () => {
+      if (!readingVideoUrl.value) {
+        showToast('视频链接不可用', 'warning');
+        return;
+      }
+      
+      const videoId = extractYoutubeVideoId(readingVideoUrl.value);
+      if (!videoId) {
+        showToast('无法解析视频ID', 'danger');
+        return;
+      }
+      
+      currentVideoId.value = videoId;
+      currentVideoTitle.value = documentTitle.value || '视频播放器';
+      showVideoPlayer.value = true;
+      videoPlayerMinimized.value = false;
+      
+      // 计算初始位置 - 出现在TOC区域下方
+      if (window.innerWidth <= 768) {
+        // 移动端：使用默认的屏幕尺寸
+        videoPlayerSize.value = { width: window.innerWidth * 0.9, height: window.innerHeight * 0.5 };
+        // 设置在屏幕底部居中
+        const leftPos = (window.innerWidth - videoPlayerSize.value.width) / 2;
+        videoPlayerPosition.value = { 
+          x: leftPos, 
+          y: window.innerHeight - videoPlayerSize.value.height - 20 
+        };
+      } else {
+        // 桌面端：定位在TOC区域下方
+        videoPlayerSize.value = { width: 480, height: 320 };
+        
+        // 获取TOC的宽度和位置
+        const tocSidebar = document.querySelector('.toc-sidebar');
+        let leftPos = 20; // 默认左边距
+        
+        if (showToc.value && tocSidebar) {
+          // 如果TOC可见，放在TOC下方
+          const tocRect = tocSidebar.getBoundingClientRect();
+          leftPos = tocRect.left + 20; // TOC左边距 + 一些padding
+          
+          // 确保不超出TOC宽度
+          if (leftPos + videoPlayerSize.value.width > tocRect.right) {
+            // 如果视频宽度超出TOC，调整宽度
+            videoPlayerSize.value.width = Math.max(320, tocRect.width - 40);
+            videoPlayerSize.value.height = videoPlayerSize.value.width / (16/9);
+          }
+        }
+        
+        // 设置在顶部，留出一些空间给页面header
+        videoPlayerPosition.value = { 
+          x: leftPos, 
+          y: 100 // 距离顶部100px，避免遮挡header
+        };
+      }
+    };
+
+    const closeVideoPlayer = () => {
+      showVideoPlayer.value = false;
+      currentVideoId.value = '';
+      currentVideoTitle.value = '';
+    };
+
+    const toggleVideoPlayerMinimize = () => {
+      videoPlayerMinimized.value = !videoPlayerMinimized.value;
+    };
+
+    // 拖拽功能
+    let isDraggingVideo = false;
+    let dragOffset = { x: 0, y: 0 };
+    let playerElement = null; // 缓存播放器元素
+
+    // 调整大小功能
+    let isResizingVideo = false;
+    let resizeStartPos = { x: 0, y: 0 };
+    let resizeStartSize = { width: 0, height: 0 };
+
+    const startVideoResize = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      isResizingVideo = true;
+      isVideoResizing.value = true;
+      
+      playerElement = e.target.closest('.floating-video-player');
+      if (!playerElement) return;
+
+      const rect = playerElement.getBoundingClientRect();
+      resizeStartPos = { x: e.clientX, y: e.clientY };
+      resizeStartSize = { width: rect.width, height: rect.height };
+
+      document.addEventListener('mousemove', doVideoResize, true);
+      document.addEventListener('mouseup', stopVideoResize, true);
+
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'nwse-resize';
+      const iframe = playerElement.querySelector('iframe');
+      if (iframe) iframe.style.pointerEvents = 'none';
+    };
+
+    const doVideoResize = (e) => {
+      if (!isResizingVideo || !playerElement) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const deltaX = e.clientX - resizeStartPos.x;
+      const deltaY = e.clientY - resizeStartPos.y;
+      
+      let newWidth, newHeight;
+      const aspectRatio = 16/9;
+
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        newWidth = resizeStartSize.width + deltaX;
+        newWidth = Math.max(320, newWidth);
+        newHeight = newWidth / aspectRatio;
+      } else {
+        newHeight = resizeStartSize.height + deltaY;
+        newHeight = Math.max(180, newHeight);
+        newWidth = newHeight * aspectRatio;
+      }
+
+      const currentPos = videoPlayerPosition.value;
+      const maxWidth = window.innerWidth - currentPos.x - 20;
+      if (newWidth > maxWidth) {
+        newWidth = maxWidth;
+        newHeight = newWidth / aspectRatio;
+      }
+      
+      const maxHeight = window.innerHeight - currentPos.y - 20;
+      if (newHeight > maxHeight) {
+        newHeight = maxHeight;
+        newWidth = newHeight / aspectRatio;
+      }
+      
+      playerElement.style.width = `${Math.round(newWidth)}px`;
+      playerElement.style.height = `${Math.round(newHeight)}px`;
+    };
+
+    const stopVideoResize = (e) => {
+      if (!isResizingVideo) return;
+      isResizingVideo = false;
+      isVideoResizing.value = false;
+
+      if (playerElement) {
+        const rect = playerElement.getBoundingClientRect();
+        videoPlayerSize.value = {
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+        };
+        const iframe = playerElement.querySelector('iframe');
+        if (iframe) iframe.style.pointerEvents = '';
+      }
+      
+      document.removeEventListener('mousemove', doVideoResize, true);
+      document.removeEventListener('mouseup', stopVideoResize, true);
+
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+      playerElement = null;
+    };
+
+    const startVideoDrag = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (videoPlayerMinimized.value) return;
+
+      playerElement = e.target.closest('.floating-video-player');
+      if (!playerElement) return;
+
+      isDraggingVideo = true;
+      isVideoDragging.value = true;
+      
+      const rect = playerElement.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      
+      dragOffset.x = clientX - rect.left;
+      dragOffset.y = clientY - rect.top;
+
+      if (e.touches) {
+        document.addEventListener('touchmove', doVideoDrag, { passive: false });
+        document.addEventListener('touchend', stopVideoDrag, { passive: false });
+      } else {
+        document.addEventListener('mousemove', doVideoDrag, true);
+        document.addEventListener('mouseup', stopVideoDrag, true);
+      }
+      
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'move';
+    };
+
+    const doVideoDrag = (e) => {
+      if (!isDraggingVideo || !playerElement) return;
+      e.preventDefault();
+      
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      
+      let newX = clientX - dragOffset.x;
+      let newY = clientY - dragOffset.y;
+      
+      const rect = playerElement.getBoundingClientRect();
+      const maxX = window.innerWidth - rect.width;
+      const maxY = window.innerHeight - rect.height;
+      
+      newX = Math.max(0, Math.min(newX, maxX));
+      newY = Math.max(0, Math.min(newY, maxY));
+      
+      // 直接操作 left/top 样式，不再使用 transform
+      playerElement.style.left = `${newX}px`;
+      playerElement.style.top = `${newY}px`;
+    };
+
+    const stopVideoDrag = (e) => {
+      if (!isDraggingVideo) return;
+      
+      isDraggingVideo = false;
+      isVideoDragging.value = false;
+      
+      if (playerElement) {
+        // 从DOM获取最终位置并同步回Vue
+        const rect = playerElement.getBoundingClientRect();
+        videoPlayerPosition.value = { x: rect.left, y: rect.top };
+        // 清理行内样式，让Vue的绑定接管
+        playerElement.style.left = '';
+        playerElement.style.top = '';
+      }
+      
+      document.removeEventListener('mousemove', doVideoDrag, true);
+      document.removeEventListener('mouseup', stopVideoDrag, true);
+      document.removeEventListener('touchmove', doVideoDrag);
+      document.removeEventListener('touchend', stopVideoDrag);
+      
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+      playerElement = null;
+    };
+
     // --- 生命周期钩子 ---
     onMounted(() => {
       checkAuth();
@@ -863,7 +1135,24 @@ createApp({
       toggleYearDropdown,
       handleClickOutside,
       selectLevel,
-      selectYear
+      selectYear,
+      showVideoPlayer,
+      videoPlayerMinimized,
+      videoPlayerPosition,
+      videoPlayerSize,
+      currentVideoId,
+      currentVideoTitle,
+      openVideoPlayer,
+      closeVideoPlayer,
+      toggleVideoPlayerMinimize,
+      startVideoDrag,
+      doVideoDrag,
+      stopVideoDrag,
+      startVideoResize,
+      doVideoResize,
+      stopVideoResize,
+      isVideoResizing,
+      isVideoDragging
     };
   }
 }).mount('#app'); 

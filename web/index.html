@@ -6,12 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>reinvent Insight - 深度分析笔记</title>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
-  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
   <script src="https://unpkg.com/marked/marked.min.js"></script>
   <script src="https://unpkg.com/@highlightjs/cdn-assets@11.9.0/highlight.min.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.9.0/styles/github-dark.min.css">
-  <script src="https://cdn.tailwindcss.com"></script>
+      <!-- 注意：生产环境应使用PostCSS插件或Tailwind CLI -->
+    <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 
@@ -73,10 +74,10 @@
             </button>
 
             <!-- 观看原视频按钮 -->
-            <a v-if="readingVideoUrl" :href="readingVideoUrl" target="_blank" class="tech-btn tech-btn-secondary">
+            <button v-if="readingVideoUrl" @click="openVideoPlayer" class="tech-btn tech-btn-secondary">
               <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
               观看原视频
-            </a>
+            </button>
 
             <!-- 下载PDF按钮 -->
             <button @click="downloadPDF" class="tech-btn tech-btn-secondary" :disabled="pdfDownloading">
@@ -576,6 +577,44 @@
     <!-- ======================================================================= -->
     <!--                           Modals and Toasts                             -->
     <!-- ======================================================================= -->
+    <!-- 浮动视频播放器 -->
+    <div v-if="showVideoPlayer" 
+         class="floating-video-player" 
+         :class="{ minimized: videoPlayerMinimized, resizing: isVideoResizing, dragging: isVideoDragging }"
+         :style="{
+           left: videoPlayerPosition.x !== null ? videoPlayerPosition.x + 'px' : 'auto',
+           top: videoPlayerPosition.y !== null ? videoPlayerPosition.y + 'px' : 'auto',
+           right: videoPlayerPosition.x !== null ? 'auto' : '20px',
+           bottom: videoPlayerPosition.y !== null ? 'auto' : '20px',
+           width: videoPlayerMinimized ? '240px' : videoPlayerSize.width + 'px',
+           height: videoPlayerMinimized ? '160px' : videoPlayerSize.height + 'px'
+         }">
+      <div class="video-player-header" @mousedown="startVideoDrag" @touchstart="startVideoDrag" @dblclick="toggleVideoPlayerMinimize" title="拖动移动位置，双击最小化">
+        <div class="video-player-title">{{ currentVideoTitle }}</div>
+        <div class="video-player-controls">
+          <button @click="toggleVideoPlayerMinimize" class="video-control-btn" :title="videoPlayerMinimized ? '恢复' : '最小化'">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path v-if="!videoPlayerMinimized" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
+              <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+            </svg>
+          </button>
+          <button @click="closeVideoPlayer" class="video-control-btn" title="关闭">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div v-show="!videoPlayerMinimized" class="video-player-content">
+        <iframe 
+          :src="`https://www.youtube.com/embed/${currentVideoId}?enablejsapi=1&modestbranding=1&rel=0`"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen>
+        </iframe>
+      </div>
+      <div v-show="!videoPlayerMinimized" class="resize-handle" @mousedown="startVideoResize"></div>
+    </div>
+
     <transition name="fade">
       <div v-if="showLogin" class="modal inset-0 fixed bg-black/70 z-50 flex items-center justify-center">
         <div
