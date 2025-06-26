@@ -206,7 +206,7 @@
               处理进度
             </h3>
             <div class="space-y-2">
-              <div v-for="(log, index) in logs" :key="index" class="flex items-center text-sm slide-in">
+              <div v-for="(log, index) in finalizedLogs" :key="index" class="flex items-center text-sm slide-in">
                 <div :class="['w-2 h-2 rounded-full mr-3 flex-shrink-0', log.includes('错误') ? 'bg-red-500' : 'bg-green-500']"></div>
                 <span class="text-gray-300">{{ log }}</span>
               </div>

@@ -777,25 +777,79 @@ createApp({
       pdfDownloading.value = true;
       
       try {
-        // URL编码文件名
+        // 调试：打印原始文件名
+        console.log('原始文件名:', readingFilename.value);
+        console.log('文件名长度:', readingFilename.value.length);
+        console.log('文件名字符编码:', [...readingFilename.value].map(c => c.charCodeAt(0).toString(16)).join(' '));
+        
+        // 直接使用原始文件名，不进行清理
+        // 服务器端会处理URL解码
         const encodedFilename = encodeURIComponent(readingFilename.value);
         const pdfUrl = `/api/public/summaries/${encodedFilename}/pdf`;
+        console.log('PDF URL:', pdfUrl);
         
-        // 创建临时链接并触发下载
-        const link = document.createElement('a');
-        link.href = pdfUrl;
-        link.download = readingFilename.value.replace('.md', '.pdf');
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // 显示生成提示
+        showToast('正在生成PDF，请稍候...', 'info');
         
-        // 显示成功提示
-        showToast('PDF下载已开始', 'success');
+        // 先尝试获取PDF，确保服务器能正确生成
+        try {
+          // 设置较长的超时时间，因为PDF生成可能需要时间
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
+          
+          const response = await fetch(pdfUrl, {
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            throw new Error(`服务器响应错误: ${response.status}`);
+          }
+          
+          // 获取blob数据
+          const blob = await response.blob();
+          
+          // 创建临时URL
+          const blobUrl = URL.createObjectURL(blob);
+          
+          // 创建隐藏的下载链接
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          // 清理下载文件名中的特殊字符
+          const downloadFilename = readingFilename.value
+            .replace(/[\u200B-\u200D\uFEFF]/g, '') // 移除零宽字符
+            .replace('.md', '.pdf');
+          link.download = downloadFilename;
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          
+          // 触发下载
+          link.click();
+          
+          // 清理
+          setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(blobUrl);
+          }, 100);
+          
+          // 显示成功提示
+          showToast('PDF下载成功', 'success');
+        } catch (fetchError) {
+          console.error('获取PDF失败:', fetchError);
+          // 如果fetch失败，尝试直接打开链接
+          console.log('尝试直接打开PDF链接...');
+          window.open(pdfUrl, '_blank');
+          showToast('正在新窗口中打开PDF...', 'info');
+        }
       } catch (error) {
         console.error('下载PDF失败:', error);
-        showToast('下载PDF失败', 'danger');
+        showToast('下载PDF失败，请重试', 'danger');
       } finally {
-        pdfDownloading.value = false;
+        // 再延迟一点让动画完成
+        setTimeout(() => {
+          pdfDownloading.value = false;
+        }, 500);
       }
     };
 
@@ -881,6 +935,13 @@ createApp({
         return true;
       }
       return false;
+    });
+
+    const finalizedLogs = computed(() => {
+      if (loading.value && logs.value.length > 0) {
+        return logs.value.slice(0, -1);
+      }
+      return logs.value;
     });
 
     // --- 数据转换与格式化 ---
@@ -1330,7 +1391,8 @@ createApp({
       showVersionDropdown,
       hasMultipleVersions,
       toggleVersionDropdown,
-      switchVersion
+      switchVersion,
+      finalizedLogs
     };
   }
 }).mount('#app'); 
