@@ -8,7 +8,7 @@ import hashlib
 import base64
 import subprocess
 import tempfile
-from typing import Set, Optional, Dict
+from typing import Set, Optional, Dict, List
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import re
@@ -160,6 +160,36 @@ class SummarizeResponse(BaseModel):
     message: str
     status: str # "created", "reconnected"
 
+def discover_versions(video_url: str) -> List[Dict[str, any]]:
+    """发现指定视频URL的所有版本"""
+    versions = []
+    
+    if not config.OUTPUT_DIR.exists():
+        return versions
+        
+    # 扫描所有文件
+    for md_file in config.OUTPUT_DIR.glob("*.md"):
+        try:
+            content = md_file.read_text(encoding="utf-8")
+            metadata = parse_metadata_from_md(content)
+            
+            # 检查是否是同一个视频
+            if metadata.get('video_url') == video_url:
+                version_info = {
+                    'filename': md_file.name,
+                    'version': metadata.get('version', 0),  # 默认为0（原始版本）
+                    'created_at': metadata.get('created_at', ''),
+                    'title_cn': metadata.get('title_cn', ''),
+                    'title_en': metadata.get('title_en', '')
+                }
+                versions.append(version_info)
+        except Exception as e:
+            logger.warning(f"检查文件 {md_file.name} 时出错: {e}")
+    
+    # 按版本号排序
+    versions.sort(key=lambda x: x['version'])
+    return versions
+
 @app.post("/summarize", response_model=SummarizeResponse)
 async def summarize_endpoint(req: SummarizeRequest, authorization: str = Header(None)):
     """
@@ -280,13 +310,20 @@ async def get_public_summary(filename: str):
         if not title_cn:
             title_cn = title_en if title_en else file_path.stem
 
+        # 获取视频URL以查找所有版本
+        video_url = metadata.get("video_url", "")
+        versions = []
+        if video_url:
+            versions = discover_versions(video_url)
+
         return {
             "filename": filename,
             "title": title_cn,  # 保持向后兼容
             "title_cn": title_cn,
             "title_en": title_en,
             "content": content,
-            "video_url": metadata.get("video_url", "")
+            "video_url": video_url,
+            "versions": versions  # 添加版本信息
         }
     except HTTPException:
         raise

@@ -5,6 +5,7 @@ import re
 import shutil
 from typing import List, Dict, Tuple, Optional
 from pathlib import Path
+from datetime import datetime
 
 from .summarizer import get_summarizer
 from .task_manager import manager as task_manager
@@ -305,8 +306,61 @@ class DeepSummaryWorkflow:
             with open(temp_report_path, "w", encoding="utf-8") as f:
                 f.write(final_report)
             
+            # === 版本管理逻辑开始 ===
+            # 查找是否已存在相同视频URL的文件
+            existing_files = []
+            base_filename = f"{metadata.sanitized_title}.md"
+            video_url = metadata.video_url
+            
+            if config.OUTPUT_DIR.exists() and video_url:
+                # 扫描所有现有文件，查找相同视频URL的文件
+                for md_file in config.OUTPUT_DIR.glob("*.md"):
+                    try:
+                        content = md_file.read_text(encoding="utf-8")
+                        # 解析metadata
+                        import yaml
+                        match = re.match(r'^---\s*\n(.*?)\n---\s*\n', content, re.DOTALL)
+                        if match:
+                            existing_metadata = yaml.safe_load(match.group(1))
+                            if existing_metadata.get('video_url') == video_url:
+                                existing_files.append(md_file.name)
+                    except Exception as e:
+                        logger.warning(f"检查文件 {md_file.name} 时出错: {e}")
+            
+            # 确定最终文件名
+            if existing_files:
+                # 找出最大版本号
+                max_version = 0
+                base_name_without_ext = metadata.sanitized_title
+                
+                for filename in existing_files:
+                    # 检查是否是带版本号的文件名
+                    version_match = re.match(rf'^{re.escape(base_name_without_ext)}_v(\d+)\.md$', filename)
+                    if version_match:
+                        version = int(version_match.group(1))
+                        max_version = max(max_version, version)
+                    elif filename == base_filename:
+                        # 原始文件存在，相当于v0
+                        max_version = max(max_version, 0)
+                
+                # 新版本号
+                new_version = max_version + 1
+                final_filename = f"{base_name_without_ext}_v{new_version}.md"
+                
+                # 在metadata中添加版本号
+                metadata_dict = yaml.safe_load(match.group(1)) if match else {}
+                metadata_dict['version'] = new_version
+                
+                # 重新生成带版本号的报告
+                final_report = _perform_assembly(title, toc_md, conclusion_md, chapter_contents, metadata, version=new_version)
+                with open(temp_report_path, "w", encoding="utf-8") as f:
+                    f.write(final_report)
+            else:
+                # 第一次生成，使用原始文件名
+                final_filename = base_filename
+            # === 版本管理逻辑结束 ===
+            
             # 移动并重命名到最终的输出目录
-            final_filename = f"{metadata.sanitized_title}.md"
             final_path = config.OUTPUT_DIR / final_filename
             config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True) # 确保目录存在
             shutil.move(temp_report_path, final_path)
@@ -340,7 +394,7 @@ class DeepSummaryWorkflow:
         if error:
              await task_manager.set_task_error(self.task_id, message)
 
-def _perform_assembly(title: str, toc_md: str, conclusion_md: str, chapter_contents: List[str], metadata: Optional[VideoMetadata] = None) -> str:
+def _perform_assembly(title: str, toc_md: str, conclusion_md: str, chapter_contents: List[str], metadata: Optional[VideoMetadata] = None, version: int = 0) -> str:
     """
     可复用的核心拼接逻辑。
     接收所有内容的字符串，返回最终的报告字符串。
@@ -363,8 +417,13 @@ def _perform_assembly(title: str, toc_md: str, conclusion_md: str, chapter_conte
                 "video_url": metadata.video_url,
                 "is_reinvent": metadata.is_reinvent,
                 "course_code": metadata.course_code,
-                "level": metadata.level
+                "level": metadata.level,
+                "created_at": datetime.now().isoformat()  # 添加创建时间
             }
+            # 只在版本号大于0时添加version字段
+            if version > 0:
+                metadata_dict['version'] = version
+                
             # allow_unicode=True 保证中文字符正确显示
             metadata_yaml = f"---\n{yaml.dump(metadata_dict, allow_unicode=True, sort_keys=False)}---\n\n"
         except ImportError:

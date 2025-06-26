@@ -54,6 +54,12 @@ createApp({
     const readingError = ref('');
     const readingFilename = ref(''); // 新增：当前阅读的文件名
     const readingHash = ref(''); // 新增：当前阅读文档的hash
+    
+    // 版本管理状态
+    const documentVersions = ref([]); // 当前文档的所有版本
+    const currentVersion = ref(0); // 当前选中的版本
+    const showVersionDropdown = ref(false); // 版本下拉菜单显示状态
+    const hasMultipleVersions = computed(() => documentVersions.value.length > 1); // 是否有多个版本
 
     // 视图控制
     const currentView = ref('library'); // 默认视图 'create', 'library', 'read'
@@ -243,6 +249,12 @@ createApp({
       if (!clickedInsideDropdown) {
         showLevelDropdown.value = false;
         showYearDropdown.value = false;
+      }
+      
+      // 处理版本下拉菜单
+      const versionSelector = document.querySelector('.version-selector');
+      if (versionSelector && !versionSelector.contains(event.target)) {
+        showVersionDropdown.value = false;
       }
     };
 
@@ -510,7 +522,7 @@ createApp({
             history.pushState({ filename }, '', `/documents/${encodedFilename}`);
           }
         }
-        viewSummary(res.data.title, res.data.content, filename, res.data.video_url, docHash);
+        viewSummary(res.data.title, res.data.content, filename, res.data.video_url, docHash, res.data.versions);
       } catch (err) {
         console.error('加载摘要失败:', err);
         const errorMessage = err.response?.data?.detail || '加载文章失败';
@@ -535,7 +547,7 @@ createApp({
           // 更新URL为短链接格式
           history.pushState({ hash: docHash }, '', `/d/${docHash}`);
         }
-        viewSummary(res.data.title, res.data.content, res.data.filename, res.data.video_url, docHash);
+        viewSummary(res.data.title, res.data.content, res.data.filename, res.data.video_url, docHash, res.data.versions);
       } catch (err) {
         console.error('加载摘要失败:', err);
         const errorMessage = err.response?.data?.detail || '加载文章失败';
@@ -545,11 +557,44 @@ createApp({
       }
     };
     
-    const viewSummary = (title, content, filename, videoUrl = '', docHash) => {
+    const viewSummary = (title, content, filename, videoUrl = '', docHash, versions = []) => {
       documentTitle.value = title;
       readingFilename.value = filename; // 跟踪当前文件名
       readingVideoUrl.value = videoUrl; // 保存视频链接
       readingHash.value = docHash; // 保存文档的hash
+      
+      // 处理版本信息
+      documentVersions.value = versions;
+      if (versions.length > 0) {
+        // 从versions中找到当前文件对应的版本
+        const currentFile = versions.find(v => v.filename === filename);
+        currentVersion.value = currentFile ? currentFile.version : 0;
+        
+        // 尝试从localStorage恢复用户的版本偏好
+        const savedPrefs = localStorage.getItem('version_prefs');
+        if (savedPrefs && videoUrl) {
+          try {
+            const prefs = JSON.parse(savedPrefs);
+            const videoId = extractYoutubeVideoId(videoUrl);
+            if (videoId && prefs[`video_${videoId}`]) {
+              const preferredVersion = prefs[`video_${videoId}`].preferred;
+              // 检查偏好版本是否存在
+              if (versions.some(v => v.version === preferredVersion)) {
+                // 如果偏好版本不是当前版本，则切换
+                if (preferredVersion !== currentVersion.value) {
+                  switchVersion(preferredVersion);
+                  return; // 切换版本会重新调用viewSummary，所以直接返回
+                }
+              }
+            }
+          } catch (e) {
+            console.error('读取版本偏好失败:', e);
+          }
+        }
+      } else {
+        // 没有版本信息，设置为默认值
+        currentVersion.value = 0;
+      }
       
       // 切换文档时关闭视频播放器
       if (showVideoPlayer.value) {
@@ -571,6 +616,62 @@ createApp({
         });
         adjustTocWidth();
       });
+    };
+
+    // 版本切换相关函数
+    const toggleVersionDropdown = () => {
+      showVersionDropdown.value = !showVersionDropdown.value;
+    };
+    
+    const switchVersion = async (version) => {
+      // 找到对应版本的文件名
+      const versionInfo = documentVersions.value.find(v => v.version === version);
+      if (!versionInfo) {
+        console.error('版本信息未找到:', version);
+        return;
+      }
+      
+      // 保存用户的版本偏好
+      if (readingVideoUrl.value) {
+        const videoId = extractYoutubeVideoId(readingVideoUrl.value);
+        if (videoId) {
+          const savedPrefs = localStorage.getItem('version_prefs') || '{}';
+          const prefs = JSON.parse(savedPrefs);
+          prefs[`video_${videoId}`] = {
+            preferred: version,
+            lastView: Date.now()
+          };
+          localStorage.setItem('version_prefs', JSON.stringify(prefs));
+        }
+      }
+      
+      // 关闭版本下拉菜单
+      showVersionDropdown.value = false;
+      
+      // 加载新版本
+      await loadSummary(versionInfo.filename, false);
+    };
+
+    // 辅助函数：从YouTube URL中提取视频ID
+    const extractYoutubeVideoId = (url) => {
+      if (!url) return null;
+      
+      // 支持多种YouTube URL格式
+      const patterns = [
+        /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([^&]+)/,
+        /(?:https?:\/\/)?(?:www\.)?youtu\.be\/([^?]+)/,
+        /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([^?]+)/,
+        /(?:https?:\/\/)?(?:www\.)?youtube\.com\/v\/([^?]+)/
+      ];
+      
+      for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match && match[1]) {
+          return match[1];
+        }
+      }
+      
+      return null;
     };
 
     // 下载PDF功能
@@ -773,24 +874,6 @@ createApp({
     };
 
     // 视频播放器相关方法
-    const extractYoutubeVideoId = (url) => {
-      if (!url) return null;
-      
-      const patterns = [
-        /youtube\.com\/watch\?v=([^&]+)/,
-        /youtu\.be\/([^?]+)/,
-        /youtube\.com\/embed\/([^?]+)/,
-        /youtube\.com\/v\/([^?]+)/
-      ];
-      
-      for (const pattern of patterns) {
-        const match = url.match(pattern);
-        if (match) return match[1];
-      }
-      
-      return null;
-    };
-
     const openVideoPlayer = () => {
       if (!readingVideoUrl.value) {
         showToast('视频链接不可用', 'warning');
@@ -1153,7 +1236,13 @@ createApp({
       doVideoResize,
       stopVideoResize,
       isVideoResizing,
-      isVideoDragging
+      isVideoDragging,
+      documentVersions,
+      currentVersion,
+      showVersionDropdown,
+      hasMultipleVersions,
+      toggleVersionDropdown,
+      switchVersion
     };
   }
 }).mount('#app'); 

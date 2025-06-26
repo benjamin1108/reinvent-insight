@@ -1356,7 +1356,7 @@ body {
   background: rgba(15, 20, 25, 0.95);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(251, 146, 60, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   overflow: hidden;
@@ -1466,8 +1466,6 @@ body {
 .custom-dropdown.active .custom-dropdown-menu {
   animation: dropdownSlideIn 0.3s ease forwards;
 }
-
-
 
 /* 选项悬停效果增强 */
 .custom-dropdown-option {
@@ -1732,6 +1730,89 @@ body {
 .metadata-area .flex > div:first-child {
   white-space: nowrap;
   flex-shrink: 0; /* 防止收缩导致被挤压 */
+}
+
+/* ========== 版本选择器样式 ========== */
+.version-selector {
+  position: relative;
+  display: inline-block;
+}
+
+.version-selector-trigger {
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #999;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.version-selector:hover .version-selector-trigger {
+  color: #666;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.version-selector.active .version-selector-trigger {
+  color: #e0e0e0;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.version-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: rgba(15, 20, 25, 0.95);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  min-width: 60px;
+  z-index: 1000;
+}
+
+.version-item {
+  padding: 6px 12px;
+  color: #999;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 12px;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.version-item:hover {
+  color: #e0e0e0;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.version-item.current {
+  color: #fb923c;
+  position: relative;
+}
+
+.version-item.current::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 12px;
+  right: 12px;
+  height: 1px;
+  background: #fb923c;
+}
+
+/* 移动端版本选择器 */
+@media (max-width: 768px) {
+  .version-selector {
+    display: none; /* 移动端暂时隐藏版本选择器，保持界面简洁 */
+  }
 }
 
  
