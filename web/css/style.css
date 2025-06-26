@@ -761,6 +761,7 @@ body {
 
 .other-card {
   position: relative;
+  border: 1px solid transparent;
 }
 
 .category-glow {
@@ -864,6 +865,23 @@ body {
   justify-content: space-between;
   min-height: 1.75rem; /* 固定最小高度 */
   font-size: 12px;
+  gap: 0.5rem; /* 增加元素间距 */
+}
+
+/* 新的、更健壮的布局规则 */
+.metadata-area > *:first-child {
+  flex-grow: 1; /* 让左侧部分占据所有多余空间，将标签推到右侧 */
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* 左侧内部元素间距 */
+}
+
+.metadata-area > *:last-child {
+  flex-shrink: 0; /* 防止标签被压缩 */
+}
+
+.metadata-area .flex > div:first-child {
+  flex: 0 0 auto; /* 固定大小，不扩展不收缩 */
 }
 
 /* 类型标签在元数据区的样式 */
@@ -892,6 +910,8 @@ body {
 
 /* 新增：Level标签专用样式 - 使用深色背景 */
 .level-badge {
+  display: inline-flex;
+  align-items: center;
   background: linear-gradient(135deg, rgba(234, 88, 12, 0.9), rgba(220, 38, 38, 0.9));
   border: 1px solid rgba(249, 115, 22, 0.3);
   color: white;
@@ -1699,6 +1719,19 @@ body {
     width: 12px;
     height: 12px;
   }
+}
+
+/* ========== 修复精选卡片 meta 区布局异常 ========== */
+.metadata-area,
+.metadata-area .flex {
+  flex-wrap: nowrap; /* 禁止换行，保持同一行 */
+}
+
+/* 左侧文章数字始终保持一行显示 */
+.metadata-area .article-count,
+.metadata-area .flex > div:first-child {
+  white-space: nowrap;
+  flex-shrink: 0; /* 防止收缩导致被挤压 */
 }
 
  
