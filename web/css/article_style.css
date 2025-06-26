@@ -1,0 +1,332 @@
+/*
+ * 文章展示样式 - 基于 PDF 样式优化版
+ * 用于网页中的 Markdown 文章展示
+ * 使用 .article-content 作为父选择器，避免与其他区域的样式冲突
+ */
+
+/* === 基础元素样式 === */
+.article-content .prose-tech {
+    font-family: "Noto Serif SC", serif;
+    font-size: 16px;
+    line-height: 1.6;
+    color: rgba(226, 232, 240, 0.85); /* 适配深色主题 */
+    text-align: justify;
+    padding: 0;
+}
+
+/* === 标题 === */
+.article-content .prose-tech h1, 
+.article-content .prose-tech h2, 
+.article-content .prose-tech h3, 
+.article-content .prose-tech h4, 
+.article-content .prose-tech h5, 
+.article-content .prose-tech h6 {
+    margin-top: 24px;
+    margin-bottom: 15px;
+    font-weight: 700;
+    
+    /* 美观的渐变色效果 */
+    background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 50%, #9333ea 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    
+    /* 保持滚动时的间距 */
+    scroll-margin-top: 100px;
+}
+
+.article-content .prose-tech h1 {
+    font-size: 24px;
+}
+
+/* 为一级标题添加科技感分隔符 */
+.article-content .prose-tech h1::after {
+    content: '';
+    display: block;
+    height: 2px;
+    margin-top: 1rem;
+    background: linear-gradient(90deg, transparent, #3b82f6, transparent);
+    border-radius: 9999px;
+    opacity: 0.6;
+}
+
+.article-content .prose-tech h2 { font-size: 22px; }
+.article-content .prose-tech h3 { font-size: 20px; }
+.article-content .prose-tech h4 { font-size: 18px; }
+.article-content .prose-tech h5 { font-size: 16px; }
+.article-content .prose-tech h6 { font-size: 16px; }
+
+/* === 段落、列表和引用 === */
+.article-content .prose-tech p { 
+    margin: 0; 
+    padding: 8px 0; 
+    line-height: 26px;
+    orphans: 2;
+    widows: 2;
+} 
+
+.article-content .prose-tech ul, .article-content .prose-tech ol { 
+    margin: 8px 0;
+    padding-left: 30px;
+}
+
+/* 有序列表样式修复 */
+.article-content .prose-tech ol { 
+    list-style-type: decimal;
+    list-style-position: outside;
+    margin: 8px 0;
+    padding-left: 35px;
+}
+
+.article-content .prose-tech ol > li {
+    margin-bottom: 5px;
+    padding-left: 5px;
+}
+
+/* 无序列表样式修复 */
+.article-content .prose-tech ul { 
+    list-style-type: disc;
+    list-style-position: outside;
+}
+
+.article-content .prose-tech ul > li {
+    list-style-type: disc;
+    margin-bottom: 5px;
+}
+
+/* 调整无序列表的圆点大小 */
+.article-content .prose-tech ul > li::marker {
+    font-size: 1.2em;
+    line-height: 1;
+}
+
+/* 二级无序列表使用方块 */
+.article-content .prose-tech ul ul { 
+    list-style-type: square;
+    margin-top: 5px;
+}
+
+.article-content .prose-tech ul ul > li::marker {
+    font-size: 1em;
+}
+
+/* 三级及以下使用圆圈 */
+.article-content .prose-tech ul ul ul { 
+    list-style-type: circle;
+}
+
+.article-content .prose-tech li {
+    orphans: 2;
+    widows: 2;
+    line-height: 26px;
+}
+
+.article-content .prose-tech li section { 
+    margin: 5px 0;
+    line-height: 26px; 
+    text-align: left;
+    display: inline;
+} 
+
+.article-content .prose-tech blockquote { 
+    display: block; 
+    font-size: 0.9em; 
+    border-left: 3px solid #06b6d4;
+    background: rgba(6, 182, 212, 0.05);
+    color: #94a3b8; /* 适配深色主题 */
+    padding: 10px 20px;
+    margin: 20px 0;
+} 
+
+.article-content .prose-tech blockquote p { 
+    margin: 0; 
+    padding: 0;
+    line-height: 26px; 
+}
+
+/* === 連結 === */
+.article-content .prose-tech a { 
+    color: #06b6d4;
+    border-bottom: 1px solid #06b6d4;
+    text-decoration: none; 
+    font-weight: 700;
+}
+
+.article-content .prose-tech a:hover {
+    text-decoration: none;
+    border-bottom: 2px solid #06b6d4;
+}
+
+/* === 其他元素 === */
+.article-content .prose-tech hr { 
+    height: 1px; 
+    margin: 15px 0;
+    border: none; 
+    border-top: 1px solid #374151; /* 适配深色主题 */
+}
+
+.article-content .prose-tech code {
+    font-family: SFMono-Regular,Consolas,"Liberation Mono",Menlo,Courier,monospace;
+}
+
+.article-content .prose-tech p code, .article-content .prose-tech li section code { 
+    font-size: 14px; 
+    padding: 2px 4px; 
+    border-radius: 4px; 
+    margin: 0 2px; 
+    color: #06b6d4;
+    background-color: rgba(6, 182, 212, 0.1);
+    font-family: SFMono-Regular,Consolas,"Liberation Mono",Menlo,Courier,monospace;
+}
+
+.article-content .prose-tech strong { 
+    font-weight: 700;
+    color: #f3f4f6; /* 在深色主题中更明显 */
+}
+
+/* H2 標題的特殊主題樣式 - 深色主题优化版 */
+.article-content .prose-tech h2 span.content {
+    display: inline-block;
+    background: linear-gradient(135deg, #06b6d4, #0ea5e9);
+    color: #ffffff;
+    padding: 3px 10px 1px;
+    border-radius: 4px;
+    margin-right: 3px;
+    font-weight: 700;
+    /* 恢复非渐变文字样式 */
+    -webkit-background-clip: unset;
+    background-clip: unset;
+}
+
+/* === 英文副标题样式 === */
+.article-content .english-subtitle {
+    display: block;
+    margin: -5px 0 20px 0;
+    font-size: 16px;
+    line-height: 1.4;
+    color: #9ca3af;
+}
+
+.article-content .english-subtitle a {
+    color: #9ca3af;
+    text-decoration: none;
+    border-bottom: 1px solid #4b5563;
+    font-weight: 400;
+}
+
+.article-content .english-subtitle a:hover {
+    color: #06b6d4;
+    border-bottom-color: #06b6d4;
+}
+
+/* English title link styling */
+.article-content .english-title-link,
+.article-content .prose-tech .english-title-link,
+.article-content .prose-tech a.english-title-link {
+    display: block;
+    margin-top: 8px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    line-height: 1.4;
+    font-weight: 600 !important;
+    font-family: Helvetica, Arial, sans-serif;
+    color: #ea580c !important;
+    text-decoration: none !important;
+    border: none !important;
+    border-bottom: none !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.article-content .english-title-link:hover,
+.article-content .prose-tech .english-title-link:hover,
+.article-content .prose-tech a.english-title-link:hover {
+    color: #dc2626 !important;
+    text-decoration: none !important;
+    border: none !important;
+    border-bottom: none !important;
+    border-top: none !important;
+}
+
+/* === 代码块样式增强 === */
+.article-content .prose-tech pre {
+    background: #1e293b;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1.5rem 0;
+    overflow-x: auto;
+}
+
+.article-content .prose-tech pre code {
+    background: none;
+    color: #e2e8f0;
+    padding: 0;
+    font-size: 14px;
+}
+
+/* === 表格样式增强 === */
+.article-content .prose-tech table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    background: rgba(30, 41, 59, 0.5);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.article-content .prose-tech th,
+.article-content .prose-tech td {
+    border: 1px solid #374151;
+    padding: 0.75rem 1rem;
+    text-align: left;
+}
+
+.article-content .prose-tech th {
+    background: rgba(6, 182, 212, 0.1);
+    color: #06b6d4;
+    font-weight: 600;
+}
+
+/* === 响应式优化 === */
+@media (max-width: 768px) {
+    .article-content .prose-tech {
+        font-size: 14px;
+        line-height: 1.7;
+    }
+
+    .article-content .prose-tech h1 { font-size: 20px; }
+    .article-content .prose-tech h2 { font-size: 18px; }
+    .article-content .prose-tech h3 { font-size: 16px; }
+    .article-content .prose-tech h4 { font-size: 15px; }
+    .article-content .prose-tech h5, .article-content .prose-tech h6 { font-size: 14px; }
+
+    .article-content .prose-tech p {
+        padding: 6px 0;
+        line-height: 24px;
+    }
+
+    .article-content .prose-tech ul, .article-content .prose-tech ol {
+        padding-left: 20px;
+    }
+
+    .article-content .prose-tech blockquote {
+        padding: 8px 15px;
+        margin: 15px 0;
+    }
+
+    .article-content .prose-tech pre {
+        padding: 0.75rem;
+        font-size: 12px;
+    }
+
+    .article-content .prose-tech table {
+        font-size: 13px;
+    }
+
+    .article-content .prose-tech th,
+    .article-content .prose-tech td {
+        padding: 0.5rem 0.75rem;
+    }
+} 
