@@ -382,6 +382,7 @@ createApp({
       requireAuth(async () => {
         if (loading.value || !url.value) return;
 
+        // 完全重置所有状态，确保没有残留
         logs.value = [];
         summary.value = '';
         title.value = '';
@@ -410,10 +411,16 @@ createApp({
     const connectWebSocket = (taskId) => {
         const wsUrl = `ws://${window.location.host}/ws/${taskId}`;
         const ws = new WebSocket(wsUrl);
+        
+        // 添加一个集合来追踪已经显示过的日志，避免重复
+        const displayedLogs = new Set(logs.value);
 
         ws.onopen = () => {
             loading.value = true;
-            logs.value.push('已连接到分析服务...');
+            // 只有在没有日志时才添加"已连接"消息
+            if (logs.value.length === 0) {
+                logs.value.push('已连接到分析服务...');
+            }
         };
 
         ws.onmessage = (event) => {
@@ -432,18 +439,28 @@ createApp({
             clearActiveTask();
           } else if (data.type === 'progress') {
             // 处理带进度的消息
-            logs.value.push(data.message);
+            if (!displayedLogs.has(data.message)) {
+                logs.value.push(data.message);
+                displayedLogs.add(data.message);
+            }
             progressPercent.value = data.progress;
           } else if (data.type === 'error') {
             // 处理错误消息
-            logs.value.push('错误: ' + data.message);
+            const errorMsg = '错误: ' + data.message;
+            if (!displayedLogs.has(errorMsg)) {
+                logs.value.push(errorMsg);
+                displayedLogs.add(errorMsg);
+            }
             loading.value = false;
             progressPercent.value = 0;
             ws.close();
             clearActiveTask();
           } else {
             // 处理普通日志消息 (type === 'log')
-            logs.value.push(data.message);
+            if (!displayedLogs.has(data.message)) {
+                logs.value.push(data.message);
+                displayedLogs.add(data.message);
+            }
             progressPercent.value = Math.min(99, (logs.value.length / 10) * 100);
           }
         };

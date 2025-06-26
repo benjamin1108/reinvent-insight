@@ -30,9 +30,16 @@ class TaskManager:
             return
         
         await websocket.accept()
+        
+        # 检查是否是首次连接（websocket为None）
+        is_first_connection = self.tasks[task_id].websocket is None
+        
         self.tasks[task_id].websocket = websocket
         logger.info(f"客户端已连接到任务: {task_id}")
-        await self.send_history(task_id)
+        
+        # 只有在重连时才发送历史记录
+        if not is_first_connection:
+            await self.send_history(task_id)
 
     def disconnect(self, task_id: str):
         if task_id in self.tasks:
