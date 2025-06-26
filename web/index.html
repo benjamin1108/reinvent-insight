@@ -227,12 +227,12 @@
             </h3>
             <div class="space-y-2">
               <div v-for="(log, index) in logs" :key="index" class="flex items-center text-sm slide-in">
-                <div class="w-2 h-2 bg-green-500 rounded-full mr-3 flex-shrink-0"></div>
+                <div :class="['w-2 h-2 rounded-full mr-3 flex-shrink-0', log.includes('错误') ? 'bg-red-500' : 'bg-green-500']"></div>
                 <span class="text-gray-300">{{ log }}</span>
               </div>
-              <div v-if="loading && currentStep < totalSteps" class="flex items-center text-sm text-gray-400">
+              <div v-if="loading && logs.length > 0" class="flex items-center text-sm text-gray-400">
                 <div class="w-2 h-2 bg-cyan-500 rounded-full mr-3 animate-pulse flex-shrink-0"></div>
-                <span>AI 正在处理，请稍候...</span>
+                <span>{{ logs[logs.length - 1] }}</span>
               </div>
             </div>
           </div>
@@ -336,10 +336,10 @@
                   <!-- Main clickable area -->
                   <div @click="loadSummaryByHash(summary.hash)" class="cursor-pointer flex-grow flex flex-col">
                     <div class="mb-3 chinese-title-container">
-                        <h3 class="text-base font-bold leading-snug line-clamp-3 chinese-title text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 group-hover:text-white group-hover:bg-none" :title="summary.title_cn">{{ summary.title_cn }}</h3>
+                        <h3 class="text-base font-bold leading-snug line-clamp-3 chinese-title text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 group-hover:text-white group-hover:bg-none" :title="summary.title_en">{{ summary.title_en }}</h3>
                     </div>
                     <div class="flex-1 mb-2 english-title-area">
-                        <p class="text-xs text-orange-400/90 group-hover:text-white/90 transition-colors font-normal leading-relaxed break-words w-full english-subtitle" :title="summary.title_en">{{ summary.title_en }}</p>
+                        <p class="text-xs text-orange-400/90 group-hover:text-white/90 transition-colors font-normal leading-relaxed break-words w-full english-subtitle" :title="summary.title_cn">{{ summary.title_cn }}</p>
                     </div>
                   </div>
 
@@ -377,11 +377,11 @@
                   <div class="mb-3 chinese-title-container">
                     <h3
                       class="text-base font-bold leading-snug line-clamp-3 chinese-title text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 group-hover:text-white group-hover:bg-none"
-                      :title="summary.title_cn">{{ summary.title_cn }}</h3>
+                      :title="summary.title_en">{{ summary.title_en }}</h3>
                   </div>
                   <div class="flex-1 mb-2 english-title-area">
                     <p class="text-xs text-cyan-400/90 group-hover:text-white/90 transition-colors font-normal leading-relaxed break-words w-full english-subtitle"
-                      :title="summary.title_en">{{ summary.title_en }}</p>
+                      :title="summary.title_cn">{{ summary.title_cn }}</p>
                   </div>
                   <div
                     class="metadata-area border-gray-700/50 text-xs text-cyan-500 group-hover:text-white/80 transition-colors">
@@ -495,10 +495,10 @@
                   <!-- Main clickable area -->
                   <div @click="loadSummaryByHash(summary.hash)" class="cursor-pointer flex-grow flex flex-col">
                     <div class="mb-3 chinese-title-container">
-                        <h3 class="text-base font-bold leading-snug line-clamp-3 chinese-title text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 group-hover:text-white group-hover:bg-none" :title="summary.title_cn">{{ summary.title_cn }}</h3>
+                        <h3 class="text-base font-bold leading-snug line-clamp-3 chinese-title text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 group-hover:text-white group-hover:bg-none" :title="summary.title_en">{{ summary.title_en }}</h3>
                     </div>
                     <div class="flex-1 mb-2 english-title-area">
-                        <p class="text-xs text-orange-400/90 group-hover:text-white/90 transition-colors font-normal leading-relaxed break-words w-full english-subtitle" :title="summary.title_en">{{ summary.title_en }}</p>
+                        <p class="text-xs text-orange-400/90 group-hover:text-white/90 transition-colors font-normal leading-relaxed break-words w-full english-subtitle" :title="summary.title_cn">{{ summary.title_cn }}</p>
                     </div>
                   </div>
 
@@ -536,11 +536,11 @@
                   <div class="mb-3 chinese-title-container">
                     <h3
                       class="text-base font-bold leading-snug line-clamp-3 chinese-title text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 group-hover:text-white group-hover:bg-none"
-                      :title="summary.title_cn">{{ summary.title_cn }}</h3>
+                      :title="summary.title_en">{{ summary.title_en }}</h3>
                   </div>
                   <div class="flex-1 mb-2 english-title-area">
                     <p class="text-xs text-cyan-400/90 group-hover:text-white/90 transition-colors font-normal leading-relaxed break-words w-full english-subtitle"
-                      :title="summary.title_en">{{ summary.title_en }}</p>
+                      :title="summary.title_cn">{{ summary.title_cn }}</p>
                   </div>
                   <div
                     class="metadata-area border-gray-700/50 text-xs text-cyan-500 group-hover:text-white/80 transition-colors">

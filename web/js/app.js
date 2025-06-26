@@ -1,4 +1,4 @@
-const { createApp, ref, onMounted, computed, nextTick, watch, onUnmounted } = Vue;
+const { createApp, ref, onMounted, computed, nextTick, watch, onUnmounted, reactive } = Vue;
 
 // 配置 marked 和 highlight.js
 marked.setOptions({
@@ -24,8 +24,6 @@ createApp({
     const logs = ref([]);
     const loading = ref(false);
     const progressPercent = ref(0);
-    const currentStep = ref(0);
-    const totalSteps = 7; // 根据后端逻辑调整
 
     // 笔记库状态
     const summaries = ref([]);
@@ -71,11 +69,7 @@ createApp({
     const loginPassword = ref('');
     
     // Toast 状态
-    const toast = ref({
-        show: false,
-        message: '',
-        type: 'success' // 'success', 'danger', 'warning'
-    });
+    const toast = reactive({ show: false, message: '', type: '' });
 
     // 添加一个标志来防止重复加载
     let loadingPromise = null;
@@ -184,9 +178,11 @@ createApp({
 
     // --- UI & 交互 ---
     const showToast = (message, type = 'success', duration = 3000) => {
-      toast.value = { show: true, message, type };
+      toast.show = true;
+      toast.message = message;
+      toast.type = type;
       setTimeout(() => {
-        toast.value.show = false;
+        toast.show = false;
       }, duration);
     };
     
@@ -392,7 +388,6 @@ createApp({
         rendered.value = '';
         loading.value = true;
         progressPercent.value = 0;
-        currentStep.value = 0;
 
         try {
           const res = await axios.post('/summarize', { url: url.value });
@@ -435,10 +430,21 @@ createApp({
             
             ws.close();
             clearActiveTask();
-          } else {
+          } else if (data.type === 'progress') {
+            // 处理带进度的消息
             logs.value.push(data.message);
-            currentStep.value += 1;
-            progressPercent.value = Math.min(99, (currentStep.value / totalSteps) * 100);
+            progressPercent.value = data.progress;
+          } else if (data.type === 'error') {
+            // 处理错误消息
+            logs.value.push('错误: ' + data.message);
+            loading.value = false;
+            progressPercent.value = 0;
+            ws.close();
+            clearActiveTask();
+          } else {
+            // 处理普通日志消息 (type === 'log')
+            logs.value.push(data.message);
+            progressPercent.value = Math.min(99, (logs.value.length / 10) * 100);
           }
         };
         ws.onerror = (event) => {
@@ -918,7 +924,7 @@ createApp({
           if (leftPos + videoPlayerSize.value.width > tocRect.right) {
             // 如果视频宽度超出TOC，调整宽度
             videoPlayerSize.value.width = Math.max(320, tocRect.width - 40);
-            videoPlayerSize.value.height = videoPlayerSize.value.width / (16/9);
+            videoPlayerSize.value = { width: videoPlayerSize.value.width, height: videoPlayerSize.value.width / (16/9) };
           }
         }
         
@@ -1199,8 +1205,6 @@ createApp({
       showToast,
       loginUsername,
       loginPassword,
-      currentStep,
-      totalSteps,
       goHome,
       requireAuth,
       showHeroSection,

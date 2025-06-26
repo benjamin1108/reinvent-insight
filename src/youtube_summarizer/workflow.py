@@ -52,18 +52,22 @@ def load_base_prompt() -> str:
         logger.error(f"基础提示词文件未找到: {BASE_PROMPT_PATH}")
         return ""
 
-def parse_outline(content: str) -> Tuple[Optional[str], Optional[List[str]]]:
-    """从Markdown文本中解析标题和章节列表"""
+def parse_outline(content: str) -> Tuple[Optional[str], Optional[List[str]], Optional[str]]:
+    """从Markdown文本中解析标题、引言和章节列表"""
     title_match = re.search(r"^#\s*(.*)", content, re.MULTILINE)
     title = title_match.group(1).strip() if title_match else None
+
+    # 解析引言
+    introduction_match = re.search(r"###\s*引言\s*\n(.*?)(?=\n###|$)", content, re.DOTALL)
+    introduction = introduction_match.group(1).strip() if introduction_match else None
 
     chapters = re.findall(r"^\d+\.\s*(.*)", content, re.MULTILINE)
     
     if not title or not chapters:
         logger.warning(f"无法从内容中解析出完整的标题和章节: {content[:500]}")
-        return None, None
+        return None, None, None
         
-    return title, chapters
+    return title, chapters, introduction
 
 # ---- Main Workflow Class ----
 class DeepSummaryWorkflow:
@@ -83,7 +87,7 @@ class DeepSummaryWorkflow:
     async def run(self):
         """执行完整的深度摘要工作流"""
         try:
-            await self._log("工作流启动：开始生成深度摘要。")
+            await self._log("正在启动深度分析流程...")
             task_manager.tasks[self.task_id].status = "running"
 
             # 步骤 1: 生成大纲
@@ -91,15 +95,14 @@ class DeepSummaryWorkflow:
             if not outline_content:
                 raise Exception("生成大纲失败")
 
-            title, chapters_raw = parse_outline(outline_content)
+            title, chapters_raw, introduction = parse_outline(outline_content)
             if not title or not chapters_raw:
                 raise Exception("解析大纲失败")
             
             # 清理章节标题，移除所有方括号，作为保险措施
             chapters = [re.sub(r'[\[\]]', '', c).strip() for c in chapters_raw]
 
-            await self._log(f"成功解析出标题: {title}")
-            await self._log(f"成功解析出 {len(chapters)} 个章节。")
+            await self._log(f"成功生成标题和 {len(chapters)} 个章节的分析框架")
             
             # 生成带链接的目录
             toc_md = generate_toc_with_links(chapters)
@@ -109,27 +112,27 @@ class DeepSummaryWorkflow:
             if not success:
                 raise Exception("部分或全部章节内容生成失败")
             
-            # 步骤 3: 生成引言、洞见和金句
+            # 步骤 3: 生成洞见和金句
             conclusion_content = await self._generate_conclusion(chapters)
             if not conclusion_content:
                 raise Exception("生成收尾内容失败")
             
             # 步骤 4: 组装最终报告
-            final_report = await self._assemble_final_report(title, toc_md, conclusion_content, len(chapters), self.metadata)
+            final_report = await self._assemble_final_report(title, introduction, toc_md, conclusion_content, len(chapters), self.metadata)
             if not final_report:
                 raise Exception("组装最终报告失败")
 
-            await self._log("工作流完成。", progress=100)
+            await self._log("分析完成！", progress=100)
             await task_manager.send_result(title, final_report, self.task_id)
 
         except Exception as e:
             error_message = f"工作流遇到严重错误: {e}"
             logger.error(f"任务 {self.task_id} - {error_message}", exc_info=True)
-            await task_manager.set_task_error(self.task_id, str(error_message))
+            await task_manager.set_task_error(self.task_id, "分析过程中出现错误，请稍后重试")
 
     async def _generate_chapters_parallel(self, chapters: List[str], title: str, outline_content: str) -> bool:
         """步骤2：并行生成所有章节的内容"""
-        await self._log(f"步骤 2/4: 开始并行生成 {len(chapters)} 个章节...")
+        await self._log(f"步骤 2/4: 正在深度分析 {len(chapters)} 个核心章节...")
 
         tasks = []
         for i, chapter_title in enumerate(chapters):
@@ -150,7 +153,7 @@ class DeepSummaryWorkflow:
                 logger.error(f"任务 {self.task_id} - 生成章节 '{chapters[i]}' 失败: {result}", exc_info=result)
         
         progress = 25 + int(50 * (successful_chapters / len(chapters)))
-        await self._log(f"章节生成完成，成功 {successful_chapters}/{len(chapters)}。", progress=progress)
+        await self._log(f"章节分析完成（{successful_chapters}/{len(chapters)}）", progress=progress)
 
         return successful_chapters == len(chapters)
 
@@ -216,8 +219,8 @@ class DeepSummaryWorkflow:
         raise RuntimeError(f"未能为章节 '{chapter_title}' 生成内容。")
 
     async def _generate_outline(self) -> Optional[str]:
-        """步骤1：生成大纲和标题，包含重试逻辑"""
-        await self._log("步骤 1/4: 正在生成大纲和标题...")
+        """步骤1：生成标题、引言和大纲，包含重试逻辑"""
+        await self._log("步骤 1/4: 正在分析视频内容结构...")
         
         prompt = prompts.OUTLINE_PROMPT_TEMPLATE.format(
             base_prompt=self.base_prompt,
@@ -231,7 +234,7 @@ class DeepSummaryWorkflow:
                     outline_path = os.path.join(self.task_dir, "outline.md")
                     with open(outline_path, "w", encoding="utf-8") as f:
                         f.write(outline)
-                    await self._log("大纲和标题已生成。", progress=25)
+                    await self._log("内容结构分析完成", progress=25)
                     return outline
                 
                 # 如果返回空内容，也视为一种失败
@@ -243,13 +246,13 @@ class DeepSummaryWorkflow:
                     logger.error(f"任务 {self.task_id} - 生成大纲达到最大重试次数，失败。", exc_info=True)
                     # 向上抛出异常，由主 run 方法捕获
                     raise e
-                await self._log(f"生成大纲时遇到问题，正在重试 ({attempt + 2}/{self.max_retries + 1})...")
+                await self._log(f"正在重新尝试分析... ({attempt + 2}/{self.max_retries + 1})")
                 await asyncio.sleep(2) # 等待2秒再重试
         return None
 
     async def _generate_conclusion(self, chapters: List[str]) -> Optional[str]:
-        """步骤3：生成引言、洞见和金句"""
-        await self._log("步骤 3/4: 正在生成引言、洞见和金句...")
+        """步骤3：生成洞见和金句"""
+        await self._log("步骤 3/4: 正在提炼核心洞见...")
 
         # 从文件中读取所有章节内容
         all_chapters_content = []
@@ -277,21 +280,21 @@ class DeepSummaryWorkflow:
                     conclusion_path = os.path.join(self.task_dir, "conclusion.md")
                     with open(conclusion_path, "w", encoding="utf-8") as f:
                         f.write(conclusion_content)
-                    await self._log("引言、洞见和金句已生成。", progress=90)
+                    await self._log("核心洞见提炼完成", progress=90)
                     return conclusion_content
                 raise ValueError("模型返回了空内容")
             except Exception as e:
                 logger.warning(f"任务 {self.task_id} - 生成收尾内容失败 (尝试 {attempt + 1}/{self.max_retries + 1}): {e}")
                 if attempt == self.max_retries:
                     logger.error(f"任务 {self.task_id} - 生成收尾内容达到最大重试次数，失败。", exc_info=True)
-                    await self._log(f"错误：生成收尾内容时发生严重错误 - {e}", error=True)
+                    await self._log(f"提炼洞见时遇到问题，请稍后重试", error=True)
                     return None
                 await asyncio.sleep(2)
         return None
 
-    async def _assemble_final_report(self, title: str, toc_md: str, conclusion_md: str, chapter_count: int, metadata: VideoMetadata) -> Optional[str]:
+    async def _assemble_final_report(self, title: str, introduction: str, toc_md: str, conclusion_md: str, chapter_count: int, metadata: VideoMetadata) -> Optional[str]:
         """步骤4：在本地组装所有部分以生成最终的Markdown文件"""
-        await self._log("步骤 4/4: 正在组装最终报告...")
+        await self._log("步骤 4/4: 正在整理最终报告...")
         try:
             chapter_contents = []
             for i in range(chapter_count):
@@ -299,7 +302,7 @@ class DeepSummaryWorkflow:
                 with open(chapter_path, 'r', encoding='utf-8') as f:
                     chapter_contents.append(f.read().strip())
             
-            final_report = _perform_assembly(title, toc_md, conclusion_md, chapter_contents, metadata)
+            final_report = _perform_assembly(title, introduction, toc_md, conclusion_md, chapter_contents, metadata)
 
             # 先保存在任务目录
             temp_report_path = os.path.join(self.task_dir, "final_report.md")
@@ -352,7 +355,7 @@ class DeepSummaryWorkflow:
                 metadata_dict['version'] = new_version
                 
                 # 重新生成带版本号的报告
-                final_report = _perform_assembly(title, toc_md, conclusion_md, chapter_contents, metadata, version=new_version)
+                final_report = _perform_assembly(title, introduction, toc_md, conclusion_md, chapter_contents, metadata, version=new_version)
                 with open(temp_report_path, "w", encoding="utf-8") as f:
                     f.write(final_report)
             else:
@@ -375,7 +378,7 @@ class DeepSummaryWorkflow:
             except ImportError:
                 pass  # API模块未运行，跳过hash映射更新
 
-            await self._log(f"最终报告已成功组装并移动到: {final_path}")
+            await self._log(f"报告整理完成")
             # 更新任务状态，包含最终文件路径
             task_manager.set_task_result(self.task_id, str(final_path))
             return final_report
@@ -394,7 +397,7 @@ class DeepSummaryWorkflow:
         if error:
              await task_manager.set_task_error(self.task_id, message)
 
-def _perform_assembly(title: str, toc_md: str, conclusion_md: str, chapter_contents: List[str], metadata: Optional[VideoMetadata] = None, version: int = 0) -> str:
+def _perform_assembly(title: str, introduction: str, toc_md: str, conclusion_md: str, chapter_contents: List[str], metadata: Optional[VideoMetadata] = None, version: int = 0) -> str:
     """
     可复用的核心拼接逻辑。
     接收所有内容的字符串，返回最终的报告字符串。
@@ -434,8 +437,7 @@ def _perform_assembly(title: str, toc_md: str, conclusion_md: str, chapter_conte
             metadata_yaml = ""
 
 
-    # 2. 从 conclusion.md 中更稳健地解析出引言、洞见和金句
-    introduction = ""
+    # 2. 从 conclusion.md 中更稳健地解析出洞见和金句
     insights = ""
     quotes = ""
 
@@ -451,9 +453,7 @@ def _perform_assembly(title: str, toc_md: str, conclusion_md: str, chapter_conte
         # 还原被切掉的 ### 标记，因为 split 会消耗掉分隔符
         full_part = "### " + part
         
-        if part.lower().startswith('引言'):
-            introduction = full_part
-        elif part.lower().startswith('洞见延伸'):
+        if part.lower().startswith('洞见延伸'):
             insights = full_part
         elif part.lower().startswith('金句&原声引用'):
             quotes = full_part
@@ -464,7 +464,7 @@ def _perform_assembly(title: str, toc_md: str, conclusion_md: str, chapter_conte
     final_report_parts = [
         metadata_yaml, # 在最前面加入元数据
         f"# {title}",
-        introduction,
+        f"### 引言\n{introduction}" if introduction else "",
         toc_md, # 使用预先生成的、带链接的目录
         "\n\n---\n\n".join(chapter_contents),
         insights,
@@ -490,7 +490,7 @@ async def reassemble_from_task_id(task_id: str):
         with open(os.path.join(task_dir, "conclusion.md"), "r", encoding="utf-8") as f:
             conclusion_md = f.read()
 
-        title, chapters_raw = parse_outline(outline_md)
+        title, chapters_raw, introduction = parse_outline(outline_md)
         if not title or not chapters_raw:
             raise ValueError("无法从 outline.md 解析出标题")
         
@@ -512,7 +512,7 @@ async def reassemble_from_task_id(task_id: str):
         logger.info(f"加载了 {len(chapter_contents)} 个章节文件。")
 
         # 调用核心拼接逻辑
-        final_report = _perform_assembly(title, toc_md, conclusion_md, chapter_contents) # reassemble 时 metadata 为 None
+        final_report = _perform_assembly(title, introduction, toc_md, conclusion_md, chapter_contents) # reassemble 时 metadata 为 None
         
         # 保存为新文件
         temp_output_path = os.path.join(task_dir, "final_report_reassembled.md")

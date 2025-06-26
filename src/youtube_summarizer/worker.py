@@ -14,7 +14,7 @@ async def summary_task_worker_async(url: str, task_id: str):
     """
     # 1. 下载字幕 (这是一个阻塞操作，在异步函数中通过 to_thread 运行以避免阻塞事件循环)
     try:
-        await manager.send_message("正在下载字幕...", task_id)
+        await manager.send_message("正在获取视频字幕...", task_id)
         loop = asyncio.get_running_loop()
         
         # 使用 to_thread 将同步的下载操作放入后台线程
@@ -33,11 +33,11 @@ async def summary_task_worker_async(url: str, task_id: str):
         except Exception as e:
             logger.warning(f"无法写入 video_title.txt: {e}")
 
-        await manager.send_message(f"成功下载字幕。", task_id)
+        await manager.send_message(f"字幕获取成功，准备开始深度分析", task_id)
 
     except Exception as e:
         logger.error(f"任务 {task_id} 下载字幕失败: {e}", exc_info=True)
-        await manager.set_task_error(task_id, f"下载字幕失败: {e}")
+        await manager.set_task_error(task_id, f"字幕获取失败，请检查视频链接是否正确")
         return
 
     # 将标题和字幕拼接，为大模型提供更完整的上下文

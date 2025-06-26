@@ -214,6 +214,8 @@ async def list_public_summaries():
     """获取所有已生成的摘要文件列表供公开展示，无需认证。"""
     try:
         summaries = []
+        video_url_map = {}  # 用于按video_url分组
+        
         if config.OUTPUT_DIR.exists():
             for md_file in config.OUTPUT_DIR.glob("*.md"):
                 try:
@@ -262,11 +264,31 @@ async def list_public_summaries():
                         "is_reinvent": metadata.get("is_reinvent", False),
                         "course_code": metadata.get("course_code"),
                         "level": metadata.get("level"),
-                        "hash": filename_to_hash.get(md_file.name, generate_doc_hash(md_file.name))  # 添加hash
+                        "hash": filename_to_hash.get(md_file.name, generate_doc_hash(md_file.name)),  # 添加hash
+                        "version": metadata.get("version", 0)  # 添加版本号
                     }
-                    summaries.append(summary_data)
+                    
+                    # 按video_url分组，只保留最新版本
+                    video_url = metadata.get("video_url", "")
+                    if video_url:
+                        # 有video_url的文件，按URL分组
+                        if video_url not in video_url_map:
+                            video_url_map[video_url] = summary_data
+                        else:
+                            # 比较版本号，保留较新的版本
+                            existing_version = video_url_map[video_url].get("version", 0)
+                            new_version = summary_data.get("version", 0)
+                            if new_version > existing_version:
+                                video_url_map[video_url] = summary_data
+                    else:
+                        # 没有video_url的文件直接加入列表
+                        summaries.append(summary_data)
+                        
                 except Exception as e:
                     logger.warning(f"处理文件 {md_file.name} 时出错: {e}")
+        
+        # 将分组后的最新版本加入到最终列表
+        summaries.extend(video_url_map.values())
 
         # 按上传日期排序，最新的在最前
         summaries.sort(key=lambda x: x.get("upload_date", "1970-01-01"), reverse=True)
@@ -472,13 +494,20 @@ async def get_summary(filename: str, authorization: str = Header(None)):
         if not title_cn:
             title_cn = title_en if title_en else file_path.stem
 
+        # 获取视频URL以查找所有版本
+        video_url = metadata.get("video_url", "")
+        versions = []
+        if video_url:
+            versions = discover_versions(video_url)
+
         return {
             "filename": filename,
             "title": title_cn,  # 保持向后兼容
             "title_cn": title_cn,
             "title_en": title_en,
             "content": content,
-            "video_url": metadata.get("video_url", "")
+            "video_url": video_url,
+            "versions": versions  # 添加版本信息
         }
     except HTTPException:
         raise
