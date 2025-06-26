@@ -49,6 +49,7 @@ createApp({
     // 阅读视图状态
     const readingContent = ref('');
     const documentTitle = ref('');
+    const documentTitleEn = ref(''); // 新增：英文标题
     const readingError = ref('');
     const readingFilename = ref(''); // 新增：当前阅读的文件名
     const readingHash = ref(''); // 新增：当前阅读文档的hash
@@ -545,7 +546,7 @@ createApp({
             history.pushState({ filename }, '', `/documents/${encodedFilename}`);
           }
         }
-        viewSummary(res.data.title, res.data.content, filename, res.data.video_url, docHash, res.data.versions);
+        viewSummary(res.data.title, res.data.title_cn, res.data.title_en, res.data.content, filename, res.data.video_url, docHash, res.data.versions);
       } catch (err) {
         console.error('加载摘要失败:', err);
         const errorMessage = err.response?.data?.detail || '加载文章失败';
@@ -570,7 +571,7 @@ createApp({
           // 更新URL为短链接格式
           history.pushState({ hash: docHash }, '', `/d/${docHash}`);
         }
-        viewSummary(res.data.title, res.data.content, res.data.filename, res.data.video_url, docHash, res.data.versions);
+        viewSummary(res.data.title, res.data.title_cn, res.data.title_en, res.data.content, res.data.filename, res.data.video_url, docHash, res.data.versions);
       } catch (err) {
         console.error('加载摘要失败:', err);
         const errorMessage = err.response?.data?.detail || '加载文章失败';
@@ -580,8 +581,9 @@ createApp({
       }
     };
     
-    const viewSummary = (title, content, filename, videoUrl = '', docHash, versions = []) => {
-      documentTitle.value = title;
+    const viewSummary = (title, title_cn, title_en, content, filename, videoUrl = '', docHash, versions = []) => {
+      documentTitle.value = title_cn || title; // 使用title_cn，如果不存在则使用title作为后备
+      documentTitleEn.value = title_en || ''; // 保存英文标题
       readingFilename.value = filename; // 跟踪当前文件名
       readingVideoUrl.value = videoUrl; // 保存视频链接
       readingHash.value = docHash; // 保存文档的hash
@@ -627,8 +629,35 @@ createApp({
       // 在解析前，移除 YAML Front Matter
       const cleanContent = content.replace(/^---[\s\S]*?---/, '').trim();
       
-      const { html, tocHtml: tocString } = renderMarkdownWithToc(cleanContent);
-      readingContent.value = html;
+      // 移除Markdown中的第一个H1标题（如果存在）
+      // 改进正则：确保只匹配单个#开头的标题
+      const contentLines = cleanContent.split('\n');
+      let contentWithoutH1 = cleanContent;
+      
+      // 查找并移除第一个H1标题
+      for (let i = 0; i < contentLines.length; i++) {
+        const line = contentLines[i].trim();
+        if (line.match(/^#\s+/)) {
+          // 找到第一个H1，移除它
+          contentLines.splice(i, 1);
+          contentWithoutH1 = contentLines.join('\n').trim();
+          break;
+        }
+      }
+      
+      // 构建带有中英文标题的HTML
+      let titleHtml = '';
+      if (documentTitleEn.value) {
+        titleHtml = `<div class="article-title-container">
+          <h2 class="article-title-en">${documentTitleEn.value}</h2>
+          <h1 class="article-title-cn">${documentTitle.value}</h1>
+        </div>`;
+      } else {
+        titleHtml = `<h1>${documentTitle.value}</h1>`;
+      }
+      
+      const { html, tocHtml: tocString } = renderMarkdownWithToc(contentWithoutH1);
+      readingContent.value = titleHtml + html;
       tocHtml.value = tocString;
       currentView.value = 'read';
 
@@ -1204,6 +1233,7 @@ createApp({
       calculateReadTime,
       readingContent,
       documentTitle,
+      documentTitleEn,
       readingError,
       viewSummary,
       currentView,
