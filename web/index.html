@@ -114,26 +114,6 @@
         
         <!-- 右侧区域 -->
         <div class="flex items-center space-x-2">
-          <!-- 版本选择器 - 只在阅读视图且有多版本时显示 -->
-          <div v-if="hasMultipleVersions" 
-               class="version-selector hidden md:block"
-               :class="{ active: showVersionDropdown }">
-            <div @click="toggleVersionDropdown" class="version-selector-trigger">
-              <span>v{{ currentVersion }}</span>
-            </div>
-            <transition name="fade">
-              <div v-if="showVersionDropdown" class="version-dropdown">
-                <div v-for="version in documentVersions" 
-                     :key="version.version"
-                     @click="switchVersion(version.version)"
-                     class="version-item"
-                     :class="{ current: version.version === currentVersion }">
-                  v{{ version.version }}
-                </div>
-              </div>
-            </transition>
-          </div>
-
           <!-- 移动端返回按钮 -->
           <button @click="goBackToLibrary" v-if="!isShareView" class="tech-btn tech-btn-secondary mobile-back-btn md:hidden">
             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -240,12 +220,12 @@
           <!-- Result -->
           <div v-if="summary" class="fade-in">
             <div class="bg-gray-900/30 border border-gray-700 rounded-xl p-8 shadow-2xl backdrop-blur-sm">
-              <div class="flex items-center justify-between mb-6">
-                <h2 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+              <div class="flex items-center justify-between mb-6 gap-4">
+                <h2 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 min-w-0 break-words">
                   {{ title }}
                 </h2>
-                <button @click="viewSummary(title, summary)"
-                  class="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-lg text-white font-medium transition-all duration-200 transform hover:scale-105">
+                <button @click="viewSummary(title, title, '', summary, '', '')"
+                  class="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-lg text-white font-medium transition-all duration-200 transform hover:scale-105 flex-shrink-0 whitespace-nowrap">
                   全屏阅读
                 </button>
               </div>
@@ -593,6 +573,25 @@
             <div class="max-w-none px-4 py-8">
               <div v-if="readingContent" @click="handleArticleClick"
                 class="tech-gradient border border-gray-700 rounded-xl p-10 shadow-2xl backdrop-blur-sm">
+                <!-- 版本选择器 - 移动到文章容器右上角 -->
+                <div v-if="hasMultipleVersions" 
+                     class="version-selector-article"
+                     :class="{ active: showVersionDropdown }">
+                  <div @click.stop="toggleVersionDropdown" class="version-selector-trigger">
+                    <span>v{{ currentVersion }}</span>
+                  </div>
+                  <transition name="fade">
+                    <div v-if="showVersionDropdown" class="version-dropdown">
+                      <div v-for="version in documentVersions" 
+                           :key="version.version"
+                           @click.stop="switchVersion(version.version)"
+                           class="version-item"
+                           :class="{ current: version.version === currentVersion }">
+                        v{{ version.version }}
+                      </div>
+                    </div>
+                  </transition>
+                </div>
                 <div v-html="readingContent" class="prose-tech max-w-none"></div>
               </div>
             </div>

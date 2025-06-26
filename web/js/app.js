@@ -76,9 +76,18 @@ createApp({
     let loadingPromise = null;
 
     // TOC 相关状态
-    const showToc = ref(true);
+    const showToc = ref(
+      localStorage.getItem('showToc') !== null 
+        ? localStorage.getItem('showToc') === 'true' 
+        : window.innerWidth >= 768  // 桌面端默认显示，移动端默认隐藏
+    );
     const tocHtml = ref('');
-    const tocWidth = ref(416); // 26rem = 416px
+    const tocWidth = ref(
+      localStorage.getItem('tocWidth') !== null 
+        ? parseInt(localStorage.getItem('tocWidth')) 
+        : 350  // 默认宽度 350px
+    );
+    const tocAutoAdjusted = ref(false); // 新增：标记目录宽度是否已自动调整过
     const isVideoResizing = ref(false); // 添加响应式状态
     const isVideoDragging = ref(false); // 添加拖动响应式状态
 
@@ -195,6 +204,7 @@ createApp({
       documentTitle.value = '';
       readingFilename.value = '';
       tocHtml.value = '';
+      tocAutoAdjusted.value = false; // 重置目录自动调整标记
     };
 
     const goBackToLibrary = () => {
@@ -205,10 +215,13 @@ createApp({
       documentTitle.value = '';
       readingFilename.value = '';
       tocHtml.value = '';
+      tocAutoAdjusted.value = false; // 重置目录自动调整标记
     };
 
     const toggleToc = () => {
       showToc.value = !showToc.value;
+      // 保存目录显示状态到localStorage
+      localStorage.setItem('showToc', showToc.value.toString());
     };
 
     // 下拉菜单方法
@@ -251,6 +264,12 @@ createApp({
       // 处理版本下拉菜单
       const versionSelector = document.querySelector('.version-selector');
       if (versionSelector && !versionSelector.contains(event.target)) {
+        showVersionDropdown.value = false;
+      }
+      
+      // 处理文章容器内的版本选择器
+      const versionSelectorArticle = document.querySelector('.version-selector-article');
+      if (versionSelectorArticle && !versionSelectorArticle.contains(event.target)) {
         showVersionDropdown.value = false;
       }
     };
@@ -296,6 +315,9 @@ createApp({
       if (!isDragging) return;
       const newWidth = Math.max(300, Math.min(800, e.clientX));
       tocWidth.value = newWidth;
+      tocAutoAdjusted.value = true; // 标记用户已手动调整过宽度
+      // 保存目录宽度到localStorage
+      localStorage.setItem('tocWidth', newWidth.toString());
     };
 
     const stopDrag = () => {
@@ -322,6 +344,8 @@ createApp({
       if (maxWidth > 0) {
         const newTocWidth = Math.min(maxWidth + 60, Math.max(300, window.innerWidth * 0.5)); 
         tocWidth.value = newTocWidth;
+        // 自动调整时也保存宽度到localStorage
+        localStorage.setItem('tocWidth', newTocWidth.toString());
       }
     };
 
@@ -430,7 +454,10 @@ createApp({
           if (data.type === 'result') {
             title.value = data.title;
             summary.value = data.summary;
-            rendered.value = marked.parse(data.summary);
+            
+            // 移除 YAML Front Matter 再渲染
+            const cleanContent = data.summary.replace(/^---[\s\S]*?---/, '').trim();
+            rendered.value = marked.parse(cleanContent);
             
             // --- 关键修改: 收到结果后立即解除加载状态 ---
             loading.value = false;
@@ -582,6 +609,15 @@ createApp({
     };
     
     const viewSummary = (title, title_cn, title_en, content, filename, videoUrl = '', docHash, versions = []) => {
+      // 检查是否是不同的文档（非版本切换）
+      const isNewDocument = !readingFilename.value || 
+                           (readingFilename.value && !versions.some(v => v.filename === readingFilename.value));
+      
+      if (isNewDocument) {
+        // 重置目录自动调整标记，让新文档可以自动调整目录宽度
+        tocAutoAdjusted.value = false;
+      }
+      
       documentTitle.value = title_cn || title; // 使用title_cn，如果不存在则使用title作为后备
       documentTitleEn.value = title_en || ''; // 保存英文标题
       readingFilename.value = filename; // 跟踪当前文件名
@@ -666,7 +702,12 @@ createApp({
         document.querySelectorAll('.prose-tech pre code').forEach((block) => {
             hljs.highlightElement(block);
         });
-        adjustTocWidth();
+        // 只在初次加载文档且未自动调整过时才调整宽度
+        // 切换版本时保持当前宽度不变
+        if (!tocAutoAdjusted.value) {
+          adjustTocWidth();
+          tocAutoAdjusted.value = true;  // 标记已自动调整过
+        }
       });
     };
 
@@ -1175,11 +1216,6 @@ createApp({
       if (currentView.value === 'library' || !isAuthenticated.value) {
         loadSummaries();
       }
-
-      // 移动端优化
-      if (window.innerWidth < 768) {
-        showToc.value = false;
-      }
       
       // 添加点击外部关闭下拉菜单的监听器
       document.addEventListener('click', handleClickOutside);
@@ -1243,6 +1279,7 @@ createApp({
       tocHtml,
       handleTocClick,
       tocWidth,
+      tocAutoAdjusted,
       initDrag,
       isAuthenticated,
       showLogin,
