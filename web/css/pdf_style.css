@@ -54,6 +54,7 @@ html, body {
 
 #nice { 
     text-align: justify;
+    text-justify: inter-character; /* 优化中英文混排的对齐方式 */
     padding: 0;
 }
 
@@ -154,7 +155,6 @@ html, body {
     margin: 5px 0;
     line-height: 26px; 
     text-align: left;
-    display: inline; /* 改为inline以避免换行问题 */
 } 
 
 #nice blockquote { 
