@@ -1,17 +1,31 @@
 const { createApp, ref, onMounted, computed, nextTick, watch, onUnmounted, reactive } = Vue;
 
+// Insert after first line
+const ensureMarkedReady = (callback) => {
+  if (typeof window.marked !== 'undefined') {
+    callback(window.marked);
+  } else {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/marked/marked.min.js';
+    script.onload = () => callback(window.marked);
+    document.head.appendChild(script);
+  }
+};
+
 // 配置 marked 和 highlight.js
-marked.setOptions({
-  highlight: function (code, lang) {
-    if (lang && hljs.getLanguage(lang)) {
-      try {
-        return hljs.highlight(code, { language: lang }).value;
-      } catch (__) { }
-    }
-    return hljs.highlightAuto(code).value;
-  },
-  breaks: true,
-  gfm: true
+ensureMarkedReady((markedInstance) => {
+  markedInstance.setOptions({
+    highlight: function (code, lang) {
+      if (lang && hljs.getLanguage(lang)) {
+        try {
+          return hljs.highlight(code, { language: lang }).value;
+        } catch (__) { }
+      }
+      return hljs.highlightAuto(code).value;
+    },
+    breaks: true,
+    gfm: true
+  });
 });
 
 createApp({
@@ -547,7 +561,6 @@ createApp({
     const loadSummary = async (filename, pushState = true) => {
       try {
         readingError.value = '';
-        readingContent.value = ''; // 清空旧内容
         currentView.value = 'read'; // 切换到阅读视图以显示加载状态
 
         // URL编码文件名以处理特殊字符
@@ -586,7 +599,6 @@ createApp({
     const loadSummaryByHash = async (docHash, pushState = true) => {
       try {
         readingError.value = '';
-        readingContent.value = ''; // 清空旧内容
         currentView.value = 'read'; // 切换到阅读视图以显示加载状态
 
         // 根据认证状态选择端点，使用hash端点
@@ -727,39 +739,35 @@ createApp({
         });
       };
 
-      // 如果是版本切换，添加动画效果
-      if (isVersionSwitch) {
-        // 直接更新内容，然后在渲染完成后对新内容淡入
-        updateContent();
+      // 统一动画逻辑：如果当前已有内容容器，则淡出再淡入
+      const contentContainer = document.querySelector('.article-content');
+      const hasExistingContent = !!contentContainer;
+      
+      if (hasExistingContent) {
+        // 淡出旧内容
+        contentContainer.classList.add('article-container--is-fading-out');
         
-        // 等待下一帧，获取新容器并设置淡入动画
-        nextTick(() => {
-          const newContentContainer = document.querySelector('.article-content > div[class*="prose-tech"]');
-          if (newContentContainer) {
-            // 设置初始状态
-            newContentContainer.style.transition = 'none';
-            newContentContainer.style.opacity = '0';
-            newContentContainer.style.filter = 'blur(6px)';
-            // 移除 scale 以避免滑动
-            
-            // 强制重排
-            newContentContainer.offsetHeight;
-            
-            // 添加过渡并恢复
-            newContentContainer.style.transition = 'opacity 0.4s ease, filter 0.4s ease';
-            newContentContainer.style.opacity = '1';
-            newContentContainer.style.filter = 'blur(0)';
-            
-            // 清理
-            setTimeout(() => {
-              newContentContainer.style.transition = '';
-              newContentContainer.style.opacity = '';
-              newContentContainer.style.filter = '';
-            }, 450);
-          }
-        });
+        setTimeout(() => {
+          // 更新内容
+          updateContent();
+          
+          // 渲染完成后淡入新内容
+          nextTick(() => {
+            const newContainer = document.querySelector('.article-content');
+            if (newContainer) {
+              // 移除旧的淡出类，添加新的淡入类
+              newContainer.classList.remove('article-container--is-fading-out');
+              newContainer.classList.add('article-container--is-fading-in');
+              
+              // 动画结束后清理类
+              setTimeout(() => {
+                newContainer.classList.remove('article-container--is-fading-in');
+              }, 300); // 匹配 articleFadeInTech 的动画时长
+            }
+          });
+        }, 200); // 匹配 articleFadeOutTech 的动画时长
       } else {
-        // 如果不是版本切换，直接更新内容
+        // 首次加载或容器不存在，直接更新
         updateContent();
       }
     };
