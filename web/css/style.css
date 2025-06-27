@@ -2122,4 +2122,39 @@ svg.animate-spin path {
   }
 }
 
+/* ========== 文章版本切换动画 ========== */
+@keyframes articleFadeOutTech {
+  from {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    filter: blur(4px);
+    transform: scale(0.99);
+  }
+}
+
+@keyframes articleFadeInTech {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: scale(0.99);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+  }
+}
+
+.article-container--is-fading-out {
+  animation: articleFadeOutTech 0.2s ease-out forwards;
+}
+
+.article-container--is-fading-in {
+  animation: articleFadeInTech 0.3s ease-in forwards;
+}
+
  

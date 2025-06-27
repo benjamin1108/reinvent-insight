@@ -613,102 +613,155 @@ createApp({
       const isNewDocument = !readingFilename.value || 
                            (readingFilename.value && !versions.some(v => v.filename === readingFilename.value));
       
-      if (isNewDocument) {
-        // 重置目录自动调整标记，让新文档可以自动调整目录宽度
-        tocAutoAdjusted.value = false;
-      }
+      // 检查是否是版本切换：当前文件和新文件都在versions列表中，但文件名不同
+      const isVersionSwitch = readingFilename.value && 
+                             readingFilename.value !== filename &&
+                             versions.some(v => v.filename === readingFilename.value) &&
+                             versions.some(v => v.filename === filename);
       
-      documentTitle.value = title_cn || title; // 使用title_cn，如果不存在则使用title作为后备
-      documentTitleEn.value = title_en || ''; // 保存英文标题
-      readingFilename.value = filename; // 跟踪当前文件名
-      readingVideoUrl.value = videoUrl; // 保存视频链接
-      readingHash.value = docHash; // 保存文档的hash
+      console.log('viewSummary called:', {
+        isNewDocument,
+        isVersionSwitch,
+        currentFilename: readingFilename.value,
+        newFilename: filename,
+        versions: versions.map(v => v.filename)
+      });
       
-      // 处理版本信息
-      documentVersions.value = versions;
-      if (versions.length > 0) {
-        // 从versions中找到当前文件对应的版本
-        const currentFile = versions.find(v => v.filename === filename);
-        currentVersion.value = currentFile ? currentFile.version : 0;
+      // 定义更新内容的函数
+      const updateContent = () => {
+        if (isNewDocument) {
+          // 重置目录自动调整标记，让新文档可以自动调整目录宽度
+          tocAutoAdjusted.value = false;
+        }
         
-        // 尝试从localStorage恢复用户的版本偏好
-        const savedPrefs = localStorage.getItem('version_prefs');
-        if (savedPrefs && videoUrl) {
-          try {
-            const prefs = JSON.parse(savedPrefs);
-            const videoId = extractYoutubeVideoId(videoUrl);
-            if (videoId && prefs[`video_${videoId}`]) {
-              const preferredVersion = prefs[`video_${videoId}`].preferred;
-              // 检查偏好版本是否存在
-              if (versions.some(v => v.version === preferredVersion)) {
-                // 如果偏好版本不是当前版本，则切换
-                if (preferredVersion !== currentVersion.value) {
-                  switchVersion(preferredVersion);
-                  return; // 切换版本会重新调用viewSummary，所以直接返回
+        documentTitle.value = title_cn || title; // 使用title_cn，如果不存在则使用title作为后备
+        documentTitleEn.value = title_en || ''; // 保存英文标题
+        readingFilename.value = filename; // 跟踪当前文件名
+        readingVideoUrl.value = videoUrl; // 保存视频链接
+        readingHash.value = docHash; // 保存文档的hash
+        
+        // 处理版本信息
+        documentVersions.value = versions;
+        if (versions.length > 0) {
+          // 从versions中找到当前文件对应的版本
+          const currentFile = versions.find(v => v.filename === filename);
+          currentVersion.value = currentFile ? currentFile.version : 0;
+          
+          // 尝试从localStorage恢复用户的版本偏好
+          const savedPrefs = localStorage.getItem('version_prefs');
+          if (savedPrefs && videoUrl) {
+            try {
+              const prefs = JSON.parse(savedPrefs);
+              const videoId = extractYoutubeVideoId(videoUrl);
+              if (videoId && prefs[`video_${videoId}`]) {
+                const preferredVersion = prefs[`video_${videoId}`].preferred;
+                // 检查偏好版本是否存在
+                if (versions.some(v => v.version === preferredVersion)) {
+                  // 如果偏好版本不是当前版本，则切换
+                  if (preferredVersion !== currentVersion.value) {
+                    switchVersion(preferredVersion);
+                    return; // 切换版本会重新调用viewSummary，所以直接返回
+                  }
                 }
               }
+            } catch (e) {
+              console.error('读取版本偏好失败:', e);
             }
-          } catch (e) {
-            console.error('读取版本偏好失败:', e);
+          }
+        } else {
+          // 没有版本信息，设置为默认值
+          currentVersion.value = 0;
+        }
+        
+        // 切换文档时关闭视频播放器
+        if (showVideoPlayer.value) {
+          closeVideoPlayer();
+        }
+
+        // 在解析前，移除 YAML Front Matter
+        const cleanContent = content.replace(/^---[\s\S]*?---/, '').trim();
+        
+        // 移除Markdown中的第一个H1标题（如果存在）
+        // 改进正则：确保只匹配单个#开头的标题
+        const contentLines = cleanContent.split('\n');
+        let contentWithoutH1 = cleanContent;
+        
+        // 查找并移除第一个H1标题
+        for (let i = 0; i < contentLines.length; i++) {
+          const line = contentLines[i].trim();
+          if (line.match(/^#\s+/)) {
+            // 找到第一个H1，移除它
+            contentLines.splice(i, 1);
+            contentWithoutH1 = contentLines.join('\n').trim();
+            break;
           }
         }
-      } else {
-        // 没有版本信息，设置为默认值
-        currentVersion.value = 0;
-      }
-      
-      // 切换文档时关闭视频播放器
-      if (showVideoPlayer.value) {
-        closeVideoPlayer();
-      }
-
-      // 在解析前，移除 YAML Front Matter
-      const cleanContent = content.replace(/^---[\s\S]*?---/, '').trim();
-      
-      // 移除Markdown中的第一个H1标题（如果存在）
-      // 改进正则：确保只匹配单个#开头的标题
-      const contentLines = cleanContent.split('\n');
-      let contentWithoutH1 = cleanContent;
-      
-      // 查找并移除第一个H1标题
-      for (let i = 0; i < contentLines.length; i++) {
-        const line = contentLines[i].trim();
-        if (line.match(/^#\s+/)) {
-          // 找到第一个H1，移除它
-          contentLines.splice(i, 1);
-          contentWithoutH1 = contentLines.join('\n').trim();
-          break;
+        
+        // 构建带有中英文标题的HTML
+        let titleHtml = '';
+        if (documentTitleEn.value) {
+          titleHtml = `<div class="article-title-container">
+            <h2 class="article-title-en">${documentTitleEn.value}</h2>
+            <h1 class="article-title-cn">${documentTitle.value}</h1>
+          </div>`;
+        } else {
+          titleHtml = `<h1>${documentTitle.value}</h1>`;
         }
-      }
-      
-      // 构建带有中英文标题的HTML
-      let titleHtml = '';
-      if (documentTitleEn.value) {
-        titleHtml = `<div class="article-title-container">
-          <h2 class="article-title-en">${documentTitleEn.value}</h2>
-          <h1 class="article-title-cn">${documentTitle.value}</h1>
-        </div>`;
-      } else {
-        titleHtml = `<h1>${documentTitle.value}</h1>`;
-      }
-      
-      const { html, tocHtml: tocString } = renderMarkdownWithToc(contentWithoutH1);
-      readingContent.value = titleHtml + html;
-      tocHtml.value = tocString;
-      currentView.value = 'read';
+        
+        const { html, tocHtml: tocString } = renderMarkdownWithToc(contentWithoutH1);
+        readingContent.value = titleHtml + html;
+        tocHtml.value = tocString;
+        currentView.value = 'read';
 
-      nextTick(() => {
-        // Re-run highlight.js on the new content
-        document.querySelectorAll('.prose-tech pre code').forEach((block) => {
-            hljs.highlightElement(block);
+        nextTick(() => {
+          // Re-run highlight.js on the new content
+          document.querySelectorAll('.prose-tech pre code').forEach((block) => {
+              hljs.highlightElement(block);
+          });
+          // 只在初次加载文档且未自动调整过时才调整宽度
+          // 切换版本时保持当前宽度不变
+          if (!tocAutoAdjusted.value) {
+            adjustTocWidth();
+            tocAutoAdjusted.value = true;  // 标记已自动调整过
+          }
         });
-        // 只在初次加载文档且未自动调整过时才调整宽度
-        // 切换版本时保持当前宽度不变
-        if (!tocAutoAdjusted.value) {
-          adjustTocWidth();
-          tocAutoAdjusted.value = true;  // 标记已自动调整过
-        }
-      });
+      };
+
+      // 如果是版本切换，添加动画效果
+      if (isVersionSwitch) {
+        // 直接更新内容，然后在渲染完成后对新内容淡入
+        updateContent();
+        
+        // 等待下一帧，获取新容器并设置淡入动画
+        nextTick(() => {
+          const newContentContainer = document.querySelector('.article-content > div[class*="prose-tech"]');
+          if (newContentContainer) {
+            // 设置初始状态
+            newContentContainer.style.transition = 'none';
+            newContentContainer.style.opacity = '0';
+            newContentContainer.style.filter = 'blur(6px)';
+            // 移除 scale 以避免滑动
+            
+            // 强制重排
+            newContentContainer.offsetHeight;
+            
+            // 添加过渡并恢复
+            newContentContainer.style.transition = 'opacity 0.4s ease, filter 0.4s ease';
+            newContentContainer.style.opacity = '1';
+            newContentContainer.style.filter = 'blur(0)';
+            
+            // 清理
+            setTimeout(() => {
+              newContentContainer.style.transition = '';
+              newContentContainer.style.opacity = '';
+              newContentContainer.style.filter = '';
+            }, 450);
+          }
+        });
+      } else {
+        // 如果不是版本切换，直接更新内容
+        updateContent();
+      }
     };
 
     // 版本切换相关函数
