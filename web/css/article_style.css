@@ -6,7 +6,7 @@
 
 /* === 基础元素样式 === */
 .article-content .prose-tech {
-    font-family: "Noto Serif SC", serif;
+    font-family: 'PingFang SC', 'Helvetica Neue', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
     font-size: 16px;
     line-height: 1.6;
     color: rgba(226, 232, 240, 0.85); /* 适配深色主题 */
@@ -181,7 +181,7 @@
 
 .article-content .prose-tech strong { 
     font-weight: 700;
-    color: #c9c197; /* 在深色主题中更明显 */
+    color: rgb(140, 138, 134);
 }
 
 /* H2 標題的特殊主題樣式 - 深色主题优化版 */
