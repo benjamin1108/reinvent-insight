@@ -34,7 +34,7 @@
   border-color: rgba(255, 255, 255, 0.2);
 }
 
-/* 下拉菜单 */
+/* 下拉菜单 - 整体圆角容器 */
 .version-dropdown {
   position: absolute;
   top: calc(100% + 4px);
@@ -50,8 +50,10 @@
   z-index: 1000;
 }
 
-/* 版本选项 */
-.version-item {
+/* 版本选项 - 确保没有圆角，背景色应该直接应用 */
+.version-selector .version-item,
+.version-selector-article .version-item {
+  display: block;
   padding: 6px 12px;
   color: #999;
   cursor: pointer;
@@ -59,29 +61,46 @@
   font-size: 12px;
   white-space: nowrap;
   text-align: center;
-}
-
-/* 选项悬停 */
-.version-item:hover {
-  color: #e0e0e0;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-/* 当前版本 */
-.version-item.current {
-  color: #fb923c;
   position: relative;
+  /* 确保没有圆角 */
+  border-radius: 0;
+  /* 确保没有边框 */
+  border: none;
+  /* 确保背景透明 */
+  background: transparent;
+  /* 防止外边距 */
+  margin: 0;
 }
 
-/* 当前版本底部指示器 */
-.version-item.current::after {
+/* 项目之间的分割线 */
+.version-selector .version-item:not(:last-child)::after,
+.version-selector-article .version-item:not(:last-child)::after {
   content: '';
   position: absolute;
   bottom: 0;
-  left: 12px;
-  right: 12px;
+  left: 0;
+  right: 0;
   height: 1px;
-  background: #fb923c;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* 选项悬停 - 整个项目的背景变化 */
+.version-selector .version-item:hover,
+.version-selector-article .version-item:hover {
+  color: #e0e0e0;
+  background: rgba(255, 255, 255, 0.05);
+  /* 确保hover时也没有圆角 */
+  border-radius: 0;
+}
+
+/* 当前版本 */
+.version-selector .version-item.current,
+.version-selector-article .version-item.current {
+  color: #fb923c;
+  font-weight: 500;
+  /* 确保当前项也没有圆角 */
+  border-radius: 0;
+  background: transparent;
 }
 
 /* 文章容器内的版本选择器特殊样式 */
@@ -91,8 +110,6 @@
   right: 20px;
   z-index: 10;
 }
-
-/* 注意：不再在组件内定义其他组件的样式，布局由使用方负责 */
 
 /* 继承基础样式但调整位置 */
 .version-selector-article .version-selector-trigger {
@@ -118,6 +135,22 @@
   color: #e0e0e0;
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* 文章容器内的下拉菜单继承主要样式 */
+.version-selector-article .version-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: rgba(15, 20, 25, 0.95);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  min-width: 60px;
+  z-index: 1000;
 }
 
 /* 过渡动画 */

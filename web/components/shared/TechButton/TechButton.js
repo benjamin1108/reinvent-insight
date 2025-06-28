@@ -37,6 +37,12 @@ export default {
       default: '加载中...'
     },
     
+    // 简单图标（文本/表情）
+    icon: {
+      type: String,
+      default: ''
+    },
+    
     // 是否禁用
     disabled: {
       type: Boolean,
@@ -49,13 +55,13 @@ export default {
       default: false
     },
     
-    // 前置图标路径
+    // 前置SVG图标路径
     iconBefore: {
       type: String,
       default: ''
     },
     
-    // 后置图标路径
+    // 后置SVG图标路径
     iconAfter: {
       type: String,
       default: ''
@@ -97,7 +103,7 @@ export default {
           [`tech-btn-${this.size}`]: this.size !== 'normal',
           'tech-btn-icon': this.iconOnly,
           'w-full': this.fullWidth,
-          'opacity-50 cursor-not-allowed': this.disabled || this.loading
+          'loading': this.loading
         }
       ];
     },
@@ -112,7 +118,7 @@ export default {
     
     textClasses() {
       return {
-        'ml-1': this.iconBefore || this.loading,
+        'ml-1': this.icon || this.iconBefore || this.loading,
         'mr-1': this.iconAfter
       };
     }

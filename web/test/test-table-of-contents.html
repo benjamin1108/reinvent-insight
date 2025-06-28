@@ -6,11 +6,14 @@
   <title>TableOfContents 组件测试</title>
   
   <!-- Vue 3 -->
-  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="/js/vendor/vue.global.js"></script>
   
   <!-- 基础样式 -->
   <link rel="stylesheet" href="/css/base/typography.css">
   <link rel="stylesheet" href="/css/base/effects.css">
+  
+  <!-- 组件样式 -->
+  <link rel="stylesheet" href="/components/common/TableOfContents/TableOfContents.css">
   
   <!-- 测试框架样式 -->
   <style>
@@ -94,12 +97,12 @@
       margin-top: 1.5rem;
     }
     
-    .toc-container {
+    /* 测试页面的TOC包装器，避免与组件内部的.toc-container冲突 */
+    .toc-wrapper {
       background: rgba(0, 0, 0, 0.2);
       border-radius: 8px;
       padding: 1rem;
       max-height: 600px;
-      overflow-y: auto;
       position: sticky;
       top: 2rem;
     }
@@ -228,12 +231,12 @@
       border-radius: 4px;
     }
     
-    @media (max-width: 768px) {
+          @media (max-width: 768px) {
       .test-layout {
         grid-template-columns: 1fr;
       }
       
-      .toc-container {
+      .toc-wrapper {
         position: static;
         max-height: 400px;
       }
@@ -258,7 +261,7 @@
         </div>
         
         <div class="test-layout">
-          <div class="toc-container">
+          <div class="toc-wrapper">
             <table-of-contents
               :sections="defaultSections"
               :current-section="currentSection1"
@@ -312,7 +315,7 @@
         </div>
         
         <div class="test-layout">
-          <div class="toc-container">
+          <div class="toc-wrapper">
             <table-of-contents
               :sections="dynamicSections"
               :current-section="currentSection2"
@@ -376,7 +379,7 @@
         </div>
         
         <div class="test-layout">
-          <div class="toc-container">
+          <div class="toc-wrapper">
             <table-of-contents
               :sections="scrollTestSections"
               :current-section="currentSection3"
@@ -412,6 +415,30 @@
           <div class="status-item">
             <span class="status-label">滚动位置:</span>
             <span class="status-value">{{ scrollPosition }}px</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 测试用例4：拖动功能测试 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">拖动功能测试</h2>
+          <p class="test-case-description">测试目录宽度调整功能</p>
+        </div>
+        
+        <div style="display: flex; height: 500px; background: rgba(0, 0, 0, 0.2); border-radius: 8px; overflow: hidden;">
+          <table-of-contents
+            :sections="defaultSections"
+            :width="300"
+            :min-width="200"
+            :max-width="500"
+            @width-change="handleWidthChange"
+          ></table-of-contents>
+          
+          <div style="flex: 1; padding: 2rem;">
+            <h3>内容区域</h3>
+            <p>拖动目录右侧的拖动条可以调整目录宽度。</p>
+            <p>最小宽度：200px，最大宽度：500px</p>
           </div>
         </div>
       </div>
@@ -634,6 +661,11 @@
           eventLog.value = [];
         };
         
+        // 处理宽度变化
+        const handleWidthChange = (width) => {
+          addLog(`宽度变更: ${width}px`);
+        };
+        
         // 初始化展开状态
         onMounted(() => {
           dynamicSections.value.forEach(section => {
@@ -666,7 +698,8 @@
           simulateScroll,
           simulateRandomScroll,
           handleScroll,
-          clearLog
+          clearLog,
+          handleWidthChange
         };
       }
     });

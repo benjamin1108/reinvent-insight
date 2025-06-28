@@ -174,13 +174,19 @@
 .tech-btn.disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  transform: none !important;
+  transform: none ;
+}
+
+/* 加载状态 - 照搬主项目的opacity */
+.tech-btn.loading {
+  opacity: 0.8;
+  pointer-events: none;
 }
 
 .tech-btn:disabled:hover,
 .tech-btn.disabled:hover {
-  transform: none !important;
-  box-shadow: initial !important;
+  transform: none ;
+  box-shadow: initial ;
 }
 
 .tech-btn:disabled::before,
@@ -193,10 +199,10 @@
 .tech-btn.disabled svg.animate-spin,
 .tech-btn:disabled .animate-spin,
 .tech-btn.disabled .animate-spin {
-  opacity: 1 !important;
-  -webkit-animation: spin 1s linear infinite !important;
-  -moz-animation: spin 1s linear infinite !important;
-  animation: spin 1s linear infinite !important;
+  opacity: 1 ;
+  -webkit-animation: spin 1s linear infinite ;
+  -moz-animation: spin 1s linear infinite ;
+  animation: spin 1s linear infinite ;
 }
 
 /* 按钮内的SVG图标样式 */
@@ -222,6 +228,7 @@
 /* 间距类 - 替代Tailwind CSS */
 .tech-btn .ml-1 { margin-left: 0.25rem; }
 .tech-btn .mr-1 { margin-right: 0.25rem; }
+.tech-btn .mr-2 { margin-right: 0.5rem; }
 
 /* 全宽类 - 替代Tailwind CSS */
 .tech-btn.w-full {
@@ -229,12 +236,34 @@
   min-width: 100%;
 }
 
-/* 加载中的旋转图标专用样式 */
-.tech-btn svg.animate-spin {
-  fill: none !important;
+/* 透明度类 - 用于SVG加载动画 */
+.tech-btn .opacity-25 {
+  opacity: 0.25;
 }
 
-/* 旋转动画 */
+.tech-btn .opacity-75 {
+  opacity: 0.75;
+}
+
+/* 旋转动画 - 保留给其他可能需要的地方 */
+@-webkit-keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@-moz-keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes spin {
   from {
     transform: rotate(0deg);
@@ -248,7 +277,74 @@
   animation: spin 1s linear infinite;
 }
 
-/* 全宽按钮 - 已在上方定义 */
+/* spin类 - 照搬主项目 */
+.spin,
+.animate-spin {
+  -webkit-animation: spin 1s linear infinite;
+  -moz-animation: spin 1s linear infinite;
+  animation: spin 1s linear infinite;
+}
+
+/* SVG特定动画样式 - 照搬主项目 */
+svg.animate-spin {
+  -webkit-animation: spin 1s linear infinite ;
+  -moz-animation: spin 1s linear infinite ;
+  animation: spin 1s linear infinite ;
+}
+
+/* 加载状态的按钮 - 照搬主项目 */
+.loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.loading .spinner,
+.loading .animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* 确保SVG加载动画在按钮内正常工作 */
+.tech-btn svg.animate-spin {
+  -webkit-animation: spin 1s linear infinite;
+  -moz-animation: spin 1s linear infinite;
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
+/* 加载中的旋转图标专用样式 - 照搬主项目 */
+.tech-btn svg.animate-spin {
+  fill: none ;
+}
+
+/* 调试：确保所有animate-spin类都有动画 - 照搬主项目 */
+*[class*="animate-spin"] {
+  -webkit-animation: spin 1s linear infinite ;
+  -moz-animation: spin 1s linear infinite ;
+  animation: spin 1s linear infinite ;
+}
+
+/* 确保动画在所有元素上都能工作 - 照搬主项目 */
+.animate-spin,
+.animate-spin svg,
+svg.animate-spin circle,
+svg.animate-spin path {
+  -webkit-animation: spin 1s linear infinite ;
+  -moz-animation: spin 1s linear infinite ;
+  animation: spin 1s linear infinite ;
+}
+
+/* 保证SVG元素本身不被隐藏 - 照搬主项目 */
+svg.animate-spin {
+  display: inline-block ;
+  visibility: visible ;
+}
+
+/* 确保圆圈和路径元素显示正确 - 照搬主项目 */
+svg.animate-spin circle,
+svg.animate-spin path {
+  stroke-width: 4;
+}
 
 /* 移动端优化 */
 @media (max-width: 768px) {

@@ -6,7 +6,7 @@
   <title>SummaryCard 组件测试</title>
   
   <!-- Vue 3 -->
-  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="/js/vendor/vue.global.js"></script>
   
   <!-- 基础样式 -->
   <link rel="stylesheet" href="/css/base/typography.css">
@@ -209,26 +209,24 @@
         <div class="card-grid">
           <summary-card
             :key="'reinvent-1'"
-            type="reinvent"
-            :id="1"
-            image="https://via.placeholder.com/400x200/0f172a/22d3ee?text=re:Invent"
+            summary-type="reinvent"
+            hash="test-hash-1"
+            title-cn="深入探讨 AWS Lambda 性能优化"
+            title-en="Deep Dive into AWS Lambda Performance Optimization"
+            :word-count="12500"
             level="Level 300"
-            title="Deep Dive into AWS Lambda Performance Optimization"
-            description="Learn advanced techniques for optimizing Lambda functions, including cold start reduction, memory tuning, and architectural patterns for maximum efficiency."
-            :year="2024"
+            year="2024"
             @click="handleCardClick"
-            @download="handleDownload"
           ></summary-card>
           
           <summary-card
             :key="'featured-1'"
-            type="featured"
-            :id="2"
-            image="https://via.placeholder.com/400x200/1e293b/3b82f6?text=Featured"
-            title="Building Resilient Microservices with AWS"
-            description="Explore best practices for building fault-tolerant microservices architectures using AWS services like ECS, API Gateway, and SQS."
+            summary-type="other"
+            hash="test-hash-2"
+            title-cn="使用 AWS 构建弹性微服务"
+            title-en="Building Resilient Microservices with AWS"
+            :word-count="8900"
             @click="handleCardClick"
-            @download="handleDownload"
           ></summary-card>
         </div>
       </div>
@@ -280,15 +278,14 @@
         <div class="card-grid">
           <summary-card
             :key="customKey"
-            :type="customType"
-            :id="100"
-            :image="customImage"
+            :summary-type="customType === 'featured' ? 'other' : customType"
+            hash="custom-hash"
+            :title-cn="customTitle"
+            :title-en="customDescription"
+            :word-count="10000"
             :level="customLevel"
-            :title="customTitle"
-            :description="customDescription"
-            :year="customYear"
+            :year="customType === 'reinvent' ? String(customYear) : null"
             @click="handleCardClick"
-            @download="handleDownload"
           ></summary-card>
         </div>
       </div>
@@ -315,15 +312,14 @@
           <summary-card
             v-for="card in dynamicCards"
             :key="card.id"
-            :type="card.type"
-            :id="card.id"
-            :image="card.image"
+            :summary-type="card.type === 'featured' ? 'other' : card.type"
+            :hash="`hash-${card.id}`"
+            :title-cn="card.titleCn"
+            :title-en="card.titleEn"
+            :word-count="card.wordCount"
             :level="card.level"
-            :title="card.title"
-            :description="card.description"
             :year="card.year"
             @click="handleCardClick"
-            @download="handleDownload"
           ></summary-card>
         </div>
       </div>
@@ -375,18 +371,18 @@
           {
             id: 1,
             type: 'reinvent',
-            image: 'https://via.placeholder.com/400x200/0f172a/22d3ee?text=Card+1',
+            titleCn: 'AWS 入门指南',
+            titleEn: 'Getting Started with AWS',
+            wordCount: 5600,
             level: 'Level 100',
-            title: 'Getting Started with AWS',
-            description: 'Introduction to core AWS services and concepts.',
-            year: 2024
+            year: '2024'
           },
           {
             id: 2,
             type: 'featured',
-            image: 'https://via.placeholder.com/400x200/1e293b/3b82f6?text=Card+2',
-            title: 'Serverless Architecture Patterns',
-            description: 'Best practices for building serverless applications.'
+            titleCn: '无服务器架构模式',
+            titleEn: 'Serverless Architecture Patterns',
+            wordCount: 7800
           }
         ]);
         
@@ -403,13 +399,10 @@
         
         // 事件处理
         const handleCardClick = (data) => {
-          addLog(`卡片点击 - ID: ${data.id}, 标题: ${data.title}`);
-          console.log('Card clicked:', data);
-        };
-        
-        const handleDownload = (data) => {
-          addLog(`下载按钮点击 - ID: ${data.id}, 标题: ${data.title}`);
-          alert(`下载: ${data.title}`);
+          console.log('Card clicked event:', data);
+          if (data && typeof data === 'object' && data.hash) {
+            addLog(`卡片点击 - Hash: ${data.hash}, 类型: ${data.type}`);
+          }
         };
         
         // 动态操作
@@ -420,11 +413,11 @@
           dynamicCards.value.push({
             id,
             type: isReinvent ? 'reinvent' : 'featured',
-            image: `https://via.placeholder.com/400x200/${isReinvent ? '0f172a/22d3ee' : '1e293b/3b82f6'}?text=Card+${id}`,
+            titleCn: `动态卡片 ${id} - 中文标题`,
+            titleEn: `Dynamic Card ${id} - English Title`,
+            wordCount: Math.floor(Math.random() * 20000) + 5000,
             level: isReinvent ? `Level ${Math.floor(Math.random() * 4 + 1) * 100}` : undefined,
-            title: `动态卡片 ${id}`,
-            description: `这是动态添加的卡片 ${id} 的描述。`,
-            year: isReinvent ? 2020 + Math.floor(Math.random() * 5) : undefined
+            year: isReinvent ? String(2020 + Math.floor(Math.random() * 5)) : undefined
           });
           
           addLog(`添加新卡片 - ID: ${id}`);
@@ -457,7 +450,6 @@
           dynamicCards,
           eventLog,
           handleCardClick,
-          handleDownload,
           addCard,
           removeCard,
           shuffleCards,

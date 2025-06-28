@@ -6,11 +6,15 @@
   <title>AppHeader 组件测试</title>
   
   <!-- Vue 3 -->
-  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="/js/vendor/vue.global.js"></script>
   
   <!-- 基础样式 -->
   <link rel="stylesheet" href="/css/base/typography.css">
   <link rel="stylesheet" href="/css/base/effects.css">
+  
+  <!-- 组件样式 -->
+  <link rel="stylesheet" href="/components/common/AppHeader/AppHeader.css">
+  <link rel="stylesheet" href="/components/shared/TechButton/TechButton.css">
   
   <!-- 测试框架样式 -->
   <style>
@@ -26,13 +30,11 @@
       --test-text-dim: #9ca3af;
     }
     
-    * {
+    /* 只对测试环境的元素应用重置，不影响组件 */
+    body {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-    }
-    
-    body {
       background: var(--test-bg);
       color: var(--test-text);
       font-family: var(--font-primary);

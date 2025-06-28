@@ -14,6 +14,26 @@ export default {
       type: String,
       default: ''
     },
+    // 目录章节数据（支持数组模式）
+    sections: {
+      type: Array,
+      default: () => []
+    },
+    // 当前激活的章节ID
+    currentSection: {
+      type: String,
+      default: ''
+    },
+    // 展开的章节ID集合
+    expanded: {
+      type: Object,
+      default: () => ({})
+    },
+    // 是否启用滚动监听
+    scrollSpy: {
+      type: Boolean,
+      default: false
+    },
     // 目录标题
     title: {
       type: String,
@@ -46,10 +66,10 @@ export default {
     }
   },
   
-  emits: ['update:visible', 'update:width', 'tocClick', 'widthChange'],
+  emits: ['update:visible', 'update:width', 'tocClick', 'widthChange', 'navigate', 'toggle'],
   
   setup(props, { emit, expose }) {
-    const { ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
+    const { ref, computed, watch, onMounted, onUnmounted, nextTick, toRefs } = Vue;
     
     // 引用
     const tocSidebar = ref(null);
@@ -60,6 +80,39 @@ export default {
     const dragStartX = ref(0);
     const dragStartWidth = ref(0);
     const hasAutoAdjusted = ref(false);
+    const internalExpanded = ref({...props.expanded});
+    
+    // 计算属性：是否使用sections模式
+    const useSectionsMode = computed(() => {
+      return props.sections && props.sections.length > 0;
+    });
+    
+    // 处理章节导航
+    const handleNavigate = (sectionId) => {
+      emit('navigate', sectionId);
+      
+      // 如果有对应的DOM元素，滚动到该位置
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+    
+    // 切换章节展开状态
+    const toggleSection = (sectionId) => {
+      internalExpanded.value[sectionId] = !internalExpanded.value[sectionId];
+      emit('toggle', sectionId, internalExpanded.value[sectionId]);
+    };
+    
+    // 检查章节是否展开
+    const isExpanded = (sectionId) => {
+      return internalExpanded.value[sectionId] !== false;
+    };
+    
+    // 检查章节是否激活
+    const isActive = (sectionId) => {
+      return props.currentSection === sectionId;
+    };
     
     // 处理目录点击
     const handleClick = (event) => {
@@ -158,6 +211,10 @@ export default {
       }
     });
     
+    watch(() => props.expanded, (newExpanded) => {
+      internalExpanded.value = {...newExpanded};
+    }, { deep: true });
+    
     watch(() => props.tocHtml, () => {
       // 当目录内容变化时，如果启用了自动调整且用户未手动调整过，则重新计算宽度
       if (props.autoAdjustWidth && !hasAutoAdjusted.value) {
@@ -203,6 +260,9 @@ export default {
     });
     
     return {
+      // props
+      ...toRefs(props),
+      
       // 引用
       tocSidebar,
       
@@ -212,7 +272,14 @@ export default {
       
       // 方法
       handleClick,
-      startDrag
+      startDrag,
+      
+      // 计算属性
+      useSectionsMode,
+      handleNavigate,
+      toggleSection,
+      isExpanded,
+      isActive
     };
   }
 }; 

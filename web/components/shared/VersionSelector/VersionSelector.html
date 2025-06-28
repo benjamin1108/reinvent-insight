@@ -1,21 +1,21 @@
 <div 
-  v-if="versions.length > 1"
+  v-if="normalizedVersions.length > 1"
   class="version-selector"
   :class="[customClass, { active: isOpen, disabled: disabled }]"
 >
   <div @click="toggleDropdown" class="version-selector-trigger">
-    <span>v{{ currentVersion }}</span>
+    <span>{{ currentVersion.startsWith('v') ? currentVersion : 'v' + currentVersion }}</span>
   </div>
   <transition name="fade">
     <div v-if="isOpen" class="version-dropdown">
       <div 
-        v-for="version in versions" 
-        :key="version.version"
-        @click="selectVersion(version.version)"
+        v-for="item in normalizedVersions" 
+        :key="item.version"
+        @click="selectVersion(item.version)"
         class="version-item"
-        :class="{ current: version.version === currentVersion }"
+        :class="{ current: item.version === currentVersion }"
       >
-        v{{ version.version }}
+        {{ item.version.startsWith('v') ? item.version : 'v' + item.version }}
       </div>
     </div>
   </transition>

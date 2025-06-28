@@ -6,7 +6,7 @@
   <title>VersionSelector 组件测试</title>
   
   <!-- Vue 3 -->
-  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="/js/vendor/vue.global.js"></script>
   
   <!-- 基础样式 -->
   <link rel="stylesheet" href="/css/base/typography.css">
@@ -260,6 +260,50 @@
     .back-link:hover {
       background: rgba(34, 211, 238, 0.1);
     }
+    
+    /* 文章容器模拟样式 */
+    .article-mock {
+      position: relative;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(71, 85, 105, 0.5);
+      border-radius: 12px;
+      padding: 40px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+    
+    .article-mock .prose-tech {
+      color: rgba(226, 232, 240, 0.85);
+      line-height: 1.6;
+    }
+    
+    .article-mock .prose-tech h1 {
+      font-size: 24px;
+      font-weight: 700;
+      background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 50%, #9333ea 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 20px;
+    }
+    
+    .article-mock .prose-tech p {
+      margin: 16px 0;
+    }
+    
+    .article-mock .prose-tech ul {
+      list-style: disc;
+      padding-left: 24px;
+      margin: 16px 0;
+    }
+    
+    .article-mock .prose-tech li {
+      margin: 8px 0;
+    }
+    
+    .article-mock .prose-tech strong {
+      color: #fb923c;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
@@ -432,6 +476,46 @@
         </div>
       </div>
       
+      <!-- 测试用例5：文章容器内的版本选择器 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">文章容器内的版本选择器</h2>
+          <p class="test-case-description">模拟主项目中文章容器内的版本选择器使用场景</p>
+        </div>
+        
+        <div class="article-mock tech-gradient border border-gray-700 rounded-xl p-10 shadow-2xl backdrop-blur-sm" style="position: relative; min-height: 300px;">
+          <!-- 版本选择器 - 放在文章容器右上角 -->
+          <div class="version-selector-article">
+            <version-selector
+              :versions="articleVersions"
+              :current-version="currentArticleVersion"
+              @change="handleArticleVersionChange"
+              custom-class=""
+            ></version-selector>
+          </div>
+          
+          <div class="prose-tech">
+            <h1>示例文章标题</h1>
+            <p>这是一个模拟的文章容器，版本选择器位于右上角，就像主项目中的实现一样。</p>
+            <p>当前版本：<strong>{{ currentArticleVersion }}</strong></p>
+            <p>版本选择器应该具有以下特性：</p>
+            <ul>
+              <li>位于文章容器的右上角（绝对定位）</li>
+              <li>半透明背景，与主项目保持一致</li>
+              <li>鼠标悬停时有适当的视觉反馈</li>
+              <li>下拉菜单应该有模糊背景效果</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="status-display">
+          <div class="status-item">
+            <span class="status-label">文章版本:</span>
+            <span class="status-value">{{ currentArticleVersion }}</span>
+          </div>
+        </div>
+      </div>
+      
       <!-- 事件日志 -->
       <div class="test-case">
         <div class="test-case-header">
@@ -489,6 +573,10 @@
         const manyVersions = ref(['v2.1.0', 'v2.0.0', 'v1.9.0']);
         const currentVersion4 = ref('v2.1.0');
         
+        // 文章容器测试
+        const articleVersions = ref(['v2.1.0', 'v2.0.0', 'v1.9.0', 'v1.8.0', 'v1.7.0']);
+        const currentArticleVersion = ref('v2.1.0');
+        
         // 事件日志
         const eventLog = ref([]);
         
@@ -519,6 +607,11 @@
         const handleVersionChange4 = (version) => {
           currentVersion4.value = version;
           addLog(`性能测试：版本切换到 ${version}`);
+        };
+        
+        const handleArticleVersionChange = (version) => {
+          currentArticleVersion.value = version;
+          addLog(`文章容器：版本切换到 ${version}`);
         };
         
         // 版本管理
@@ -602,11 +695,14 @@
           currentVersion3,
           manyVersions,
           currentVersion4,
+          articleVersions,
+          currentArticleVersion,
           eventLog,
           handleVersionChange1,
           handleVersionChange2,
           handleVersionChange3,
           handleVersionChange4,
+          handleArticleVersionChange,
           addVersion,
           removeVersion,
           toggleDisabled,

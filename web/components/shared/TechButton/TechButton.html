@@ -5,6 +5,11 @@
   @click="handleClick"
   :type="type">
   
+  <!-- 简单图标（文本/表情） -->
+  <span v-if="icon && !loading" :class="iconClasses" style="display: inline-flex; align-items: center; justify-content: center;">
+    {{ icon }}
+  </span>
+  
   <!-- 前置图标 -->
   <svg v-if="iconBefore && !loading" 
        :class="iconClasses" 

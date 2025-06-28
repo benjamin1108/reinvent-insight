@@ -6,7 +6,7 @@
   <title>TechButton 组件测试</title>
   
   <!-- Vue 3 -->
-  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="/js/vendor/vue.global.js"></script>
   
   <!-- 基础样式 -->
   <link rel="stylesheet" href="/css/base/typography.css">
@@ -166,6 +166,17 @@
     .back-link:hover {
       background: rgba(34, 211, 238, 0.1);
     }
+    
+    /* 测试旋转动画是否工作 */
+    @keyframes test-spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    
+    .test-spin {
+      display: inline-block;
+      animation: test-spin 1s linear infinite;
+    }
   </style>
 </head>
 <body>
@@ -175,6 +186,10 @@
     <div class="test-header">
       <h1>TechButton 组件测试</h1>
       <p>统一的科技风格按钮组件，支持多种变体、尺寸、状态和图标</p>
+      <div style="margin-top: 1rem;">
+        <span class="test-spin" style="color: #22d3ee;">⚙️</span> 
+        <span style="color: #9ca3af; font-size: 0.875rem; margin-left: 0.5rem;">如果这个齿轮在旋转，说明CSS动画正常工作</span>
+      </div>
     </div>
     
     <div class="test-container">

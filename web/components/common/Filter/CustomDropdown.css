@@ -65,9 +65,9 @@
   opacity: 0.4;
   cursor: not-allowed;
   pointer-events: none;
-  background: rgba(100, 100, 100, 0.1) !important;
-  border-color: rgba(150, 150, 150, 0.3) !important;
-  color: #666 !important;
+  background: rgba(100, 100, 100, 0.1) ;
+  border-color: rgba(150, 150, 150, 0.3) ;
+  color: #666 ;
 }
 
 /* 禁用状态的悬停效果（不应有任何变化） */
@@ -120,10 +120,10 @@
 /* 禁用状态下永远不显示下拉菜单 */
 .custom-dropdown.disabled .custom-dropdown-menu,
 .custom-dropdown.disabled.active .custom-dropdown-menu {
-  opacity: 0 !important;
-  transform: translateY(-10px) !important;
-  pointer-events: none !important;
-  animation: none !important;
+  opacity: 0 ;
+  transform: translateY(-10px) ;
+  pointer-events: none ;
+  animation: none ;
 }
 
 /* 下拉选项 */

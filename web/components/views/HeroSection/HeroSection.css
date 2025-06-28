@@ -115,7 +115,7 @@
   /* 移动端按钮样式由TechButton组件处理 */
   
   .hero-section .block {
-    display: block !important;
+    display: block ;
   }
 }
 

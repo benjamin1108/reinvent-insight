@@ -21,6 +21,63 @@
   justify-content: center;
 }
 
+/* 颜色变体 - 替代Tailwind CSS */
+.progress-bar-fill.bg-cyan-500 {
+  background-color: #06b6d4 ;
+}
+
+.progress-bar-fill.bg-green-500 {
+  background-color: #10b981 ;
+}
+
+.progress-bar-fill.bg-yellow-500 {
+  background-color: #eab308 ;
+}
+
+.progress-bar-fill.bg-red-500 {
+  background-color: #ef4444 ;
+}
+
+/* 圆角样式 - 替代Tailwind CSS */
+/* 应用到容器 */
+.progress-bar-container.rounded-none {
+  border-radius: 0 ;
+}
+.progress-bar-container.rounded-sm {
+  border-radius: 0.125rem ;
+}
+.progress-bar-container.rounded-md {
+  border-radius: 0.375rem ;
+}
+.progress-bar-container.rounded-lg {
+  border-radius: 0.5rem ;
+}
+.progress-bar-container.rounded-full {
+  border-radius: 9999px ;
+}
+
+/* 应用到填充条 */
+.progress-bar-fill.rounded-none {
+  border-radius: 0 ;
+}
+.progress-bar-fill.rounded-sm {
+  border-radius: 0.125rem ;
+}
+.progress-bar-fill.rounded-md {
+  border-radius: 0.375rem ;
+}
+.progress-bar-fill.rounded-lg {
+  border-radius: 0.5rem ;
+}
+.progress-bar-fill.rounded-full {
+  border-radius: 9999px ;
+}
+
+/* 文本颜色 */
+.text-white {
+  color: #ffffff;
+}
+
 /* 外部文本（在进度条上方） */
 .progress-text-outside {
   margin-bottom: 0.5rem;

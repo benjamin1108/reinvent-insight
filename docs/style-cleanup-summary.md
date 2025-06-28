@@ -101,4 +101,51 @@
 
 ---
 
-这次样式清理工作进一步提升了项目的代码质量和可维护性，为后续的开发奠定了良好的基础。 
+这次样式清理工作进一步提升了项目的代码质量和可维护性，为后续的开发奠定了良好的基础。
+
+## 2024年12月 - CSS类名独立性修复
+
+### 发现的问题
+在代码审查中发现组件CSS类名缺乏独立性，存在命名污染风险：
+- 使用了过于通用的类名（如 `.flex`, `.container`, `.content`）
+- 多个组件定义相同类名
+- 容易与全局样式或第三方库冲突
+
+### AppHeader组件修复完成
+已为所有类名添加 `app-header-` 前缀：
+
+#### 容器类
+- `header-container` → `app-header-container`
+- `mobile-header` → `app-header-mobile`
+- `header-content` → `app-header-content`
+
+#### 布局类
+- `header-left-section` → `app-header-left`
+- `left-section` → `app-header-reading-left`
+- `right-section` → `app-header-right`
+- `.flex` → `app-header-left-inner`
+
+#### 导航类
+- `main-nav` → `app-header-nav`
+- `mobile-nav` → `app-header-mobile-nav`
+- `desktop-actions` → `app-header-actions`
+- `mobile-auth` → `app-header-mobile-auth`
+
+#### 品牌类
+- `brand-logo` → `app-header-brand`
+
+#### 阅读模式类
+- `mobile-reading-header` → `app-header-reading`
+- `reading-controls` → `app-header-reading-controls`
+- `mobile-back-btn` → `app-header-mobile-back`
+
+### 其他需要修复的组件
+1. **SummaryCard组件**：定义了全局 `.flex` 类
+2. **CreateView组件**：使用了 `.progress-section .flex`
+3. **LibraryView组件**：使用了 `.content-area`
+
+### 命名规范建议
+1. 所有类名使用组件名前缀
+2. 保持语义清晰（如 `component-module-element`）
+3. 避免过于通用的类名
+4. 考虑使用 BEM 命名法或 CSS Modules 

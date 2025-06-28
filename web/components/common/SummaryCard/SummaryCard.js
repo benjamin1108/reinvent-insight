@@ -31,7 +31,7 @@ export default {
     
     // 年份（可选，主要用于re:Invent）
     year: {
-      type: String,
+      type: [String, Number],
       default: ''
     },
     
@@ -54,11 +54,13 @@ export default {
     // 格式化字数显示
     const formattedWordCount = computed(() => {
       const count = props.wordCount;
-      if (!count) return '0';
-      if (count >= 10000) {
-        return `${(count / 10000).toFixed(1)}万`;
+      if (!count) return '0 字';
+      
+      if (count >= 1000) {
+        const k = (count / 1000).toFixed(count >= 10000 ? 0 : 1);
+        return `${k}k 字`;
       }
-      return count.toString();
+      return `${count} 字`;
     });
     
     // 处理级别文本（提取级别数字和显示文本）

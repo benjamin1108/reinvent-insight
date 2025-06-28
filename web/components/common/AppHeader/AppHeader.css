@@ -4,6 +4,11 @@
 
 /* Header基础样式 */
 .app-header {
+  /* tech-gradient效果 - 从主项目style.css复制 */
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.8) 50%, rgba(15, 23, 42, 0.9) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  
   border-bottom: 1px solid #374151;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   position: sticky;
@@ -11,8 +16,21 @@
   z-index: 40;
 }
 
+/* 内容容器样式 */
+.app-header .app-header-container {
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 1rem; /* 标准padding */
+}
+
+/* 阅读模式的padding调整 */
+.app-header-reading .app-header-container {
+  padding: 0.75rem 1rem;
+}
+
 /* 品牌标识样式 */
-.brand-logo {
+.app-header-brand {
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -20,162 +38,195 @@
   transition: transform 0.2s ease;
 }
 
-.brand-logo:hover {
+.app-header-brand:hover {
   transform: scale(1.02);
 }
 
-.brand-logo svg {
+.app-header-brand svg {
   width: 1.75rem;
   height: 1.75rem;
   color: #06b6d4;
 }
 
-.brand-logo h1 {
-  font-size: 1.25rem;
-  font-weight: 700;
-  background: linear-gradient(to right, #22d3ee, #3b82f6);
+.app-header-brand h1 {
+  font-size: 1.25rem; /* text-xl */
+  font-weight: 700; /* font-bold */
+  background: linear-gradient(to right, #06b6d4, #3b82f6); /* from-cyan-400 to-blue-500 */
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   margin: 0;
 }
 
-.brand-logo h1 span {
-  color: #a855f7;
+.app-header-brand h1 span {
+  /* 使用确保span的颜色覆盖渐变色 */
+  color: #a855f7 ; /* text-purple-400 */
+  background: none ;
+  -webkit-background-clip: unset ;
+  background-clip: unset ;
 }
 
 /* 导航和布局相关的组件特定样式保留 */
 
 /* 导航布局 */
-.mobile-header {
+.app-header-mobile {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-.main-nav {
-  display: none;
+/* 左侧区域（logo和导航） */
+.app-header-left {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
 }
 
-.desktop-actions {
-  display: none;
+.app-header-left-inner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
-.mobile-nav {
+/* 主导航 - 默认隐藏 */
+.app-header-nav {
+  display: none;
+  gap: 0.5rem;
+}
+
+/* 桌面端操作区 - 默认隐藏 */
+.app-header-actions {
+  display: none;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* 移动端导航 */
+.app-header-mobile-nav {
   display: flex;
   gap: 0.5rem;
-  margin-top: 0.75rem;
+  margin-top: 1rem;
 }
 
-/* TechButton组件在mobile-nav中的布局调整 */
-.mobile-nav tech-button {
-  flex: 1;
-}
-
-.mobile-auth {
+/* 移动端认证按钮 */
+.app-header-mobile-auth {
   display: block;
 }
 
-/* 阅读模式特有样式 */
-.mobile-reading-header {
-  padding: 0.75rem 0;
-}
-
-.header-content {
+/* 阅读模式样式 */
+.app-header-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.left-section {
+.app-header-reading-left {
   display: flex;
   align-items: center;
 }
 
-.reading-controls {
+.app-header-reading-controls {
   display: none;
-  margin-left: 1rem;
   gap: 0.5rem;
+  margin-left: 1rem;
+}
+
+/* TechButton组件在mobile-nav中的布局调整 */
+.app-header-mobile-nav tech-button {
+  flex: 1;
+}
+
+/* 阅读模式特有样式 */
+.app-header-reading {
+  padding: 0.75rem 0;
 }
 
 /* 阅读控制区域的TechButton样式由组件本身处理 */
 
-.right-section {
+.app-header-right {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.mobile-back-btn {
+.app-header-mobile-back {
   display: block;
 }
 
-.mobile-hide-toc-btn {
+.app-header-mobile-hide-toc {
   display: none;
 }
 
 /* 目录切换按钮特殊样式 */
-.toc-toggle-btn {
-  min-width: 80px !important;
+.app-header-toc-toggle {
+  min-width: 80px ;
 }
 
 /* 桌面端样式 */
 @media (min-width: 768px) {
-  .mobile-header {
+  /* header容器在桌面端变为横向布局 */
+  .app-header .app-header-mobile {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
+    gap: 0;
   }
   
-  .main-nav {
-    display: flex;
-    gap: 0.5rem;
+  /* 左侧区域在桌面端自适应宽度 */
+  .app-header .app-header-left {
+    width: auto;
+    flex: 0 0 auto; /* 不允许伸缩 */
   }
   
-  .desktop-actions {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-  
-  .mobile-nav {
-    display: none;
-  }
-  
-  .mobile-auth {
-    display: none;
-  }
-  
-  .reading-controls {
+  /* 显示桌面端导航 */
+  .app-header .app-header-nav {
     display: flex;
   }
   
-  .mobile-back-btn {
+  /* 显示桌面端操作区 */
+  .app-header .app-header-actions {
+    display: flex;
+  }
+  
+  /* 隐藏移动端元素 */
+  .app-header .app-header-mobile-nav {
+    display: none ;
+  }
+  
+  .app-header .app-header-mobile-auth {
+    display: none ;
+  }
+  
+  /* 显示阅读模式的控制按钮 */
+  .app-header .app-header-reading-controls {
+    display: flex;
+  }
+  
+  .app-header-mobile-back {
     display: none;
   }
   
-  .mobile-hide-toc-btn {
+  .app-header-mobile-hide-toc {
     display: block;
   }
 }
 
 /* 移动端优化 - 匹配原项目规范 */
 @media (max-width: 768px) {
-  .app-header {
-    padding: 1rem;
-  }
+  /* 移动端保持相同的padding */
   
-  .brand-logo h1 {
+  .app-header-brand h1 {
     font-size: 1.125rem;
   }
   
   /* TechButton组件的移动端样式由组件本身处理 */
   
-  .mobile-reading-header {
+  .app-header-reading {
     padding: 0.75rem 1rem;
   }
   
-  .mobile-reading-header .brand-logo h1 {
+  .app-header-reading .app-header-brand h1 {
     font-size: 1rem;
   }
   
@@ -184,22 +235,20 @@
 
 /* 极小屏幕优化 */
 @media (max-width: 480px) {
-  .app-header {
-    padding: 0.75rem;
-  }
+  /* padding由HTML中的Tailwind类控制 */
   
-  .brand-logo h1 {
+  .app-header-brand h1 {
     font-size: 1rem;
   }
   
-  .brand-logo svg {
+  .app-header-brand svg {
     width: 1.5rem;
     height: 1.5rem;
   }
   
   /* 极小屏幕下的TechButton样式由组件本身处理 */
   
-  .mobile-nav {
+  .app-header-mobile-nav {
     flex-direction: column;
     gap: 0.5rem;
   }
@@ -207,7 +256,7 @@
 
 /* 高对比度模式支持 */
 @media (prefers-contrast: high) {
-  .brand-logo h1 {
+  .app-header-brand h1 {
     background: none;
     color: #ffffff;
   }
@@ -217,7 +266,7 @@
 
 /* 减少动画模式支持 */
 @media (prefers-reduced-motion: reduce) {
-  .brand-logo {
+  .app-header-brand {
     transition: none;
   }
   
@@ -226,7 +275,6 @@
 
 /* 深色主题支持（默认） */
 .app-header {
-  background-color: transparent;
   color: #e5e7eb;
 }
 
@@ -237,7 +285,7 @@
   box-sizing: border-box;
 }
 
-/* 清除默认样式 */
+/* 清除默认样式 - 注意不要影响TechButton组件 */
 .app-header h1,
 .app-header h2,
 .app-header h3,
@@ -259,15 +307,8 @@
   list-style: none;
 }
 
-.app-header button {
-  background: none;
-  border: none;
-  padding: 0;
-  margin: 0;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-}
+/* 删除button的全局重置，让TechButton保持自己的样式 */
+/* TechButton组件会自己处理按钮样式 */
 
 .app-header a {
   text-decoration: none;

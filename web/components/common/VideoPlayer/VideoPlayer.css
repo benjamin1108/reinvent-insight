@@ -42,19 +42,19 @@
 .floating-video-player.dragging {
   opacity: 0.9;
   transition: none;
-  cursor: move !important;
+  cursor: move ;
 }
 
 .floating-video-player.dragging .video-player-header {
-  cursor: move !important;
+  cursor: move ;
 }
 
 /* 最小化状态 */
 .floating-video-player.minimized {
-  width: 300px !important;
-  height: auto !important;
-  min-width: 300px !important;
-  min-height: auto !important;
+  width: 300px ;
+  height: auto ;
+  min-width: 300px ;
+  min-height: auto ;
   opacity: 0.95;
   cursor: default;
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.8), 0 0 30px rgba(251, 146, 60, 0.1);
@@ -202,8 +202,8 @@
   }
 
   .floating-video-player.minimized {
-    width: 250px !important;
-    min-width: 250px !important;
+    width: 250px ;
+    min-width: 250px ;
   }
 
   .video-player-header {

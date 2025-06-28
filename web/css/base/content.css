@@ -222,7 +222,7 @@
   .prose-tech h6,
   .prose-tech p,
   .prose-tech li {
-    color: black !important;
-    background: none !important;
+    color: black ;
+    background: none ;
   }
 } 

@@ -9,16 +9,17 @@ const VersionSelector = {
       type: Array,
       required: true,
       validator: (value) => {
+        // 支持字符串数组或对象数组
         return value.every(v => 
-          typeof v === 'object' && 
-          typeof v.version === 'number'
+          typeof v === 'string' || 
+          (typeof v === 'object' && v !== null && 'version' in v)
         );
       }
     },
     
     // 当前选中的版本
-    modelValue: {
-      type: Number,
+    currentVersion: {
+      type: [String, Number],
       required: true
     },
     
@@ -35,18 +36,31 @@ const VersionSelector = {
     }
   },
   
-  emits: ['update:modelValue', 'change'],
+  emits: ['change'],
   
   setup(props, { emit }) {
-    const { ref, computed } = Vue;
+    const { ref, computed, watch } = Vue;
     
     // 下拉菜单显示状态
     const isOpen = ref(false);
     
-    // 当前版本
-    const currentVersion = computed({
-      get: () => props.modelValue,
-      set: (value) => emit('update:modelValue', value)
+    // 内部版本状态
+    const internalVersion = ref(props.currentVersion);
+    
+    // 监听外部版本变化
+    watch(() => props.currentVersion, (newVersion) => {
+      internalVersion.value = newVersion;
+    });
+    
+    // 规范化版本列表，确保统一格式
+    const normalizedVersions = computed(() => {
+      return props.versions.map(v => {
+        if (typeof v === 'string') {
+          // 如果是字符串，转换为对象格式
+          return { version: v };
+        }
+        return v;
+      });
     });
     
     // 切换下拉菜单
@@ -58,8 +72,8 @@ const VersionSelector = {
     // 选择版本
     const selectVersion = (version) => {
       if (props.disabled) return;
-      if (version !== currentVersion.value) {
-        currentVersion.value = version;
+      if (version !== internalVersion.value) {
+        internalVersion.value = version;
         emit('change', version);
       }
       isOpen.value = false;
@@ -85,9 +99,10 @@ const VersionSelector = {
     
     return {
       isOpen,
-      currentVersion,
+      currentVersion: internalVersion,
       toggleDropdown,
-      selectVersion
+      selectVersion,
+      normalizedVersions
     };
   }
 };

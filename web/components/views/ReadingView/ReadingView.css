@@ -219,11 +219,11 @@
 /* 响应式设计 */
 @media (max-width: 768px) {
   .mobile-hide-toc {
-    display: none !important;
+    display: none ;
   }
   
   .dragbar {
-    display: none !important;
+    display: none ;
   }
   
   .article-wrapper {
@@ -279,18 +279,18 @@
   .toc-sidebar,
   .dragbar,
   .version-selector-container {
-    display: none !important;
+    display: none ;
   }
   
   .article-container {
-    overflow: visible !important;
+    overflow: visible ;
   }
   
   .article-content {
-    background: white !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
+    background: white ;
+    border: none ;
+    box-shadow: none ;
+    padding: 0 ;
   }
   
   /* prose-tech打印样式由全局content.css提供 */

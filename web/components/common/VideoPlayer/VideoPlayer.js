@@ -65,7 +65,14 @@ export default {
     // 计算属性
     const iframeSrc = computed(() => {
       if (!props.videoId) return '';
-      return `https://www.youtube.com/embed/${props.videoId}?enablejsapi=1&modestbranding=1&rel=0`;
+      // 添加参数来减少YouTube的额外功能
+      // modestbranding=1 - 减少YouTube品牌显示
+      // rel=0 - 不显示相关视频
+      // fs=1 - 允许全屏
+      // autoplay=0 - 不自动播放
+      // origin - 设置来源以提高安全性
+      const origin = window.location.origin;
+      return `https://www.youtube.com/embed/${props.videoId}?enablejsapi=1&modestbranding=1&rel=0&fs=1&autoplay=0&origin=${origin}`;
     });
     
     // 方法

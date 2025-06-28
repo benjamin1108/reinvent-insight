@@ -12,7 +12,7 @@
   
   <!-- Main clickable area -->
   <div class="cursor-pointer flex-grow flex flex-col">
-    <!-- 中文标题 -->
+    <!-- 主标题（英文） -->
     <div class="mb-3 chinese-title-container">
       <h3 
         class="text-base font-bold leading-snug line-clamp-3 chinese-title"
@@ -21,7 +21,7 @@
       </h3>
     </div>
     
-    <!-- 英文副标题 -->
+    <!-- 副标题（中文） -->
     <div class="flex-1 mb-2 english-title-area">
       <p 
         class="text-xs font-normal leading-relaxed break-words w-full english-subtitle"
@@ -32,9 +32,14 @@
   </div>
   
   <!-- Footer with metadata -->
-  <div class="metadata-area">
+  <div :class="[
+    summaryType === 'reinvent' ? 'metadata-footer' : 'metadata-area',
+    'text-xs transition-colors',
+    summaryType === 'reinvent' 
+      ? 'text-orange-400 group-hover:text-white/80' 
+      : 'text-cyan-500 group-hover:text-white/80'
+  ]">
     <div class="flex justify-between items-center">
-      <!-- 左侧：字数 -->
       <div class="flex items-center space-x-3">
         <div class="flex items-center" title="字数">
           <svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -45,10 +50,8 @@
           <span>{{ formattedWordCount }}</span>
         </div>
       </div>
-      
-      <!-- 右侧：标签和级别 -->
       <div class="flex items-center space-x-2">
-        <div class="metadata-badge">{{ summaryType === 'reinvent' ? 'RE:INVENT' : '精选' }}</div>
+        <div class="metadata-badge">{{ summaryType === 'reinvent' ? 're:Invent' : '精选' }}</div>
         <div v-if="year" class="metadata-badge">{{ year }}</div>
         <div 
           v-if="level" 

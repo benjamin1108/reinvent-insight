@@ -1,11 +1,11 @@
 <!-- 普通页面Header -->
 <header v-if="mode === 'normal'"
   class="app-header tech-gradient border-b border-gray-800 shadow-lg sticky top-0 z-40">
-  <div class="max-w-full mx-auto px-4 py-4 md:flex md:items-center md:justify-between mobile-header">
-    <div class="flex items-center justify-between w-full md:w-auto">
-      <div class="flex items-center space-x-4">
+  <div class="app-header-container app-header-mobile">
+    <div class="app-header-left">
+      <div class="app-header-left-inner">
         <!-- 品牌标识 -->
-        <a @click="handleHomeClick" class="cursor-pointer flex items-center space-x-2 brand-logo">
+        <a @click="handleHomeClick" class="app-header-brand">
           <svg class="w-7 h-7 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -16,7 +16,7 @@
         </a>
         
         <!-- 桌面端主导航 -->
-        <div v-if="isAuthenticated" class="hidden md:flex space-x-2 main-nav">
+        <div v-if="isAuthenticated" class="app-header-nav">
           <tech-button 
             variant="secondary" 
             :class="{ 'active': currentView === 'create' }"
@@ -33,7 +33,7 @@
       </div>
       
       <!-- 移动端登录/退出按钮 -->
-      <div class="md:hidden mobile-auth">
+      <div class="app-header-mobile-auth">
         <tech-button 
           v-if="!isAuthenticated" 
           variant="secondary"
@@ -50,7 +50,7 @@
     </div>
     
     <!-- 移动端导航 -->
-    <div v-if="isAuthenticated" class="md:hidden mobile-nav flex gap-2 mt-3">
+    <div v-if="isAuthenticated" class="app-header-mobile-nav">
       <tech-button 
         variant="secondary" 
         full-width
@@ -68,7 +68,7 @@
     </div>
     
     <!-- 桌面端右侧操作区 -->
-    <div class="hidden md:flex items-center space-x-4 desktop-actions">
+    <div class="app-header-actions">
       <!-- 临时测试Toast按钮 -->
       <tech-button 
         v-if="showTestToast" 
@@ -96,12 +96,12 @@
 
 <!-- 阅读页面Header -->
 <header v-else-if="mode === 'reading'"
-  class="app-header tech-gradient border-b border-gray-800 shadow-lg sticky top-0 z-40 mobile-reading-header">
-  <div class="max-w-full mx-auto px-4 py-3 flex items-center justify-between header-content">
+  class="app-header tech-gradient border-b border-gray-800 shadow-lg sticky top-0 z-40 app-header-reading">
+  <div class="app-header-container app-header-content">
     <!-- 左侧品牌和操作区 -->
-    <div class="flex items-center left-section">
+    <div class="app-header-reading-left">
       <!-- 品牌标识 -->
-      <a @click="handleHomeClick" class="cursor-pointer flex items-center space-x-2 brand-logo">
+      <a @click="handleHomeClick" class="app-header-brand">
         <svg class="w-7 h-7 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -112,7 +112,7 @@
       </a>
 
       <!-- 桌面端操作按钮组 -->
-      <div class="hidden md:flex reading-controls ml-4">
+      <div class="app-header-reading-controls">
         <!-- 返回按钮 -->
         <tech-button 
           v-if="!isShareView" 
@@ -158,14 +158,14 @@
     </div>
     
     <!-- 右侧操作区 -->
-    <div class="flex items-center space-x-2 right-section">
+    <div class="app-header-right">
       <!-- 移动端返回按钮 -->
       <tech-button 
         v-if="!isShareView" 
         variant="secondary" 
         size="sm"
         icon-before="M10 19l-7-7m0 0l7-7m-7 7h18"
-        class="mobile-back-btn md:hidden"
+        class="app-header-mobile-back"
         @click="handleBackToLibrary">
         返回
       </tech-button>

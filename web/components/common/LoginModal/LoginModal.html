@@ -1,42 +1,82 @@
 <transition name="fade">
   <div v-if="visible" class="modal" @click="handleBackdropClick">
     <div class="modal-content tech-gradient glow-effect">
-      <button @click="close" class="modal-close">
+      <button @click="close" class="modal-close" title="关闭">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
         </svg>
       </button>
       <h2 class="modal-title">{{ title }}</h2>
+      
+      <!-- 提示信息容器 - 始终存在 -->
+      <div class="alert-container">
+        <div v-if="alert.message" 
+             :class="['inline-alert', alert.type]"
+             role="alert">
+          <svg class="alert-icon" fill="currentColor" viewBox="0 0 20 20">
+            <path v-if="alert.type === 'error'" fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+            <path v-else-if="alert.type === 'success'" fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span>{{ alert.message }}</span>
+        </div>
+      </div>
+      
+      <!-- 登录表单 -->
       <form @submit.prevent="handleSubmit" class="modal-form">
-        <div class="form-group">
-          <label class="form-label">用户名</label>
-          <input 
-            v-model="username" 
-            type="text" 
-            required
-            class="form-input"
+        <!-- 用户名输入（当loginType为'username'或'both'时显示） -->
+        <div class="form-group" v-if="loginType === 'username' || loginType === 'both'">
+          <label for="username" class="form-label">{{ usernameLabel }}</label>
+          <input
+            id="username"
+            v-model="form.username"
+            type="text"
+            :class="['form-input', { 'error': errors.username }]"
             :placeholder="usernamePlaceholder"
+            @blur="validateUsername"
+            @input="clearError('username')"
+            autocomplete="username"
+            :required="loginType === 'username'"
           />
+          <span v-if="errors.username" class="field-error">{{ errors.username }}</span>
         </div>
+
+        <!-- 邮箱输入（当loginType为'email'或'both'时显示） -->
+        <div class="form-group" v-if="loginType === 'email' || loginType === 'both'">
+          <label for="email" class="form-label">邮箱地址</label>
+          <input
+            id="email"
+            v-model="form.email"
+            type="email"
+            :class="['form-input', { 'error': errors.email }]"
+            placeholder="your@email.com"
+            @blur="validateEmail"
+            @input="clearError('email')"
+            autocomplete="email"
+            :required="loginType === 'email'"
+          />
+          <span v-if="errors.email" class="field-error">{{ errors.email }}</span>
+        </div>
+
+        <!-- 密码输入 -->
         <div class="form-group">
-          <label class="form-label">密码</label>
-          <input 
-            v-model="password" 
-            type="password" 
+          <label for="password" class="form-label">密码</label>
+          <input
+            id="password"
+            v-model="form.password"
+            type="password"
+            :class="['form-input', { 'error': errors.password }]"
+            placeholder="••••••••"
+            @blur="validatePassword"
+            @input="clearError('password')"
+            autocomplete="current-password"
             required
-            class="form-input"
-            :placeholder="passwordPlaceholder"
           />
+          <span v-if="errors.password" class="field-error">{{ errors.password }}</span>
         </div>
-        <button type="submit" class="submit-button" :disabled="loading">
-          <span v-if="!loading">{{ submitText }}</span>
-          <span v-else class="loading-container">
-            <svg class="loading-spinner" fill="none" viewBox="0 0 24 24">
-              <circle style="opacity: 0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path style="opacity: 0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            登录中...
-          </span>
+
+        <!-- 提交按钮 -->
+        <button type="submit" class="tech-btn tech-btn-primary w-full" :disabled="isSubmitting || loading">
+          <span>{{ isSubmitting || loading ? '登录中...' : submitText }}</span>
         </button>
       </form>
     </div>
