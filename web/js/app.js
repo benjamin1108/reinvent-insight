@@ -73,9 +73,22 @@ createApp({
     const currentVersion = ref(0); // 当前选中的版本
     const showVersionDropdown = ref(false); // 版本下拉菜单显示状态
     const hasMultipleVersions = computed(() => documentVersions.value.length > 1); // 是否有多个版本
+    const documentLoading = ref(false); // 文档加载状态
 
     // 视图控制
-    const currentView = ref('library'); // 默认视图 'create', 'library', 'read'
+    // 根据初始URL判断默认视图
+    const getInitialView = () => {
+      const path = window.location.pathname;
+      const hashMatch = path.match(/^\/d\/([a-zA-Z0-9]+)$/);
+      const docMatch = path.match(/\/documents\/(.+)/);
+      
+      if (hashMatch || docMatch) {
+        return 'read';  // 如果是文档URL，默认显示read视图
+      }
+      return 'library';  // 否则显示library视图
+    };
+    
+    const currentView = ref(getInitialView()); // 根据URL设置初始视图
     
     // 认证状态
     const isAuthenticated = ref(false);
@@ -104,6 +117,13 @@ createApp({
     const tocAutoAdjusted = ref(false); // 新增：标记目录宽度是否已自动调整过
     const isVideoResizing = ref(false); // 添加响应式状态
     const isVideoDragging = ref(false); // 添加拖动响应式状态
+    
+    // 环境信息状态
+    const environmentInfo = ref({
+      environment: 'production',
+      is_development: false,
+      loaded: false  // 添加加载状态标志
+    });
 
     // --- 路由处理 ---
     const handleRouting = () => {
@@ -561,6 +581,7 @@ createApp({
     const loadSummary = async (filename, pushState = true) => {
       try {
         readingError.value = '';
+        documentLoading.value = true; // 设置加载状态
         currentView.value = 'read'; // 切换到阅读视图以显示加载状态
 
         // URL编码文件名以处理特殊字符
@@ -587,18 +608,21 @@ createApp({
           }
         }
         viewSummary(res.data.title, res.data.title_cn, res.data.title_en, res.data.content, filename, res.data.video_url, docHash, res.data.versions);
+        documentLoading.value = false; // 清除加载状态
       } catch (err) {
         console.error('加载摘要失败:', err);
         const errorMessage = err.response?.data?.detail || '加载文章失败';
         readingError.value = errorMessage;
         showToast(errorMessage, 'danger');
         currentView.value = 'read'; // 确保停留在阅读视图显示错误
+        documentLoading.value = false; // 清除加载状态
       }
     };
     
     const loadSummaryByHash = async (docHash, pushState = true) => {
       try {
         readingError.value = '';
+        documentLoading.value = true; // 设置加载状态
         currentView.value = 'read'; // 切换到阅读视图以显示加载状态
 
         // 根据认证状态选择端点，使用hash端点
@@ -611,12 +635,14 @@ createApp({
           history.pushState({ hash: docHash }, '', `/d/${docHash}`);
         }
         viewSummary(res.data.title, res.data.title_cn, res.data.title_en, res.data.content, res.data.filename, res.data.video_url, docHash, res.data.versions);
+        documentLoading.value = false; // 清除加载状态
       } catch (err) {
         console.error('加载摘要失败:', err);
         const errorMessage = err.response?.data?.detail || '加载文章失败';
         readingError.value = errorMessage;
         showToast(errorMessage, 'danger');
         currentView.value = 'read'; // 确保停留在阅读视图显示错误
+        documentLoading.value = false; // 清除加载状态
       }
     };
     
@@ -1324,8 +1350,22 @@ createApp({
     };
 
     // --- 生命周期钩子 ---
-    onMounted(() => {
+    onMounted(async () => {
       checkAuth();
+      
+      // 获取环境信息
+      try {
+        const envRes = await axios.get('/api/env');
+        environmentInfo.value = {
+          ...envRes.data,
+          loaded: true  // 标记已加载
+        };
+      } catch (error) {
+        console.error('获取环境信息失败:', error);
+        // 即使失败也标记为已加载，使用默认值
+        environmentInfo.value.loaded = true;
+      }
+      
       handleRouting(); // 处理初始URL路由
       restoreTask(); // 检查是否有任务需要恢复
       
@@ -1388,6 +1428,7 @@ createApp({
       documentTitle,
       documentTitleEn,
       readingError,
+      documentLoading,
       viewSummary,
       currentView,
       goBackToLibrary,
@@ -1448,7 +1489,8 @@ createApp({
       hasMultipleVersions,
       toggleVersionDropdown,
       switchVersion,
-      finalizedLogs
+      finalizedLogs,
+      environmentInfo
     };
   }
 }).mount('#app'); 

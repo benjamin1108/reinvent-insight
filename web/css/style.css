@@ -2510,4 +2510,66 @@ svg.animate-spin path {
 .article-content.article-container--is-fading-in {
   animation: articleFadeInTech 0.3s ease-in forwards;
 }
+
+/* ==============================
+   环境标识样式
+   ============================== */
+.dev-env-indicator {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #000;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+  z-index: 9999;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  animation: pulse 2s infinite, fadeIn 0.3s ease-in-out;
+  opacity: 1;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 6px 12px rgba(251, 191, 36, 0.4);
+  }
+}
+
+/* 开发环境下的特殊样式 */
+body.dev-environment {
+  border-top: 3px solid #fbbf24;
+}
+
+body.dev-environment .tech-gradient {
+  position: relative;
+}
+
+body.dev-environment .tech-gradient::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #fbbf24, #f59e0b);
+  opacity: 0.1;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .dev-env-indicator {
+    bottom: 10px;
+    right: 10px;
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+}
  

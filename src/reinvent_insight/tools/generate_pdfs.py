@@ -372,7 +372,8 @@ def main():
     
     # 获取项目根目录
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(script_dir)  # 脚本在tools目录下，向上一级是项目根目录
+    # 脚本现在在 src/reinvent_insight/tools 目录下，向上三级是项目根目录
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(script_dir)))
     
     # 设置CSS文件路径
     if args.css:

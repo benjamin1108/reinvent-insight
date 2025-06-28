@@ -8,6 +8,8 @@ import hashlib
 import base64
 import subprocess
 import tempfile
+import os
+import sys
 from typing import Set, Optional, Dict, List
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -209,6 +211,35 @@ async def summarize_endpoint(req: SummarizeRequest, authorization: str = Header(
     
     return SummarizeResponse(task_id=task_id, message="任务已创建，请连接 WebSocket。", status="created")
 
+@app.get("/api/env")
+async def get_environment_info():
+    """获取环境信息，用于区分开发和生产环境"""
+    # 通过多种方式判断环境
+    is_dev = any([
+        # 检查环境变量（优先级最高）
+        os.getenv("ENVIRONMENT", "").lower() == "development",
+        os.getenv("ENV", "").lower() == "dev",
+        # 检查是否存在开发环境特有的文件
+        (config.PROJECT_ROOT / ".git").exists(),  # git目录只在开发环境存在
+        (config.PROJECT_ROOT / "pyproject.toml").exists(),  # 项目配置文件
+        (config.PROJECT_ROOT / "run-dev.sh").exists(),  # 开发脚本
+        # 检查是否在虚拟环境中运行（生产环境通常使用系统包）
+        hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix),
+    ])
+    
+    # 如果明确设置了生产环境变量，则强制为生产环境
+    if os.getenv("ENVIRONMENT", "").lower() == "production":
+        is_dev = False
+    
+    return {
+        "environment": "development" if is_dev else "production",
+        "project_root": str(config.PROJECT_ROOT),
+        "host": os.getenv("HOST", "unknown"),
+        "port": os.getenv("PORT", "unknown"),
+        "version": "0.1.0",
+        "is_development": is_dev
+    }
+
 @app.get("/api/public/summaries")
 async def list_public_summaries():
     """获取所有已生成的摘要文件列表供公开展示，无需认证。"""
@@ -391,8 +422,14 @@ async def get_summary_pdf(filename: str, response: Response):
             logger.info(f"生成PDF文件: {pdf_filename}")
             
             # 构建生成PDF的命令
-            script_path = config.PROJECT_ROOT / "tools" / "generate_pdfs.py"
+            script_path = Path(__file__).parent / "tools" / "generate_pdfs.py"
+            logger.info(f"PDF生成脚本路径: {script_path}")
+            logger.info(f"脚本是否存在: {script_path.exists()}")
+            
             if not script_path.exists():
+                logger.error(f"PDF生成工具不存在: {script_path}")
+                logger.error(f"当前文件路径: {__file__}")
+                logger.error(f"父目录内容: {list(Path(__file__).parent.iterdir())}")
                 raise HTTPException(status_code=500, detail="PDF生成工具不存在")
             
             # 使用临时目录作为输出目录
@@ -404,14 +441,19 @@ async def get_summary_pdf(filename: str, response: Response):
                     "python",
                     str(script_path),
                     "-f", str(md_file_path),
-                    "-o", str(temp_dir)
+                    "-o", str(temp_dir),
+                    "--css", str(config.PROJECT_ROOT / "web" / "css" / "pdf_style.css")
                 ]
                 
                 result = subprocess.run(cmd, capture_output=True, text=True)
                 
                 if result.returncode != 0:
-                    logger.error(f"PDF生成失败: {result.stderr}")
-                    raise HTTPException(status_code=500, detail="PDF生成失败")
+                    logger.error(f"PDF生成命令执行失败")
+                    logger.error(f"命令: {' '.join(cmd)}")
+                    logger.error(f"返回码: {result.returncode}")
+                    logger.error(f"标准输出: {result.stdout}")
+                    logger.error(f"错误输出: {result.stderr}")
+                    raise HTTPException(status_code=500, detail=f"PDF生成失败: {result.stderr or result.stdout or '未知错误'}")
                 
                 # 将生成的PDF移动到目标位置
                 if temp_pdf_path.exists():

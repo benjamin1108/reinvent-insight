@@ -12,7 +12,7 @@
 
 将长篇技术演讲转化为结构化的深度笔记，让知识获取效率提升 10 倍
 
-[功能特性](#-功能特性) • [快速开始](#-快速开始) • [架构设计](#-架构设计) • [API文档](#-api-文档) • [部署指南](#-部署指南)
+[功能特性](#-功能特性) • [快速开始](#-快速开始) • [架构设计](#-架构设计) • [API文档](#-api-文档) • [部署指南](#-部署指南) • [更多文档](./docs/)
 
 </div>
 
@@ -524,32 +524,19 @@ curl -X POST http://localhost:8001/login \
 
 ## 🚢 部署说明
 
-### Docker 部署（推荐）
+### 生产环境部署
 
-```dockerfile
-# Dockerfile
-FROM python:3.9-slim
+使用自动化部署脚本进行生产环境部署：
 
-WORKDIR /app
+```bash
+# 使用部署脚本
+./redeploy.sh
 
-# 安装系统依赖
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
-
-# 安装 Python 依赖
-COPY pyproject.toml uv.lock ./
-RUN pip install uv && uv pip install -r pyproject.toml
-
-# 复制代码
-COPY . .
-
-# 暴露端口
-EXPOSE 8001
-
-# 启动命令
-CMD ["python", "-m", "src.reinvent_insight.main", "web", "--host", "0.0.0.0", "--port", "8001"]
+# 带选项的部署
+./redeploy.sh --port 8080 --host 0.0.0.0
 ```
+
+详细的部署说明请参考 [部署脚本详解](./docs/DEPLOY_SCRIPTS.md)。
 
 ### 生产环境配置
 
@@ -591,4 +578,30 @@ user=your_user
 
 ### 性能优化建议
 
-1. **API 并发限制**: 在 `config.py` 中调整 `
+1. **API 并发限制**: 在 `config.py` 中调整 `CHAPTER_GENERATION_DELAY_SECONDS`
+2. **缓存策略**: 利用 `downloads/tasks/` 目录缓存中间结果
+3. **进程管理**: 使用 systemd 或 supervisor 管理服务进程
+4. **并发控制**: 合理设置批量处理的并发数
+
+## 📚 更多文档
+
+项目的详细文档都整理在 [docs](./docs/) 目录中：
+
+- **开发相关**
+  - [开发环境运行指南](./docs/RUN_DEV.md) - 本地开发环境搭建与运行
+  - [环境标识功能](./docs/ENV_INDICATOR.md) - 开发/生产环境视觉区分
+  
+- **部署相关**
+  - [部署脚本详解](./docs/DEPLOY_SCRIPTS.md) - 自动化部署脚本使用说明
+
+
+
+## 📄 许可证
+
+本项目采用 MIT 许可证
+
+---
+
+<div align="center">
+  <sub>Built with ❤️ for the cloud architecture community</sub>
+</div>

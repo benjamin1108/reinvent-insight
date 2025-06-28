@@ -420,6 +420,7 @@ Type=simple
 User=$USER
 WorkingDirectory=$DEPLOY_DIR/reinvent_insight-0.1.0
 Environment="PATH=$DEPLOY_DIR/reinvent_insight-0.1.0/$VENV_NAME/bin"
+Environment="ENVIRONMENT=production"
 ExecStart=$DEPLOY_DIR/reinvent_insight-0.1.0/$VENV_NAME/bin/reinvent-insight web --host $HOST --port $PORT
 Restart=always
 RestartSec=10
