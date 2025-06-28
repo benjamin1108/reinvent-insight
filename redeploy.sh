@@ -96,20 +96,71 @@ build_package() {
     
     # 检查并激活虚拟环境（如果存在）
     if [ -d ".venv" ]; then
+        # 检查虚拟环境是否完整
+        if [ ! -f ".venv/bin/python" ]; then
+            print_warning "虚拟环境不完整，重新创建..."
+            rm -rf .venv
+            python3 -m venv .venv
+        fi
+        
         print_info "激活项目虚拟环境..."
         source .venv/bin/activate
+        # 确保使用虚拟环境中的 Python
+        PYTHON_BIN=".venv/bin/python"
+        
+        # 使用 python -m pip 方式（更可靠）
+        PIP_CMD="$PYTHON_BIN -m pip"
+        
+        # 确保 pip 可用
+        if ! $PYTHON_BIN -m pip --version >/dev/null 2>&1; then
+            print_warning "虚拟环境中没有 pip，尝试安装..."
+            curl -sS https://bootstrap.pypa.io/get-pip.py | $PYTHON_BIN
+        fi
     elif [ -d "venv" ]; then
+        # 检查虚拟环境是否完整
+        if [ ! -f "venv/bin/python" ]; then
+            print_warning "虚拟环境不完整，重新创建..."
+            rm -rf venv
+            python3 -m venv venv
+        fi
+        
         print_info "激活项目虚拟环境..."
         source venv/bin/activate
+        PYTHON_BIN="venv/bin/python"
+        PIP_CMD="$PYTHON_BIN -m pip"
+        
+        # 确保 pip 可用
+        if ! $PYTHON_BIN -m pip --version >/dev/null 2>&1; then
+            print_warning "虚拟环境中没有 pip，尝试安装..."
+            curl -sS https://bootstrap.pypa.io/get-pip.py | $PYTHON_BIN
+        fi
     else
         print_warning "未找到虚拟环境，使用系统 Python"
+        PYTHON_BIN="python3"
+        PIP_CMD="python3 -m pip"
     fi
     
     # 确保有构建工具
-    pip install --upgrade build wheel -q
+    print_info "安装构建依赖..."
+    $PIP_CMD install --upgrade pip setuptools wheel build
+    
+    # 检查 build 模块是否安装成功
+    if ! $PYTHON_BIN -c "import build" 2>/dev/null; then
+        print_error "build 模块安装失败，尝试重新安装..."
+        $PIP_CMD install --force-reinstall build
+        
+        # 再次检查
+        if ! $PYTHON_BIN -c "import build" 2>/dev/null; then
+            print_error "无法安装 build 模块，请检查 Python 环境"
+            exit 1
+        fi
+    fi
+    
+    print_info "使用 Python: $($PYTHON_BIN --version)"
+    print_info "构建工具已就绪"
     
     # 构建
-    python -m build
+    $PYTHON_BIN -m build
     
     if [ $? -eq 0 ]; then
         print_success "构建成功"
