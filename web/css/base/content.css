@@ -1,0 +1,228 @@
+/* 
+ * 基础内容样式 - reinvent-insight项目
+ * 统一的文章内容显示样式，供所有组件使用
+ */
+
+/* prose-tech 样式 - 科技风格的文章内容显示 */
+.prose-tech {
+  max-width: none;
+  color: #e5e7eb;
+  line-height: 1.75;
+}
+
+.prose-tech h1 {
+  color: #f9fafb;
+  font-size: 2.25rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  margin-top: 0;
+  background: linear-gradient(to right, #22d3ee, #3b82f6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.prose-tech h2 {
+  color: #f3f4f6;
+  font-size: 1.875rem;
+  font-weight: 600;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid rgba(34, 211, 238, 0.3);
+}
+
+.prose-tech h3 {
+  color: #f3f4f6;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.prose-tech h4 {
+  color: #f3f4f6;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose-tech h5,
+.prose-tech h6 {
+  color: #f3f4f6;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose-tech p {
+  margin-bottom: 1rem;
+  color: #d1d5db;
+}
+
+.prose-tech ul, 
+.prose-tech ol {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+  color: #d1d5db;
+}
+
+.prose-tech li {
+  margin-bottom: 0.5rem;
+}
+
+.prose-tech code {
+  background: rgba(34, 211, 238, 0.1);
+  color: #22d3ee;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+  font-family: var(--font-code, 'JetBrains Mono', monospace);
+}
+
+.prose-tech pre {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid #374151;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.prose-tech pre code {
+  background: none;
+  color: #e5e7eb;
+  padding: 0;
+}
+
+.prose-tech blockquote {
+  border-left: 4px solid #22d3ee;
+  background: rgba(34, 211, 238, 0.05);
+  padding: 1rem;
+  margin: 1rem 0;
+  border-radius: 0 0.5rem 0.5rem 0;
+  color: #d1d5db;
+  font-style: italic;
+}
+
+.prose-tech table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  border: 1px solid #374151;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.prose-tech th {
+  background: rgba(34, 211, 238, 0.1);
+  color: #22d3ee;
+  padding: 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 1px solid #374151;
+}
+
+.prose-tech td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #374151;
+  color: #d1d5db;
+}
+
+.prose-tech tr:last-child td {
+  border-bottom: none;
+}
+
+.prose-tech a {
+  color: #22d3ee;
+  text-decoration: underline;
+  text-decoration-color: rgba(34, 211, 238, 0.3);
+  transition: all 0.2s ease;
+}
+
+.prose-tech a:hover {
+  color: #06b6d4;
+  text-decoration-color: rgba(6, 182, 212, 0.6);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .prose-tech h1 {
+    font-size: 1.875rem;
+  }
+  
+  .prose-tech h2 {
+    font-size: 1.5rem;
+  }
+  
+  .prose-tech h3 {
+    font-size: 1.25rem;
+  }
+  
+  .prose-tech pre {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+  
+  .prose-tech table {
+    font-size: 0.875rem;
+  }
+  
+  .prose-tech th,
+  .prose-tech td {
+    padding: 0.5rem;
+  }
+}
+
+/* 极小屏幕优化 */
+@media (max-width: 480px) {
+  .prose-tech h1 {
+    font-size: 1.5rem;
+  }
+  
+  .prose-tech h2 {
+    font-size: 1.25rem;
+  }
+  
+  .prose-tech h3 {
+    font-size: 1.125rem;
+  }
+}
+
+/* 高对比度模式支持 */
+@media (prefers-contrast: high) {
+  .prose-tech h1 {
+    background: none;
+    color: #ffffff;
+  }
+  
+  .prose-tech h2,
+  .prose-tech h3,
+  .prose-tech h4,
+  .prose-tech h5,
+  .prose-tech h6 {
+    color: #ffffff;
+  }
+  
+  .prose-tech code {
+    background: #000000;
+    color: #ffffff;
+  }
+}
+
+/* 打印样式 */
+@media print {
+  .prose-tech,
+  .prose-tech h1,
+  .prose-tech h2,
+  .prose-tech h3,
+  .prose-tech h4,
+  .prose-tech h5,
+  .prose-tech h6,
+  .prose-tech p,
+  .prose-tech li {
+    color: black !important;
+    background: none !important;
+  }
+} 

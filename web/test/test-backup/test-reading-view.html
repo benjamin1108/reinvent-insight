@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReadingView组件测试 - reinvent Insight</title>
+  
+  <!-- 基础样式文件 - 按重构后的架构引入 -->
+  <link rel="stylesheet" href="../css/base/typography.css">
+  <link rel="stylesheet" href="../css/base/effects.css">  
+  <link rel="stylesheet" href="../css/base/content.css">
+  
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+  <script src="/js/vendor/vue.global.prod.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 核心脚本 -->
+  <script src="/js/core/component-loader.js"></script>
+  <style>
+    body {
+      background: #111827;
+      color: #e5e7eb;
+      min-height: 100vh;
+    }
+    
+    .test-controls {
+      background: rgba(17, 24, 39, 0.8);
+      border: 1px solid #374151;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      width: 320px;
+      z-index: 1000;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    .control-group {
+      margin-bottom: 1rem;
+    }
+    
+    .control-label {
+      display: block;
+      color: #d1d5db;
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+    
+    .control-select {
+      width: 100%;
+      padding: 0.5rem;
+      background: rgba(17, 24, 39, 0.8);
+      border: 1px solid #4b5563;
+      border-radius: 4px;
+      color: white;
+      font-size: 0.875rem;
+    }
+    
+    .test-button {
+      padding: 0.5rem 1rem;
+      background: linear-gradient(to right, #06b6d4, #3b82f6);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: transform 0.2s, opacity 0.2s;
+      margin-right: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .test-button:hover {
+      transform: scale(1.05);
+      opacity: 0.9;
+    }
+    
+    .test-button:active {
+      transform: scale(0.98);
+    }
+    
+    .event-log {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid #1f2937;
+      border-radius: 8px;
+      padding: 0.75rem;
+      margin-top: 1rem;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    
+    .log-item {
+      color: #d1d5db;
+      font-size: 0.75rem;
+      margin-bottom: 0.25rem;
+      font-family: monospace;
+    }
+    
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      color: #d1d5db;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    
+    .checkbox-label input {
+      margin-right: 0.5rem;
+    }
+    
+    .reading-container {
+      height: 100vh;
+      width: 100%;
+    }
+  </style>
+</head>
+
+<body class="h-full bg-gray-900 text-gray-200">
+  <div id="app" class="h-full">
+    <!-- 控制面板 -->
+    <div class="test-controls">
+      <h2 class="text-lg font-semibold mb-3 text-cyan-400">ReadingView 测试</h2>
+      
+      <div class="control-group">
+        <label class="control-label">文章状态</label>
+        <select v-model="articleState" class="control-select">
+          <option value="normal">正常显示</option>
+          <option value="loading">加载状态</option>
+          <option value="error">错误状态</option>
+          <option value="no-content">无内容</option>
+        </select>
+      </div>
+      
+      <div class="control-group">
+        <label class="control-label">内容类型</label>
+        <select v-model="contentType" class="control-select">
+          <option value="rich">丰富内容</option>
+          <option value="simple">简单内容</option>
+          <option value="code-heavy">代码重度</option>
+          <option value="table-heavy">表格重度</option>
+        </select>
+      </div>
+      
+      <div class="control-group">
+        <label class="control-label">版本设置</label>
+        <select v-model="versionType" class="control-select">
+          <option value="single">单版本</option>
+          <option value="multiple">多版本</option>
+        </select>
+      </div>
+      
+      <div class="control-group">
+        <label class="control-label">TOC设置</label>
+        <select v-model="tocType" class="control-select">
+          <option value="full">完整目录</option>
+          <option value="simple">简单目录</option>
+          <option value="empty">无目录</option>
+        </select>
+      </div>
+      
+      <div class="mt-3">
+        <button @click="updateContent" class="test-button">更新内容</button>
+        <button @click="toggleToc" class="test-button">切换TOC</button>
+        <button @click="resetLayout" class="test-button">重置布局</button>
+        <button @click="clearLogs" class="test-button">清空日志</button>
+      </div>
+      
+      <div class="mt-3">
+        <label class="checkbox-label">
+          <input type="checkbox" v-model="showDebugInfo">
+          显示调试信息
+        </label>
+      </div>
+      
+      <div v-if="showDebugInfo" class="mt-3 text-sm">
+        <div><strong>TOC显示:</strong> {{ tocVisible ? '是' : '否' }}</div>
+        <div><strong>TOC宽度:</strong> {{ tocWidth }}px</div>
+        <div><strong>内容长度:</strong> {{ currentContent.length }}字符</div>
+        <div><strong>版本数:</strong> {{ currentVersions.length }}</div>
+      </div>
+
+      <!-- 事件日志 -->
+      <div class="event-log">
+        <h3 class="text-sm font-semibold mb-2 text-cyan-400">事件日志</h3>
+        <div v-for="(log, index) in eventLogs" :key="index" class="log-item">
+          [{{ log.time }}] {{ log.message }}
+        </div>
+        <div v-if="eventLogs.length === 0" class="log-item text-gray-500">
+          暂无事件日志
+        </div>
+      </div>
+    </div>
+
+    <!-- ReadingView 组件 -->
+    <div class="reading-container">
+      <reading-view
+        :content="currentContent"
+        :toc-html="currentTocHtml"
+        :loading="isLoading"
+        :error="errorMessage"
+        :loading-text="loadingText"
+        :versions="currentVersions"
+        :current-version="currentVersion"
+        :initial-show-toc="initialShowToc"
+        :initial-toc-width="280"
+        @toc-click="handleTocClick"
+        @article-click="handleArticleClick"
+        @version-change="handleVersionChange"
+        @toc-toggle="handleTocToggle"
+        @toc-resize="handleTocResize"
+        ref="readingViewRef">
+      </reading-view>
+    </div>
+  </div>
+
+  <script type="module">
+    const { createApp, ref, reactive, computed, onMounted, getCurrentInstance } = Vue;
+    
+    const app = createApp({
+      setup() {
+        // 状态管理
+        const articleState = ref('normal');
+        const contentType = ref('rich');
+        const versionType = ref('multiple');
+        const tocType = ref('full');
+        const showDebugInfo = ref(false);
+        const eventLogs = ref([]);
+        const readingViewRef = ref(null);
+        const currentVersion = ref('2');
+        const tocVisible = ref(true);
+        const tocWidth = ref(280);
+        
+        // 模拟内容数据
+        const contentData = {
+          rich: {
+            html: `
+              <h1>AWS re:Invent 2023：构建可扩展的微服务架构</h1>
+              
+              <h2>概述</h2>
+              <p>在现代云计算环境中，<strong>微服务架构</strong>已经成为构建大规模、高可用应用程序的首选方案。本文将深入探讨如何在AWS平台上设计和实现可扩展的微服务架构。</p>
+              
+              <blockquote>
+                <p>微服务架构不仅仅是技术选择，更是组织文化和开发流程的变革。</p>
+              </blockquote>
+              
+              <h2>核心设计原则</h2>
+              <p>在设计微服务架构时，我们需要遵循以下关键原则：</p>
+              
+              <ul>
+                <li><strong>单一职责</strong>：每个服务专注于特定的业务功能</li>
+                <li><strong>去中心化</strong>：避免单点故障和性能瓶颈</li>
+                <li><strong>容错性</strong>：优雅处理服务间的通信失败</li>
+                <li><strong>可观测性</strong>：全面的监控和日志记录</li>
+              </ul>
+              
+              <h3>技术栈选择</h3>
+              <p>推荐的AWS服务组合：</p>
+              
+              <table>
+                <thead>
+                  <tr>
+                    <th>组件</th>
+                    <th>AWS服务</th>
+                    <th>用途</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>容器编排</td>
+                    <td>Amazon EKS</td>
+                    <td>Kubernetes管理</td>
+                  </tr>
+                  <tr>
+                    <td>服务网格</td>
+                    <td>AWS App Mesh</td>
+                    <td>服务间通信</td>
+                  </tr>
+                  <tr>
+                    <td>API网关</td>
+                    <td>Amazon API Gateway</td>
+                    <td>统一入口</td>
+                  </tr>
+                </tbody>
+              </table>
+              
+              <h2>实施步骤</h2>
+              
+              <h3>第一阶段：服务拆分</h3>
+              <p>首先，我们需要识别和拆分现有的单体应用：</p>
+              
+              <pre><code>// 示例：用户服务接口定义
+interface UserService {
+  async createUser(userData: UserData): Promise<User>;
+  async getUserById(id: string): Promise<User>;
+  async updateUser(id: string, updates: Partial<User>): Promise<User>;
+  async deleteUser(id: string): Promise<void>;
+}</code></pre>
+              
+              <h3>第二阶段：基础设施搭建</h3>
+              <p>使用Infrastructure as Code (IaC)工具如AWS CDK或Terraform来定义基础设施：</p>
+              
+              <pre><code>// AWS CDK示例
+const cluster = new eks.Cluster(this, 'MicroservicesCluster', {
+  version: eks.KubernetesVersion.V1_28,
+  defaultCapacity: 3,
+  defaultCapacityInstance: ec2.InstanceType.of(
+    ec2.InstanceClass.M5, 
+    ec2.InstanceSize.LARGE
+  )
+});</code></pre>
+              
+              <h2>最佳实践</h2>
+              
+              <ol>
+                <li><strong>数据管理</strong>：每个微服务拥有独立的数据存储</li>
+                <li><strong>通信模式</strong>：优先使用异步消息传递</li>
+                <li><strong>安全策略</strong>：实施零信任网络模型</li>
+                <li><strong>部署策略</strong>：采用蓝绿部署或金丝雀部署</li>
+              </ol>
+              
+              <h3>监控和观测</h3>
+              <p>建立全面的监控体系对于微服务架构的成功至关重要。推荐使用：</p>
+              
+              <ul>
+                <li><a href="https://aws.amazon.com/cloudwatch/">Amazon CloudWatch</a> - 指标和日志</li>
+                <li><a href="https://aws.amazon.com/x-ray/">AWS X-Ray</a> - 分布式追踪</li>
+                <li><a href="https://prometheus.io/">Prometheus</a> + <a href="https://grafana.com/">Grafana</a> - 自定义监控</li>
+              </ul>
+              
+              <h2>总结</h2>
+              <p>微服务架构为现代应用提供了前所未有的灵活性和可扩展性。通过合理的设计和AWS强大的云服务支持，我们可以构建出既稳定又高效的分布式系统。</p>
+              
+              <blockquote>
+                <p>记住，微服务架构的成功不仅取决于技术实现，更需要团队在文化和流程上的配套改变。</p>
+              </blockquote>
+            `,
+            toc: `
+              <ul class="toc-list">
+                <li><a href="#概述" class="toc-link">概述</a></li>
+                <li>
+                  <a href="#核心设计原则" class="toc-link">核心设计原则</a>
+                  <ul class="toc-sublist">
+                    <li><a href="#技术栈选择" class="toc-link">技术栈选择</a></li>
+                  </ul>
+                </li>
+                <li>
+                  <a href="#实施步骤" class="toc-link">实施步骤</a>
+                  <ul class="toc-sublist">
+                    <li><a href="#第一阶段：服务拆分" class="toc-link">第一阶段：服务拆分</a></li>
+                    <li><a href="#第二阶段：基础设施搭建" class="toc-link">第二阶段：基础设施搭建</a></li>
+                  </ul>
+                </li>
+                <li>
+                  <a href="#最佳实践" class="toc-link">最佳实践</a>
+                  <ul class="toc-sublist">
+                    <li><a href="#监控和观测" class="toc-link">监控和观测</a></li>
+                  </ul>
+                </li>
+                <li><a href="#总结" class="toc-link">总结</a></li>
+              </ul>
+            `
+          },
+          simple: {
+            html: `
+              <h1>简单文档示例</h1>
+              <p>这是一个简单的文档示例，用于测试ReadingView组件的基本功能。</p>
+              <h2>第一节</h2>
+              <p>这里是第一节的内容。包含一些基本的文本和格式。</p>
+              <h2>第二节</h2>
+              <p>这里是第二节的内容。可以测试目录导航功能。</p>
+            `,
+            toc: `
+              <ul class="toc-list">
+                <li><a href="#第一节" class="toc-link">第一节</a></li>
+                <li><a href="#第二节" class="toc-link">第二节</a></li>
+              </ul>
+            `
+          },
+          'code-heavy': {
+            html: `
+              <h1>代码示例文档</h1>
+              <h2>JavaScript 示例</h2>
+              <pre><code>function calculateSum(a, b) {
+  return a + b;
+}
+
+const result = calculateSum(5, 3);
+console.log('结果:', result);</code></pre>
+              
+              <h2>Python 示例</h2>
+              <pre><code>def process_data(data):
+    """处理数据的函数"""
+    result = []
+    for item in data:
+        if item > 0:
+            result.append(item * 2)
+    return result
+
+# 使用示例
+numbers = [1, -2, 3, -4, 5]
+processed = process_data(numbers)
+print(f"处理结果: {processed}")</code></pre>
+            `,
+            toc: `
+              <ul class="toc-list">
+                <li><a href="#javascript-示例" class="toc-link">JavaScript 示例</a></li>
+                <li><a href="#python-示例" class="toc-link">Python 示例</a></li>
+              </ul>
+            `
+          },
+          'table-heavy': {
+            html: `
+              <h1>表格示例文档</h1>
+              <h2>服务对比表</h2>
+              <table>
+                <thead>
+                  <tr>
+                    <th>服务名称</th>
+                    <th>类型</th>
+                    <th>价格</th>
+                    <th>性能</th>
+                    <th>适用场景</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>EC2</td>
+                    <td>虚拟机</td>
+                    <td>中等</td>
+                    <td>高</td>
+                    <td>通用计算</td>
+                  </tr>
+                  <tr>
+                    <td>Lambda</td>
+                    <td>无服务器</td>
+                    <td>低</td>
+                    <td>中等</td>
+                    <td>事件驱动</td>
+                  </tr>
+                  <tr>
+                    <td>Fargate</td>
+                    <td>容器</td>
+                    <td>中等</td>
+                    <td>高</td>
+                    <td>容器化应用</td>
+                  </tr>
+                </tbody>
+              </table>
+            `,
+            toc: `
+              <ul class="toc-list">
+                <li><a href="#服务对比表" class="toc-link">服务对比表</a></li>
+              </ul>
+            `
+          }
+        };
+        
+        // 版本数据
+        const versionsData = {
+          single: [{ version: '1', title: '版本 1' }],
+          multiple: [
+            { version: '1', title: '版本 1' },
+            { version: '2', title: '版本 2' },
+            { version: '3', title: '版本 3' }
+          ]
+        };
+        
+        // 计算属性
+        const currentContent = computed(() => {
+          if (articleState.value === 'loading' || articleState.value === 'error') {
+            return '';
+          }
+          if (articleState.value === 'no-content') {
+            return '';
+          }
+          return contentData[contentType.value]?.html || '';
+        });
+        
+        const currentTocHtml = computed(() => {
+          if (tocType.value === 'empty') return '';
+          if (tocType.value === 'simple') return contentData.simple.toc;
+          return contentData[contentType.value]?.toc || '';
+        });
+        
+        const currentVersions = computed(() => {
+          return versionsData[versionType.value] || [];
+        });
+        
+        const isLoading = computed(() => articleState.value === 'loading');
+        const errorMessage = computed(() => {
+          return articleState.value === 'error' ? '加载文章时发生错误，请稍后重试。' : '';
+        });
+        
+        const loadingText = ref('加载文章中...');
+        const initialShowToc = ref(true);
+        
+        // 方法
+        const addLog = (message) => {
+          eventLogs.value.push({
+            time: new Date().toLocaleTimeString(),
+            message
+          });
+          
+          if (eventLogs.value.length > 30) {
+            eventLogs.value = eventLogs.value.slice(-30);
+          }
+        };
+        
+        const handleTocClick = (event) => {
+          addLog(`TOC点击: ${event.target?.textContent || '未知'}`);
+        };
+        
+        const handleArticleClick = (event) => {
+          addLog(`文章点击: ${event.target?.tagName || '未知元素'}`);
+        };
+        
+        const handleVersionChange = (version) => {
+          currentVersion.value = version;
+          addLog(`版本切换: v${version}`);
+        };
+        
+        const handleTocToggle = (visible) => {
+          tocVisible.value = visible;
+          addLog(`TOC切换: ${visible ? '显示' : '隐藏'}`);
+        };
+        
+        const handleTocResize = (width) => {
+          tocWidth.value = width;
+          addLog(`TOC宽度调整: ${width}px`);
+        };
+        
+        const updateContent = () => {
+          addLog(`更新内容: ${articleState.value} / ${contentType.value}`);
+        };
+        
+        const toggleToc = () => {
+          if (readingViewRef.value) {
+            readingViewRef.value.toggleToc();
+            addLog('手动切换TOC');
+          }
+        };
+        
+        const resetLayout = () => {
+          if (readingViewRef.value) {
+            readingViewRef.value.resetLayout();
+            addLog('重置布局');
+          }
+        };
+        
+        const clearLogs = () => {
+          eventLogs.value = [];
+        };
+        
+        // 组件加载
+        onMounted(async () => {
+          try {
+            const app = getCurrentInstance().appContext.app;
+            
+            await ComponentLoader.registerComponents(app, [
+              ['reading-view', '/components/views/ReadingView', 'ReadingView'],
+              ['table-of-contents', '/components/common/TableOfContents', 'TableOfContents'],
+              ['version-selector', '/components/common/VersionSelector', 'VersionSelector']
+            ]);
+            
+            console.log('ReadingView 组件加载成功');
+            addLog('组件加载完成');
+          } catch (error) {
+            console.error('加载组件失败:', error);
+            addLog(`组件加载失败: ${error.message}`);
+          }
+        });
+        
+        return {
+          // 状态
+          articleState,
+          contentType,
+          versionType,
+          tocType,
+          showDebugInfo,
+          eventLogs,
+          readingViewRef,
+          currentVersion,
+          tocVisible,
+          tocWidth,
+          
+          // 计算属性
+          currentContent,
+          currentTocHtml,
+          currentVersions,
+          isLoading,
+          errorMessage,
+          loadingText,
+          initialShowToc,
+          
+          // 方法
+          handleTocClick,
+          handleArticleClick,
+          handleVersionChange,
+          handleTocToggle,
+          handleTocResize,
+          updateContent,
+          toggleToc,
+          resetLayout,
+          clearLogs
+        };
+      }
+    });
+    
+    app.mount('#app');
+  </script>
+</body>
+</html> 

@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CreateView 组件测试</title>
+  
+  <!-- Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  
+  <!-- 基础样式 -->
+  <link rel="stylesheet" href="/css/base/typography.css">
+  <link rel="stylesheet" href="/css/base/effects.css">
+  <link rel="stylesheet" href="/css/base/content.css">
+  
+  <!-- 测试框架样式 -->
+  <style>
+    :root {
+      --test-bg: #0f172a;
+      --test-surface: #1e293b;
+      --test-border: #334155;
+      --test-primary: #22d3ee;
+      --test-success: #10b981;
+      --test-warning: #f59e0b;
+      --test-error: #ef4444;
+      --test-text: #e5e7eb;
+      --test-text-dim: #9ca3af;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: var(--test-bg);
+      color: var(--test-text);
+      font-family: var(--font-primary);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    
+    .test-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    
+    .test-header h1 {
+      font-size: 2.5rem;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    
+    .test-header p {
+      color: var(--test-text-dim);
+      font-size: 1.125rem;
+    }
+    
+    .test-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .test-case {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    
+    .test-case-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    
+    .test-case-title {
+      font-size: 1.25rem;
+      color: var(--test-primary);
+    }
+    
+    .test-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+    
+    .control-group {
+      flex: 1;
+      min-width: 200px;
+    }
+    
+    .control-label {
+      display: block;
+      color: var(--test-text-dim);
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .control-input {
+      width: 100%;
+      padding: 0.5rem;
+      background: var(--test-bg);
+      border: 1px solid var(--test-border);
+      border-radius: 6px;
+      color: var(--test-text);
+      font-size: 0.875rem;
+    }
+    
+    .control-checkbox {
+      margin-right: 0.5rem;
+    }
+    
+    .test-button {
+      padding: 0.5rem 1.5rem;
+      background: var(--gradient-primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .test-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3);
+    }
+    
+    .test-button.secondary {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+    }
+    
+    .view-container {
+      background: var(--test-bg);
+      border: 1px solid var(--test-border);
+      border-radius: 8px;
+      overflow: hidden;
+      min-height: 400px;
+    }
+    
+    .test-output {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--test-border);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+      font-family: var(--font-code);
+      font-size: 0.875rem;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .back-link {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      padding: 0.5rem 1rem;
+      background: var(--test-surface);
+      border: 1px solid var(--test-primary);
+      border-radius: 6px;
+      color: var(--test-primary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    
+    .back-link:hover {
+      background: rgba(34, 211, 238, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <a href="/test/" class="back-link">← 返回测试目录</a>
+  
+  <div id="app">
+    <div class="test-header">
+      <h1>CreateView 组件测试</h1>
+      <p>YouTube链接输入和分析界面，集成URL输入、进度显示和结果展示</p>
+    </div>
+    
+    <div class="test-container">
+      <!-- 测试用例1：基础渲染 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">基础渲染测试</h2>
+        </div>
+        
+        <div class="view-container">
+          <create-view
+            :url="basicUrl"
+            :loading="false"
+            :progress-percent="0"
+            :logs="[]"
+            :finalized-logs="[]"
+            @update:url="val => basicUrl = val"
+            @start-analysis="handleStartAnalysis"
+          ></create-view>
+        </div>
+      </div>
+      
+      <!-- 测试用例2：分析过程模拟 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">分析过程模拟</h2>
+        </div>
+        
+        <div class="test-controls">
+          <div class="control-group">
+            <label class="control-label">YouTube URL</label>
+            <input v-model="simulationUrl" class="control-input" 
+                   placeholder="https://www.youtube.com/watch?v=...">
+          </div>
+          <div class="control-group">
+            <label class="control-label">&nbsp;</label>
+            <button @click="startSimulation" class="test-button" :disabled="isSimulating">
+              {{ isSimulating ? '分析中...' : '开始模拟分析' }}
+            </button>
+            <button @click="resetSimulation" class="test-button secondary">
+              重置
+            </button>
+          </div>
+        </div>
+        
+        <div class="view-container">
+          <create-view
+            :url="simulationUrl"
+            :loading="isSimulating"
+            :progress-percent="simulationProgress"
+            :logs="simulationLogs"
+            :finalized-logs="finalizedLogs"
+            :summary="simulationSummary"
+            :title="simulationTitle"
+            :rendered="simulationRendered"
+            @update:url="val => simulationUrl = val"
+            @start-analysis="handleSimulationStart"
+            @view-summary="handleViewSummary"
+          ></create-view>
+        </div>
+      </div>
+      
+      <!-- 测试用例3：错误状态 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">错误状态测试</h2>
+        </div>
+        
+        <div class="test-controls">
+          <button @click="showInvalidUrl" class="test-button">
+            无效URL
+          </button>
+          <button @click="showNetworkError" class="test-button">
+            网络错误
+          </button>
+          <button @click="showAnalysisError" class="test-button">
+            分析失败
+          </button>
+        </div>
+        
+        <div class="view-container">
+          <create-view
+            :url="errorUrl"
+            :loading="errorLoading"
+            :progress-percent="errorProgress"
+            :logs="errorLogs"
+            :error="errorMessage"
+            @update:url="val => errorUrl = val"
+            @start-analysis="handleErrorAnalysis"
+          ></create-view>
+        </div>
+      </div>
+      
+      <!-- 事件日志 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">事件日志</h2>
+        </div>
+        
+        <button @click="clearLog" class="test-button secondary" style="margin-bottom: 1rem;">
+          清空日志
+        </button>
+        
+        <div class="test-output">
+          <div v-for="(log, index) in eventLog" :key="index">
+            {{ log }}
+          </div>
+          <div v-if="eventLog.length === 0" style="color: var(--test-text-dim);">
+            暂无事件记录
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 组件加载器 -->
+  <script src="/js/core/component-loader.js"></script>
+  
+  <script type="module">
+    const { createApp, ref } = Vue;
+    
+    const app = createApp({
+      setup() {
+        // 基础测试
+        const basicUrl = ref('');
+        
+        // 模拟测试
+        const simulationUrl = ref('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+        const isSimulating = ref(false);
+        const simulationProgress = ref(0);
+        const simulationLogs = ref([]);
+        const finalizedLogs = ref([]);
+        const simulationSummary = ref('');
+        const simulationTitle = ref('');
+        const simulationRendered = ref('');
+        
+        // 错误测试
+        const errorUrl = ref('');
+        const errorLoading = ref(false);
+        const errorProgress = ref(0);
+        const errorLogs = ref([]);
+        const errorMessage = ref('');
+        
+        // 事件日志
+        const eventLog = ref([]);
+        
+        const addLog = (message) => {
+          const time = new Date().toLocaleTimeString();
+          eventLog.value.unshift(`[${time}] ${message}`);
+          if (eventLog.value.length > 20) {
+            eventLog.value.pop();
+          }
+        };
+        
+        // 基础事件处理
+        const handleStartAnalysis = (url) => {
+          addLog(`开始分析: ${url}`);
+          alert(`即将分析: ${url}`);
+        };
+        
+        // 模拟分析过程
+        const startSimulation = () => {
+          if (!simulationUrl.value) {
+            alert('请输入YouTube URL');
+            return;
+          }
+          
+          isSimulating.value = true;
+          simulationProgress.value = 0;
+          simulationLogs.value = [];
+          simulationSummary.value = '';
+          simulationTitle.value = '';
+          simulationRendered.value = '';
+          
+          addLog('开始模拟分析过程');
+          
+          const steps = [
+            { log: '正在获取视频信息...', progress: 20 },
+            { log: '正在下载字幕...', progress: 40 },
+            { log: '正在分析内容...', progress: 60 },
+            { log: '正在生成摘要...', progress: 80 },
+            { log: '分析完成！', progress: 100 }
+          ];
+          
+          let stepIndex = 0;
+          const interval = setInterval(() => {
+            if (stepIndex < steps.length) {
+              const step = steps[stepIndex];
+              simulationLogs.value.push(step.log);
+              simulationProgress.value = step.progress;
+              stepIndex++;
+            } else {
+              clearInterval(interval);
+              finalizedLogs.value = [...simulationLogs.value];
+              simulationTitle.value = 'AWS re:Invent 2023 - Keynote with Adam Selipsky';
+              simulationSummary.value = '这是一个模拟的视频摘要，展示了AWS最新的云服务创新...';
+              simulationRendered.value = '<h1>分析结果</h1><p>视频内容已成功分析。</p>';
+              isSimulating.value = false;
+              addLog('模拟分析完成');
+            }
+          }, 1000);
+        };
+        
+        const resetSimulation = () => {
+          simulationUrl.value = '';
+          isSimulating.value = false;
+          simulationProgress.value = 0;
+          simulationLogs.value = [];
+          finalizedLogs.value = [];
+          simulationSummary.value = '';
+          simulationTitle.value = '';
+          simulationRendered.value = '';
+          addLog('重置模拟状态');
+        };
+        
+        const handleSimulationStart = (url) => {
+          addLog(`模拟分析开始: ${url}`);
+          startSimulation();
+        };
+        
+        const handleViewSummary = (data) => {
+          addLog(`查看摘要: ${data.title}`);
+          alert(`标题: ${data.title}\n\n摘要: ${data.summary}`);
+        };
+        
+        // 错误场景
+        const showInvalidUrl = () => {
+          errorUrl.value = 'not-a-youtube-url';
+          errorMessage.value = '无效的YouTube URL格式';
+          errorLogs.value = ['URL验证失败'];
+          addLog('显示无效URL错误');
+        };
+        
+        const showNetworkError = () => {
+          errorUrl.value = 'https://www.youtube.com/watch?v=test';
+          errorLoading.value = true;
+          errorProgress.value = 30;
+          errorLogs.value = ['正在连接...', '网络连接失败'];
+          errorMessage.value = '网络连接错误，请检查网络设置';
+          setTimeout(() => {
+            errorLoading.value = false;
+          }, 2000);
+          addLog('模拟网络错误');
+        };
+        
+        const showAnalysisError = () => {
+          errorUrl.value = 'https://www.youtube.com/watch?v=error';
+          errorLoading.value = true;
+          errorProgress.value = 60;
+          errorLogs.value = ['获取视频信息...', '下载字幕...', '分析失败'];
+          errorMessage.value = '视频分析失败：无法获取字幕';
+          setTimeout(() => {
+            errorLoading.value = false;
+          }, 2000);
+          addLog('模拟分析错误');
+        };
+        
+        const handleErrorAnalysis = (url) => {
+          addLog(`尝试分析错误URL: ${url}`);
+          alert('这将触发一个错误！');
+        };
+        
+        const clearLog = () => {
+          eventLog.value = [];
+        };
+        
+        return {
+          basicUrl,
+          simulationUrl,
+          isSimulating,
+          simulationProgress,
+          simulationLogs,
+          finalizedLogs,
+          simulationSummary,
+          simulationTitle,
+          simulationRendered,
+          errorUrl,
+          errorLoading,
+          errorProgress,
+          errorLogs,
+          errorMessage,
+          eventLog,
+          handleStartAnalysis,
+          startSimulation,
+          resetSimulation,
+          handleSimulationStart,
+          handleViewSummary,
+          showInvalidUrl,
+          showNetworkError,
+          showAnalysisError,
+          handleErrorAnalysis,
+          clearLog,
+          addLog
+        };
+      }
+    });
+    
+    // 加载组件
+    (async () => {
+      try {
+        await ComponentLoader.registerComponents(app, [
+          ['create-view', '/components/views/CreateView', 'CreateView'],
+          ['tech-button', '/components/shared/TechButton', 'TechButton'],
+          ['progress-bar', '/components/shared/ProgressBar', 'ProgressBar']
+        ]);
+        
+        app.mount('#app');
+        console.log('CreateView 测试环境初始化完成');
+      } catch (error) {
+        console.error('测试环境初始化失败:', error);
+      }
+    })();
+  </script>
+</body>
+</html> 

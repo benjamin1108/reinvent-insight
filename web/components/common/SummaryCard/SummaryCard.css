@@ -1,15 +1,10 @@
-/* SummaryCard组件样式 - 完全独立，不依赖全局样式 */
-
-/* 基础字体设置 */
-.summary-card {
-  font-family: 'JetBrains Mono', 'Consolas', 'SFMono-Regular', Menlo, monospace, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-}
-
-/* tech-gradient背景样式 */
-.summary-card.tech-gradient {
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.8) 50%, rgba(15, 23, 42, 0.9) 100%);
-  backdrop-filter: blur(10px);
-}
+/* SummaryCard组件样式 */
+/* 
+ * 样式策略：
+ * - 使用全局基础样式类（tech-gradient, glow-effect）来自 /css/base/effects.css
+ * - 组件只定义自身特有的样式和修饰符
+ * - 继承全局字体设置来自 /css/base/typography.css
+ */
 
 /* 基础卡片样式 */
 .summary-card {
@@ -17,16 +12,6 @@
   display: flex;
   flex-direction: column;
   cursor: pointer;
-}
-
-/* glow-effect样式 */
-.summary-card.glow-effect {
-  box-shadow: 0 0 20px rgba(6, 182, 212, 0.1), 0 0 40px rgba(6, 182, 212, 0.05);
-}
-
-.summary-card.glow-effect:hover {
-  box-shadow: 0 0 30px rgba(6, 182, 212, 0.2), 0 0 60px rgba(6, 182, 212, 0.1);
-  transition: box-shadow 0.3s ease;
 }
 
 .summary-card:hover {

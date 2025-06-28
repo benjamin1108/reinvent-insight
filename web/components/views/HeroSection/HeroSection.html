@@ -1,0 +1,20 @@
+<div class="hero-section relative text-white text-center py-20 px-6 overflow-hidden">
+  <div class="absolute inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm"></div>
+  <div class="hero-background absolute inset-0 z-0 opacity-20"></div>
+  <div class="relative z-10">
+    <h1 class="text-5xl md:text-6xl font-extrabold mb-4 leading-tight">
+      <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">与顶尖架构师</span>
+      <span class="block md:inline">思维同步</span>
+    </h1>
+    <p class="text-xl md:text-2xl max-w-3xl mx-auto text-gray-300 mb-8">
+      洞悉架构取舍，解码设计精髓。行业最前沿思考,云计算必读洞见。
+    </p>
+    <tech-button 
+      v-if="!isAuthenticated" 
+      variant="primary" 
+      size="lg"
+      @click="handleLoginClick">
+      即刻登录，开启洞察之旅
+    </tech-button>
+  </div>
+</div> 

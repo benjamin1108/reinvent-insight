@@ -1,9 +1,6 @@
 /* CustomDropdown 组件样式 - 完全独立，不依赖全局样式 */
 
-/* 基础字体设置 */
-.custom-dropdown {
-  font-family: 'JetBrains Mono', 'Consolas', 'SFMono-Regular', Menlo, monospace, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-}
+/* CustomDropdown组件样式 - 继承全局字体设置 */
 
 /* 自定义下拉菜单容器 */
 .custom-dropdown {

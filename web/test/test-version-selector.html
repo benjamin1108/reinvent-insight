@@ -3,302 +3,632 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VersionSelector组件测试</title>
-  <script src="/js/vendor/vue.global.prod.min.js"></script>
-  <link href="https://cdn.tailwindcss.com" rel="stylesheet">
+  <title>VersionSelector 组件测试</title>
   
-  <!-- 组件系统脚本 -->
-  <script src="/js/core/event-bus.js" type="module"></script>
-  <script src="/js/core/component-loader.js" type="module"></script>
+  <!-- Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   
+  <!-- 基础样式 -->
+  <link rel="stylesheet" href="/css/base/typography.css">
+  <link rel="stylesheet" href="/css/base/effects.css">
+  
+  <!-- 测试框架样式 -->
   <style>
-    body {
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-      background-attachment: fixed;
-      min-height: 100vh;
-      color: #e5e7eb;
-      margin: 0;
-      padding: 0;
-      font-family: 'JetBrains Mono', 'Consolas', 'SFMono-Regular', Menlo, monospace, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    :root {
+      --test-bg: #0f172a;
+      --test-surface: #1e293b;
+      --test-border: #334155;
+      --test-primary: #22d3ee;
+      --test-success: #10b981;
+      --test-warning: #f59e0b;
+      --test-error: #ef4444;
+      --test-text: #e5e7eb;
+      --test-text-dim: #9ca3af;
     }
     
-    .test-section {
-      background: #1f2937;
-      border: 1px solid #374151;
-      border-radius: 0.5rem;
-      padding: 1.5rem;
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: var(--test-bg);
+      color: var(--test-text);
+      font-family: var(--font-primary);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    
+    .test-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    
+    .test-header h1 {
+      font-size: 2.5rem;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    
+    .test-header p {
+      color: var(--test-text-dim);
+      font-size: 1.125rem;
+    }
+    
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .test-case {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+      border-radius: 12px;
+      padding: 2rem;
       margin-bottom: 2rem;
     }
     
-    .test-title {
-      color: #60a5fa;
-      font-size: 1.5rem;
-      font-weight: bold;
-      margin-bottom: 1rem;
+    .test-case-header {
+      margin-bottom: 1.5rem;
     }
     
-    .test-description {
-      color: #9ca3af;
-      margin-bottom: 1rem;
+    .test-case-title {
+      font-size: 1.25rem;
+      color: var(--test-primary);
     }
     
-    /* 模拟文章容器样式 */
-    .article-container {
-      background: rgba(31, 41, 55, 0.5);
-      border: 1px solid #374151;
-      border-radius: 12px;
-      padding: 40px;
-      position: relative;
-      min-height: 300px;
-    }
-    
-    .article-title {
-      font-size: 24px;
-      font-weight: bold;
-      color: #e5e7eb;
-      margin-bottom: 20px;
-    }
-    
-    .article-content {
-      color: #9ca3af;
-      line-height: 1.6;
-    }
-    
-    .result-box {
-      background: #111827;
-      border: 1px solid #374151;
-      border-radius: 0.5rem;
-      padding: 1rem;
-      margin-top: 1rem;
-      font-family: monospace;
+    .test-case-description {
+      color: var(--test-text-dim);
       font-size: 0.875rem;
+      margin-top: 0.5rem;
+    }
+    
+    .test-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+    
+    .control-group {
+      flex: 1;
+      min-width: 200px;
+    }
+    
+    .control-label {
+      display: block;
+      color: var(--test-text-dim);
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .control-input {
+      width: 100%;
+      padding: 0.5rem;
+      background: var(--test-bg);
+      border: 1px solid var(--test-border);
+      border-radius: 6px;
+      color: var(--test-text);
+      font-size: 0.875rem;
+    }
+    
+    .selector-demo {
+      padding: 2rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100px;
+    }
+    
+    .test-button {
+      padding: 0.5rem 1.5rem;
+      background: var(--gradient-primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .test-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3);
+    }
+    
+    .test-button.secondary {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+    }
+    
+    .version-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .version-item {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--test-border);
+      border-radius: 8px;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .version-info {
+      flex: 1;
+    }
+    
+    .version-name {
+      font-weight: 600;
+      color: var(--test-text);
+    }
+    
+    .version-date {
+      font-size: 0.75rem;
+      color: var(--test-text-dim);
+      margin-top: 0.25rem;
+    }
+    
+    .version-badge {
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .badge-latest {
+      background: rgba(34, 211, 238, 0.2);
+      color: var(--test-primary);
+    }
+    
+    .badge-stable {
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--test-success);
+    }
+    
+    .badge-beta {
+      background: rgba(245, 158, 11, 0.2);
+      color: var(--test-warning);
+    }
+    
+    .test-output {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--test-border);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1.5rem;
+      font-family: var(--font-code);
+      font-size: 0.875rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .status-display {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+    
+    .status-item {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    
+    .status-label {
+      color: var(--test-text-dim);
+      font-size: 0.875rem;
+    }
+    
+    .status-value {
+      font-weight: 600;
+      color: var(--test-primary);
+    }
+    
+    .back-link {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      padding: 0.5rem 1rem;
+      background: var(--test-surface);
+      border: 1px solid var(--test-primary);
+      border-radius: 6px;
+      color: var(--test-primary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    
+    .back-link:hover {
+      background: rgba(34, 211, 238, 0.1);
     }
   </style>
 </head>
 <body>
-  <div id="test-app" class="container mx-auto p-8">
-    <h1 class="text-3xl font-bold text-cyan-400 mb-8">VersionSelector 组件测试</h1>
-    
-    <!-- 基础测试 -->
-    <div class="test-section">
-      <h2 class="test-title">基础版本选择器</h2>
-      <p class="test-description">测试基本的版本选择功能</p>
-      
-      <div class="mb-4">
-        <version-selector
-          v-model="currentVersion1"
-          :versions="versions1"
-          @change="onVersionChange1"
-        />
-      </div>
-      
-      <div class="result-box">
-        <div>当前版本: v{{ currentVersion1 }}</div>
-        <div>可用版本: {{ versions1.map(v => 'v' + v.version).join(', ') }}</div>
-        <div class="mt-2">事件日志:</div>
-        <div v-for="(log, index) in logs1" :key="index" class="text-sm text-gray-400">
-          {{ log }}
-        </div>
-      </div>
+  <a href="/test/" class="back-link">← 返回测试目录</a>
+  
+  <div id="app">
+    <div class="test-header">
+      <h1>VersionSelector 组件测试</h1>
+      <p>版本选择器组件，支持下拉选择不同版本</p>
     </div>
     
-    <!-- 文章容器内的版本选择器 -->
-    <div class="test-section">
-      <h2 class="test-title">文章容器内的版本选择器</h2>
-      <p class="test-description">模拟在文章阅读页面的版本选择器</p>
-      
-      <div class="article-container">
-        <version-selector
-          v-model="currentVersion2"
-          :versions="versions2"
-          custom-class="version-selector-article"
-          @change="onVersionChange2"
-        />
-        
-        <div class="article-title">AWS re:Invent 2024 Keynote 深度解读</div>
-        <div class="article-content">
-          <p>当前查看的是版本 {{ currentVersion2 }} 的内容。</p>
-          <p>版本 {{ currentVersion2 }} 更新于: {{ getVersionDate(currentVersion2) }}</p>
-          <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
-        </div>
-      </div>
-      
-      <div class="result-box mt-4">
-        <div>版本切换历史:</div>
-        <div v-for="(log, index) in logs2" :key="index" class="text-sm text-gray-400">
-          {{ log }}
-        </div>
-      </div>
-    </div>
-    
-    <!-- 多种配置测试 -->
-    <div class="test-section">
-      <h2 class="test-title">多种配置测试</h2>
-      <p class="test-description">测试不同的版本列表配置</p>
-      
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <!-- 单版本 -->
-        <div>
-          <h3 class="text-sm font-bold text-cyan-400 mb-2">单版本（不显示选择器）</h3>
-          <version-selector
-            v-model="currentVersion3"
-            :versions="singleVersion"
-          />
-          <p class="text-xs text-gray-500 mt-2">只有一个版本时应该隐藏选择器</p>
+    <div class="test-container">
+      <!-- 测试用例1：基础功能 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">基础功能测试</h2>
+          <p class="test-case-description">默认版本列表和选择功能</p>
         </div>
         
-        <!-- 多版本 -->
-        <div>
-          <h3 class="text-sm font-bold text-cyan-400 mb-2">多版本</h3>
+        <div class="selector-demo">
           <version-selector
-            v-model="currentVersion4"
-            :versions="multiVersions"
-          />
+            :versions="defaultVersions"
+            :current-version="currentVersion1"
+            @change="handleVersionChange1"
+          ></version-selector>
         </div>
         
-        <!-- 禁用状态 -->
-        <div>
-          <h3 class="text-sm font-bold text-cyan-400 mb-2">禁用状态</h3>
-          <version-selector
-            v-model="currentVersion5"
-            :versions="versions1"
-            :disabled="true"
-          />
+        <div class="status-display">
+          <div class="status-item">
+            <span class="status-label">当前版本:</span>
+            <span class="status-value">{{ currentVersion1 }}</span>
+          </div>
         </div>
       </div>
-    </div>
-    
-    <!-- 动态版本测试 -->
-    <div class="test-section">
-      <h2 class="test-title">动态版本测试</h2>
-      <p class="test-description">测试动态添加/删除版本</p>
       
-      <div class="mb-4">
-        <version-selector
-          v-model="currentVersionDynamic"
-          :versions="dynamicVersions"
-        />
+      <!-- 测试用例2：自定义版本列表 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">自定义版本列表</h2>
+          <p class="test-case-description">动态添加、删除版本</p>
+        </div>
+        
+        <div class="test-controls">
+          <div class="control-group">
+            <label class="control-label">版本名称</label>
+            <input v-model="newVersionName" class="control-input" placeholder="例如: v3.0.0">
+          </div>
+          <div class="control-group">
+            <label class="control-label">发布日期</label>
+            <input v-model="newVersionDate" type="date" class="control-input">
+          </div>
+          <div class="control-group" style="display: flex; align-items: flex-end;">
+            <button @click="addVersion" class="test-button">
+              添加版本
+            </button>
+          </div>
+        </div>
+        
+        <div class="version-list">
+          <div v-for="(version, index) in customVersions" :key="version" class="version-item">
+            <div class="version-info">
+              <div class="version-name">{{ version }}</div>
+              <div class="version-date">{{ versionDates[version] || '未知日期' }}</div>
+            </div>
+            <span v-if="index === 0" class="version-badge badge-latest">最新</span>
+            <button v-else @click="removeVersion(index)" class="test-button secondary" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;">
+              删除
+            </button>
+          </div>
+        </div>
+        
+        <div class="selector-demo">
+          <version-selector
+            :versions="customVersions"
+            :current-version="currentVersion2"
+            @change="handleVersionChange2"
+          ></version-selector>
+        </div>
+        
+        <div class="status-display">
+          <div class="status-item">
+            <span class="status-label">当前版本:</span>
+            <span class="status-value">{{ currentVersion2 }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">版本数量:</span>
+            <span class="status-value">{{ customVersions.length }}</span>
+          </div>
+        </div>
       </div>
       
-      <div class="flex gap-2 mb-4">
-        <button @click="addVersion" 
-                class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-white transition">
-          添加版本
+      <!-- 测试用例3：禁用状态 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">状态控制测试</h2>
+          <p class="test-case-description">测试禁用状态和空列表处理</p>
+        </div>
+        
+        <div class="test-controls">
+          <button @click="toggleDisabled" class="test-button">
+            {{ isDisabled ? '启用' : '禁用' }}选择器
+          </button>
+          <button @click="toggleEmpty" class="test-button secondary">
+            {{ emptyList ? '恢复版本' : '清空版本' }}
+          </button>
+        </div>
+        
+        <div class="selector-demo">
+          <version-selector
+            :versions="stateTestVersions"
+            :current-version="currentVersion3"
+            :disabled="isDisabled"
+            @change="handleVersionChange3"
+          ></version-selector>
+        </div>
+        
+        <div class="status-display">
+          <div class="status-item">
+            <span class="status-label">选择器状态:</span>
+            <span class="status-value" :style="{ color: isDisabled ? 'var(--test-error)' : 'var(--test-success)' }">
+              {{ isDisabled ? '已禁用' : '已启用' }}
+            </span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">版本列表:</span>
+            <span class="status-value">{{ emptyList ? '空' : `${stateTestVersions.length} 个版本` }}</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 测试用例4：大量版本性能测试 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">性能测试</h2>
+          <p class="test-case-description">大量版本列表的渲染和选择性能</p>
+        </div>
+        
+        <div class="test-controls">
+          <button @click="generateManyVersions(50)" class="test-button secondary">
+            生成 50 个版本
+          </button>
+          <button @click="generateManyVersions(100)" class="test-button secondary">
+            生成 100 个版本
+          </button>
+          <button @click="generateManyVersions(500)" class="test-button secondary">
+            生成 500 个版本
+          </button>
+          <button @click="resetManyVersions" class="test-button">
+            重置
+          </button>
+        </div>
+        
+        <div class="selector-demo">
+          <version-selector
+            :versions="manyVersions"
+            :current-version="currentVersion4"
+            @change="handleVersionChange4"
+          ></version-selector>
+        </div>
+        
+        <div class="status-display">
+          <div class="status-item">
+            <span class="status-label">版本数量:</span>
+            <span class="status-value">{{ manyVersions.length }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">当前选择:</span>
+            <span class="status-value">{{ currentVersion4 }}</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 事件日志 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">事件日志</h2>
+        </div>
+        
+        <button @click="clearLog" class="test-button secondary">
+          清空日志
         </button>
-        <button @click="removeVersion" 
-                class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-white transition"
-                :disabled="dynamicVersions.length <= 1">
-          删除最新版本
-        </button>
-      </div>
-      
-      <div class="result-box">
-        <div>当前版本: v{{ currentVersionDynamic }}</div>
-        <div>版本列表: {{ dynamicVersions.map(v => 'v' + v.version).join(', ') }}</div>
+        
+        <div class="test-output">
+          <div v-if="eventLog.length === 0" style="color: var(--test-text-dim);">
+            暂无事件记录
+          </div>
+          <div v-for="(log, index) in eventLog" :key="index">
+            {{ log }}
+          </div>
+        </div>
       </div>
     </div>
   </div>
-
+  
+  <!-- 组件加载器 -->
+  <script src="/js/core/component-loader.js"></script>
+  
   <script type="module">
-    import ComponentLoader from '/js/core/component-loader.js';
+    const { createApp, ref, computed } = Vue;
     
-    const { createApp } = Vue;
-    
-    const testApp = createApp({
-      data() {
-        return {
-          // 基础测试数据
-          currentVersion1: 3,
-          versions1: [
-            { version: 1, date: '2024-01-01' },
-            { version: 2, date: '2024-01-15' },
-            { version: 3, date: '2024-02-01' }
-          ],
-          logs1: [],
-          
-          // 文章容器测试数据
-          currentVersion2: 2,
-          versions2: [
-            { version: 1, date: '2024-01-10', author: 'Alice' },
-            { version: 2, date: '2024-01-20', author: 'Bob' },
-            { version: 3, date: '2024-01-25', author: 'Charlie' },
-            { version: 4, date: '2024-02-01', author: 'David' }
-          ],
-          logs2: [],
-          
-          // 多种配置测试
-          currentVersion3: 1,
-          singleVersion: [{ version: 1 }],
-          
-          currentVersion4: 2,
-          multiVersions: [
-            { version: 1 },
-            { version: 2 },
-            { version: 3 },
-            { version: 4 },
-            { version: 5 }
-          ],
-          
-          currentVersion5: 1,
-          
-          // 动态版本测试
-          currentVersionDynamic: 1,
-          dynamicVersions: [
-            { version: 1, date: '2024-01-01' }
-          ],
-          nextVersion: 2
-        };
-      },
-      
-      methods: {
-        onVersionChange1(version) {
-          this.logs1.unshift(`[${new Date().toLocaleTimeString()}] 切换到版本 ${version}`);
-          if (this.logs1.length > 5) this.logs1.pop();
-        },
+    const app = createApp({
+      setup() {
+        // 默认版本列表
+        const defaultVersions = ['v2.1.0', 'v2.0.0', 'v1.9.0', 'v1.8.0', 'v1.7.0'];
+        const currentVersion1 = ref('v2.1.0');
         
-        onVersionChange2(version) {
-          this.logs2.unshift(`[${new Date().toLocaleTimeString()}] 从版本 ${this.currentVersion2} 切换到版本 ${version}`);
-          if (this.logs2.length > 5) this.logs2.pop();
-        },
+        // 自定义版本列表
+        const customVersions = ref(['v2.1.0', 'v2.0.0', 'v1.9.0']);
+        const versionDates = ref({
+          'v2.1.0': '2024-01-15',
+          'v2.0.0': '2023-12-01',
+          'v1.9.0': '2023-10-15'
+        });
+        const currentVersion2 = ref('v2.1.0');
+        const newVersionName = ref('');
+        const newVersionDate = ref('');
         
-        getVersionDate(version) {
-          const versionInfo = this.versions2.find(v => v.version === version);
-          return versionInfo ? versionInfo.date : '未知';
-        },
+        // 状态测试
+        const isDisabled = ref(false);
+        const emptyList = ref(false);
+        const stateTestVersions = computed(() => 
+          emptyList.value ? [] : ['v2.1.0', 'v2.0.0', 'v1.9.0']
+        );
+        const currentVersion3 = ref('v2.1.0');
         
-        addVersion() {
-          this.dynamicVersions.push({
-            version: this.nextVersion,
-            date: new Date().toISOString().split('T')[0]
-          });
-          this.currentVersionDynamic = this.nextVersion;
-          this.nextVersion++;
-        },
+        // 性能测试
+        const manyVersions = ref(['v2.1.0', 'v2.0.0', 'v1.9.0']);
+        const currentVersion4 = ref('v2.1.0');
         
-        removeVersion() {
-          if (this.dynamicVersions.length > 1) {
-            const removed = this.dynamicVersions.pop();
-            if (this.currentVersionDynamic === removed.version) {
-              this.currentVersionDynamic = this.dynamicVersions[this.dynamicVersions.length - 1].version;
-            }
+        // 事件日志
+        const eventLog = ref([]);
+        
+        const addLog = (message) => {
+          const time = new Date().toLocaleTimeString();
+          eventLog.value.unshift(`[${time}] ${message}`);
+          if (eventLog.value.length > 50) {
+            eventLog.value.pop();
           }
-        }
+        };
+        
+        // 事件处理
+        const handleVersionChange1 = (version) => {
+          currentVersion1.value = version;
+          addLog(`基础测试：版本切换到 ${version}`);
+        };
+        
+        const handleVersionChange2 = (version) => {
+          currentVersion2.value = version;
+          addLog(`自定义列表：版本切换到 ${version}`);
+        };
+        
+        const handleVersionChange3 = (version) => {
+          currentVersion3.value = version;
+          addLog(`状态测试：版本切换到 ${version}`);
+        };
+        
+        const handleVersionChange4 = (version) => {
+          currentVersion4.value = version;
+          addLog(`性能测试：版本切换到 ${version}`);
+        };
+        
+        // 版本管理
+        const addVersion = () => {
+          if (!newVersionName.value) {
+            alert('请输入版本名称');
+            return;
+          }
+          
+          if (customVersions.value.includes(newVersionName.value)) {
+            alert('该版本已存在');
+            return;
+          }
+          
+          customVersions.value.unshift(newVersionName.value);
+          if (newVersionDate.value) {
+            versionDates.value[newVersionName.value] = newVersionDate.value;
+          }
+          
+          addLog(`添加新版本：${newVersionName.value}`);
+          currentVersion2.value = newVersionName.value;
+          newVersionName.value = '';
+          newVersionDate.value = '';
+        };
+        
+        const removeVersion = (index) => {
+          const removed = customVersions.value[index];
+          customVersions.value.splice(index, 1);
+          delete versionDates.value[removed];
+          
+          if (currentVersion2.value === removed) {
+            currentVersion2.value = customVersions.value[0] || '';
+          }
+          
+          addLog(`删除版本：${removed}`);
+        };
+        
+        // 状态控制
+        const toggleDisabled = () => {
+          isDisabled.value = !isDisabled.value;
+          addLog(`选择器状态：${isDisabled.value ? '已禁用' : '已启用'}`);
+        };
+        
+        const toggleEmpty = () => {
+          emptyList.value = !emptyList.value;
+          addLog(`版本列表：${emptyList.value ? '已清空' : '已恢复'}`);
+        };
+        
+        // 性能测试
+        const generateManyVersions = (count) => {
+          const versions = [];
+          for (let i = count; i > 0; i--) {
+            versions.push(`v${Math.floor(i / 100)}.${Math.floor((i % 100) / 10)}.${i % 10}`);
+          }
+          manyVersions.value = versions;
+          currentVersion4.value = versions[0];
+          addLog(`生成了 ${count} 个版本`);
+        };
+        
+        const resetManyVersions = () => {
+          manyVersions.value = ['v2.1.0', 'v2.0.0', 'v1.9.0'];
+          currentVersion4.value = 'v2.1.0';
+          addLog('性能测试版本列表已重置');
+        };
+        
+        const clearLog = () => {
+          eventLog.value = [];
+        };
+        
+        return {
+          defaultVersions,
+          currentVersion1,
+          customVersions,
+          versionDates,
+          currentVersion2,
+          newVersionName,
+          newVersionDate,
+          isDisabled,
+          emptyList,
+          stateTestVersions,
+          currentVersion3,
+          manyVersions,
+          currentVersion4,
+          eventLog,
+          handleVersionChange1,
+          handleVersionChange2,
+          handleVersionChange3,
+          handleVersionChange4,
+          addVersion,
+          removeVersion,
+          toggleDisabled,
+          toggleEmpty,
+          generateManyVersions,
+          resetManyVersions,
+          clearLog
+        };
       }
     });
     
     // 加载组件
     (async () => {
       try {
-        await ComponentLoader.registerComponents(testApp, [
+        await ComponentLoader.registerComponents(app, [
           ['version-selector', '/components/shared/VersionSelector', 'VersionSelector']
         ]);
-        console.log('VersionSelector组件加载完成');
         
-        testApp.mount('#test-app');
-        console.log('应用挂载完成');
+        app.mount('#app');
+        console.log('VersionSelector 测试环境初始化完成');
       } catch (error) {
-        console.error('组件加载失败:', error);
-        testApp.mount('#test-app');
+        console.error('测试环境初始化失败:', error);
       }
     })();
   </script>

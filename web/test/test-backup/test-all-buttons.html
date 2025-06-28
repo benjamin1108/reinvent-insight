@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechButton集成测试 - reinvent-insight</title>
+    
+    <!-- 基础样式文件 - 按重构后的架构引入 -->
+    <link rel="stylesheet" href="../css/base/typography.css">
+    <link rel="stylesheet" href="../css/base/effects.css">  
+    <link rel="stylesheet" href="../css/base/content.css">
+    
+    <style>
+        /* CSS重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            height: 100%;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            min-height: 100vh;
+            color: #e5e7eb;
+            font-family: 'JetBrains Mono', 'Consolas', 'SFMono-Regular', Menlo, monospace, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            line-height: 1.5;
+        }
+        
+        /* 基础元素重置 */
+        h1, h2, h3, h4, h5, h6 {
+            margin: 0;
+            font-weight: inherit;
+        }
+        
+        p {
+            margin: 0;
+        }
+        
+        button {
+            background: none;
+            border: none;
+            padding: 0;
+            margin: 0;
+            font: inherit;
+            color: inherit;
+            cursor: pointer;
+        }
+        
+        input {
+            font: inherit;
+            color: inherit;
+        }
+        
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .test-section {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid #374151;
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .test-section h2 {
+            color: #22d3ee;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        
+        .component-demo {
+            border: 1px solid #4b5563;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin: 1rem 0;
+            background: rgba(17, 24, 39, 0.5);
+        }
+        
+        .component-demo h3 {
+            color: #f59e0b;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+        
+        .demo-content {
+            padding: 1rem 0;
+        }
+        
+        #event-log {
+            height: 200px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid #374151;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            font-family: monospace;
+            font-size: 0.875rem;
+        }
+        
+        .log-entry {
+            margin-bottom: 0.25rem;
+            color: #94a3b8;
+        }
+        
+        .log-entry.success {
+            color: #10b981;
+        }
+        
+        .log-entry.error {
+            color: #ef4444;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+    </style>
+    <script src="../js/vendor/vue.global.prod.min.js"></script>
+</head>
+<body>
+    <div id="app" class="test-container">
+        <h1 style="text-align: center; color: #22d3ee; margin-bottom: 2rem; font-size: 2rem;">
+            TechButton 统一按钮组件集成测试
+        </h1>
+        
+        <!-- AppHeader 组件测试 -->
+        <div class="test-section">
+            <h2>🔧 AppHeader 组件</h2>
+            <div class="component-demo">
+                <h3>普通模式</h3>
+                <div class="demo-content">
+                    <app-header 
+                        mode="normal"
+                        :is-authenticated="isAuthenticated"
+                        current-view="create"
+                        :show-test-toast="true"
+                        @home-click="logEvent('AppHeader: 首页点击')"
+                        @view-change="logEvent('AppHeader: 视图切换 - ' + $event)"
+                        @login-show="logEvent('AppHeader: 显示登录')"
+                        @logout="logEvent('AppHeader: 退出登录')"
+                        @test-toast="logEvent('AppHeader: 测试Toast')">
+                    </app-header>
+                </div>
+            </div>
+            
+            <div class="component-demo">
+                <h3>阅读模式</h3>
+                <div class="demo-content">
+                    <app-header 
+                        mode="reading"
+                        :is-authenticated="true"
+                        :is-share-view="false"
+                        :show-toc="showToc"
+                        reading-video-url="https://example.com/video"
+                        :pdf-downloading="pdfDownloading"
+                        @back-to-library="logEvent('AppHeader: 返回笔记库')"
+                        @open-video="logEvent('AppHeader: 打开视频')"
+                        @download-pdf="handlePdfDownload"
+                        @toggle-toc="handleToggleToc">
+                    </app-header>
+                </div>
+            </div>
+        </div>
+        
+        <!-- HeroSection 组件测试 -->
+        <div class="test-section">
+            <h2>🚀 HeroSection 组件</h2>
+            <div class="component-demo">
+                <h3>未登录状态</h3>
+                <div class="demo-content">
+                    <hero-section 
+                        :is-authenticated="false"
+                        @login-click="logEvent('HeroSection: 登录点击')">
+                    </hero-section>
+                </div>
+            </div>
+        </div>
+        
+        <!-- CreateView 组件测试 -->
+        <div class="test-section">
+            <h2>📝 CreateView 组件</h2>
+            <div class="component-demo">
+                <h3>分析界面</h3>
+                <div class="demo-content">
+                    <create-view 
+                        v-model:url="videoUrl"
+                        :loading="createLoading"
+                        :progress-percent="progressPercent"
+                        :logs="logs"
+                        :finalized-logs="finalizedLogs"
+                        :summary="summary"
+                        title="测试视频解读"
+                        rendered="<p>这里是渲染的内容...</p>"
+                        @start-analysis="handleStartAnalysis"
+                        @view-summary="logEvent('CreateView: 查看摘要')">
+                    </create-view>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 控制面板 -->
+        <div class="test-section">
+            <h2>🎛️ 控制面板</h2>
+            <div class="grid">
+                <div>
+                    <h3>状态控制</h3>
+                    <div style="margin: 1rem 0;">
+                        <label style="display: block; margin-bottom: 0.5rem;">
+                            <input type="checkbox" v-model="isAuthenticated" style="margin-right: 0.5rem;">
+                            用户已认证
+                        </label>
+                        <label style="display: block; margin-bottom: 0.5rem;">
+                            <input type="checkbox" v-model="showToc" style="margin-right: 0.5rem;">
+                            显示目录
+                        </label>
+                        <label style="display: block; margin-bottom: 0.5rem;">
+                            <input type="checkbox" v-model="pdfDownloading" style="margin-right: 0.5rem;">
+                            PDF下载中
+                        </label>
+                        <label style="display: block; margin-bottom: 0.5rem;">
+                            <input type="checkbox" v-model="createLoading" style="margin-right: 0.5rem;">
+                            分析加载中
+                        </label>
+                    </div>
+                    
+                    <div style="margin: 1rem 0;">
+                        <label style="display: block; margin-bottom: 0.5rem;">
+                            进度百分比：{{ progressPercent }}%
+                        </label>
+                        <input type="range" v-model="progressPercent" min="0" max="100" style="width: 100%;">
+                    </div>
+                </div>
+                
+                <div>
+                    <h3>事件日志</h3>
+                    <div id="event-log" ref="eventLog">
+                        <div v-for="(entry, index) in eventLog" :key="index" :class="['log-entry', entry.type]">
+                            [{{ entry.time }}] {{ entry.message }}
+                        </div>
+                    </div>
+                    <button @click="clearLog" style="margin-top: 0.5rem; padding: 0.5rem 1rem; background: #374151; color: white; border: none; border-radius: 0.25rem; cursor: pointer;">
+                        清空日志
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 组件加载脚本 -->
+    <script src="../js/core/event-bus.js"></script>
+    <script src="../js/core/component-loader.js"></script>
+    
+    <script type="module">
+        const { createApp } = Vue;
+        
+        let vueApp; // 声明变量来存储Vue应用实例
+        
+        const app = createApp({
+            data() {
+                return {
+                    // 状态控制
+                    isAuthenticated: false,
+                    showToc: true,
+                    pdfDownloading: false,
+                    createLoading: false,
+                    progressPercent: 0,
+                    
+                    // CreateView 相关数据
+                    videoUrl: 'https://www.youtube.com/watch?v=example',
+                    logs: ['初始化...', '准备分析...'],
+                    finalizedLogs: ['系统准备完成'],
+                    summary: '这是一个测试摘要内容...',
+                    
+                    // 事件日志
+                    eventLog: []
+                };
+            },
+            
+            methods: {
+                logEvent(message, type = 'success') {
+                    const time = new Date().toLocaleTimeString();
+                    this.eventLog.push({ time, message, type });
+                    
+                    // 滚动到底部
+                    this.$nextTick(() => {
+                        const logElement = this.$refs.eventLog;
+                        if (logElement) {
+                            logElement.scrollTop = logElement.scrollHeight;
+                        }
+                    });
+                },
+                
+                clearLog() {
+                    this.eventLog = [];
+                },
+                
+                handlePdfDownload() {
+                    this.pdfDownloading = true;
+                    this.logEvent('AppHeader: 开始下载PDF');
+                    
+                    setTimeout(() => {
+                        this.pdfDownloading = false;
+                        this.logEvent('AppHeader: PDF下载完成');
+                    }, 3000);
+                },
+                
+                handleToggleToc() {
+                    this.showToc = !this.showToc;
+                    this.logEvent(`AppHeader: 切换目录显示 - ${this.showToc ? '显示' : '隐藏'}`);
+                },
+                
+                handleStartAnalysis(url) {
+                    this.createLoading = true;
+                    this.progressPercent = 0;
+                    this.logs = ['开始分析...'];
+                    this.logEvent(`CreateView: 开始分析 - ${url}`);
+                    
+                    // 模拟进度
+                    const interval = setInterval(() => {
+                        this.progressPercent += 10;
+                        this.logs.push(`分析进度: ${this.progressPercent}%`);
+                        
+                        if (this.progressPercent >= 100) {
+                            clearInterval(interval);
+                            this.createLoading = false;
+                            this.finalizedLogs = [...this.logs];
+                            this.logEvent('CreateView: 分析完成');
+                        }
+                    }, 500);
+                }
+            },
+            
+            async mounted() {
+                this.logEvent('页面初始化完成', 'success');
+                
+                // 改进的测试专用组件加载器，支持依赖处理
+                const loadTestComponent = async (name, path, fileName) => {
+                    try {
+                        // 并行加载 HTML、CSS 和 JS
+                        const [htmlResponse, cssResponse] = await Promise.all([
+                            fetch(`${path}/${fileName}.html`),
+                            fetch(`${path}/${fileName}.css`).catch(() => null)
+                        ]);
+                        
+                        if (!htmlResponse.ok) {
+                            throw new Error(`无法加载组件HTML: ${name}`);
+                        }
+                        
+                        const html = await htmlResponse.text();
+                        const css = cssResponse?.ok ? await cssResponse.text() : '';
+                        
+                        // 动态导入JS模块
+                        const jsModule = await import(`${path}/${fileName}.js`);
+                        
+                        // 注入组件样式
+                        if (css && !document.querySelector(`[data-component-style="${name}"]`)) {
+                            const style = document.createElement('style');
+                            style.setAttribute('data-component-style', name);
+                            style.textContent = css;
+                            document.head.appendChild(style);
+                        }
+                        
+                        // 处理组件依赖
+                        const componentConfig = jsModule.default;
+                        if (componentConfig.dependencies) {
+                            this.logEvent(`组件 ${name} 需要依赖: ${componentConfig.dependencies.map(d => d[0]).join(', ')}`, 'success');
+                            
+                            for (const [depName, depPath, depFileName] of componentConfig.dependencies) {
+                                // 检查依赖是否已经注册
+                                if (!vueApp._context.components[depName]) {
+                                    this.logEvent(`加载依赖组件: ${depName}`, 'success');
+                                    // 转换路径：绝对路径转为相对路径
+                                    const relativePath = depPath.startsWith('/') ? '..' + depPath : depPath;
+                                    await loadTestComponent(depName, relativePath, depFileName);
+                                }
+                            }
+                        }
+                        
+                        // 创建组件定义（移除dependencies，避免Vue处理时出错）
+                        const componentDef = {
+                            name,
+                            template: html,
+                            ...componentConfig
+                        };
+                        delete componentDef.dependencies; // 移除dependencies配置
+                        
+                        // 注册到Vue应用
+                        vueApp.component(name, componentDef);
+                        
+                        this.logEvent(`组件 ${name} 加载成功`, 'success');
+                        return true;
+                    } catch (error) {
+                        this.logEvent(`组件 ${name} 加载失败: ${error.message}`, 'error');
+                        console.error(`组件 ${name} 加载失败:`, error);
+                        return false;
+                    }
+                };
+                
+                // 加载组件（依赖会自动处理）
+                const components = [
+                    ['app-header', '../components/common/AppHeader', 'AppHeader'],
+                    ['hero-section', '../components/views/HeroSection', 'HeroSection'],  
+                    ['create-view', '../components/views/CreateView', 'CreateView']
+                ];
+                
+                let successCount = 0;
+                for (const [name, path, fileName] of components) {
+                    const success = await loadTestComponent(name, path, fileName);
+                    if (success) successCount++;
+                }
+                
+                this.logEvent(`主要组件加载完成: ${successCount}/${components.length} 个成功`, successCount === components.length ? 'success' : 'error');
+                
+                // 显示已注册的所有组件
+                const registeredComponents = Object.keys(vueApp._context.components);
+                this.logEvent(`已注册组件: ${registeredComponents.join(', ')}`, 'success');
+            }
+        });
+        
+        vueApp = app; // 保存Vue应用实例
+        app.mount('#app');
+    </script>
+</body>
+</html> 

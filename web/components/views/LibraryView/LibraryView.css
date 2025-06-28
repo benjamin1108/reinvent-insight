@@ -1,0 +1,313 @@
+/* LibraryView组件样式 - 完全独立，不依赖全局样式 */
+
+/* LibraryView组件样式 - 继承全局字体设置 */
+
+/* 主容器样式 */
+.library-view {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+/* 渐入动画 */
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 页面标题样式 */
+.library-header h2 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  background: linear-gradient(to right, #22d3ee, #3b82f6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 0.5rem;
+}
+
+.library-header p {
+  color: #9ca3af;
+}
+
+/* 加载状态样式 */
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 0;
+}
+
+.loading-state .text-center {
+  text-align: center;
+}
+
+.loading-state svg {
+  width: 2rem;
+  height: 2rem;
+  color: #22d3ee;
+  margin: 0 auto 1rem auto;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-state p {
+  color: #9ca3af;
+}
+
+/* 内容区域样式 */
+.content-area {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+/* 区域容器样式 */
+.section-container {
+  width: 100%;
+}
+
+/* 区域标题样式 */
+.section-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.section-header .flex:first-child {
+  display: flex;
+  align-items: center;
+}
+
+/* glow-effect样式现在由全局effects.css提供 */
+
+/* 区域标题文字 */
+.section-header h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* re:Invent区域标题 */
+.reinvent-section h3 {
+  background: linear-gradient(to right, #fb923c, #ef4444);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* 其他区域标题 */
+.other-section h3 {
+  background: linear-gradient(to right, #22d3ee, #3b82f6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* 文章计数样式 */
+.article-count {
+  margin-left: 0.75rem;
+  font-size: 0.875rem;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+/* 筛选器容器 */
+.filters-container {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* 网格布局 */
+.mobile-grid,
+.reinvent-grid,
+.other-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: 1fr;
+}
+
+/* 中等屏幕网格 */
+@media (min-width: 768px) {
+  .mobile-grid,
+  .reinvent-grid,
+  .other-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 大屏幕网格 */
+@media (min-width: 1024px) {
+  .mobile-grid,
+  .reinvent-grid,
+  .other-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* 空状态样式 */
+.empty-state {
+  text-align: center;
+  padding: 3rem 0;
+}
+
+.empty-state h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #d1d5db;
+  margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+  color: #6b7280;
+}
+
+/* 移动端容器样式 */
+.mobile-container {
+  padding: 1rem;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .library-view {
+    padding: 1rem;
+  }
+  
+  .library-header {
+    margin-bottom: 2rem;
+  }
+  
+  .library-header h2 {
+    font-size: 1.5rem;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .section-header h3 {
+    font-size: 1.25rem;
+  }
+  
+  .filters-container {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  
+  .content-area {
+    gap: 2rem;
+  }
+  
+  .mobile-grid,
+  .reinvent-grid,
+  .other-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+/* 极小屏幕优化 */
+@media (max-width: 480px) {
+  .library-view {
+    padding: 0.75rem;
+  }
+  
+  .library-header h2 {
+    font-size: 1.25rem;
+  }
+  
+  .section-header h3 {
+    font-size: 1.125rem;
+  }
+  
+  .article-count {
+    font-size: 0.75rem;
+  }
+}
+
+/* 高对比度模式支持 */
+@media (prefers-contrast: high) {
+  .library-header h2 {
+    background: none;
+    color: #ffffff;
+  }
+  
+  .section-header h3 {
+    background: none;
+    color: #ffffff;
+  }
+  
+  .loading-state svg {
+    color: #ffffff;
+  }
+}
+
+/* 减少动画模式支持 */
+@media (prefers-reduced-motion: reduce) {
+  .fade-in,
+  .loading-state svg {
+    animation: none;
+    transition: none;
+  }
+  
+  /* glow-effect减少动画支持由全局effects.css提供 */
+}
+
+/* 深色主题支持（默认） */
+.library-view {
+  background-color: transparent;
+  color: #e5e7eb;
+}
+
+/* 确保与其他组件的兼容性 */
+.library-view *,
+.library-view *::before,
+.library-view *::after {
+  box-sizing: border-box;
+}
+
+/* 清除默认样式 */
+.library-view h1,
+.library-view h2,
+.library-view h3,
+.library-view h4,
+.library-view h5,
+.library-view h6 {
+  margin: 0;
+  font-weight: inherit;
+}
+
+.library-view p {
+  margin: 0;
+}
+
+.library-view ul,
+.library-view ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+} 

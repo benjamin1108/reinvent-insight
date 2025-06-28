@@ -87,7 +87,4 @@ class EventBus {
 
 // 创建全局事件总线实例
 const eventBus = new EventBus();
-window.eventBus = eventBus;
-
-// ES6 模块导出
-export default eventBus; 
+window.eventBus = eventBus; 

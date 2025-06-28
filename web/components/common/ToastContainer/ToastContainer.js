@@ -3,11 +3,14 @@
  * 管理多个Toast的显示
  */
 export default {
-  components: {
-    // 注册Toast组件（如果使用局部注册）
-    // Toast组件应该通过ComponentLoader全局注册
+  props: {
+    // 事件总线实例，支持依赖注入
+    eventBus: {
+      type: Object,
+      default: null
+    }
   },
-  setup() {
+  setup(props) {
     const { ref, onMounted, onUnmounted } = Vue;
     
     const toasts = ref([]);
@@ -42,21 +45,18 @@ export default {
     };
     
     onMounted(() => {
-      // 等待eventBus可用
-      const checkEventBus = () => {
-        if (window.eventBus) {
-          window.eventBus.on('show-toast', handleShowToast);
-        } else {
-          // 如果eventBus还未加载，稍后再试
-          setTimeout(checkEventBus, 10);
-        }
-      };
-      checkEventBus();
+      const bus = props.eventBus || window.eventBus;
+      if (bus) {
+        bus.on('show-toast', handleShowToast);
+      } else {
+        console.warn('ToastContainer: 没有找到eventBus实例');
+      }
     });
     
     onUnmounted(() => {
-      if (window.eventBus) {
-        window.eventBus.off('show-toast', handleShowToast);
+      const bus = props.eventBus || window.eventBus;
+      if (bus) {
+        bus.off('show-toast', handleShowToast);
       }
     });
     

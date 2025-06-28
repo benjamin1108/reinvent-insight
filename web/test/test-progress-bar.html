@@ -4,171 +4,332 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ProgressBar 组件测试</title>
-  <link rel="stylesheet" href="/css/style.css">
-  <script src="/js/vendor/vue.global.prod.min.js"></script>
+  
+  <!-- Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  
+  <!-- 基础样式 -->
+  <link rel="stylesheet" href="/css/base/typography.css">
+  <link rel="stylesheet" href="/css/base/effects.css">
+  
+  <!-- 测试框架样式 -->
   <style>
-    .test-section {
-      background: rgba(17, 24, 39, 0.8);
-      border: 1px solid #374151;
+    :root {
+      --test-bg: #0f172a;
+      --test-surface: #1e293b;
+      --test-border: #334155;
+      --test-primary: #22d3ee;
+      --test-success: #10b981;
+      --test-warning: #f59e0b;
+      --test-error: #ef4444;
+      --test-text: #e5e7eb;
+      --test-text-dim: #9ca3af;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: var(--test-bg);
+      color: var(--test-text);
+      font-family: var(--font-primary);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    
+    .test-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    
+    .test-header h1 {
+      font-size: 2.5rem;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    
+    .test-header p {
+      color: var(--test-text-dim);
+      font-size: 1.125rem;
+    }
+    
+    .test-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .test-case {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
       border-radius: 12px;
       padding: 2rem;
       margin-bottom: 2rem;
     }
     
-    .test-title {
-      color: #06b6d4;
-      font-size: 1.5rem;
-      font-weight: bold;
+    .test-case-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       margin-bottom: 1.5rem;
     }
     
-    .test-case {
-      margin-bottom: 2rem;
+    .test-case-title {
+      font-size: 1.25rem;
+      color: var(--test-primary);
     }
     
-    .test-case-title {
-      color: #9CA3AF;
+    .test-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+    
+    .control-group {
+      flex: 1;
+      min-width: 200px;
+    }
+    
+    .control-label {
+      display: block;
+      color: var(--test-text-dim);
       font-size: 0.875rem;
       margin-bottom: 0.5rem;
     }
     
-    .control-panel {
-      background: rgba(31, 41, 55, 0.5);
-      border: 1px solid #4B5563;
-      border-radius: 8px;
-      padding: 1.5rem;
-      margin-bottom: 2rem;
-    }
-    
-    .control-group {
-      margin-bottom: 1rem;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-    
-    .control-label {
-      color: #D1D5DB;
-      font-size: 0.875rem;
-      min-width: 120px;
-    }
-    
-    .control-input {
-      flex: 1;
-      background: rgba(17, 24, 39, 0.8);
-      border: 1px solid #4B5563;
-      border-radius: 4px;
+    .control-input,
+    .control-select {
+      width: 100%;
       padding: 0.5rem;
-      color: white;
+      background: var(--test-bg);
+      border: 1px solid var(--test-border);
+      border-radius: 6px;
+      color: var(--test-text);
       font-size: 0.875rem;
+    }
+    
+    .control-range {
+      width: 100%;
+    }
+    
+    .control-value {
+      color: var(--test-primary);
+      font-weight: 600;
+      margin-left: 0.5rem;
     }
     
     .control-checkbox {
-      width: 1.25rem;
-      height: 1.25rem;
-      cursor: pointer;
+      margin-right: 0.5rem;
     }
     
-    .control-select {
-      background: rgba(17, 24, 39, 0.8);
-      border: 1px solid #4B5563;
-      border-radius: 4px;
-      padding: 0.5rem;
-      color: white;
+    .component-display {
+      padding: 2rem;
+      background: var(--test-bg);
+      border: 1px solid var(--test-border);
+      border-radius: 8px;
+      margin-top: 1rem;
+    }
+    
+    .progress-item {
+      margin-bottom: 1.5rem;
+    }
+    
+    .progress-label {
+      color: var(--test-text-dim);
       font-size: 0.875rem;
-      cursor: pointer;
+      margin-bottom: 0.5rem;
     }
     
-    .action-buttons {
-      display: flex;
-      gap: 1rem;
-      margin-top: 1.5rem;
-    }
-    
-    .action-button {
+    .test-button {
       padding: 0.5rem 1.5rem;
-      background: linear-gradient(to right, #06b6d4, #3b82f6);
+      background: var(--gradient-primary);
       color: white;
       border: none;
       border-radius: 6px;
       font-size: 0.875rem;
+      font-weight: 500;
       cursor: pointer;
-      transition: transform 0.2s, opacity 0.2s;
+      transition: all 0.2s;
+      margin-right: 0.5rem;
     }
     
-    .action-button:hover {
-      transform: scale(1.05);
-      opacity: 0.9;
+    .test-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3);
     }
     
-    .action-button:active {
-      transform: scale(0.95);
+    .test-button.secondary {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
     }
     
-    .log-panel {
-      background: rgba(0, 0, 0, 0.3);
-      border: 1px solid #1F2937;
-      border-radius: 8px;
-      padding: 1rem;
-      margin-top: 2rem;
-      max-height: 200px;
-      overflow-y: auto;
+    .back-link {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      padding: 0.5rem 1rem;
+      background: var(--test-surface);
+      border: 1px solid var(--test-primary);
+      border-radius: 6px;
+      color: var(--test-primary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: all 0.2s;
     }
     
-    .log-entry {
-      color: #9CA3AF;
-      font-size: 0.75rem;
-      font-family: monospace;
-      margin-bottom: 0.25rem;
+    .back-link:hover {
+      background: rgba(34, 211, 238, 0.1);
     }
-    
-    .log-entry.info { color: #60A5FA; }
-    .log-entry.success { color: #34D399; }
-    .log-entry.warning { color: #FBBF24; }
-    .log-entry.error { color: #F87171; }
   </style>
 </head>
-<body class="min-h-screen bg-gray-950 text-white">
+<body>
+  <a href="/test/" class="back-link">← 返回测试目录</a>
+  
   <div id="app">
-    <div class="max-w-6xl mx-auto p-6">
-      <!-- 页面标题 -->
-      <div class="mb-8">
-        <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 mb-2">
-          ProgressBar 组件测试
-        </h1>
-        <p class="text-gray-400">测试和演示进度条组件的各种功能</p>
+    <div class="test-header">
+      <h1>ProgressBar 组件测试</h1>
+      <p>进度条组件，支持多种样式、动画效果和自定义配置</p>
+    </div>
+    
+    <div class="test-container">
+      <!-- 测试用例1：基础进度条 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">基础进度条测试</h2>
+        </div>
+        
+        <div class="test-controls">
+          <div class="control-group">
+            <label class="control-label">
+              进度值: <span class="control-value">{{ basicProgress }}%</span>
+            </label>
+            <input 
+              type="range" 
+              v-model.number="basicProgress" 
+              min="0" 
+              max="100" 
+              class="control-range"
+            >
+          </div>
+        </div>
+        
+        <div class="component-display">
+          <div class="progress-item">
+            <div class="progress-label">默认样式</div>
+            <progress-bar :percent="basicProgress"></progress-bar>
+          </div>
+          
+          <div class="progress-item">
+            <div class="progress-label">带文本显示</div>
+            <progress-bar :percent="basicProgress" :show-text="true"></progress-bar>
+          </div>
+          
+          <div class="progress-item">
+            <div class="progress-label">外部文本</div>
+            <progress-bar :percent="basicProgress" :show-text="true" text-position="outside"></progress-bar>
+          </div>
+        </div>
       </div>
-
-      <!-- 控制面板 -->
-      <div class="test-section">
-        <h2 class="test-title">交互式控制面板</h2>
-        <div class="control-panel">
-          <div class="control-group">
-            <label class="control-label">进度值 (%):</label>
-            <input type="range" v-model.number="progress" min="0" max="100" class="control-input">
-            <span class="text-cyan-400 min-w-[50px]">{{ progress }}%</span>
+      
+      <!-- 测试用例2：颜色变体 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">颜色变体测试</h2>
+        </div>
+        
+        <div class="component-display">
+          <div class="progress-item">
+            <div class="progress-label">渐变色（默认）</div>
+            <progress-bar :percent="70" color="gradient" :show-text="true"></progress-bar>
           </div>
           
-          <div class="control-group">
-            <label class="control-label">高度:</label>
-            <input type="text" v-model="height" class="control-input" placeholder="例如: 8px, 12px, 1rem">
+          <div class="progress-item">
+            <div class="progress-label">主色调</div>
+            <progress-bar :percent="70" color="primary" :show-text="true"></progress-bar>
           </div>
           
+          <div class="progress-item">
+            <div class="progress-label">成功</div>
+            <progress-bar :percent="70" color="success" :show-text="true"></progress-bar>
+          </div>
+          
+          <div class="progress-item">
+            <div class="progress-label">警告</div>
+            <progress-bar :percent="70" color="warning" :show-text="true"></progress-bar>
+          </div>
+          
+          <div class="progress-item">
+            <div class="progress-label">错误</div>
+            <progress-bar :percent="70" color="error" :show-text="true"></progress-bar>
+          </div>
+          
+          <div class="progress-item">
+            <div class="progress-label">自定义颜色</div>
+            <progress-bar :percent="70" color="#8b5cf6" :show-text="true"></progress-bar>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 测试用例3：条纹和动画 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">条纹和动画效果</h2>
+        </div>
+        
+        <div class="test-controls">
           <div class="control-group">
-            <label class="control-label">颜色:</label>
-            <select v-model="color" class="control-select">
-              <option value="gradient">渐变色</option>
-              <option value="primary">主色调</option>
-              <option value="success">成功</option>
-              <option value="warning">警告</option>
-              <option value="error">错误</option>
-              <option value="#8B5CF6">自定义颜色</option>
+            <label class="control-label">
+              <input type="checkbox" v-model="striped" class="control-checkbox">
+              显示条纹
+            </label>
+          </div>
+          <div class="control-group">
+            <label class="control-label">
+              <input type="checkbox" v-model="animated" :disabled="!striped" class="control-checkbox">
+              条纹动画
+            </label>
+          </div>
+        </div>
+        
+        <div class="component-display">
+          <progress-bar 
+            :percent="75" 
+            :striped="striped" 
+            :animated="animated"
+            height="20px"
+            :show-text="true"
+          ></progress-bar>
+        </div>
+      </div>
+      
+      <!-- 测试用例4：尺寸和圆角 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">尺寸和圆角测试</h2>
+        </div>
+        
+        <div class="test-controls">
+          <div class="control-group">
+            <label class="control-label">高度</label>
+            <select v-model="testHeight" class="control-select">
+              <option value="4px">细 (4px)</option>
+              <option value="8px">标准 (8px)</option>
+              <option value="16px">中等 (16px)</option>
+              <option value="24px">大 (24px)</option>
             </select>
           </div>
-          
           <div class="control-group">
-            <label class="control-label">圆角:</label>
-            <select v-model="rounded" class="control-select">
+            <label class="control-label">圆角</label>
+            <select v-model="testRounded" class="control-select">
               <option value="none">无</option>
               <option value="sm">小</option>
               <option value="md">中</option>
@@ -176,309 +337,148 @@
               <option value="full">完全</option>
             </select>
           </div>
-          
-          <div class="control-group">
-            <label class="control-label">显示文本:</label>
-            <input type="checkbox" v-model="showText" class="control-checkbox">
-          </div>
-          
-          <div class="control-group" v-if="showText">
-            <label class="control-label">文本位置:</label>
-            <select v-model="textPosition" class="control-select">
-              <option value="inside">内部</option>
-              <option value="outside">外部</option>
-            </select>
-          </div>
-          
-          <div class="control-group">
-            <label class="control-label">条纹效果:</label>
-            <input type="checkbox" v-model="striped" class="control-checkbox">
-          </div>
-          
-          <div class="control-group" v-if="striped">
-            <label class="control-label">动画条纹:</label>
-            <input type="checkbox" v-model="animated" class="control-checkbox">
-          </div>
-          
-          <div class="action-buttons">
-            <button @click="startProgress" class="action-button">开始进度</button>
-            <button @click="pauseProgress" class="action-button">暂停</button>
-            <button @click="resetProgress" class="action-button">重置</button>
-            <button @click="completeProgress" class="action-button">完成</button>
-          </div>
         </div>
         
-        <!-- 实时预览 -->
-        <div class="test-case">
-          <h3 class="test-case-title">实时预览</h3>
-          <progress-bar
-            :percent="progress"
-            :height="height"
-            :color="color"
-            :show-text="showText"
-            :text-position="textPosition"
-            :striped="striped"
-            :animated="animated"
-            :rounded="rounded"
-          ></progress-bar>
-        </div>
-      </div>
-
-      <!-- 预设示例 -->
-      <div class="test-section">
-        <h2 class="test-title">预设示例</h2>
-        
-        <div class="test-case">
-          <h3 class="test-case-title">基础进度条</h3>
-          <progress-bar :percent="30"></progress-bar>
-        </div>
-        
-        <div class="test-case">
-          <h3 class="test-case-title">带文本的进度条（内部）</h3>
-          <progress-bar :percent="65" :show-text="true"></progress-bar>
-        </div>
-        
-        <div class="test-case">
-          <h3 class="test-case-title">带文本的进度条（外部）</h3>
-          <progress-bar :percent="45" :show-text="true" text-position="outside"></progress-bar>
-        </div>
-        
-        <div class="test-case">
-          <h3 class="test-case-title">不同颜色的进度条</h3>
-          <div style="margin-bottom: 1rem;">
-            <progress-bar :percent="80" color="success" :show-text="true" style="margin-bottom: 0.5rem;"></progress-bar>
-            <progress-bar :percent="60" color="warning" :show-text="true" style="margin-bottom: 0.5rem;"></progress-bar>
-            <progress-bar :percent="40" color="error" :show-text="true" style="margin-bottom: 0.5rem;"></progress-bar>
-            <progress-bar :percent="70" color="#8B5CF6" :show-text="true"></progress-bar>
-          </div>
-        </div>
-        
-        <div class="test-case">
-          <h3 class="test-case-title">条纹动画效果</h3>
-          <progress-bar :percent="75" :striped="true" :animated="true" height="16px"></progress-bar>
-        </div>
-        
-        <div class="test-case">
-          <h3 class="test-case-title">不同高度和圆角</h3>
-          <div style="margin-bottom: 1rem;">
-            <progress-bar :percent="50" height="4px" rounded="none" style="margin-bottom: 0.5rem;"></progress-bar>
-            <progress-bar :percent="50" height="12px" rounded="sm" style="margin-bottom: 0.5rem;"></progress-bar>
-            <progress-bar :percent="50" height="20px" rounded="lg" :show-text="true"></progress-bar>
-          </div>
-        </div>
-      </div>
-
-      <!-- 模拟场景 -->
-      <div class="test-section">
-        <h2 class="test-title">模拟场景</h2>
-        
-        <div class="test-case">
-          <h3 class="test-case-title">文件上传进度</h3>
-          <div style="margin-bottom: 0.5rem;">
-            <span class="text-sm text-gray-400">正在上传: video.mp4</span>
-          </div>
+        <div class="component-display">
           <progress-bar 
-            :percent="uploadProgress" 
-            :show-text="true" 
-            color="primary"
-            :striped="true"
-            :animated="uploadProgress < 100"
+            :percent="60" 
+            :height="testHeight"
+            :rounded="testRounded"
+            :show-text="true"
           ></progress-bar>
-          <button @click="simulateUpload" class="action-button" style="margin-top: 1rem;">
-            模拟上传
+        </div>
+      </div>
+      
+      <!-- 测试用例5：动态进度模拟 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">动态进度模拟</h2>
+        </div>
+        
+        <div class="test-controls">
+          <button @click="startSimulation" class="test-button" :disabled="isSimulating">
+            {{ isSimulating ? '进行中...' : '开始模拟' }}
+          </button>
+          <button @click="resetSimulation" class="test-button secondary">
+            重置
           </button>
         </div>
         
-        <div class="test-case">
-          <h3 class="test-case-title">批量任务进度</h3>
-          <div v-for="(task, index) in tasks" :key="index" style="margin-bottom: 1rem;">
-            <div style="margin-bottom: 0.25rem;">
-              <span class="text-sm text-gray-400">{{ task.name }}</span>
-            </div>
+        <div class="component-display">
+          <div class="progress-item">
+            <div class="progress-label">文件上传进度</div>
             <progress-bar 
-              :percent="task.progress" 
-              :color="task.progress === 100 ? 'success' : 'gradient'"
-              height="6px"
+              :percent="uploadProgress" 
+              :show-text="true"
+              :striped="uploadProgress < 100"
+              :animated="uploadProgress < 100"
+              :color="uploadProgress === 100 ? 'success' : 'primary'"
             ></progress-bar>
           </div>
-          <button @click="simulateBatchTasks" class="action-button" style="margin-top: 1rem;">
-            开始批量任务
-          </button>
-        </div>
-      </div>
-
-      <!-- 日志面板 -->
-      <div class="log-panel">
-        <div v-for="(log, index) in logs" :key="index" :class="['log-entry', log.type]">
-          [{{ log.time }}] {{ log.message }}
+          
+          <div class="progress-item">
+            <div class="progress-label">数据处理进度</div>
+            <progress-bar 
+              :percent="processProgress" 
+              :show-text="true"
+              color="gradient"
+              text-position="outside"
+            ></progress-bar>
+          </div>
         </div>
       </div>
     </div>
   </div>
-
+  
+  <!-- 组件加载器 -->
+  <script src="/js/core/component-loader.js"></script>
+  
   <script type="module">
-    import ComponentLoader from '/js/core/component-loader.js';
+    const { createApp, ref } = Vue;
     
-    const { createApp, ref, onMounted, onUnmounted } = Vue;
-    
-    createApp({
+    const app = createApp({
       setup() {
-        // 控制面板状态
-        const progress = ref(50);
-        const height = ref('8px');
-        const color = ref('gradient');
-        const showText = ref(false);
-        const textPosition = ref('inside');
+        // 基础进度控制
+        const basicProgress = ref(30);
+        
+        // 条纹和动画
         const striped = ref(false);
         const animated = ref(false);
-        const rounded = ref('full');
         
-        // 模拟场景状态
+        // 尺寸和圆角
+        const testHeight = ref('8px');
+        const testRounded = ref('full');
+        
+        // 动态模拟
+        const isSimulating = ref(false);
         const uploadProgress = ref(0);
-        const tasks = ref([
-          { name: '处理图片', progress: 0 },
-          { name: '分析数据', progress: 0 },
-          { name: '生成报告', progress: 0 }
-        ]);
+        const processProgress = ref(0);
         
-        // 日志
-        const logs = ref([]);
-        const addLog = (message, type = 'info') => {
-          const time = new Date().toLocaleTimeString();
-          logs.value.unshift({ time, message, type });
-          if (logs.value.length > 20) {
-            logs.value.pop();
-          }
-        };
-        
-        // 进度控制
-        let progressInterval = null;
-        
-        const startProgress = () => {
-          addLog('开始进度动画', 'info');
-          if (progressInterval) clearInterval(progressInterval);
-          
-          progressInterval = setInterval(() => {
-            if (progress.value < 100) {
-              progress.value += 1;
-            } else {
-              clearInterval(progressInterval);
-              addLog('进度完成！', 'success');
-            }
-          }, 100);
-        };
-        
-        const pauseProgress = () => {
-          if (progressInterval) {
-            clearInterval(progressInterval);
-            progressInterval = null;
-            addLog('进度已暂停', 'warning');
-          }
-        };
-        
-        const resetProgress = () => {
-          pauseProgress();
-          progress.value = 0;
-          addLog('进度已重置', 'info');
-        };
-        
-        const completeProgress = () => {
-          pauseProgress();
-          progress.value = 100;
-          addLog('进度设置为100%', 'success');
-        };
-        
-        // 模拟文件上传
-        const simulateUpload = () => {
+        // 开始模拟
+        const startSimulation = () => {
+          isSimulating.value = true;
           uploadProgress.value = 0;
-          addLog('开始模拟文件上传', 'info');
+          processProgress.value = 0;
           
+          // 模拟上传进度
           const uploadInterval = setInterval(() => {
-            const increment = Math.random() * 15 + 5; // 5-20的随机增量
-            uploadProgress.value = Math.min(uploadProgress.value + increment, 100);
-            
-            if (uploadProgress.value >= 100) {
-              uploadProgress.value = 100;
+            if (uploadProgress.value < 100) {
+              uploadProgress.value += Math.random() * 15 + 5;
+              if (uploadProgress.value > 100) uploadProgress.value = 100;
+            } else {
               clearInterval(uploadInterval);
-              addLog('文件上传完成！', 'success');
             }
           }, 500);
-        };
-        
-        // 模拟批量任务
-        const simulateBatchTasks = () => {
-          // 重置任务进度
-          tasks.value.forEach(task => task.progress = 0);
-          addLog('开始执行批量任务', 'info');
           
-          tasks.value.forEach((task, index) => {
-            setTimeout(() => {
-              const taskInterval = setInterval(() => {
-                const increment = Math.random() * 20 + 10;
-                task.progress = Math.min(task.progress + increment, 100);
-                
-                if (task.progress >= 100) {
-                  task.progress = 100;
-                  clearInterval(taskInterval);
-                  addLog(`${task.name} 完成！`, 'success');
-                }
-              }, 300);
-            }, index * 1000); // 每个任务延迟启动
-          });
+          // 模拟处理进度（延迟开始）
+          setTimeout(() => {
+            const processInterval = setInterval(() => {
+              if (processProgress.value < 100) {
+                processProgress.value += Math.random() * 10 + 3;
+                if (processProgress.value > 100) processProgress.value = 100;
+              } else {
+                clearInterval(processInterval);
+                isSimulating.value = false;
+              }
+            }, 400);
+          }, 1000);
         };
         
-        // 组件加载
-        onMounted(async () => {
-          try {
-            // 获取当前 Vue 应用实例
-            const app = Vue.getCurrentInstance().appContext.app;
-            
-            await ComponentLoader.registerComponents(app, [
-              ['progress-bar', '/components/shared/ProgressBar', 'ProgressBar']
-            ]);
-            
-            addLog('ProgressBar组件加载成功', 'success');
-          } catch (error) {
-            console.error('加载组件失败:', error);
-            addLog(`加载组件失败: ${error.message}`, 'error');
-          }
-        });
-        
-        // 清理
-        onUnmounted(() => {
-          if (progressInterval) {
-            clearInterval(progressInterval);
-          }
-        });
+        // 重置模拟
+        const resetSimulation = () => {
+          isSimulating.value = false;
+          uploadProgress.value = 0;
+          processProgress.value = 0;
+        };
         
         return {
-          // 控制面板
-          progress,
-          height,
-          color,
-          showText,
-          textPosition,
+          basicProgress,
           striped,
           animated,
-          rounded,
-          
-          // 方法
-          startProgress,
-          pauseProgress,
-          resetProgress,
-          completeProgress,
-          
-          // 模拟场景
+          testHeight,
+          testRounded,
+          isSimulating,
           uploadProgress,
-          tasks,
-          simulateUpload,
-          simulateBatchTasks,
-          
-          // 日志
-          logs
+          processProgress,
+          startSimulation,
+          resetSimulation
         };
       }
-    }).mount('#app');
+    });
+    
+    // 加载组件
+    (async () => {
+      try {
+        await ComponentLoader.registerComponents(app, [
+          ['progress-bar', '/components/shared/ProgressBar', 'ProgressBar']
+        ]);
+        
+        app.mount('#app');
+        console.log('ProgressBar 测试环境初始化完成');
+      } catch (error) {
+        console.error('测试环境初始化失败:', error);
+      }
+    })();
   </script>
 </body>
 </html> 

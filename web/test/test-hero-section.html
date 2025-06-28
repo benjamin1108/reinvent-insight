@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HeroSection 组件测试</title>
+  
+  <!-- Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  
+  <!-- 基础样式 -->
+  <link rel="stylesheet" href="/css/base/typography.css">
+  <link rel="stylesheet" href="/css/base/effects.css">
+  
+  <!-- 测试框架样式 -->
+  <style>
+    :root {
+      --test-bg: #0f172a;
+      --test-surface: #1e293b;
+      --test-border: #334155;
+      --test-primary: #22d3ee;
+      --test-success: #10b981;
+      --test-warning: #f59e0b;
+      --test-error: #ef4444;
+      --test-text: #e5e7eb;
+      --test-text-dim: #9ca3af;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: var(--test-bg);
+      color: var(--test-text);
+      font-family: var(--font-primary);
+      min-height: 100vh;
+    }
+    
+    .test-header {
+      text-align: center;
+      padding: 2rem;
+      background: var(--test-surface);
+      border-bottom: 1px solid var(--test-border);
+    }
+    
+    .test-header h1 {
+      font-size: 2.5rem;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    
+    .test-header p {
+      color: var(--test-text-dim);
+      font-size: 1.125rem;
+    }
+    
+    .test-container {
+      max-width: 100%;
+      margin: 0 auto;
+    }
+    
+    .test-case {
+      margin-bottom: 2rem;
+    }
+    
+    .test-case-header {
+      background: var(--test-surface);
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--test-border);
+    }
+    
+    .test-case-title {
+      font-size: 1.25rem;
+      color: var(--test-primary);
+    }
+    
+    .test-controls {
+      background: var(--test-surface);
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--test-border);
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    
+    .test-button {
+      padding: 0.5rem 1.5rem;
+      background: var(--gradient-primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .test-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3);
+    }
+    
+    .test-button.secondary {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+    }
+    
+    .hero-container {
+      min-height: 600px;
+      background: var(--test-bg);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .test-output {
+      background: var(--test-surface);
+      border-top: 1px solid var(--test-border);
+      padding: 1.5rem;
+      font-family: var(--font-code);
+      font-size: 0.875rem;
+    }
+    
+    .status-indicator {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-left: 1rem;
+    }
+    
+    .status-authenticated {
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--test-success);
+    }
+    
+    .status-guest {
+      background: rgba(245, 158, 11, 0.2);
+      color: var(--test-warning);
+    }
+    
+    .back-link {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      padding: 0.5rem 1rem;
+      background: var(--test-surface);
+      border: 1px solid var(--test-primary);
+      border-radius: 6px;
+      color: var(--test-primary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+      z-index: 100;
+    }
+    
+    .back-link:hover {
+      background: rgba(34, 211, 238, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <a href="/test/" class="back-link">← 返回测试目录</a>
+  
+  <div id="app">
+    <div class="test-header">
+      <h1>HeroSection 组件测试</h1>
+      <p>首页英雄区域组件，展示欢迎信息、品牌标识和登录入口</p>
+    </div>
+    
+    <div class="test-container">
+      <!-- 测试用例1：未登录状态 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">
+            未登录状态
+            <span class="status-indicator status-guest">访客</span>
+          </h2>
+        </div>
+        
+        <div class="hero-container">
+          <hero-section 
+            :is-authenticated="false"
+            @login-click="handleLoginClick"
+          ></hero-section>
+        </div>
+      </div>
+      
+      <!-- 测试用例2：已登录状态 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">
+            已登录状态
+            <span class="status-indicator status-authenticated">已认证</span>
+          </h2>
+        </div>
+        
+        <div class="hero-container">
+          <hero-section 
+            :is-authenticated="true"
+            @login-click="handleLoginClick"
+          ></hero-section>
+        </div>
+      </div>
+      
+      <!-- 测试用例3：动态切换 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">
+            动态状态切换
+            <span class="status-indicator" 
+                  :class="isAuthenticated ? 'status-authenticated' : 'status-guest'">
+              {{ isAuthenticated ? '已认证' : '访客' }}
+            </span>
+          </h2>
+        </div>
+        
+        <div class="test-controls">
+          <button @click="toggleAuth" class="test-button">
+            切换登录状态
+          </button>
+          <button @click="simulateLogin" class="test-button secondary">
+            模拟登录流程
+          </button>
+        </div>
+        
+        <div class="hero-container">
+          <hero-section 
+            :is-authenticated="isAuthenticated"
+            @login-click="handleDynamicLogin"
+          ></hero-section>
+        </div>
+        
+        <div class="test-output" v-if="eventLog.length > 0">
+          <div style="margin-bottom: 0.5rem; color: var(--test-text-dim);">事件日志：</div>
+          <div v-for="(log, index) in eventLog" :key="index">
+            {{ log }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 组件加载器 -->
+  <script src="/js/core/component-loader.js"></script>
+  
+  <script type="module">
+    const { createApp, ref } = Vue;
+    
+    const app = createApp({
+      setup() {
+        const isAuthenticated = ref(false);
+        const eventLog = ref([]);
+        
+        const addLog = (message) => {
+          const time = new Date().toLocaleTimeString();
+          eventLog.value.unshift(`[${time}] ${message}`);
+          if (eventLog.value.length > 10) {
+            eventLog.value.pop();
+          }
+        };
+        
+        const handleLoginClick = () => {
+          addLog('静态测试：登录按钮被点击');
+          alert('登录按钮被点击！');
+        };
+        
+        const toggleAuth = () => {
+          isAuthenticated.value = !isAuthenticated.value;
+          addLog(`认证状态切换为：${isAuthenticated.value ? '已登录' : '未登录'}`);
+        };
+        
+        const simulateLogin = async () => {
+          if (isAuthenticated.value) {
+            addLog('模拟退出登录...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            isAuthenticated.value = false;
+            addLog('已退出登录');
+          } else {
+            addLog('模拟登录过程...');
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            isAuthenticated.value = true;
+            addLog('登录成功！');
+          }
+        };
+        
+        const handleDynamicLogin = () => {
+          if (!isAuthenticated.value) {
+            addLog('触发登录事件');
+            simulateLogin();
+          } else {
+            addLog('已登录用户点击了按钮');
+          }
+        };
+        
+        return {
+          isAuthenticated,
+          eventLog,
+          handleLoginClick,
+          toggleAuth,
+          simulateLogin,
+          handleDynamicLogin
+        };
+      }
+    });
+    
+    // 加载组件
+    (async () => {
+      try {
+        await ComponentLoader.registerComponents(app, [
+          ['hero-section', '/components/views/HeroSection', 'HeroSection'],
+          ['tech-button', '/components/shared/TechButton', 'TechButton']
+        ]);
+        
+        app.mount('#app');
+        console.log('HeroSection 测试环境初始化完成');
+      } catch (error) {
+        console.error('测试环境初始化失败:', error);
+      }
+    })();
+  </script>
+</body>
+</html> 

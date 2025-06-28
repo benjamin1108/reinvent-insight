@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LibraryView组件测试 - reinvent Insight</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+  <script src="/js/vendor/vue.global.prod.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 核心脚本 -->
+  <script src="/js/core/component-loader.js"></script>
+  <style>
+    body {
+      background: #111827;
+      color: #e5e7eb;
+      min-height: 100vh;
+    }
+    
+    .test-controls {
+      background: rgba(17, 24, 39, 0.8);
+      border: 1px solid #374151;
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    
+    .control-group {
+      margin-bottom: 1rem;
+    }
+    
+    .control-label {
+      display: block;
+      color: #d1d5db;
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+    
+    .control-input,
+    .control-select {
+      width: 100%;
+      max-width: 300px;
+      padding: 0.5rem;
+      background: rgba(17, 24, 39, 0.8);
+      border: 1px solid #4b5563;
+      border-radius: 4px;
+      color: white;
+      font-size: 0.875rem;
+    }
+    
+    .test-button {
+      padding: 0.75rem 1.5rem;
+      background: linear-gradient(to right, #06b6d4, #3b82f6);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: transform 0.2s, opacity 0.2s;
+      margin-right: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    .test-button:hover {
+      transform: scale(1.05);
+      opacity: 0.9;
+    }
+    
+    .test-button:active {
+      transform: scale(0.98);
+    }
+    
+    .event-log {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid #1f2937;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .log-item {
+      color: #d1d5db;
+      font-size: 0.875rem;
+      margin-bottom: 0.25rem;
+      font-family: monospace;
+    }
+    
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      color: #d1d5db;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    
+    .checkbox-label input {
+      margin-right: 0.5rem;
+    }
+  </style>
+</head>
+
+<body class="h-full bg-gray-900 text-gray-200">
+  <div id="app" class="h-full">
+    <div class="container mx-auto p-6">
+      <h1 class="text-3xl font-bold text-center mb-8 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+        LibraryView 组件测试页面
+      </h1>
+      
+      <!-- 控制面板 -->
+      <div class="test-controls">
+        <h2 class="text-xl font-semibold mb-4 text-cyan-400">测试控制面板</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="control-group">
+            <label class="control-label">数据集类型</label>
+            <select v-model="selectedDataset" class="control-select">
+              <option value="mixed">混合数据（re:Invent + 其他）</option>
+              <option value="reinvent">仅re:Invent数据</option>
+              <option value="other">仅其他数据</option>
+              <option value="empty">空数据</option>
+            </select>
+          </div>
+          
+          <div class="control-group">
+            <label class="control-label">组件状态</label>
+            <select v-model="componentState" class="control-select">
+              <option value="normal">正常状态</option>
+              <option value="loading">加载状态</option>
+              <option value="guest">访客模式</option>
+            </select>
+          </div>
+          
+          <div class="control-group">
+            <label class="control-label">数据数量</label>
+            <select v-model="dataSize" class="control-select">
+              <option value="small">小数据集（6项）</option>
+              <option value="medium">中数据集（12项）</option>
+              <option value="large">大数据集（20项）</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="mt-4">
+          <button @click="updateData" class="test-button">更新数据</button>
+          <button @click="clearData" class="test-button">清空数据</button>
+          <button @click="resetFilters" class="test-button">重置筛选</button>
+          <button @click="clearLogs" class="test-button">清空日志</button>
+        </div>
+        
+        <div class="mt-4">
+          <label class="checkbox-label">
+            <input type="checkbox" v-model="showDebugInfo">
+            显示调试信息
+          </label>
+        </div>
+      </div>
+
+      <!-- 调试信息 -->
+      <div v-if="showDebugInfo" class="test-controls">
+        <h3 class="text-lg font-semibold mb-3 text-purple-400">调试信息</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div>
+            <div class="mb-2"><strong>总数据:</strong> {{ currentSummaries.length }}</div>
+            <div class="mb-2"><strong>re:Invent:</strong> {{ reinventCount }}</div>
+            <div class="mb-2"><strong>其他:</strong> {{ otherCount }}</div>
+          </div>
+          <div>
+            <div class="mb-2"><strong>当前状态:</strong> {{ componentState }}</div>
+            <div class="mb-2"><strong>数据集:</strong> {{ selectedDataset }}</div>
+            <div class="mb-2"><strong>加载中:</strong> {{ isLoading ? '是' : '否' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LibraryView 组件 -->
+      <library-view
+        :summaries="currentSummaries"
+        :loading="isLoading"
+        :loading-text="loadingText"
+        :empty-title="emptyTitle"
+        :empty-message="emptyMessage"
+        :is-guest="isGuest"
+        @summary-click="handleSummaryClick"
+        @level-change="handleLevelChange"
+        @year-change="handleYearChange"
+        ref="libraryViewRef">
+      </library-view>
+
+      <!-- 事件日志 -->
+      <div class="event-log">
+        <h3 class="text-lg font-semibold mb-2 text-cyan-400">事件日志</h3>
+        <div v-for="(log, index) in eventLogs" :key="index" class="log-item">
+          [{{ log.time }}] {{ log.message }}
+        </div>
+        <div v-if="eventLogs.length === 0" class="log-item text-gray-500">
+          暂无事件日志
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    const { createApp, ref, reactive, computed, onMounted, getCurrentInstance } = Vue;
+    
+    const app = createApp({
+      setup() {
+        // 状态管理
+        const selectedDataset = ref('mixed');
+        const componentState = ref('normal');
+        const dataSize = ref('medium');
+        const showDebugInfo = ref(false);
+        const eventLogs = ref([]);
+        const libraryViewRef = ref(null);
+        
+        // 模拟数据
+        const mockData = {
+          reinvent: [
+            {
+              filename: 'reinvent-2023-1.md',
+              title_en: 'AWS re:Invent 2023: Building Scalable Applications',
+              title_cn: 'AWS re:Invent 2023：构建可扩展应用程序',
+              word_count: 15000,
+              level: 'Level 200 - 中级',
+              hash: 'hash-reinvent-1',
+              upload_date: '2023-12-01'
+            },
+            {
+              filename: 'reinvent-2023-2.md',
+              title_en: 'AWS re:Invent 2023: Serverless Architecture Best Practices',
+              title_cn: 'AWS re:Invent 2023：无服务器架构最佳实践',
+              word_count: 22000,
+              level: 'Level 300 - 高级',
+              hash: 'hash-reinvent-2',
+              upload_date: '2023-12-02'
+            },
+            {
+              filename: 'reinvent-2022-1.md',
+              title_en: 'AWS re:Invent 2022: Keynote - The Future of Cloud',
+              title_cn: 'AWS re:Invent 2022：主题演讲 - 云的未来',
+              word_count: 8000,
+              level: 'Keynote',
+              hash: 'hash-reinvent-3',
+              upload_date: '2022-11-30'
+            },
+            {
+              filename: 'reinvent-2022-2.md',
+              title_en: 'AWS re:Invent 2022: Machine Learning Innovations',
+              title_cn: 'AWS re:Invent 2022：机器学习创新',
+              word_count: 18000,
+              level: 'Level 400 - 专家',
+              hash: 'hash-reinvent-4',
+              upload_date: '2022-12-01'
+            },
+            {
+              filename: 'reinvent-2021-1.md',
+              title_en: 'AWS re:Invent 2021: Container Security',
+              title_cn: 'AWS re:Invent 2021：容器安全',
+              word_count: 12000,
+              level: 'Level 100 - 基础',
+              hash: 'hash-reinvent-5',
+              upload_date: '2021-12-15'
+            },
+            {
+              filename: 'reinvent-2023-3.md',
+              title_en: 'AWS re:Invent 2023: Database Modernization',
+              title_cn: 'AWS re:Invent 2023：数据库现代化',
+              word_count: 16500,
+              level: 'Level 200 - 中级',
+              hash: 'hash-reinvent-6',
+              upload_date: '2023-12-03'
+            }
+          ],
+          other: [
+            {
+              filename: 'microservices-guide.md',
+              title_en: 'Complete Guide to Microservices Architecture',
+              title_cn: '微服务架构完整指南',
+              word_count: 25000,
+              level: 'Level 300 - 高级',
+              hash: 'hash-other-1',
+              upload_date: '2023-10-15'
+            },
+            {
+              filename: 'kubernetes-best-practices.md',
+              title_en: 'Kubernetes Best Practices for Production',
+              title_cn: 'Kubernetes生产环境最佳实践',
+              word_count: 20000,
+              level: 'Level 200 - 中级',
+              hash: 'hash-other-2',
+              upload_date: '2023-09-20'
+            },
+            {
+              filename: 'devops-automation.md',
+              title_en: 'DevOps Automation Strategies',
+              title_cn: 'DevOps自动化策略',
+              word_count: 14000,
+              level: 'Level 100 - 基础',
+              hash: 'hash-other-3',
+              upload_date: '2023-08-10'
+            },
+            {
+              filename: 'cloud-security.md',
+              title_en: 'Advanced Cloud Security Patterns',
+              title_cn: '高级云安全模式',
+              word_count: 18500,
+              level: 'Level 400 - 专家',
+              hash: 'hash-other-4',
+              upload_date: '2023-11-05'
+            }
+          ]
+        };
+        
+        // 计算属性
+        const currentSummaries = computed(() => {
+          let data = [];
+          
+          switch (selectedDataset.value) {
+            case 'mixed':
+              data = [...mockData.reinvent, ...mockData.other];
+              break;
+            case 'reinvent':
+              data = mockData.reinvent;
+              break;
+            case 'other':
+              data = mockData.other;
+              break;
+            case 'empty':
+              data = [];
+              break;
+          }
+          
+          // 根据数据大小限制
+          const sizeMap = { small: 6, medium: 12, large: 20 };
+          const maxSize = sizeMap[dataSize.value];
+          
+          return data.slice(0, maxSize);
+        });
+        
+        const isLoading = computed(() => componentState.value === 'loading');
+        const isGuest = computed(() => componentState.value === 'guest');
+        
+        const loadingText = computed(() => {
+          return isGuest.value ? '加载洞察中...' : '加载笔记中...';
+        });
+        
+        const emptyTitle = computed(() => {
+          return isGuest.value ? '暂无公开内容' : '笔记库为空';
+        });
+        
+        const emptyMessage = computed(() => {
+          return isGuest.value ? '敬请期待更多深度解读！' : '创建您的第一篇深度解读笔记吧！';
+        });
+        
+        const reinventCount = computed(() => {
+          return currentSummaries.value.filter(s => 
+            s.title_en.toLowerCase().includes('reinvent') || 
+            s.title_en.toLowerCase().includes('re:invent')
+          ).length;
+        });
+        
+        const otherCount = computed(() => {
+          return currentSummaries.value.length - reinventCount.value;
+        });
+        
+        // 方法
+        const addLog = (message) => {
+          eventLogs.value.push({
+            time: new Date().toLocaleTimeString(),
+            message
+          });
+          
+          // 限制日志数量
+          if (eventLogs.value.length > 50) {
+            eventLogs.value = eventLogs.value.slice(-50);
+          }
+        };
+        
+        const handleSummaryClick = (data) => {
+          addLog(`点击摘要: ${data.hash} (类型: ${data.type})`);
+        };
+        
+        const handleLevelChange = (level) => {
+          addLog(`级别筛选变更: ${level || '全部级别'}`);
+        };
+        
+        const handleYearChange = (year) => {
+          addLog(`年份筛选变更: ${year || '全部年份'}`);
+        };
+        
+        const updateData = () => {
+          addLog(`更新数据: ${selectedDataset.value} (${dataSize.value})`);
+        };
+        
+        const clearData = () => {
+          selectedDataset.value = 'empty';
+          addLog('清空数据');
+        };
+        
+        const resetFilters = () => {
+          if (libraryViewRef.value) {
+            libraryViewRef.value.resetFilters();
+            addLog('重置筛选条件');
+          }
+        };
+        
+        const clearLogs = () => {
+          eventLogs.value = [];
+        };
+        
+        // 组件加载
+        onMounted(async () => {
+          try {
+            const app = getCurrentInstance().appContext.app;
+            
+            // 注册依赖组件
+            await ComponentLoader.registerComponents(app, [
+              ['library-view', '/components/views/LibraryView', 'LibraryView'],
+              ['summary-card', '/components/common/SummaryCard', 'SummaryCard'],
+              ['level-filter', '/components/common/Filter/LevelFilter', 'LevelFilter'],
+              ['year-filter', '/components/common/Filter/YearFilter', 'YearFilter']
+            ]);
+            
+            console.log('LibraryView 组件加载成功');
+            addLog('组件加载完成');
+          } catch (error) {
+            console.error('加载组件失败:', error);
+            addLog(`组件加载失败: ${error.message}`);
+          }
+        });
+        
+        return {
+          // 状态
+          selectedDataset,
+          componentState,
+          dataSize,
+          showDebugInfo,
+          eventLogs,
+          libraryViewRef,
+          
+          // 计算属性
+          currentSummaries,
+          isLoading,
+          isGuest,
+          loadingText,
+          emptyTitle,
+          emptyMessage,
+          reinventCount,
+          otherCount,
+          
+          // 方法
+          handleSummaryClick,
+          handleLevelChange,
+          handleYearChange,
+          updateData,
+          clearData,
+          resetFilters,
+          clearLogs
+        };
+      }
+    });
+    
+    app.mount('#app');
+  </script>
+</body>
+</html> 

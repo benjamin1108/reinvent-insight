@@ -85,9 +85,8 @@ export default {
       dragStartX.value = event.clientX;
       dragStartWidth.value = actualWidth.value;
       
-      // 添加拖动时的样式
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
+      // 使用CSS类控制拖拽状态
+      document.documentElement.classList.add('is-dragging-toc');
       
       e.preventDefault();
     };
@@ -120,8 +119,8 @@ export default {
       if (!isDragging.value) return;
       
       isDragging.value = false;
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
+      // 清除拖拽状态
+      document.documentElement.classList.remove('is-dragging-toc');
     };
     
     // 自动调整宽度

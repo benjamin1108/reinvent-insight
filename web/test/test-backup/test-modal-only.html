@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>模态框组件测试</title>
+    <style>
+        body {
+            background: #1e293b;
+            color: white;
+            font-family: monospace;
+            padding: 2rem;
+        }
+        .test-section {
+            background: #374151;
+            padding: 2rem;
+            margin: 1rem 0;
+            border-radius: 0.5rem;
+        }
+        .controls {
+            margin: 1rem 0;
+        }
+        .controls button {
+            margin: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 0.375rem;
+            cursor: pointer;
+        }
+        .controls button:hover {
+            background: #2563eb;
+        }
+    </style>
+    <script src="../js/vendor/vue.global.prod.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <h1>模态框组件独立测试</h1>
+        
+        <div class="test-section">
+            <h2>登录模态框测试</h2>
+            <div class="controls">
+                <button @click="showModal">显示登录框</button>
+                <button @click="showCustomModal">显示自定义登录框</button>
+            </div>
+            
+            <!-- 这里会显示模态框 -->
+            <login-modal
+                v-if="modalState.visible"
+                :visible="modalState.visible"
+                :title="modalState.title"
+                :loading="modalState.loading"
+                @login="handleLogin"
+                @close="closeModal">
+            </login-modal>
+            
+            <div v-if="currentUser">
+                <h3>当前用户</h3>
+                <p>用户名: {{ currentUser.username }}</p>
+                <p>登录时间: {{ currentUser.loginTime }}</p>
+                <button @click="logout">退出登录</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+        
+        console.log('Vue对象:', Vue);
+        
+        const app = createApp({
+            data() {
+                return {
+                    modalState: {
+                        visible: false,
+                        title: '用户登录',
+                        loading: false
+                    },
+                    currentUser: null
+                };
+            },
+            methods: {
+                showModal() {
+                    this.modalState.visible = true;
+                    this.modalState.title = '用户登录';
+                    console.log('显示标准登录框');
+                },
+                showCustomModal() {
+                    this.modalState.visible = true;
+                    this.modalState.title = '自定义登录框';
+                    console.log('显示自定义登录框');
+                },
+                closeModal() {
+                    this.modalState.visible = false;
+                    this.modalState.loading = false;
+                    console.log('关闭模态框');
+                },
+                handleLogin(credentials) {
+                    console.log('登录尝试:', credentials);
+                    this.modalState.loading = true;
+                    
+                    // 模拟登录过程
+                    setTimeout(() => {
+                        this.currentUser = {
+                            username: credentials.username,
+                            loginTime: new Date().toLocaleString()
+                        };
+                        this.modalState.visible = false;
+                        this.modalState.loading = false;
+                        console.log('登录成功:', credentials.username);
+                    }, 2000);
+                },
+                logout() {
+                    this.currentUser = null;
+                    console.log('用户已退出登录');
+                }
+            },
+            async mounted() {
+                console.log('Vue应用挂载完成');
+                
+                // 加载登录模态框组件
+                try {
+                    console.log('开始加载登录模态框组件...');
+                    
+                    // 加载组件文件
+                    const [htmlResponse, cssResponse] = await Promise.all([
+                        fetch('../components/common/LoginModal/LoginModal.html'),
+                        fetch('../components/common/LoginModal/LoginModal.css').catch(() => ({ ok: false }))
+                    ]);
+                    
+                    if (!htmlResponse.ok) {
+                        throw new Error('无法加载LoginModal.html');
+                    }
+                    
+                    const html = await htmlResponse.text();
+                    const css = cssResponse?.ok ? await cssResponse.text() : '';
+                    
+                    console.log('HTML加载成功:', html.length, '字符');
+                    console.log('CSS加载成功:', css.length, '字符');
+                    
+                    // 注入CSS
+                    if (css) {
+                        const style = document.createElement('style');
+                        style.textContent = css;
+                        document.head.appendChild(style);
+                        console.log('CSS已注入');
+                    }
+                    
+                    // 加载JS模块
+                    const jsModule = await import('../components/common/LoginModal/LoginModal.js');
+                    console.log('JS模块加载成功:', jsModule);
+                    
+                    if (!jsModule.default) {
+                        throw new Error('LoginModal组件没有默认导出');
+                    }
+                    
+                    // 注册组件
+                    const componentDef = {
+                        name: 'login-modal',
+                        template: html,
+                        ...jsModule.default
+                    };
+                    
+                    app.component('login-modal', componentDef);
+                    console.log('LoginModal组件注册成功');
+                    
+                    // 验证注册
+                    const registeredComponents = Object.keys(app._context.components);
+                    console.log('已注册组件:', registeredComponents);
+                    
+                } catch (error) {
+                    console.error('组件加载失败:', error);
+                    alert('组件加载失败: ' + error.message);
+                }
+            }
+        });
+        
+        console.log('准备挂载Vue应用...');
+        app.mount('#app');
+        console.log('Vue应用挂载完成');
+    </script>
+</body>
+</html> 

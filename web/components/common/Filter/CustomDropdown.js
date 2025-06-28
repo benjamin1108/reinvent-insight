@@ -98,9 +98,4 @@ const CustomDropdown = {
   }
 }; 
 
-// 暴露到window对象以支持旧代码
-if (typeof window !== 'undefined') {
-  window.CustomDropdown = CustomDropdown;
-}
-
 export default CustomDropdown;

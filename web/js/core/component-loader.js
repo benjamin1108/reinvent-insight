@@ -101,7 +101,4 @@ class ComponentLoader {
 }
 
 // 导出组件加载器
-window.ComponentLoader = ComponentLoader;
-
-// 同时支持 ES6 模块导出
-export default ComponentLoader; 
+window.ComponentLoader = ComponentLoader; 

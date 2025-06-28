@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Toast组件测试</title>
+  <script src="/js/vendor/vue.global.prod.min.js"></script>
+  <link href="https://cdn.tailwindcss.com" rel="stylesheet">
+  
+  <!-- 组件系统脚本 -->
+  <script src="/js/core/event-bus.js" type="module"></script>
+  <script src="/js/core/component-loader.js" type="module"></script>
+  <script src="/js/composables/useToast.js" type="module"></script>
+  
+  <style>
+    /* 测试页面专用样式 */
+    .test-container {
+      min-height: 100vh;
+      background: #111827;
+      color: #e5e7eb;
+    }
+    
+    .test-section {
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    .test-title {
+      color: #60a5fa;
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+    }
+    
+    .test-description {
+      color: #9ca3af;
+      margin-bottom: 1rem;
+    }
+    
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+    }
+    
+    .test-result {
+      background: #374151;
+      border-radius: 0.375rem;
+      padding: 1rem;
+      margin-top: 1rem;
+      font-family: monospace;
+      font-size: 0.875rem;
+      white-space: pre-wrap;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <div id="test-app" class="test-container p-8">
+    <h1 class="text-3xl font-bold text-cyan-400 mb-8">Toast 组件测试</h1>
+    
+    <!-- 基础功能测试 -->
+    <div class="test-section">
+      <h2 class="test-title">基础功能测试</h2>
+      <p class="test-description">测试Toast组件的基本显示功能</p>
+      
+      <div class="test-grid">
+        <button @click="showSuccess" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-white transition">
+          成功提示
+        </button>
+        
+        <button @click="showError" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-white transition">
+          错误提示
+        </button>
+        
+        <button @click="showWarning" class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded text-white transition">
+          警告提示
+        </button>
+        
+        <button @click="showInfo" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white transition">
+          信息提示
+        </button>
+      </div>
+    </div>
+    
+    <!-- 自定义参数测试 -->
+    <div class="test-section">
+      <h2 class="test-title">自定义参数测试</h2>
+      <p class="test-description">测试自定义消息内容和持续时间</p>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-2">消息内容</label>
+          <input 
+            v-model="customMessage" 
+            type="text" 
+            placeholder="输入自定义消息"
+            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+          >
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium mb-2">持续时间（毫秒）</label>
+          <input 
+            v-model.number="customDuration" 
+            type="number" 
+            min="0"
+            step="1000"
+            placeholder="3000"
+            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+          >
+        </div>
+        
+        <div class="test-grid">
+          <button 
+            v-for="type in ['success', 'error', 'warning', 'info']" 
+            :key="type"
+            @click="showCustom(type)" 
+            :class="[
+              'px-4 py-2 rounded text-white transition',
+              type === 'success' ? 'bg-green-600 hover:bg-green-700' :
+              type === 'error' ? 'bg-red-600 hover:bg-red-700' :
+              type === 'warning' ? 'bg-yellow-600 hover:bg-yellow-700' :
+              'bg-blue-600 hover:bg-blue-700'
+            ]"
+          >
+            自定义{{ type }}
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 多个Toast测试 -->
+    <div class="test-section">
+      <h2 class="test-title">多个Toast测试</h2>
+      <p class="test-description">测试同时显示多个Toast的功能</p>
+      
+      <div class="space-y-4">
+        <button @click="showMultiple" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded text-white transition">
+          显示多个Toast（延迟显示）
+        </button>
+        
+        <button @click="showBurst" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded text-white transition">
+          快速显示10个Toast
+        </button>
+        
+        <button @click="showPersistent" class="px-4 py-2 bg-pink-600 hover:bg-pink-700 rounded text-white transition">
+          显示不自动关闭的Toast
+        </button>
+      </div>
+    </div>
+    
+    <!-- 测试日志 -->
+    <div class="test-section">
+      <h2 class="test-title">测试日志</h2>
+      <p class="test-description">显示Toast事件日志</p>
+      
+      <button @click="clearLog" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded text-white transition mb-4">
+        清空日志
+      </button>
+      
+      <div class="test-result" v-if="testLog.length > 0">
+        <div v-for="(log, index) in testLog" :key="index">
+          [{{ log.time }}] {{ log.message }}
+        </div>
+      </div>
+      <div v-else class="text-gray-500">暂无日志</div>
+    </div>
+    
+    <!-- Toast容器 -->
+    <toast-container></toast-container>
+  </div>
+
+  <!-- 核心脚本 -->
+  <script src="/js/core/component-loader.js"></script>
+  
+  <script type="module">
+    import { useToast } from '/js/composables/useToast.js';
+    
+    const { createApp, ref } = Vue;
+    
+    const testApp = createApp({
+      setup() {
+        const customMessage = ref('这是一条自定义消息');
+        const customDuration = ref(3000);
+        const testLog = ref([]);
+        
+        const addLog = (message) => {
+          const time = new Date().toLocaleTimeString();
+          testLog.value.unshift({ time, message });
+          if (testLog.value.length > 20) {
+            testLog.value.pop();
+          }
+        };
+        
+        const showSuccess = () => {
+          const toast = useToast();
+          toast.success('操作成功完成！');
+          addLog('显示成功提示');
+        };
+        
+        const showError = () => {
+          const toast = useToast();
+          toast.error('操作失败，请重试');
+          addLog('显示错误提示');
+        };
+        
+        const showWarning = () => {
+          const toast = useToast();
+          toast.warning('请注意，这是一个警告');
+          addLog('显示警告提示');
+        };
+        
+        const showInfo = () => {
+          const toast = useToast();
+          toast.info('这是一条信息提示');
+          addLog('显示信息提示');
+        };
+        
+        const showCustom = (type) => {
+          const toast = useToast();
+          toast.showToast({
+            message: customMessage.value,
+            type: type,
+            duration: customDuration.value
+          });
+          addLog(`显示自定义${type}提示，持续${customDuration.value}ms`);
+        };
+        
+        const showMultiple = () => {
+          const toast = useToast();
+          const messages = [
+            { text: '第一条消息', type: 'success', delay: 0 },
+            { text: '第二条消息', type: 'warning', delay: 500 },
+            { text: '第三条消息', type: 'error', delay: 1000 },
+            { text: '第四条消息', type: 'info', delay: 1500 }
+          ];
+          
+          messages.forEach(({ text, type, delay }) => {
+            setTimeout(() => {
+              toast.showToast({ message: text, type });
+              addLog(`延迟${delay}ms显示${type}提示`);
+            }, delay);
+          });
+        };
+        
+        const showBurst = () => {
+          const toast = useToast();
+          const types = ['success', 'error', 'warning', 'info'];
+          
+          for (let i = 0; i < 10; i++) {
+            const type = types[i % 4];
+            toast.showToast({
+              message: `快速消息 #${i + 1}`,
+              type,
+              duration: 5000
+            });
+          }
+          addLog('快速显示10个Toast');
+        };
+        
+        const showPersistent = () => {
+          const toast = useToast();
+          toast.showToast({
+            message: '这个Toast不会自动关闭，请手动关闭',
+            type: 'info',
+            duration: 0 // 0表示不自动关闭
+          });
+          addLog('显示不自动关闭的Toast');
+        };
+        
+        const clearLog = () => {
+          testLog.value = [];
+          addLog('日志已清空');
+        };
+        
+        return {
+          customMessage,
+          customDuration,
+          testLog,
+          showSuccess,
+          showError,
+          showWarning,
+          showInfo,
+          showCustom,
+          showMultiple,
+          showBurst,
+          showPersistent,
+          clearLog
+        };
+      }
+    });
+    
+    // 加载组件系统
+    (async () => {
+      try {
+        const components = [
+          ['Toast', '/components/common/Toast', 'Toast'],
+          ['ToastContainer', '/components/common/ToastContainer', 'ToastContainer']
+        ];
+        
+        await ComponentLoader.registerComponents(testApp, components);
+        console.log('Toast测试页面组件加载完成');
+        
+        testApp.mount('#test-app');
+      } catch (error) {
+        console.error('Toast测试页面组件加载失败:', error);
+      }
+    })();
+  </script>
+</body>
+</html> 

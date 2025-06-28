@@ -4,90 +4,345 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>组件测试模板</title>
-  <script src="/js/vendor/vue.global.prod.min.js"></script>
-  <link href="https://cdn.tailwindcss.com" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css">
   
-  <!-- 组件系统脚本 -->
-  <script src="/js/core/event-bus.js" type="module"></script>
-  <script src="/js/core/component-loader.js" type="module"></script>
+  <!-- Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   
+  <!-- 基础样式 -->
+  <link rel="stylesheet" href="/css/base/typography.css">
+  <link rel="stylesheet" href="/css/base/effects.css">
+  <link rel="stylesheet" href="/css/base/content.css">
+  
+  <!-- 测试框架样式 -->
   <style>
-    /* 测试页面专用样式 */
-    .test-container {
-      min-height: 100vh;
-      background: #111827;
-      color: #e5e7eb;
+    :root {
+      --test-bg: #0f172a;
+      --test-surface: #1e293b;
+      --test-border: #334155;
+      --test-primary: #22d3ee;
+      --test-success: #10b981;
+      --test-warning: #f59e0b;
+      --test-error: #ef4444;
+      --test-text: #e5e7eb;
+      --test-text-dim: #9ca3af;
     }
     
-    .test-section {
-      background: #1f2937;
-      border: 1px solid #374151;
-      border-radius: 0.5rem;
-      padding: 1.5rem;
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: var(--test-bg);
+      color: var(--test-text);
+      font-family: var(--font-primary);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    
+    .test-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    
+    .test-header h1 {
+      font-size: 2.5rem;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    
+    .test-header p {
+      color: var(--test-text-dim);
+      font-size: 1.125rem;
+    }
+    
+    .test-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .test-case {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+      border-radius: 12px;
+      padding: 2rem;
       margin-bottom: 2rem;
     }
     
-    .test-title {
-      color: #60a5fa;
-      font-size: 1.5rem;
-      font-weight: bold;
-      margin-bottom: 1rem;
+    .test-case-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
     }
     
-    .test-description {
-      color: #9ca3af;
-      margin-bottom: 1rem;
+    .test-case-title {
+      font-size: 1.25rem;
+      color: var(--test-primary);
+    }
+    
+    .test-case-status {
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .status-pass {
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--test-success);
+    }
+    
+    .status-fail {
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--test-error);
+    }
+    
+    .status-running {
+      background: rgba(245, 158, 11, 0.2);
+      color: var(--test-warning);
+    }
+    
+    .test-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+    
+    .control-group {
+      flex: 1;
+      min-width: 200px;
+    }
+    
+    .control-label {
+      display: block;
+      color: var(--test-text-dim);
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .control-input,
+    .control-select {
+      width: 100%;
+      padding: 0.5rem;
+      background: var(--test-bg);
+      border: 1px solid var(--test-border);
+      border-radius: 6px;
+      color: var(--test-text);
+      font-size: 0.875rem;
+    }
+    
+    .control-input:focus,
+    .control-select:focus {
+      outline: none;
+      border-color: var(--test-primary);
+    }
+    
+    .test-button {
+      padding: 0.5rem 1.5rem;
+      background: var(--gradient-primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .test-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3);
+    }
+    
+    .test-button:active {
+      transform: translateY(0);
+    }
+    
+    .test-button.secondary {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+    }
+    
+    .test-output {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--test-border);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+      font-family: var(--font-code);
+      font-size: 0.875rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .component-display {
+      padding: 2rem;
+      background: var(--test-bg);
+      border: 1px solid var(--test-border);
+      border-radius: 8px;
+      margin-top: 1rem;
+    }
+    
+    .back-link {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      padding: 0.5rem 1rem;
+      background: var(--test-surface);
+      border: 1px solid var(--test-primary);
+      border-radius: 6px;
+      color: var(--test-primary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    
+    .back-link:hover {
+      background: rgba(34, 211, 238, 0.1);
+    }
+    
+    @media (max-width: 768px) {
+      body {
+        padding: 1rem;
+      }
+      
+      .test-case {
+        padding: 1rem;
+      }
+      
+      .back-link {
+        position: static;
+        display: inline-block;
+        margin-bottom: 1rem;
+      }
     }
   </style>
 </head>
 <body>
-  <div id="test-app" class="test-container p-8">
-    <h1 class="text-3xl font-bold text-cyan-400 mb-8">组件测试页面模板</h1>
-    
-    <div class="test-section">
-      <h2 class="test-title">使用说明</h2>
-      <p class="test-description">
-        这是一个组件测试页面模板。复制此文件并修改以测试你的组件。
-      </p>
+  <a href="/test/" class="back-link">← 返回测试目录</a>
+  
+  <div id="app">
+    <div class="test-header">
+      <h1>{{ componentName }} 组件测试</h1>
+      <p>{{ componentDescription }}</p>
     </div>
     
-    <!-- 在这里添加你的测试内容 -->
-    
+    <div class="test-container">
+      <!-- 测试用例1 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">基础功能测试</h2>
+          <span class="test-case-status" :class="testStatus.basic">
+            {{ testStatus.basic === 'status-pass' ? '✅ 通过' : 
+               testStatus.basic === 'status-fail' ? '❌ 失败' : '⏳ 运行中' }}
+          </span>
+        </div>
+        
+        <div class="test-controls">
+          <div class="control-group">
+            <label class="control-label">测试参数</label>
+            <input v-model="testParam" class="control-input" placeholder="输入测试值">
+          </div>
+          
+          <div class="control-group">
+            <label class="control-label">&nbsp;</label>
+            <button @click="runBasicTest" class="test-button">运行测试</button>
+          </div>
+        </div>
+        
+        <div class="component-display">
+          <!-- 组件实例放这里 -->
+          <p style="color: var(--test-text-dim); text-align: center;">
+            组件将在这里显示
+          </p>
+        </div>
+        
+        <div class="test-output" v-if="testOutput.basic">
+          <pre>{{ testOutput.basic }}</pre>
+        </div>
+      </div>
+      
+      <!-- 更多测试用例... -->
+    </div>
   </div>
-
+  
+  <!-- 组件加载器 -->
+  <script src="/js/core/component-loader.js"></script>
+  
   <script type="module">
-    import ComponentLoader from '/js/core/component-loader.js';
-    
     const { createApp, ref } = Vue;
     
-    const testApp = createApp({
+    const app = createApp({
       setup() {
-        // 在这里添加你的测试逻辑
+        // 组件信息
+        const componentName = ref('组件名称');
+        const componentDescription = ref('组件描述');
+        
+        // 测试状态
+        const testStatus = ref({
+          basic: 'status-pass',
+          advanced: 'status-fail',
+          edge: 'status-running'
+        });
+        
+        // 测试参数
+        const testParam = ref('');
+        
+        // 测试输出
+        const testOutput = ref({
+          basic: '',
+          advanced: '',
+          edge: ''
+        });
+        
+        // 测试方法
+        const runBasicTest = () => {
+          testStatus.value.basic = 'status-running';
+          testOutput.value.basic = '开始运行基础测试...\n';
+          
+          // 模拟异步测试
+          setTimeout(() => {
+            testOutput.value.basic += '✓ 组件正确渲染\n';
+            testOutput.value.basic += '✓ 属性绑定正常\n';
+            testOutput.value.basic += '✓ 事件触发正常\n';
+            testStatus.value.basic = 'status-pass';
+          }, 1000);
+        };
         
         return {
-          // 返回需要在模板中使用的数据和方法
+          componentName,
+          componentDescription,
+          testStatus,
+          testParam,
+          testOutput,
+          runBasicTest
         };
       }
     });
     
-    // 加载组件系统
+    // 加载组件
     (async () => {
       try {
-        const components = [
-          // 在这里添加要测试的组件
-          // ['component-name', '/components/path/to/Component', 'ComponentFileName']
-          // 例如: ['progress-bar', '/components/shared/ProgressBar', 'ProgressBar']
-        ];
+        // 在这里加载要测试的组件
+        // await ComponentLoader.registerComponents(app, [
+        //   ['component-name', '/components/path', 'ComponentFile']
+        // ]);
         
-        await ComponentLoader.registerComponents(testApp, components);
-        console.log('测试页面组件加载完成');
-        
-        testApp.mount('#test-app');
+        app.mount('#app');
+        console.log('测试环境初始化完成');
       } catch (error) {
-        console.error('测试页面组件加载失败:', error);
+        console.error('测试环境初始化失败:', error);
       }
     })();
   </script>
 </body>
-</html> 
+</html>

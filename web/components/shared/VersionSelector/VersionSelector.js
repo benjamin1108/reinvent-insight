@@ -92,9 +92,4 @@ const VersionSelector = {
   }
 };
 
-// 暴露到window对象以支持旧代码
-if (typeof window !== 'undefined') {
-  window.VersionSelector = VersionSelector;
-}
-
 export default VersionSelector;

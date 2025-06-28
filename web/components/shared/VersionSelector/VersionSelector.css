@@ -4,7 +4,6 @@
 .version-selector {
   position: relative;
   display: inline-block;
-  font-family: 'JetBrains Mono', 'Consolas', 'SFMono-Regular', Menlo, monospace, 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 
 /* 触发器样式 */
@@ -93,10 +92,7 @@
   z-index: 10;
 }
 
-/* 使文章容器相对定位以支持版本选择器的绝对定位 */
-.tech-gradient.border.border-gray-700.rounded-xl.p-10 {
-  position: relative;
-}
+/* 注意：不再在组件内定义其他组件的样式，布局由使用方负责 */
 
 /* 继承基础样式但调整位置 */
 .version-selector-article .version-selector-trigger {

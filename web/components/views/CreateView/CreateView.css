@@ -1,0 +1,243 @@
+/* CreateView组件样式 - 完全独立，不依赖全局样式 */
+
+/* CreateView组件样式 - 继承全局字体设置和效果样式 */
+
+/* 主容器样式 */
+.create-view {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+/* 渐入动画 */
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 输入卡片样式 */
+.input-card {
+  border: 1px solid #374151;
+  border-radius: 0.75rem;
+  padding: 2rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  margin-bottom: 2rem;
+}
+
+.input-card h2 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  background: linear-gradient(to bottom right, #d97706, #ea580c);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 0.5rem;
+}
+
+.input-card p {
+  color: #9ca3af;
+  margin-bottom: 1.5rem;
+}
+
+/* 输入框样式 */
+.input-card input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(31, 41, 55, 0.5);
+  border: 1px solid #4b5563;
+  border-radius: 0.5rem;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.input-card input::placeholder {
+  color: #9ca3af;
+}
+
+.input-card input:focus {
+  outline: none;
+  ring: 2px solid #06b6d4;
+  border-color: transparent;
+}
+
+.input-card input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 按钮样式现在由TechButton组件统一提供 */
+
+/* 进度区域样式 */
+.progress-section {
+  background: rgba(17, 24, 39, 0.5);
+  border: 1px solid #374151;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  backdrop-filter: blur(8px);
+  margin-bottom: 2rem;
+}
+
+.progress-section h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #22d3ee;
+  display: flex;
+  align-items: center;
+}
+
+.progress-section h3 svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-right: 0.5rem;
+}
+
+/* 日志样式 */
+.progress-section .space-y-2 > * + * {
+  margin-top: 0.5rem;
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.progress-section .flex {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.progress-section .text-gray-300 {
+  color: #d1d5db;
+}
+
+.progress-section .text-gray-400 {
+  color: #9ca3af;
+}
+
+.progress-section .animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .5;
+  }
+}
+
+/* 结果区域样式 */
+.result-section {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.result-section > div {
+  background: rgba(17, 24, 39, 0.3);
+  border: 1px solid #374151;
+  border-radius: 0.75rem;
+  padding: 2rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(8px);
+}
+
+.result-section h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: linear-gradient(to right, #22d3ee, #3b82f6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  min-width: 0;
+  word-break: break-words;
+}
+
+.result-section button {
+  padding: 0.5rem 1rem;
+  background: linear-gradient(to right, #9333ea, #ec4899);
+  border-radius: 0.5rem;
+  color: white;
+  font-weight: 500;
+  transition: all 0.2s;
+  transform: scale(1);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.result-section button:hover {
+  background: linear-gradient(to right, #7c3aed, #db2777);
+  transform: scale(1.05);
+}
+
+/* prose-tech样式现在由全局content.css提供 */
+
+/* 移动端样式 */
+.mobile-container {
+  padding: 1rem;
+}
+
+.mobile-input-card {
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.mobile-progress {
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .create-view {
+    padding: 1rem;
+  }
+  
+  .input-card {
+    padding: 1.5rem;
+  }
+  
+  .input-card h2 {
+    font-size: 1.5rem;
+  }
+  
+  .progress-section {
+    padding: 1rem;
+  }
+  
+  .result-section > div {
+    padding: 1.5rem;
+  }
+  
+  .result-section .flex {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+  
+  .result-section button {
+    white-space: normal;
+    text-align: center;
+  }
+} 

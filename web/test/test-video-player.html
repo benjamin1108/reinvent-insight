@@ -4,438 +4,818 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VideoPlayer 组件测试</title>
-  <script src="/js/vendor/vue.global.prod.min.js"></script>
+  
+  <!-- Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  
+  <!-- 基础样式 -->
+  <link rel="stylesheet" href="/css/base/typography.css">
+  <link rel="stylesheet" href="/css/base/effects.css">
+  
+  <!-- 测试框架样式 -->
   <style>
-    body {
-      margin: 0;
-      padding: 0;
-      min-height: 100vh;
-      background-color: #0a0e27;
-      color: white;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    :root {
+      --test-bg: #0f172a;
+      --test-surface: #1e293b;
+      --test-border: #334155;
+      --test-primary: #22d3ee;
+      --test-success: #10b981;
+      --test-warning: #f59e0b;
+      --test-error: #ef4444;
+      --test-text: #e5e7eb;
+      --test-text-dim: #9ca3af;
     }
     
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: var(--test-bg);
+      color: var(--test-text);
+      font-family: var(--font-primary);
+      min-height: 100vh;
       padding: 2rem;
     }
     
-    .header {
+    .test-header {
+      text-align: center;
       margin-bottom: 3rem;
     }
     
-    .title {
-      font-size: 2rem;
-      font-weight: bold;
-      background: linear-gradient(to right, #22d3ee, #3b82f6);
+    .test-header h1 {
+      font-size: 2.5rem;
+      background: var(--gradient-primary);
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
       margin-bottom: 0.5rem;
     }
     
-    .subtitle {
-      color: #9ca3af;
+    .test-header p {
+      color: var(--test-text-dim);
+      font-size: 1.125rem;
     }
     
-    .test-section {
-      background: rgba(17, 24, 39, 0.8);
-      border: 1px solid #374151;
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .test-case {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
       border-radius: 12px;
       padding: 2rem;
       margin-bottom: 2rem;
     }
     
-    .section-title {
-      color: #06b6d4;
-      font-size: 1.5rem;
-      font-weight: bold;
+    .test-case-header {
       margin-bottom: 1.5rem;
     }
     
-    .control-group {
+    .test-case-title {
+      font-size: 1.25rem;
+      color: var(--test-primary);
+    }
+    
+    .test-case-description {
+      color: var(--test-text-dim);
+      font-size: 0.875rem;
+      margin-top: 0.5rem;
+    }
+    
+    .test-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
       margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+    
+    .control-group {
+      flex: 1;
+      min-width: 200px;
     }
     
     .control-label {
       display: block;
-      color: #d1d5db;
+      color: var(--test-text-dim);
       font-size: 0.875rem;
       margin-bottom: 0.5rem;
     }
     
     .control-input {
       width: 100%;
-      max-width: 400px;
       padding: 0.5rem;
-      background: rgba(17, 24, 39, 0.8);
-      border: 1px solid #4b5563;
-      border-radius: 4px;
-      color: white;
+      background: var(--test-bg);
+      border: 1px solid var(--test-border);
+      border-radius: 6px;
+      color: var(--test-text);
       font-size: 0.875rem;
     }
     
+    .video-container {
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .player-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 2rem;
+    }
+    
     .test-button {
-      padding: 0.75rem 1.5rem;
-      background: linear-gradient(to right, #06b6d4, #3b82f6);
+      padding: 0.5rem 1.5rem;
+      background: var(--gradient-primary);
       color: white;
       border: none;
       border-radius: 6px;
       font-size: 0.875rem;
-      cursor: pointer;
-      transition: transform 0.2s, opacity 0.2s;
-      margin-right: 1rem;
-      margin-bottom: 1rem;
-    }
-    
-    .test-button:hover {
-      transform: scale(1.05);
-      opacity: 0.9;
-    }
-    
-    .test-button:active {
-      transform: scale(0.98);
-    }
-    
-    .video-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 1rem;
-      margin-top: 1rem;
-    }
-    
-    .video-item {
-      background: rgba(31, 41, 55, 0.5);
-      border: 1px solid #4b5563;
-      border-radius: 8px;
-      padding: 1rem;
+      font-weight: 500;
       cursor: pointer;
       transition: all 0.2s;
     }
     
-    .video-item:hover {
-      background: rgba(31, 41, 55, 0.8);
-      border-color: #06b6d4;
-      transform: translateY(-2px);
+    .test-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3);
     }
     
-    .video-title {
-      font-weight: 500;
-      margin-bottom: 0.25rem;
+    .test-button.secondary {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
     }
     
-    .video-id {
-      color: #9ca3af;
-      font-size: 0.75rem;
-    }
-    
-    .status-panel {
-      background: rgba(0, 0, 0, 0.3);
-      border: 1px solid #1f2937;
-      border-radius: 8px;
+    .status-display {
       padding: 1rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
       margin-top: 1rem;
     }
     
     .status-item {
       display: flex;
-      justify-content: space-between;
-      margin-bottom: 0.5rem;
-      color: #d1d5db;
-      font-size: 0.875rem;
-    }
-    
-    .status-item:last-child {
-      margin-bottom: 0;
+      gap: 0.5rem;
+      align-items: center;
     }
     
     .status-label {
-      color: #9ca3af;
+      color: var(--test-text-dim);
+      font-size: 0.875rem;
     }
     
     .status-value {
-      color: #60a5fa;
-      font-weight: 500;
+      font-weight: 600;
+      color: var(--test-primary);
     }
     
-    .checkbox-label {
-      display: flex;
-      align-items: center;
-      color: #d1d5db;
+    .test-output {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--test-border);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+      font-family: var(--font-code);
       font-size: 0.875rem;
-      cursor: pointer;
+      max-height: 300px;
+      overflow-y: auto;
     }
     
-    .checkbox-label input {
-      margin-right: 0.5rem;
+    .video-info {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    .video-info h3 {
+      color: var(--test-primary);
+      margin-bottom: 0.5rem;
+      font-size: 1rem;
+    }
+    
+    .video-info p {
+      color: var(--test-text-dim);
+      font-size: 0.875rem;
+      line-height: 1.5;
+    }
+    
+    .back-link {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      padding: 0.5rem 1rem;
+      background: var(--test-surface);
+      border: 1px solid var(--test-primary);
+      border-radius: 6px;
+      color: var(--test-primary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+      z-index: 100;
+    }
+    
+    .back-link:hover {
+      background: rgba(34, 211, 238, 0.1);
+    }
+    
+    .sample-videos {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+    
+    .sample-video-btn {
+      padding: 0.25rem 0.75rem;
+      background: rgba(34, 211, 238, 0.2);
+      border: 1px solid var(--test-primary);
+      border-radius: 4px;
+      color: var(--test-primary);
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .sample-video-btn:hover {
+      background: rgba(34, 211, 238, 0.3);
     }
   </style>
 </head>
 <body>
+  <a href="/test/" class="back-link">← 返回测试目录</a>
+  
   <div id="app">
-    <div class="container">
-      <!-- 页面标题 -->
-      <div class="header">
-        <h1 class="title">VideoPlayer 组件测试</h1>
-        <p class="subtitle">测试浮动视频播放器的各种功能</p>
+    <div class="test-header">
+      <h1>VideoPlayer 组件测试</h1>
+      <p>视频播放器组件，支持自定义控制和事件监听</p>
+    </div>
+    
+    <div class="test-container">
+      <!-- 测试用例1：基础播放器 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">基础播放器功能</h2>
+          <p class="test-case-description">标准视频播放器，包含基本控制功能</p>
+        </div>
+        
+        <div class="video-container">
+          <video-player
+            :src="videoUrl1"
+            :poster="posterUrl1"
+            :autoplay="false"
+            :controls="true"
+            @play="handlePlay1"
+            @pause="handlePause1"
+            @ended="handleEnded1"
+            @timeupdate="handleTimeUpdate1"
+          ></video-player>
+        </div>
+        
+        <div class="status-display">
+          <div class="status-item">
+            <span class="status-label">播放状态:</span>
+            <span class="status-value">{{ playStatus1 }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">当前时间:</span>
+            <span class="status-value">{{ formatTime(currentTime1) }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">总时长:</span>
+            <span class="status-value">{{ formatTime(duration1) }}</span>
+          </div>
+        </div>
       </div>
-
-      <!-- 基础功能测试 -->
-      <div class="test-section">
-        <h2 class="section-title">基础功能测试</h2>
-        
-        <div class="control-group">
-          <label class="control-label">自定义视频ID（YouTube）</label>
-          <input v-model="customVideoId" 
-                 class="control-input" 
-                 placeholder="例如: dQw4w9WgXcQ">
+      
+      <!-- 测试用例2：自定义配置 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">自定义配置测试</h2>
+          <p class="test-case-description">测试不同配置选项和视频源</p>
         </div>
         
-        <div class="control-group">
-          <label class="control-label">视频标题</label>
-          <input v-model="customTitle" 
-                 class="control-input" 
-                 placeholder="输入视频标题">
+        <div class="test-controls">
+          <div class="control-group">
+            <label class="control-label">视频URL</label>
+            <input v-model="customVideoUrl" class="control-input" placeholder="输入视频URL">
+            <div class="sample-videos">
+              <button v-for="sample in sampleVideos" :key="sample.name"
+                      @click="customVideoUrl = sample.url"
+                      class="sample-video-btn">
+                {{ sample.name }}
+              </button>
+            </div>
+          </div>
+          
+          <div class="control-group">
+            <label class="control-label">封面图URL</label>
+            <input v-model="customPosterUrl" class="control-input" placeholder="输入封面图URL">
+          </div>
         </div>
         
-        <div class="control-group">
-          <label class="checkbox-label">
-            <input type="checkbox" v-model="defaultMinimized">
-            默认最小化
+        <div class="test-controls">
+          <label style="display: flex; align-items: center; gap: 0.5rem;">
+            <input type="checkbox" v-model="customAutoplay">
+            <span>自动播放</span>
+          </label>
+          
+          <label style="display: flex; align-items: center; gap: 0.5rem;">
+            <input type="checkbox" v-model="customControls">
+            <span>显示控制栏</span>
+          </label>
+          
+          <label style="display: flex; align-items: center; gap: 0.5rem;">
+            <input type="checkbox" v-model="customLoop">
+            <span>循环播放</span>
+          </label>
+          
+          <label style="display: flex; align-items: center; gap: 0.5rem;">
+            <input type="checkbox" v-model="customMuted">
+            <span>静音</span>
           </label>
         </div>
         
-        <button @click="openCustomVideo" class="test-button">
-          打开自定义视频
-        </button>
+        <div class="video-container">
+          <video-player
+            :key="playerKey"
+            :src="customVideoUrl"
+            :poster="customPosterUrl"
+            :autoplay="customAutoplay"
+            :controls="customControls"
+            :loop="customLoop"
+            :muted="customMuted"
+            @play="handlePlay2"
+            @pause="handlePause2"
+            @loadedmetadata="handleLoadedMetadata"
+            @error="handleError"
+          ></video-player>
+        </div>
         
-        <button @click="closeVideo" class="test-button" :disabled="!showPlayer">
-          关闭视频
-        </button>
+        <div class="video-info" v-if="videoMetadata">
+          <h3>视频信息</h3>
+          <p>尺寸: {{ videoMetadata.width }} x {{ videoMetadata.height }}</p>
+          <p>时长: {{ formatTime(videoMetadata.duration) }}</p>
+        </div>
       </div>
-
-      <!-- 预设视频列表 -->
-      <div class="test-section">
-        <h2 class="section-title">预设视频列表</h2>
+      
+      <!-- 测试用例3：多播放器测试 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">多播放器同步测试</h2>
+          <p class="test-case-description">多个播放器实例的独立控制</p>
+        </div>
         
-        <div class="video-list">
-          <div v-for="video in presetVideos" 
-               :key="video.id"
-               @click="openPresetVideo(video)"
-               class="video-item">
-            <div class="video-title">{{ video.title }}</div>
-            <div class="video-id">ID: {{ video.id }}</div>
+        <div class="test-controls">
+          <button @click="playAll" class="test-button">
+            全部播放
+          </button>
+          <button @click="pauseAll" class="test-button secondary">
+            全部暂停
+          </button>
+          <button @click="syncTime" class="test-button secondary">
+            同步进度
+          </button>
+        </div>
+        
+        <div class="player-grid">
+          <div v-for="(player, index) in multiPlayers" :key="player.id">
+            <div class="video-info">
+              <h3>播放器 {{ index + 1 }}</h3>
+              <p>{{ player.title }}</p>
+            </div>
+            <video-player
+              :ref="el => playerRefs[index] = el"
+              :src="player.src"
+              :poster="player.poster"
+              controls
+              @play="() => handleMultiPlay(index)"
+              @pause="() => handleMultiPause(index)"
+              @timeupdate="(time) => handleMultiTimeUpdate(index, time)"
+            ></video-player>
+            <div class="status-display" style="margin-top: 0.5rem;">
+              <div class="status-item">
+                <span class="status-label">状态:</span>
+                <span class="status-value">{{ player.status }}</span>
+              </div>
+              <div class="status-item">
+                <span class="status-label">进度:</span>
+                <span class="status-value">{{ formatTime(player.currentTime) }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-
-      <!-- 状态监控 -->
-      <div class="test-section">
-        <h2 class="section-title">状态监控</h2>
+      
+      <!-- 测试用例4：API 控制测试 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">API 控制测试</h2>
+          <p class="test-case-description">通过组件API控制播放器</p>
+        </div>
         
-        <div class="status-panel">
-          <div class="status-item">
-            <span class="status-label">播放器状态：</span>
-            <span class="status-value">{{ showPlayer ? '显示' : '隐藏' }}</span>
+        <div class="test-controls">
+          <button @click="apiPlay" class="test-button">播放</button>
+          <button @click="apiPause" class="test-button secondary">暂停</button>
+          <button @click="apiSeek(0)" class="test-button secondary">重新开始</button>
+          <button @click="apiSeek(10)" class="test-button secondary">快进 10s</button>
+          <button @click="apiSeek(-10)" class="test-button secondary">快退 10s</button>
+          <button @click="apiToggleMute" class="test-button secondary">
+            {{ apiMuted ? '取消静音' : '静音' }}
+          </button>
+        </div>
+        
+        <div class="test-controls">
+          <div class="control-group">
+            <label class="control-label">音量控制</label>
+            <input type="range" v-model="apiVolume" @input="apiSetVolume" 
+                   min="0" max="100" class="control-input">
+            <span style="margin-left: 0.5rem;">{{ apiVolume }}%</span>
           </div>
-          <div class="status-item">
-            <span class="status-label">最小化状态：</span>
-            <span class="status-value">{{ playerMinimized ? '是' : '否' }}</span>
-          </div>
-          <div class="status-item">
-            <span class="status-label">位置：</span>
-            <span class="status-value">
-              X: {{ playerPosition.x ?? 'auto' }}, 
-              Y: {{ playerPosition.y ?? 'auto' }}
-            </span>
-          </div>
-          <div class="status-item">
-            <span class="status-label">大小：</span>
-            <span class="status-value">
-              {{ playerSize.width }} x {{ playerSize.height }}
-            </span>
-          </div>
-          <div class="status-item">
-            <span class="status-label">当前视频ID：</span>
-            <span class="status-value">{{ currentVideoId || '无' }}</span>
+          
+          <div class="control-group">
+            <label class="control-label">播放速度</label>
+            <select v-model="apiPlaybackRate" @change="apiSetPlaybackRate" class="control-input">
+              <option value="0.5">0.5x</option>
+              <option value="1">1x</option>
+              <option value="1.25">1.25x</option>
+              <option value="1.5">1.5x</option>
+              <option value="2">2x</option>
+            </select>
           </div>
         </div>
         
-        <button @click="resetPosition" class="test-button" style="margin-top: 1rem;">
-          重置位置
+        <div class="video-container">
+          <video-player
+            ref="apiPlayer"
+            :src="apiVideoUrl"
+            controls
+            @play="handleApiPlay"
+            @pause="handleApiPause"
+            @volumechange="handleVolumeChange"
+            @ratechange="handleRateChange"
+          ></video-player>
+        </div>
+      </div>
+      
+      <!-- 事件日志 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">事件日志</h2>
+        </div>
+        
+        <button @click="clearLog" class="test-button secondary">
+          清空日志
         </button>
         
-        <button @click="resetSize" class="test-button">
-          重置大小
-        </button>
+        <div class="test-output">
+          <div v-if="eventLog.length === 0" style="color: var(--test-text-dim);">
+            暂无事件记录
+          </div>
+          <div v-for="(log, index) in eventLog" :key="index">
+            {{ log }}
+          </div>
+        </div>
       </div>
     </div>
-    
-    <!-- VideoPlayer 组件 -->
-    <video-player
-      :visible="showPlayer"
-      :video-id="currentVideoId"
-      :title="currentTitle"
-      :initial-position="playerPosition"
-      :initial-size="playerSize"
-      :default-minimized="defaultMinimized"
-      @update:visible="showPlayer = $event"
-      @close="handleClose"
-      @position-change="handlePositionChange"
-      @size-change="handleSizeChange"
-      @minimize-change="handleMinimizeChange"
-    ></video-player>
   </div>
-
+  
+  <!-- 组件加载器 -->
+  <script src="/js/core/component-loader.js"></script>
+  
   <script type="module">
-    import ComponentLoader from '/js/core/component-loader.js';
+    const { createApp, ref, reactive, computed, onMounted, nextTick } = Vue;
     
-    const { createApp, ref, reactive, onMounted, getCurrentInstance } = Vue;
-    
-    createApp({
+    const app = createApp({
       setup() {
-        // 状态
-        const showPlayer = ref(false);
-        const currentVideoId = ref('');
-        const currentTitle = ref('');
-        const customVideoId = ref('dQw4w9WgXcQ');
-        const customTitle = ref('Rick Astley - Never Gonna Give You Up');
-        const defaultMinimized = ref(false);
-        const playerMinimized = ref(false);
+        // 基础播放器
+        const videoUrl1 = ref('https://www.w3schools.com/html/mov_bbb.mp4');
+        const posterUrl1 = ref('https://via.placeholder.com/640x360/0f172a/22d3ee?text=Video+Poster');
+        const playStatus1 = ref('未开始');
+        const currentTime1 = ref(0);
+        const duration1 = ref(0);
         
-        const playerPosition = reactive({
-          x: null,
-          y: null
-        });
+        // 自定义配置
+        const customVideoUrl = ref('https://www.w3schools.com/html/movie.mp4');
+        const customPosterUrl = ref('');
+        const customAutoplay = ref(false);
+        const customControls = ref(true);
+        const customLoop = ref(false);
+        const customMuted = ref(false);
+        const playerKey = ref(0);
+        const videoMetadata = ref(null);
         
-        const playerSize = reactive({
-          width: 480,
-          height: 320
-        });
-        
-        // 预设视频
-        const presetVideos = [
-          {
-            id: 'dQw4w9WgXcQ',
-            title: 'Rick Astley - Never Gonna Give You Up'
-          },
-          {
-            id: 'jNQXAC9IVRw',
-            title: 'Me at the zoo (First YouTube video)'
-          },
-          {
-            id: 'wZZ7oFKsKzY',
-            title: 'Nyan Cat [original]'
-          },
-          {
-            id: 'kJQP7kiw5Fk',
-            title: 'Luis Fonsi - Despacito'
-          },
-          {
-            id: '9bZkp7q19f0',
-            title: 'PSY - GANGNAM STYLE'
-          },
-          {
-            id: 'OPf0YbXqDm0',
-            title: 'Mark Ronson - Uptown Funk'
-          }
+        // 示例视频
+        const sampleVideos = [
+          { name: 'Big Buck Bunny', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+          { name: 'Sample MP4', url: 'https://www.w3schools.com/html/movie.mp4' },
+          { name: 'Test Pattern', url: 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4' }
         ];
         
-        // 方法
-        const openCustomVideo = () => {
-          if (!customVideoId.value) {
-            alert('请输入视频ID');
-            return;
+        // 多播放器
+        const multiPlayers = ref([
+          {
+            id: 1,
+            title: 'Big Buck Bunny (短片)',
+            src: 'https://www.w3schools.com/html/mov_bbb.mp4',
+            poster: 'https://via.placeholder.com/400x225/0f172a/22d3ee?text=Player+1',
+            status: '就绪',
+            currentTime: 0
+          },
+          {
+            id: 2,
+            title: 'Sample Video',
+            src: 'https://www.w3schools.com/html/movie.mp4',
+            poster: 'https://via.placeholder.com/400x225/1e293b/3b82f6?text=Player+2',
+            status: '就绪',
+            currentTime: 0
           }
-          
-          currentVideoId.value = customVideoId.value;
-          currentTitle.value = customTitle.value || '视频播放器';
-          showPlayer.value = true;
-        };
+        ]);
+        const playerRefs = ref([]);
         
-        const openPresetVideo = (video) => {
-          currentVideoId.value = video.id;
-          currentTitle.value = video.title;
-          showPlayer.value = true;
-        };
+        // API 控制
+        const apiPlayer = ref(null);
+        const apiVideoUrl = ref('https://www.w3schools.com/html/mov_bbb.mp4');
+        const apiVolume = ref(100);
+        const apiMuted = ref(false);
+        const apiPlaybackRate = ref('1');
         
-        const closeVideo = () => {
-          showPlayer.value = false;
-        };
+        // 事件日志
+        const eventLog = ref([]);
         
-        const handleClose = () => {
-          console.log('视频播放器已关闭');
-          currentVideoId.value = '';
-          currentTitle.value = '';
-        };
-        
-        const handlePositionChange = (position) => {
-          playerPosition.x = position.x;
-          playerPosition.y = position.y;
-          console.log('位置变化:', position);
-        };
-        
-        const handleSizeChange = (size) => {
-          playerSize.width = size.width;
-          playerSize.height = size.height;
-          console.log('大小变化:', size);
-        };
-        
-        const handleMinimizeChange = (minimized) => {
-          playerMinimized.value = minimized;
-          console.log('最小化状态:', minimized);
-        };
-        
-        const resetPosition = () => {
-          playerPosition.x = null;
-          playerPosition.y = null;
-        };
-        
-        const resetSize = () => {
-          playerSize.width = 480;
-          playerSize.height = 320;
-        };
-        
-        // 组件加载
-        onMounted(async () => {
-          try {
-            const app = getCurrentInstance().appContext.app;
-            await ComponentLoader.registerComponents(app, [
-              ['video-player', '/components/common/VideoPlayer', 'VideoPlayer']
-            ]);
-            console.log('VideoPlayer 组件加载成功');
-          } catch (error) {
-            console.error('加载组件失败:', error);
+        const addLog = (message) => {
+          const time = new Date().toLocaleTimeString();
+          eventLog.value.unshift(`[${time}] ${message}`);
+          if (eventLog.value.length > 100) {
+            eventLog.value.pop();
           }
-        });
+        };
+        
+        // 时间格式化
+        const formatTime = (seconds) => {
+          if (isNaN(seconds) || seconds === null) return '00:00';
+          const mins = Math.floor(seconds / 60);
+          const secs = Math.floor(seconds % 60);
+          return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        };
+        
+        // 基础播放器事件
+        const handlePlay1 = () => {
+          playStatus1.value = '播放中';
+          addLog('基础播放器：开始播放');
+        };
+        
+        const handlePause1 = () => {
+          playStatus1.value = '已暂停';
+          addLog('基础播放器：暂停播放');
+        };
+        
+        const handleEnded1 = () => {
+          playStatus1.value = '播放完成';
+          addLog('基础播放器：播放结束');
+        };
+        
+        const handleTimeUpdate1 = (data) => {
+          currentTime1.value = data.currentTime;
+          duration1.value = data.duration;
+        };
+        
+        // 自定义配置事件
+        const handlePlay2 = () => {
+          addLog('自定义播放器：开始播放');
+        };
+        
+        const handlePause2 = () => {
+          addLog('自定义播放器：暂停播放');
+        };
+        
+        const handleLoadedMetadata = (data) => {
+          videoMetadata.value = data;
+          addLog(`视频元数据加载完成：${data.width}x${data.height}, ${formatTime(data.duration)}`);
+        };
+        
+        const handleError = (error) => {
+          addLog(`播放错误：${error.message}`);
+          alert(`视频加载失败：${error.message}`);
+        };
+        
+        // 多播放器控制
+        const handleMultiPlay = (index) => {
+          multiPlayers.value[index].status = '播放中';
+          addLog(`播放器 ${index + 1}：开始播放`);
+        };
+        
+        const handleMultiPause = (index) => {
+          multiPlayers.value[index].status = '已暂停';
+          addLog(`播放器 ${index + 1}：暂停播放`);
+        };
+        
+        const handleMultiTimeUpdate = (index, data) => {
+          multiPlayers.value[index].currentTime = data.currentTime;
+        };
+        
+        const playAll = async () => {
+          await nextTick();
+          playerRefs.value.forEach((player, index) => {
+            if (player && player.play) {
+              player.play();
+              multiPlayers.value[index].status = '播放中';
+            }
+          });
+          addLog('所有播放器：开始播放');
+        };
+        
+        const pauseAll = async () => {
+          await nextTick();
+          playerRefs.value.forEach((player, index) => {
+            if (player && player.pause) {
+              player.pause();
+              multiPlayers.value[index].status = '已暂停';
+            }
+          });
+          addLog('所有播放器：暂停播放');
+        };
+        
+        const syncTime = async () => {
+          await nextTick();
+          const firstPlayer = playerRefs.value[0];
+          if (firstPlayer && firstPlayer.getCurrentTime) {
+            const time = firstPlayer.getCurrentTime();
+            playerRefs.value.forEach((player, index) => {
+              if (player && player.seek && index > 0) {
+                player.seek(time);
+              }
+            });
+            addLog(`同步所有播放器到时间：${formatTime(time)}`);
+          }
+        };
+        
+        // API 控制方法
+        const apiPlay = async () => {
+          await nextTick();
+          if (apiPlayer.value && apiPlayer.value.play) {
+            apiPlayer.value.play();
+          }
+        };
+        
+        const apiPause = async () => {
+          await nextTick();
+          if (apiPlayer.value && apiPlayer.value.pause) {
+            apiPlayer.value.pause();
+          }
+        };
+        
+        const apiSeek = async (offset) => {
+          await nextTick();
+          if (apiPlayer.value && apiPlayer.value.seek) {
+            if (offset === 0) {
+              apiPlayer.value.seek(0);
+              addLog('API控制：重新开始');
+            } else {
+              const currentTime = apiPlayer.value.getCurrentTime() || 0;
+              apiPlayer.value.seek(currentTime + offset);
+              addLog(`API控制：${offset > 0 ? '快进' : '快退'} ${Math.abs(offset)}秒`);
+            }
+          }
+        };
+        
+        const apiToggleMute = async () => {
+          await nextTick();
+          apiMuted.value = !apiMuted.value;
+          if (apiPlayer.value && apiPlayer.value.setMuted) {
+            apiPlayer.value.setMuted(apiMuted.value);
+          }
+        };
+        
+        const apiSetVolume = async () => {
+          await nextTick();
+          if (apiPlayer.value && apiPlayer.value.setVolume) {
+            apiPlayer.value.setVolume(apiVolume.value / 100);
+          }
+        };
+        
+        const apiSetPlaybackRate = async () => {
+          await nextTick();
+          if (apiPlayer.value && apiPlayer.value.setPlaybackRate) {
+            apiPlayer.value.setPlaybackRate(parseFloat(apiPlaybackRate.value));
+          }
+        };
+        
+        const handleApiPlay = () => {
+          addLog('API播放器：开始播放');
+        };
+        
+        const handleApiPause = () => {
+          addLog('API播放器：暂停播放');
+        };
+        
+        const handleVolumeChange = (volume) => {
+          apiVolume.value = Math.round(volume * 100);
+          addLog(`API播放器：音量变更为 ${apiVolume.value}%`);
+        };
+        
+        const handleRateChange = (rate) => {
+          apiPlaybackRate.value = rate.toString();
+          addLog(`API播放器：播放速度变更为 ${rate}x`);
+        };
+        
+        const clearLog = () => {
+          eventLog.value = [];
+        };
+        
+        // 强制更新播放器
+        const forceUpdatePlayer = () => {
+          playerKey.value++;
+        };
         
         return {
-          // 状态
-          showPlayer,
-          currentVideoId,
-          currentTitle,
-          customVideoId,
-          customTitle,
-          defaultMinimized,
-          playerMinimized,
-          playerPosition,
-          playerSize,
-          presetVideos,
+          // 基础播放器
+          videoUrl1,
+          posterUrl1,
+          playStatus1,
+          currentTime1,
+          duration1,
+          
+          // 自定义配置
+          customVideoUrl,
+          customPosterUrl,
+          customAutoplay,
+          customControls,
+          customLoop,
+          customMuted,
+          playerKey,
+          videoMetadata,
+          sampleVideos,
+          
+          // 多播放器
+          multiPlayers,
+          playerRefs,
+          
+          // API 控制
+          apiPlayer,
+          apiVideoUrl,
+          apiVolume,
+          apiMuted,
+          apiPlaybackRate,
+          
+          // 事件日志
+          eventLog,
           
           // 方法
-          openCustomVideo,
-          openPresetVideo,
-          closeVideo,
-          handleClose,
-          handlePositionChange,
-          handleSizeChange,
-          handleMinimizeChange,
-          resetPosition,
-          resetSize
+          formatTime,
+          handlePlay1,
+          handlePause1,
+          handleEnded1,
+          handleTimeUpdate1,
+          handlePlay2,
+          handlePause2,
+          handleLoadedMetadata,
+          handleError,
+          handleMultiPlay,
+          handleMultiPause,
+          handleMultiTimeUpdate,
+          playAll,
+          pauseAll,
+          syncTime,
+          apiPlay,
+          apiPause,
+          apiSeek,
+          apiToggleMute,
+          apiSetVolume,
+          apiSetPlaybackRate,
+          handleApiPlay,
+          handleApiPause,
+          handleVolumeChange,
+          handleRateChange,
+          clearLog
         };
       }
-    }).mount('#app');
+    });
+    
+    // 加载组件
+    (async () => {
+      try {
+        await ComponentLoader.registerComponents(app, [
+          ['video-player', '/components/common/VideoPlayer', 'VideoPlayer']
+        ]);
+        
+        app.mount('#app');
+        console.log('VideoPlayer 测试环境初始化完成');
+      } catch (error) {
+        console.error('测试环境初始化失败:', error);
+      }
+    })();
   </script>
 </body>
 </html> 

@@ -3,264 +3,245 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>组件测试中心</title>
-  <script src="/js/vendor/vue.global.prod.min.js"></script>
-  <link href="https://cdn.tailwindcss.com" rel="stylesheet">
+  <title>组件单元测试目录 - reinvent-insight</title>
+  
+  <!-- 基础样式 -->
+  <link rel="stylesheet" href="/css/base/typography.css">
+  <link rel="stylesheet" href="/css/base/effects.css">
   
   <style>
     body {
-      background: #111827;
+      background: #0f172a;
       color: #e5e7eb;
+      padding: 2rem;
+      margin: 0;
       min-height: 100vh;
     }
     
-    /* 重置链接样式，防止浏览器默认的紫色链接 */
-    a {
-      color: inherit;
-      text-decoration: none;
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      font-size: 2.5rem;
+      margin-bottom: 3rem;
+      background: linear-gradient(to right, #22d3ee, #3b82f6);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    
+    .test-category {
+      margin-bottom: 3rem;
+    }
+    
+    .category-title {
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+      color: #22d3ee;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid rgba(34, 211, 238, 0.3);
+    }
+    
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
     }
     
     .test-card {
-      background: #1f2937;
+      background: rgba(15, 23, 42, 0.9);
       border: 1px solid #374151;
-      border-radius: 0.5rem;
+      border-radius: 12px;
       padding: 1.5rem;
-      transition: all 0.3s;
-      display: block;
+      transition: all 0.3s ease;
+      text-decoration: none;
       color: inherit;
+      display: block;
     }
     
     .test-card:hover {
-      border-color: #60a5fa;
-      box-shadow: 0 0 20px rgba(96, 165, 250, 0.3);
-      text-decoration: none;
+      border-color: #22d3ee;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(34, 211, 238, 0.2);
     }
     
-    .test-status {
+    .test-card h3 {
+      margin: 0 0 0.5rem 0;
+      color: #22d3ee;
+      font-size: 1.25rem;
+    }
+    
+    .test-card p {
+      margin: 0;
+      color: #9ca3af;
+      font-size: 0.875rem;
+    }
+    
+    .status {
       display: inline-block;
       padding: 0.25rem 0.75rem;
       border-radius: 9999px;
       font-size: 0.75rem;
       font-weight: 600;
+      margin-top: 0.75rem;
     }
     
-    .status-ready {
-      background: #059669;
-      color: white;
+    .status-complete {
+      background: rgba(16, 185, 129, 0.2);
+      color: #10b981;
     }
     
-    .status-pending {
-      background: #f59e0b;
-      color: white;
+    .status-partial {
+      background: rgba(251, 146, 60, 0.2);
+      color: #fb923c;
     }
     
-    .status-wip {
-      background: #8b5cf6;
-      color: white;
+    .info-box {
+      background: rgba(6, 182, 212, 0.1);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 2rem;
     }
     
-    /* 确保所有文本颜色正确显示 */
-    .text-gray-400 {
-      color: #9ca3af !important;
+    .info-box h2 {
+      margin: 0 0 0.5rem 0;
+      color: #22d3ee;
+      font-size: 1.125rem;
     }
     
-    .text-gray-500 {
-      color: #6b7280 !important;
-    }
-    
-    .text-cyan-300 {
-      color: #67e8f9 !important;
-    }
-    
-    .text-cyan-400 {
-      color: #22d3ee !important;
-    }
-    
-    /* 防止 Vue 渲染时的闪烁 */
-    [v-cloak] {
-      display: none;
+    .info-box p {
+      margin: 0;
+      color: #d1d5db;
+      font-size: 0.875rem;
     }
   </style>
 </head>
 <body>
-  <div id="test-index" class="container mx-auto p-8 max-w-6xl">
-    <div class="text-center mb-12">
-      <h1 class="text-4xl font-bold text-cyan-400 mb-4">组件测试中心</h1>
-      <p class="text-gray-400 text-lg">独立的组件测试页面，确保每个组件都能正常工作</p>
+  <div class="container">
+    <h1>组件单元测试目录</h1>
+    
+    <div class="info-box">
+      <h2>📌 测试说明</h2>
+      <p>点击下方卡片进入对应组件的单元测试页面。每个测试页面都包含了该组件的独立测试案例。</p>
     </div>
     
-    <!-- 已完成的组件 -->
-    <section class="mb-12">
-      <h2 class="text-2xl font-bold text-green-400 mb-6 flex items-center">
-        <span class="mr-2">✅</span>
-        <span>已完成的组件</span>
-      </h2>
-      <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <a href="/test/test-toast.html" class="test-card block">
-          <div class="flex justify-between items-start mb-3">
-            <h3 class="text-xl font-semibold text-cyan-300">Toast 组件</h3>
-            <span class="test-status status-ready">Ready</span>
-            <span class="px-2 py-1 text-xs bg-yellow-600 text-white rounded ml-2">新增</span>
-          </div>
-          <p class="text-gray-400 mb-4">全局消息提示组件（新增功能，原项目只有接口无实现）</p>
-          <div class="text-sm text-gray-500">
-            <div>📁 /components/common/Toast/</div>
-            <div>⚠️ 原项目有showToast调用但无UI实现</div>
-            <div class="mt-1">
-              <a href="/test/test-toast-comparison.html" 
-                 class="text-cyan-400 hover:text-cyan-300 underline">
-                查看实现方案对比 →
-              </a>
-            </div>
-
-          </div>
+    <!-- 基础组件 -->
+    <div class="test-category">
+      <h2 class="category-title">🔧 基础组件 (Shared)</h2>
+      <div class="test-grid">
+        <a href="/test/test-tech-button.html" class="test-card">
+          <h3>TechButton</h3>
+          <p>统一的科技风格按钮组件，支持多种变体、尺寸和状态</p>
+          <span class="status status-complete">✅ 完整测试</span>
         </a>
         
-        <a href="/test/test-progress-bar.html" class="test-card block">
-          <div class="flex justify-between items-start mb-3">
-            <h3 class="text-xl font-semibold text-cyan-300">ProgressBar 组件</h3>
-            <span class="test-status status-ready">Ready</span>
-          </div>
-          <p class="text-gray-400 mb-4">进度条组件，支持多种样式和动画效果</p>
-          <div class="text-sm text-gray-500">
-            <div>📁 /components/shared/ProgressBar/</div>
-            <div>✨ 支持渐变、条纹动画、自定义颜色等</div>
-          </div>
+        <a href="/test/test-progress-bar.html" class="test-card">
+          <h3>ProgressBar</h3>
+          <p>进度条组件，支持多种样式和动画效果</p>
+          <span class="status status-complete">✅ 完整测试</span>
         </a>
         
-        <a href="/test/test-login-modal.html" class="test-card block">
-          <div class="flex justify-between items-start mb-3">
-            <h3 class="text-xl font-semibold text-cyan-300">LoginModal 组件</h3>
-            <span class="test-status status-ready">Ready</span>
-          </div>
-          <p class="text-gray-400 mb-4">用户登录模态框组件，完全保持原有样式和功能</p>
-          <div class="text-sm text-gray-500">
-            <div>📁 /components/common/LoginModal/</div>
-            <div>✨ 保持原有样式、支持自定义配置、双向数据绑定</div>
-          </div>
-        </a>
-        
-        <a href="/test/test-summary-card.html" class="test-card block">
-          <div class="flex justify-between items-start mb-3">
-            <h3 class="text-xl font-semibold text-cyan-300">SummaryCard 组件</h3>
-            <span class="test-status status-ready">Ready</span>
-          </div>
-          <p class="text-gray-400 mb-4">文章摘要卡片组件，支持两种不同的展示样式</p>
-          <div class="text-sm text-gray-500">
-            <div>📁 /components/common/SummaryCard/</div>
-            <div>✨ 支持 re:Invent 和精选两种样式、级别标签、响应式设计</div>
-          </div>
-        </a>
-        
-        <a href="/test/test-filter.html" class="test-card block">
-          <div class="flex justify-between items-start mb-3">
-            <h3 class="text-xl font-semibold text-cyan-300">Filter 组件</h3>
-            <span class="test-status status-ready">Ready</span>
-          </div>
-          <p class="text-gray-400 mb-4">级别和年份筛选器组件，提供统一的下拉菜单样式</p>
-          <div class="text-sm text-gray-500">
-            <div>📁 /components/common/Filter/</div>
-            <div>✨ 包含 LevelFilter 和 YearFilter，基于 CustomDropdown 组件</div>
-          </div>
-        </a>
-        
-        <a href="/test/test-version-selector.html" class="test-card block">
-          <div class="flex justify-between items-start mb-3">
-            <h3 class="text-xl font-semibold text-cyan-300">VersionSelector 组件</h3>
-            <span class="test-status status-ready">Ready</span>
-          </div>
-          <p class="text-gray-400 mb-4">文档版本选择器组件，支持多版本文档切换</p>
-          <div class="text-sm text-gray-500">
-            <div>📁 /components/shared/VersionSelector/</div>
-            <div>✨ 单版本自动隐藏、支持绝对定位、移动端适配</div>
-          </div>
-        </a>
-        
-        <a href="/test/test-video-player.html" class="test-card block">
-          <div class="flex justify-between items-start mb-3">
-            <h3 class="text-xl font-semibold text-cyan-300">VideoPlayer 组件</h3>
-            <span class="test-status status-ready">Ready</span>
-          </div>
-          <p class="text-gray-400 mb-4">浮动视频播放器组件，支持拖动、调整大小和最小化</p>
-          <div class="text-sm text-gray-500">
-            <div>📁 /components/common/VideoPlayer/</div>
-            <div>✨ 支持拖动位置、调整大小、最小化、YouTube视频嵌入</div>
-          </div>
-        </a>
-        
-        <a href="/test/test-table-of-contents.html" class="test-card block">
-          <div class="flex justify-between items-start mb-3">
-            <h3 class="text-xl font-semibold text-cyan-300">TableOfContents 组件</h3>
-            <span class="test-status status-ready">Ready</span>
-          </div>
-          <p class="text-gray-400 mb-4">文章目录组件，支持显示/隐藏、拖动调整宽度、点击跳转</p>
-          <div class="text-sm text-gray-500">
-            <div>📁 /components/common/TableOfContents/</div>
-            <div>✨ 自动调整宽度、拖动改变宽度、点击跳转、移动端隐藏</div>
-          </div>
+        <a href="/test/test-version-selector.html" class="test-card">
+          <h3>VersionSelector</h3>
+          <p>文档版本选择器，支持多版本切换</p>
+          <span class="status status-complete">✅ 完整测试</span>
         </a>
       </div>
-    </section>
+    </div>
     
-
-    
-    <!-- 计划中的组件 -->
-    <section class="mb-12">
-      <h2 class="text-2xl font-bold text-gray-400 mb-6 flex items-center">
-        <span class="mr-2">📋</span>
-        <span>计划中的组件</span>
-      </h2>
-      <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <div 
-          v-for="component in plannedComponents" 
-          :key="component.name"
-          class="test-card opacity-50"
-          v-cloak
-        >
-          <div class="flex justify-between items-start mb-3">
-            <h3 class="text-xl font-semibold text-cyan-300">{{ component.name }}</h3>
-            <span class="test-status status-pending">Planned</span>
-          </div>
-          <p class="text-gray-400 mb-4">{{ component.description }}</p>
-          <div class="text-sm text-gray-500">
-            <div>📁 {{ component.path }}</div>
-          </div>
-        </div>
-      </div>
-    </section>
-    
-    <!-- 测试工具 -->
-    <section class="mb-12">
-      <h2 class="text-2xl font-bold text-purple-400 mb-6 flex items-center">
-        <span class="mr-2">🛠️</span>
-        <span>测试工具</span>
-      </h2>
-      <div class="grid gap-6 md:grid-cols-2">
-        <a href="/test/test-template.html" class="test-card block">
-          <h3 class="text-xl font-semibold text-cyan-300 mb-2">测试页面模板</h3>
-          <p class="text-gray-400">用于创建新组件测试页面的模板文件</p>
+    <!-- 通用组件 -->
+    <div class="test-category">
+      <h2 class="category-title">📦 通用组件 (Common)</h2>
+      <div class="test-grid">
+        <a href="/test/test-login-modal.html" class="test-card">
+          <h3>LoginModal</h3>
+          <p>用户登录模态框，支持表单验证和加载状态</p>
+          <span class="status status-complete">✅ 完整测试</span>
         </a>
         
-        <a href="/" class="test-card block">
-          <h3 class="text-xl font-semibold text-cyan-300 mb-2">返回主应用</h3>
-          <p class="text-gray-400">查看组件在实际应用中的集成效果</p>
+        <a href="/test/test-summary-card.html" class="test-card">
+          <h3>SummaryCard</h3>
+          <p>文章摘要卡片，支持re:Invent和其他精选两种类型</p>
+          <span class="status status-complete">✅ 完整测试</span>
+        </a>
+        
+        <a href="/test/test-filter.html" class="test-card">
+          <h3>Filter</h3>
+          <p>筛选器组件集合，包含级别和年份筛选</p>
+          <span class="status status-complete">✅ 完整测试</span>
+        </a>
+        
+        <a href="/test/test-video-player.html" class="test-card">
+          <h3>VideoPlayer</h3>
+          <p>浮动视频播放器，支持拖动和调整大小</p>
+          <span class="status status-complete">✅ 完整测试</span>
+        </a>
+        
+        <a href="/test/test-table-of-contents.html" class="test-card">
+          <h3>TableOfContents</h3>
+          <p>文章目录组件，支持拖动调整宽度</p>
+          <span class="status status-complete">✅ 完整测试</span>
+        </a>
+        
+        <a href="/test/test-app-header.html" class="test-card">
+          <h3>AppHeader</h3>
+          <p>应用顶部导航栏，支持普通和阅读两种模式</p>
+          <span class="status status-complete">✅ 完整测试</span>
+        </a>
+        
+        <a href="/test/test-toast.html" class="test-card">
+          <h3>Toast</h3>
+          <p>消息提示组件（新增功能）</p>
+          <span class="status status-complete">✅ 完整测试</span>
         </a>
       </div>
-    </section>
+    </div>
+    
+    <!-- 视图组件 -->
+    <div class="test-category">
+      <h2 class="category-title">🖼️ 视图组件 (Views)</h2>
+      <div class="test-grid">
+        <a href="/test/test-library-view.html" class="test-card">
+          <h3>LibraryView</h3>
+          <p>笔记库展示界面，集成筛选和卡片展示功能</p>
+          <span class="status status-complete">✅ 完整测试</span>
+        </a>
+        
+        <a href="/test/test-reading-view.html" class="test-card">
+          <h3>ReadingView</h3>
+          <p>文章阅读界面，集成目录和版本切换功能</p>
+          <span class="status status-complete">✅ 完整测试</span>
+        </a>
+        
+        <a href="/test/test-create-view.html" class="test-card">
+          <h3>CreateView</h3>
+          <p>YouTube链接输入和分析界面</p>
+          <span class="status status-complete">✅ 完整测试</span>
+        </a>
+        
+        <a href="/test/test-hero-section.html" class="test-card">
+          <h3>HeroSection</h3>
+          <p>首页英雄区域，展示欢迎信息和品牌</p>
+          <span class="status status-complete">✅ 完整测试</span>
+        </a>
+      </div>
+    </div>
+    
+    <!-- 其他测试 -->
+    <div class="test-category">
+      <h2 class="category-title">🧪 其他测试</h2>
+      <div class="test-grid">
+        <a href="/test/test-template.html" class="test-card">
+          <h3>测试模板</h3>
+          <p>用于创建新测试的模板文件</p>
+          <span class="status status-complete">✅ 可用</span>
+        </a>
+      </div>
+    </div>
   </div>
-
-  <script>
-    const { createApp, ref } = Vue;
-    
-    createApp({
-      setup() {
-        const plannedComponents = ref([]);
-        
-        return {
-          plannedComponents
-        };
-      }
-    }).mount('#test-index');
-  </script>
 </body>
 </html> 

@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AppHeader 组件测试</title>
+  
+  <!-- Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  
+  <!-- 基础样式 -->
+  <link rel="stylesheet" href="/css/base/typography.css">
+  <link rel="stylesheet" href="/css/base/effects.css">
+  
+  <!-- 测试框架样式 -->
+  <style>
+    :root {
+      --test-bg: #0f172a;
+      --test-surface: #1e293b;
+      --test-border: #334155;
+      --test-primary: #22d3ee;
+      --test-success: #10b981;
+      --test-warning: #f59e0b;
+      --test-error: #ef4444;
+      --test-text: #e5e7eb;
+      --test-text-dim: #9ca3af;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: var(--test-bg);
+      color: var(--test-text);
+      font-family: var(--font-primary);
+      min-height: 100vh;
+    }
+    
+    .test-header {
+      text-align: center;
+      padding: 2rem;
+      background: var(--test-surface);
+      border-bottom: 1px solid var(--test-border);
+      margin-bottom: 3rem;
+    }
+    
+    .test-header h1 {
+      font-size: 2.5rem;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    
+    .test-header p {
+      color: var(--test-text-dim);
+      font-size: 1.125rem;
+    }
+    
+    .test-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+    
+    .test-case {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 2rem;
+    }
+    
+    .test-case-header {
+      background: rgba(0, 0, 0, 0.2);
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--test-border);
+    }
+    
+    .test-case-title {
+      font-size: 1.25rem;
+      color: var(--test-primary);
+    }
+    
+    .test-controls {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--test-border);
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    
+    .test-button {
+      padding: 0.5rem 1.5rem;
+      background: var(--gradient-primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .test-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3);
+    }
+    
+    .test-button.secondary {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+    }
+    
+    .header-preview {
+      min-height: 80px;
+      background: var(--test-bg);
+      position: relative;
+    }
+    
+    .status-row {
+      display: flex;
+      gap: 2rem;
+      padding: 1rem 1.5rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-top: 1px solid var(--test-border);
+      font-size: 0.875rem;
+    }
+    
+    .status-item {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    
+    .status-label {
+      color: var(--test-text-dim);
+    }
+    
+    .status-value {
+      font-weight: 600;
+      color: var(--test-primary);
+    }
+    
+    .test-output {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--test-border);
+      padding: 1.5rem;
+      font-family: var(--font-code);
+      font-size: 0.875rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .test-output-header {
+      color: var(--test-text-dim);
+      margin-bottom: 0.5rem;
+    }
+    
+    .back-link {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      padding: 0.5rem 1rem;
+      background: var(--test-surface);
+      border: 1px solid var(--test-primary);
+      border-radius: 6px;
+      color: var(--test-primary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+      z-index: 1000;
+    }
+    
+    .back-link:hover {
+      background: rgba(34, 211, 238, 0.1);
+    }
+    
+    .demo-content {
+      padding: 2rem;
+      background: rgba(0, 0, 0, 0.2);
+      color: var(--test-text-dim);
+      text-align: center;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <a href="/test/" class="back-link">← 返回测试目录</a>
+  
+  <div id="app">
+    <div class="test-header">
+      <h1>AppHeader 组件测试</h1>
+      <p>应用顶部导航栏组件，包含标题、用户信息和操作按钮</p>
+    </div>
+    
+    <div class="test-container">
+      <!-- 测试用例1：未登录状态 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">未登录状态</h2>
+        </div>
+        
+        <div class="header-preview">
+          <app-header
+            :is-authenticated="false"
+            @create="handleCreate"
+            @toggle-sidebar="handleToggleSidebar"
+            @logout="handleLogout"
+          ></app-header>
+        </div>
+        
+        <div class="demo-content">
+          页面内容区域
+        </div>
+      </div>
+      
+      <!-- 测试用例2：已登录状态 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">已登录状态</h2>
+        </div>
+        
+        <div class="header-preview">
+          <app-header
+            :is-authenticated="true"
+            :username="'TestUser'"
+            @create="handleCreate"
+            @toggle-sidebar="handleToggleSidebar"
+            @logout="handleLogout"
+          ></app-header>
+        </div>
+        
+        <div class="demo-content">
+          页面内容区域
+        </div>
+      </div>
+      
+      <!-- 测试用例3：动态交互测试 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">动态交互测试</h2>
+        </div>
+        
+        <div class="test-controls">
+          <button @click="toggleAuth" class="test-button">
+            {{ currentState.isAuthenticated ? '退出登录' : '模拟登录' }}
+          </button>
+          <button @click="changeUsername" class="test-button secondary">
+            更改用户名
+          </button>
+          <button @click="simulateCreate" class="test-button secondary">
+            触发创建
+          </button>
+          <button @click="simulateToggleSidebar" class="test-button secondary">
+            切换侧边栏
+          </button>
+        </div>
+        
+        <div class="header-preview">
+          <app-header
+            :is-authenticated="currentState.isAuthenticated"
+            :username="currentState.username"
+            @create="handleDynamicCreate"
+            @toggle-sidebar="handleDynamicToggleSidebar"
+            @logout="handleDynamicLogout"
+          ></app-header>
+        </div>
+        
+        <div class="status-row">
+          <div class="status-item">
+            <span class="status-label">认证状态:</span>
+            <span class="status-value">{{ currentState.isAuthenticated ? '已登录' : '未登录' }}</span>
+          </div>
+          <div class="status-item" v-if="currentState.isAuthenticated">
+            <span class="status-label">用户名:</span>
+            <span class="status-value">{{ currentState.username }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">侧边栏:</span>
+            <span class="status-value">{{ currentState.sidebarOpen ? '展开' : '收起' }}</span>
+          </div>
+        </div>
+        
+        <div class="demo-content">
+          页面内容区域 - 侧边栏状态: {{ currentState.sidebarOpen ? '展开' : '收起' }}
+        </div>
+      </div>
+      
+      <!-- 测试用例4：响应式测试 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">响应式布局测试</h2>
+        </div>
+        
+        <div class="test-controls">
+          <button @click="setViewportWidth(375)" class="test-button secondary">
+            移动端 (375px)
+          </button>
+          <button @click="setViewportWidth(768)" class="test-button secondary">
+            平板 (768px)
+          </button>
+          <button @click="setViewportWidth(1024)" class="test-button secondary">
+            桌面 (1024px)
+          </button>
+          <button @click="setViewportWidth('100%')" class="test-button">
+            自适应
+          </button>
+        </div>
+        
+        <div style="overflow-x: auto; padding: 1rem;">
+          <div :style="{ width: viewportWidth, margin: '0 auto', border: '1px solid var(--test-border)' }">
+            <app-header
+              :is-authenticated="true"
+              username="ResponsiveTest"
+              @create="handleCreate"
+              @toggle-sidebar="handleToggleSidebar"
+              @logout="handleLogout"
+            ></app-header>
+            <div class="demo-content">
+              当前宽度: {{ viewportWidth }}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 事件日志 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">事件日志</h2>
+        </div>
+        
+        <div class="test-controls">
+          <button @click="clearLog" class="test-button secondary">
+            清空日志
+          </button>
+        </div>
+        
+        <div class="test-output">
+          <div class="test-output-header">事件记录：</div>
+          <div v-if="eventLog.length === 0" style="color: var(--test-text-dim);">
+            暂无事件记录
+          </div>
+          <div v-for="(log, index) in eventLog" :key="index">
+            {{ log }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 组件加载器 -->
+  <script src="/js/core/component-loader.js"></script>
+  
+  <script type="module">
+    const { createApp, ref, reactive } = Vue;
+    
+    const app = createApp({
+      setup() {
+        // 动态状态
+        const currentState = reactive({
+          isAuthenticated: false,
+          username: 'DemoUser',
+          sidebarOpen: false
+        });
+        
+        // 响应式测试
+        const viewportWidth = ref('100%');
+        
+        // 事件日志
+        const eventLog = ref([]);
+        
+        const addLog = (message) => {
+          const time = new Date().toLocaleTimeString();
+          eventLog.value.unshift(`[${time}] ${message}`);
+          if (eventLog.value.length > 50) {
+            eventLog.value.pop();
+          }
+        };
+        
+        // 静态事件处理
+        const handleCreate = () => {
+          addLog('静态测试：创建按钮被点击');
+          alert('创建按钮被点击！');
+        };
+        
+        const handleToggleSidebar = () => {
+          addLog('静态测试：侧边栏切换被触发');
+        };
+        
+        const handleLogout = () => {
+          addLog('静态测试：退出登录被点击');
+          alert('退出登录！');
+        };
+        
+        // 动态交互
+        const toggleAuth = () => {
+          currentState.isAuthenticated = !currentState.isAuthenticated;
+          addLog(`认证状态变更：${currentState.isAuthenticated ? '已登录' : '未登录'}`);
+          if (!currentState.isAuthenticated) {
+            currentState.username = 'DemoUser';
+          }
+        };
+        
+        const changeUsername = () => {
+          if (currentState.isAuthenticated) {
+            const names = ['Alice', 'Bob', 'Charlie', 'David', 'Emma'];
+            currentState.username = names[Math.floor(Math.random() * names.length)];
+            addLog(`用户名更改为：${currentState.username}`);
+          } else {
+            alert('请先登录！');
+          }
+        };
+        
+        const simulateCreate = () => {
+          addLog('手动触发创建事件');
+        };
+        
+        const simulateToggleSidebar = () => {
+          currentState.sidebarOpen = !currentState.sidebarOpen;
+          addLog(`手动切换侧边栏：${currentState.sidebarOpen ? '展开' : '收起'}`);
+        };
+        
+        // 动态事件处理
+        const handleDynamicCreate = () => {
+          addLog('动态测试：创建按钮被点击');
+        };
+        
+        const handleDynamicToggleSidebar = () => {
+          currentState.sidebarOpen = !currentState.sidebarOpen;
+          addLog(`动态测试：侧边栏切换 - ${currentState.sidebarOpen ? '展开' : '收起'}`);
+        };
+        
+        const handleDynamicLogout = () => {
+          addLog('动态测试：退出登录被点击');
+          currentState.isAuthenticated = false;
+          currentState.username = 'DemoUser';
+          addLog('用户已退出登录');
+        };
+        
+        // 响应式测试
+        const setViewportWidth = (width) => {
+          viewportWidth.value = typeof width === 'number' ? `${width}px` : width;
+          addLog(`视口宽度设置为：${viewportWidth.value}`);
+        };
+        
+        const clearLog = () => {
+          eventLog.value = [];
+          addLog('日志已清空');
+        };
+        
+        return {
+          currentState,
+          viewportWidth,
+          eventLog,
+          handleCreate,
+          handleToggleSidebar,
+          handleLogout,
+          toggleAuth,
+          changeUsername,
+          simulateCreate,
+          simulateToggleSidebar,
+          handleDynamicCreate,
+          handleDynamicToggleSidebar,
+          handleDynamicLogout,
+          setViewportWidth,
+          clearLog
+        };
+      }
+    });
+    
+    // 加载组件
+    (async () => {
+      try {
+        await ComponentLoader.registerComponents(app, [
+          ['app-header', '/components/common/AppHeader', 'AppHeader'],
+          ['tech-button', '/components/shared/TechButton', 'TechButton']
+        ]);
+        
+        app.mount('#app');
+        console.log('AppHeader 测试环境初始化完成');
+      } catch (error) {
+        console.error('测试环境初始化失败:', error);
+      }
+    })();
+  </script>
+</body>
+</html> 

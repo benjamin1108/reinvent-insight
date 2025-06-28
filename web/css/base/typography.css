@@ -1,0 +1,36 @@
+/* 
+ * 基础字体样式 - reinvent-insight项目
+ * 统一的字体定义，供所有组件继承使用
+ */
+
+/* 主要字体栈 - 科技感等宽字体为主 */
+:root {
+  --font-primary: 'JetBrains Mono', 'Consolas', 'SFMono-Regular', Menlo, monospace, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-code: 'SFMono-Regular', 'Consolas', 'Liberation Mono', Menlo, Courier, monospace;
+  --font-ui: 'PingFang SC', 'Helvetica Neue', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+/* 全局字体应用 */
+html {
+  font-family: var(--font-primary);
+  line-height: 1.5;
+}
+
+body {
+  font-family: inherit;
+}
+
+/* 组件字体继承 - 确保所有组件都使用统一字体 */
+* {
+  font-family: inherit;
+}
+
+/* 代码字体 */
+code, pre, kbd, samp {
+  font-family: var(--font-code);
+}
+
+/* UI控件字体 */
+input, textarea, select, button {
+  font-family: inherit;
+} 

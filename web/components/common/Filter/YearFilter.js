@@ -4,7 +4,9 @@
  */
 
 const YearFilter = {
-  // 不在这里声明components，因为CustomDropdown是通过ComponentLoader全局注册的
+  dependencies: [
+    ['custom-dropdown', '../components/common/Filter', 'CustomDropdown']
+  ],
   
   props: {
     // 当前选中的年份
@@ -62,10 +64,5 @@ const YearFilter = {
     };
   }
 }; 
-
-// 暴露到window对象以支持旧代码
-if (typeof window !== 'undefined') {
-  window.YearFilter = YearFilter;
-}
 
 export default YearFilter;
