@@ -5,8 +5,8 @@
 export default {
   dependencies: [
     ['summary-card', '/components/common/SummaryCard', 'SummaryCard'],
-    ['level-filter', '/components/common/Filter/LevelFilter', 'LevelFilter'],
-    ['year-filter', '/components/common/Filter/YearFilter', 'YearFilter']
+    ['level-filter', '/components/common/Filter', 'LevelFilter'],
+    ['year-filter', '/components/common/Filter', 'YearFilter']
   ],
   
   props: {

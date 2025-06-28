@@ -1,11 +1,11 @@
 <!-- 普通页面Header -->
 <header v-if="mode === 'normal'"
   class="app-header tech-gradient border-b border-gray-800 shadow-lg sticky top-0 z-40">
-  <div class="app-header-container app-header-mobile">
-    <div class="app-header-left">
-      <div class="app-header-left-inner">
+  <div class="app-header__container app-header__mobile">
+    <div class="app-header__left">
+      <div class="app-header__left-inner">
         <!-- 品牌标识 -->
-        <a @click="handleHomeClick" class="app-header-brand">
+        <a @click="handleHomeClick" class="app-header__brand">
           <svg class="w-7 h-7 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -16,7 +16,7 @@
         </a>
         
         <!-- 桌面端主导航 -->
-        <div v-if="isAuthenticated" class="app-header-nav">
+        <div v-if="isAuthenticated" class="app-header__nav">
           <tech-button 
             variant="secondary" 
             :class="{ 'active': currentView === 'create' }"
@@ -33,7 +33,7 @@
       </div>
       
       <!-- 移动端登录/退出按钮 -->
-      <div class="app-header-mobile-auth">
+      <div class="app-header__mobile-auth">
         <tech-button 
           v-if="!isAuthenticated" 
           variant="secondary"
@@ -50,7 +50,7 @@
     </div>
     
     <!-- 移动端导航 -->
-    <div v-if="isAuthenticated" class="app-header-mobile-nav">
+    <div v-if="isAuthenticated" class="app-header__mobile-nav">
       <tech-button 
         variant="secondary" 
         full-width
@@ -68,7 +68,7 @@
     </div>
     
     <!-- 桌面端右侧操作区 -->
-    <div class="app-header-actions">
+    <div class="app-header__actions">
       <!-- 临时测试Toast按钮 -->
       <tech-button 
         v-if="showTestToast" 
@@ -96,12 +96,12 @@
 
 <!-- 阅读页面Header -->
 <header v-else-if="mode === 'reading'"
-  class="app-header tech-gradient border-b border-gray-800 shadow-lg sticky top-0 z-40 app-header-reading">
-  <div class="app-header-container app-header-content">
+  class="app-header tech-gradient border-b border-gray-800 shadow-lg sticky top-0 z-40 app-header--reading">
+  <div class="app-header__container app-header__content">
     <!-- 左侧品牌和操作区 -->
-    <div class="app-header-reading-left">
+    <div class="app-header__reading-left">
       <!-- 品牌标识 -->
-      <a @click="handleHomeClick" class="app-header-brand">
+      <a @click="handleHomeClick" class="app-header__brand">
         <svg class="w-7 h-7 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -112,7 +112,7 @@
       </a>
 
       <!-- 桌面端操作按钮组 -->
-      <div class="app-header-reading-controls">
+      <div class="app-header__reading-controls">
         <!-- 返回按钮 -->
         <tech-button 
           v-if="!isShareView" 
@@ -158,14 +158,14 @@
     </div>
     
     <!-- 右侧操作区 -->
-    <div class="app-header-right">
+    <div class="app-header__right">
       <!-- 移动端返回按钮 -->
       <tech-button 
         v-if="!isShareView" 
         variant="secondary" 
         size="sm"
         icon-before="M10 19l-7-7m0 0l7-7m-7 7h18"
-        class="app-header-mobile-back"
+        class="app-header__mobile-back"
         @click="handleBackToLibrary">
         返回
       </tech-button>

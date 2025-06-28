@@ -5,7 +5,7 @@
 
 const LevelFilter = {
   dependencies: [
-    ['custom-dropdown', '../components/common/Filter', 'CustomDropdown']
+    ['custom-dropdown', '/components/common/Filter', 'CustomDropdown']
   ],
   
   props: {

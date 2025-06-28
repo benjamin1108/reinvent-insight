@@ -256,11 +256,11 @@
         
         <div class="library-container">
           <library-view
-            :documents="documents1"
-            :selected-id="selectedId1"
-            @select="handleSelect1"
-            @filter="handleFilter1"
-            @search="handleSearch1"
+            :summaries="documents1"
+            :loading="false"
+            @summary-click="handleSelect1"
+            @level-change="handleFilter1"
+            @year-change="handleSearch1"
           ></library-view>
         </div>
       </div>
@@ -328,14 +328,11 @@
         
         <div class="library-container">
           <library-view
-            :documents="documents2"
-            :selected-id="selectedId2"
-            :initial-filter="currentFilter"
-            :initial-search="currentSearch"
-            @select="handleSelect2"
-            @filter="handleFilter2"
-            @search="handleSearch2"
-            @create="handleCreate"
+            :summaries="documents2"
+            :loading="false"
+            @summary-click="handleSelect2"
+            @level-change="handleFilter2"
+            @year-change="handleSearch2"
           ></library-view>
         </div>
       </div>
@@ -379,10 +376,10 @@
         
         <div class="library-container">
           <library-view
-            :documents="documents3"
-            @select="handleSelect3"
-            @search="handleSearch3"
-            @render-complete="handleRenderComplete"
+            :summaries="documents3"
+            :loading="false"
+            @summary-click="handleSelect3"
+            @level-change="handleSearch3"
           ></library-view>
         </div>
       </div>
@@ -424,27 +421,37 @@
         const documents1 = ref([
           {
             id: 1,
-            title: 'Getting Started with AWS Lambda',
-            type: 'reinvent',
+            title_en: 'Getting Started with AWS Lambda',
+            title_cn: 'AWS Lambda 入门指南',
+            filename: 'lambda-basics',
+            hash: 'hash1',
             level: 'Level 200',
             year: 2024,
-            description: 'Learn the basics of serverless computing with AWS Lambda.',
+            word_count: 5000,
+            upload_date: '2024-01-15',
             tags: ['serverless', 'lambda', 'compute']
           },
           {
             id: 2,
-            title: 'Building Microservices on AWS',
-            type: 'featured',
-            description: 'Best practices for building scalable microservices.',
+            title_en: 'Building Microservices on AWS',
+            title_cn: '在 AWS 上构建微服务',
+            filename: 'microservices-aws',
+            hash: 'hash2',
+            level: 'Level 300',
+            word_count: 8000,
+            upload_date: '2024-02-20',
             tags: ['microservices', 'architecture', 'ecs']
           },
           {
             id: 3,
-            title: 'Deep Dive into DynamoDB',
-            type: 'reinvent',
+            title_en: 'AWS re:Invent 2023 - Deep Dive into DynamoDB',
+            title_cn: 'AWS re:Invent 2023 - DynamoDB 深度解析',
+            filename: 'dynamodb-deep-dive',
+            hash: 'hash3',
             level: 'Level 300',
             year: 2023,
-            description: 'Advanced patterns and optimization techniques for DynamoDB.',
+            word_count: 12000,
+            upload_date: '2023-12-10',
             tags: ['database', 'nosql', 'dynamodb']
           }
         ]);
@@ -479,8 +486,8 @@
         
         // 事件处理 - 基础测试
         const handleSelect1 = (document) => {
-          selectedId1.value = document.id;
-          addLog(`基础测试：选择文档 - ${document.title}`);
+          selectedId1.value = document.hash;
+          addLog(`基础测试：选择文档 - ${document.title_en || document.title_cn}`);
         };
         
         const handleFilter1 = (filter) => {
@@ -493,8 +500,8 @@
         
         // 事件处理 - 动态数据
         const handleSelect2 = (document) => {
-          selectedId2.value = document.id;
-          addLog(`动态测试：选择文档 - ${document.title}`);
+          selectedId2.value = document.hash;
+          addLog(`动态测试：选择文档 - ${document.title_en || document.title_cn}`);
         };
         
         const handleFilter2 = (filter) => {
@@ -515,27 +522,32 @@
         
         // 文档操作
         const addDocument = () => {
+          const isReinvent = Math.random() > 0.5;
+          const docNum = documents2.value.length + 1;
           const newDoc = {
             id: Date.now(),
-            title: `新文档 ${documents2.value.length + 1}`,
-            type: Math.random() > 0.5 ? 'reinvent' : 'featured',
-            description: '这是动态添加的文档。',
+            title_en: isReinvent ? `AWS re:Invent 2024 - New Document ${docNum}` : `New Document ${docNum}`,
+            title_cn: `新文档 ${docNum}`,
+            filename: `new-document-${docNum}`,
+            hash: `hash-new-${Date.now()}`,
+            word_count: Math.floor(Math.random() * 5000) + 1000,
+            upload_date: new Date().toISOString().split('T')[0],
             tags: ['new', 'dynamic']
           };
           
-          if (newDoc.type === 'reinvent') {
+          if (isReinvent) {
             newDoc.level = `Level ${Math.floor(Math.random() * 4 + 1) * 100}`;
             newDoc.year = 2020 + Math.floor(Math.random() * 5);
           }
           
           documents2.value.push(newDoc);
-          addLog(`添加文档：${newDoc.title}`);
+          addLog(`添加文档：${newDoc.title_cn}`);
         };
         
         const removeDocument = () => {
           if (documents2.value.length > 0) {
             const removed = documents2.value.pop();
-            addLog(`删除文档：${removed.title}`);
+            addLog(`删除文档：${removed.title_cn || removed.title_en}`);
           }
         };
         
@@ -543,10 +555,10 @@
           if (documents2.value.length > 0) {
             documents2.value[0] = {
               ...documents2.value[0],
-              title: `${documents2.value[0].title} (已更新)`,
+              title_cn: `${documents2.value[0].title_cn} (已更新)`,
               updated: new Date().toISOString()
             };
-            addLog(`更新文档：${documents2.value[0].title}`);
+            addLog(`更新文档：${documents2.value[0].title_cn}`);
           }
         };
         
@@ -560,29 +572,38 @@
           documents2.value = [
             {
               id: 101,
-              title: 'Keynote: AWS re:Invent 2024',
-              type: 'reinvent',
+              title_en: 'AWS re:Invent 2024 Keynote',
+              title_cn: 'AWS re:Invent 2024 主题演讲',
+              filename: 'reinvent-2024-keynote',
+              hash: 'hash101',
               level: 'Keynote',
               year: 2024,
-              description: 'Annual keynote announcing new services and features.',
+              word_count: 15000,
+              upload_date: '2024-12-01',
               tags: ['keynote', 'announcements']
             },
             {
               id: 102,
-              title: 'Advanced VPC Networking',
-              type: 'reinvent',
+              title_en: 'AWS re:Invent 2024 - Advanced VPC Networking',
+              title_cn: 'AWS re:Invent 2024 - 高级 VPC 网络',
+              filename: 'advanced-vpc-networking',
+              hash: 'hash102',
               level: 'Level 400',
               year: 2024,
-              description: 'Deep dive into VPC design patterns.',
+              word_count: 10000,
+              upload_date: '2024-12-02',
               tags: ['networking', 'vpc', 'security']
             },
             {
               id: 103,
-              title: 'ML/AI Services Overview',
-              type: 'reinvent',
+              title_en: 'AWS re:Invent 2024 - ML/AI Services Overview',
+              title_cn: 'AWS re:Invent 2024 - ML/AI 服务概览',
+              filename: 'ml-ai-services-overview',
+              hash: 'hash103',
               level: 'Level 200',
               year: 2024,
-              description: 'Introduction to AWS ML and AI services.',
+              word_count: 8000,
+              upload_date: '2024-12-03',
               tags: ['ml', 'ai', 'sagemaker']
             }
           ];
@@ -593,23 +614,32 @@
           documents2.value = [
             {
               id: 201,
-              title: 'Kubernetes Best Practices',
-              type: 'featured',
-              description: 'Production-ready K8s patterns.',
+              title_en: 'Kubernetes Best Practices',
+              title_cn: 'Kubernetes 最佳实践',
+              filename: 'kubernetes-best-practices',
+              hash: 'hash201',
+              word_count: 6000,
+              upload_date: '2024-01-10',
               tags: ['kubernetes', 'containers', 'eks']
             },
             {
               id: 202,
-              title: 'CI/CD Pipeline Design',
-              type: 'featured',
-              description: 'Building efficient deployment pipelines.',
+              title_en: 'CI/CD Pipeline Design',
+              title_cn: 'CI/CD 流水线设计',
+              filename: 'cicd-pipeline-design',
+              hash: 'hash202',
+              word_count: 7500,
+              upload_date: '2024-02-15',
               tags: ['devops', 'cicd', 'automation']
             },
             {
               id: 203,
-              title: 'Security Architecture Guide',
-              type: 'featured',
-              description: 'Comprehensive security patterns for cloud.',
+              title_en: 'Security Architecture Guide',
+              title_cn: '安全架构指南',
+              filename: 'security-architecture-guide',
+              hash: 'hash203',
+              word_count: 9000,
+              upload_date: '2024-03-20',
               tags: ['security', 'compliance', 'architecture']
             }
           ];
@@ -635,10 +665,11 @@
           
           if (currentSearch.value) {
             const search = currentSearch.value.toLowerCase();
-            count = documents2.value.filter(d => 
-              d.title.toLowerCase().includes(search) ||
-              d.description.toLowerCase().includes(search)
-            ).length;
+            count = documents2.value.filter(d => {
+              const titleEn = (d.title_en || '').toLowerCase();
+              const titleCn = (d.title_cn || '').toLowerCase();
+              return titleEn.includes(search) || titleCn.includes(search);
+            }).length;
           }
           
           filteredCount.value = count;
@@ -651,11 +682,15 @@
           
           for (let i = 1; i <= count; i++) {
             const isReinvent = Math.random() > 0.5;
+            const title = generateTitle();
             const doc = {
               id: 1000 + i,
-              title: `Document ${i}: ${generateTitle()}`,
-              type: isReinvent ? 'reinvent' : 'featured',
-              description: generateDescription(),
+              title_en: isReinvent ? `AWS re:Invent 2024 - ${title}` : title,
+              title_cn: `文档 ${i}: ${title}`,
+              filename: `document-${i}`,
+              hash: `hash${1000 + i}`,
+              word_count: Math.floor(Math.random() * 10000) + 2000,
+              upload_date: `2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
               tags: generateTags()
             };
             
@@ -718,7 +753,7 @@
         
         // 性能测试事件
         const handleSelect3 = (document) => {
-          addLog(`性能测试：选择文档 - ${document.title}`);
+          addLog(`性能测试：选择文档 - ${document.title_en || document.title_cn}`);
         };
         
         const handleSearch3 = (query) => {
@@ -789,7 +824,9 @@
         await ComponentLoader.registerComponents(app, [
           ['library-view', '/components/views/LibraryView', 'LibraryView'],
           ['summary-card', '/components/common/SummaryCard', 'SummaryCard'],
-          ['filter', '/components/common/Filter', 'Filter']
+          ['level-filter', '/components/common/Filter', 'LevelFilter'],
+          ['year-filter', '/components/common/Filter', 'YearFilter'],
+          ['custom-dropdown', '/components/common/Filter', 'CustomDropdown']
         ]);
         
         app.mount('#app');

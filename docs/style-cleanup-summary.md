@@ -148,4 +148,108 @@
 1. 所有类名使用组件名前缀
 2. 保持语义清晰（如 `component-module-element`）
 3. 避免过于通用的类名
-4. 考虑使用 BEM 命名法或 CSS Modules 
+4. 考虑使用 BEM 命名法或 CSS Modules
+
+## 2024年12月 - BEM规范检查报告
+
+### BEM规范简介
+BEM (Block Element Modifier) 是一种CSS命名方法论：
+- **Block（块）**：独立的组件，如 `.card`
+- **Element（元素）**：块的子元素，用双下划线连接，如 `.card__header`
+- **Modifier（修饰符）**：块或元素的变体，用双中划线连接，如 `.card--primary`
+
+### 当前组件BEM规范遵循情况
+
+#### ❌ 未遵循BEM规范的组件
+
+**1. shared目录**
+- **TechButton**
+  - 现状：`.tech-btn`, `.tech-btn-primary`, `.tech-btn-sm`
+  - BEM写法：`.tech-btn`, `.tech-btn--primary`, `.tech-btn--sm`
+  - 问题：使用单横线而非双横线表示修饰符
+
+- **ProgressBar**
+  - 现状：`.progress-bar-wrapper`, `.progress-bar-container`, `.progress-bar-fill`
+  - BEM写法：`.progress-bar`, `.progress-bar__container`, `.progress-bar__fill`
+  - 问题：使用单横线而非双下划线表示元素
+
+- **VersionSelector**
+  - 需要检查具体实现
+
+**2. common目录**
+- **AppHeader**
+  - 现状：`.app-header-container`, `.app-header-nav`, `.app-header-mobile`
+  - BEM写法：`.app-header`, `.app-header__nav`, `.app-header--mobile`
+  - 问题：统一使用单横线连接
+
+- **VideoPlayer**
+  - 现状：`.floating-video-player`, `.video-player-header`, `.video-control-btn`
+  - BEM写法：`.video-player`, `.video-player__header`, `.video-player__control-btn`
+  - 问题：混合使用单横线
+
+- **TableOfContents**
+  - 现状：`.toc-container`, `.toc-sidebar`, `.toc-link`
+  - BEM写法：`.toc`, `.toc__sidebar`, `.toc__link`
+  - 问题：使用单横线连接
+
+- **LoginModal**
+  - 现状：`.modal-content`, `.modal-close`, `.form-group`
+  - BEM写法：`.login-modal`, `.login-modal__content`, `.login-modal__close`
+  - 问题：缺少组件名前缀，使用通用名称
+
+- **Toast/ToastContainer**
+  - 需要检查具体实现
+
+- **Filter**
+  - 需要检查具体实现
+
+- **SummaryCard**
+  - 现状：定义了全局 `.flex` 类
+  - 问题：除了通用类名外，需要检查主要类名是否符合BEM
+
+**3. views目录**
+- **CreateView**
+  - 现状：`.progress-section`, `.result-section`
+  - BEM写法：`.create-view`, `.create-view__progress`, `.create-view__result`
+
+- **LibraryView**
+  - 现状：`.content-area`
+  - BEM写法：`.library-view`, `.library-view__content`
+
+- **ReadingView**
+  - 需要检查具体实现
+
+- **HeroSection**
+  - 需要检查具体实现
+
+### 修复优先级
+
+1. **高优先级**（影响较大）
+   - LoginModal - 使用了过于通用的类名
+   - SummaryCard - 定义了全局 `.flex`
+   - TechButton - 作为基础组件，应该规范
+
+2. **中优先级**
+   - AppHeader - 已有前缀但格式不对
+   - ProgressBar - 命名相对清晰
+   - VideoPlayer - 影响范围有限
+
+3. **低优先级**
+   - TableOfContents - 使用了缩写但相对独特
+   - Views组件 - 页面级组件，冲突风险较低
+
+### 建议行动计划
+
+1. **第一阶段**：修复高优先级组件
+   - 重命名所有类以符合BEM规范
+   - 更新对应的HTML模板
+   - 测试功能是否正常
+
+2. **第二阶段**：统一所有组件命名
+   - 建立组件CSS模板
+   - 逐个修复剩余组件
+
+3. **第三阶段**：建立规范和工具
+   - 创建CSS命名规范文档
+   - 考虑引入CSS linter
+   - 评估CSS Modules方案 

@@ -1,10 +1,12 @@
 /**
  * CreateView组件
- * YouTube链接输入和分析界面
+ * YouTube链接输入和分析界面，支持URL输入、进度显示和结果展示
+ * 使用BEM命名规范，完全独立的组件样式
  */
 export default {
   dependencies: [
-    ['tech-button', '/components/shared/TechButton', 'TechButton']
+    ['tech-button', '/components/shared/TechButton', 'TechButton'],
+    ['progress-bar', '/components/shared/ProgressBar', 'ProgressBar']
   ],
   
   props: {

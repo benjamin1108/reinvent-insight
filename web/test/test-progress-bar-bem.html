@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProgressBar BEM测试</title>
+    
+    <!-- 基础样式 -->
+    <link rel="stylesheet" href="/css/base/reset.css">
+    <link rel="stylesheet" href="/css/base/variables.css">
+    <link rel="stylesheet" href="/css/base/typography.css">
+    
+    <!-- 组件样式 -->
+    <link rel="stylesheet" href="/components/shared/ProgressBar/ProgressBar.css">
+    
+    <style>
+        body {
+            background: #1a1a1a;
+            color: #e0e0e0;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .test-section {
+            margin-bottom: 3rem;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+            color: #06b6d4;
+        }
+        
+        .test-row {
+            margin-bottom: 2rem;
+        }
+        
+        .test-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #9ca3af;
+            font-size: 0.875rem;
+        }
+        
+        .info-box {
+            background: rgba(6, 182, 212, 0.1);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .info-box h3 {
+            color: #06b6d4;
+            margin-bottom: 0.5rem;
+        }
+        
+        .info-box ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .info-box li {
+            margin-bottom: 0.25rem;
+        }
+        
+        .info-box code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.125rem 0.25rem;
+            border-radius: 3px;
+            color: #22d3ee;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .control-label {
+            font-size: 0.875rem;
+            color: #9ca3af;
+        }
+        
+        input[type="range"] {
+            width: 200px;
+        }
+        
+        select {
+            padding: 0.25rem 0.5rem;
+            background: #374151;
+            border: 1px solid #4b5563;
+            color: #e5e7eb;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="container">
+        <h1 style="font-size: 2rem; margin-bottom: 2rem; color: #06b6d4;">ProgressBar BEM重构测试</h1>
+        
+        <div class="info-box">
+            <h3>BEM命名规范改动说明</h3>
+            <ul>
+                <li>✅ 删除了全局的 <code>.text-white</code> 类</li>
+                <li>✅ 删除了Tailwind风格的类（<code>.bg-cyan-500</code>, <code>.rounded-none</code>等）</li>
+                <li>✅ 所有类名改为BEM格式：<code>progress-bar__element--modifier</code></li>
+                <li>✅ 不再污染全局样式空间</li>
+            </ul>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label class="control-label">进度值</label>
+                <input type="range" v-model="progress" min="0" max="100" />
+                <span>{{ progress }}%</span>
+            </div>
+            
+            <div class="control-group">
+                <label class="control-label">颜色</label>
+                <select v-model="color">
+                    <option value="gradient">渐变色</option>
+                    <option value="primary">青色</option>
+                    <option value="success">绿色</option>
+                    <option value="warning">黄色</option>
+                    <option value="error">红色</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label class="control-label">圆角</label>
+                <select v-model="rounded">
+                    <option value="none">无圆角</option>
+                    <option value="sm">小圆角</option>
+                    <option value="md">中圆角</option>
+                    <option value="lg">大圆角</option>
+                    <option value="full">完全圆角</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label class="control-label">
+                    <input type="checkbox" v-model="striped" />
+                    条纹效果
+                </label>
+                <label class="control-label">
+                    <input type="checkbox" v-model="animated" :disabled="!striped" />
+                    动画条纹
+                </label>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2 class="section-title">基础进度条</h2>
+            
+            <div class="test-row">
+                <span class="test-label">默认样式：</span>
+                <progress-bar :percent="progress"></progress-bar>
+            </div>
+            
+            <div class="test-row">
+                <span class="test-label">自定义设置：</span>
+                <progress-bar 
+                    :percent="progress" 
+                    :color="color"
+                    :rounded="rounded"
+                    :striped="striped"
+                    :animated="animated">
+                </progress-bar>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2 class="section-title">带文本的进度条</h2>
+            
+            <div class="test-row">
+                <span class="test-label">内部文本：</span>
+                <progress-bar 
+                    :percent="progress" 
+                    :show-text="true"
+                    text-position="inside"
+                    height="24px">
+                </progress-bar>
+            </div>
+            
+            <div class="test-row">
+                <span class="test-label">外部文本：</span>
+                <progress-bar 
+                    :percent="progress" 
+                    :show-text="true"
+                    text-position="outside">
+                </progress-bar>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2 class="section-title">不同高度</h2>
+            
+            <div class="test-row">
+                <span class="test-label">细条（4px）：</span>
+                <progress-bar :percent="65" height="4px" color="primary"></progress-bar>
+            </div>
+            
+            <div class="test-row">
+                <span class="test-label">标准（8px）：</span>
+                <progress-bar :percent="75" height="8px" color="success"></progress-bar>
+            </div>
+            
+            <div class="test-row">
+                <span class="test-label">粗条（16px）：</span>
+                <progress-bar :percent="85" height="16px" color="warning" :show-text="true"></progress-bar>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2 class="section-title">完成状态（100%动画）</h2>
+            <progress-bar :percent="100" color="success" :show-text="true"></progress-bar>
+        </div>
+    </div>
+
+    <!-- Vue 3 -->
+    <script src="/js/vendor/vue.global.js"></script>
+    
+    <!-- 核心工具 -->
+    <script src="/js/core/component-loader.js"></script>
+    <script src="/js/core/eventBus.js"></script>
+    
+    <script>
+    const { createApp, ref } = Vue;
+    
+    createApp({
+        setup() {
+            const progress = ref(60);
+            const color = ref('gradient');
+            const rounded = ref('full');
+            const striped = ref(false);
+            const animated = ref(false);
+            
+            return {
+                progress,
+                color,
+                rounded,
+                striped,
+                animated
+            };
+        },
+        mounted() {
+            // 注册组件
+            window.ComponentLoader.registerComponents([
+                ['progress-bar', '/components/shared/ProgressBar', 'ProgressBar']
+            ]).then(() => {
+                console.log('✅ ProgressBar组件加载成功');
+            }).catch(error => {
+                console.error('❌ 组件加载失败:', error);
+            });
+        }
+    }).mount('#app');
+    </script>
+</body>
+</html> 

@@ -1,10 +1,10 @@
-<transition name="video-player-fade">
+<transition name="floating-video-player-fade">
   <div v-if="visible" 
        class="floating-video-player" 
        :class="{ 
-         minimized: minimized, 
-         resizing: isResizing, 
-         dragging: isDragging 
+         'floating-video-player--minimized': minimized, 
+         'floating-video-player--resizing': isResizing, 
+         'floating-video-player--dragging': isDragging 
        }"
        :style="{
          left: position.x !== null ? position.x + 'px' : 'auto',
@@ -16,20 +16,20 @@
        }">
     
     <!-- 标题栏 -->
-    <div class="video-player-header" 
+    <div class="floating-video-player__header" 
          @mousedown="startDrag" 
          @touchstart="startDrag" 
          @dblclick="toggleMinimize" 
          title="拖动移动位置，双击最小化">
       
       <!-- 视频标题 -->
-      <div class="video-player-title">{{ title }}</div>
+      <div class="floating-video-player__title">{{ title }}</div>
       
       <!-- 控制按钮 -->
-      <div class="video-player-controls">
+      <div class="floating-video-player__controls">
         <!-- 最小化/恢复按钮 -->
         <button @click="toggleMinimize" 
-                class="video-control-btn" 
+                class="floating-video-player__control-btn" 
                 :title="minimized ? '恢复' : '最小化'">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path v-if="!minimized" 
@@ -47,7 +47,7 @@
         
         <!-- 关闭按钮 -->
         <button @click="close" 
-                class="video-control-btn" 
+                class="floating-video-player__control-btn" 
                 title="关闭">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" 
@@ -60,7 +60,7 @@
     </div>
     
     <!-- 视频内容区域 -->
-    <div v-show="!minimized" class="video-player-content">
+    <div v-show="!minimized" class="floating-video-player__content">
       <iframe 
         :src="iframeSrc"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -70,7 +70,7 @@
     
     <!-- 调整大小手柄 -->
     <div v-show="!minimized" 
-         class="resize-handle" 
+         class="floating-video-player__resize-handle" 
          @mousedown="startResize"></div>
   </div>
 </transition> 

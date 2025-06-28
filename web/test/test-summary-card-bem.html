@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SummaryCard BEM测试</title>
+    
+    <!-- 基础样式 -->
+    <link rel="stylesheet" href="/css/base/reset.css">
+    <link rel="stylesheet" href="/css/base/variables.css">
+    <link rel="stylesheet" href="/css/base/typography.css">
+    <link rel="stylesheet" href="/css/base/effects.css">
+    <link rel="stylesheet" href="/css/base/content.css">
+    
+    <!-- 组件样式 -->
+    <link rel="stylesheet" href="/components/common/SummaryCard/SummaryCard.css">
+    
+    <style>
+        body {
+            background: #1a1a1a;
+            color: #e0e0e0;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .test-section {
+            margin-bottom: 3rem;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+            color: #06b6d4;
+        }
+        
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .info-box {
+            background: rgba(6, 182, 212, 0.1);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .info-box h3 {
+            color: #06b6d4;
+            margin-bottom: 0.5rem;
+        }
+        
+        .info-box ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .info-box li {
+            margin-bottom: 0.25rem;
+        }
+        
+        .info-box code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.125rem 0.25rem;
+            border-radius: 3px;
+            color: #22d3ee;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="container">
+        <h1 style="font-size: 2rem; margin-bottom: 2rem; color: #06b6d4;">SummaryCard BEM重构测试</h1>
+        
+        <div class="info-box">
+            <h3>BEM命名规范改动说明</h3>
+            <ul>
+                <li>✅ 删除了所有全局工具类（<code>.flex</code>, <code>.items-center</code>等）</li>
+                <li>✅ 所有类名改为BEM格式：<code>summary-card__element--modifier</code></li>
+                <li>✅ 修饰符：<code>summary-card--reinvent</code> 和 <code>summary-card--other</code></li>
+                <li>✅ 保留了tech-gradient和glow-effect全局样式类</li>
+            </ul>
+        </div>
+        
+        <div class="test-section">
+            <h2 class="section-title">Re:Invent 卡片</h2>
+            <div class="cards-grid">
+                <summary-card
+                    summary-type="reinvent"
+                    title-en="Building Event-Driven Architectures on AWS"
+                    title-cn="在AWS上构建事件驱动架构的最佳实践与案例分析"
+                    :word-count="12580"
+                    year="2024"
+                    level="Level 300 - 高级"
+                    hash="test-reinvent-1"
+                    @click="handleCardClick">
+                </summary-card>
+                
+                <summary-card
+                    summary-type="reinvent"
+                    title-en="Generative AI: From Proof of Concept to Production"
+                    title-cn="生成式AI：从概念验证到生产环境部署"
+                    :word-count="8900"
+                    year="2024"
+                    level="Level 200 - 中级"
+                    hash="test-reinvent-2"
+                    @click="handleCardClick">
+                </summary-card>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2 class="section-title">其他精选卡片</h2>
+            <div class="cards-grid">
+                <summary-card
+                    summary-type="other"
+                    title-en="The Complete Guide to Microservices Security"
+                    title-cn="微服务安全完全指南：认证、授权与加密"
+                    :word-count="5430"
+                    hash="test-other-1"
+                    @click="handleCardClick">
+                </summary-card>
+                
+                <summary-card
+                    summary-type="other"
+                    title-en="Understanding Kubernetes Networking"
+                    title-cn="深入理解Kubernetes网络模型"
+                    :word-count="15200"
+                    hash="test-other-2"
+                    @click="handleCardClick">
+                </summary-card>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2 class="section-title">极端情况测试</h2>
+            <div class="cards-grid">
+                <summary-card
+                    summary-type="reinvent"
+                    title-en="This is a very long title that should test the line clamping functionality and see how it handles overflow in the card layout system"
+                    title-cn="这是一个非常长的中文标题，用来测试文本截断功能是否正常工作，看看在卡片布局系统中如何处理文本溢出的情况，确保三行截断能够正常显示"
+                    :word-count="999"
+                    year="2023"
+                    level="Level 100 - 初级"
+                    hash="test-edge-1"
+                    @click="handleCardClick">
+                </summary-card>
+                
+                <summary-card
+                    summary-type="other"
+                    title-en="Short"
+                    title-cn="短"
+                    :word-count="100"
+                    hash="test-edge-2"
+                    @click="handleCardClick">
+                </summary-card>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vue 3 -->
+    <script src="/js/vendor/vue.global.js"></script>
+    
+    <!-- 核心工具 -->
+    <script src="/js/core/component-loader.js"></script>
+    <script src="/js/core/eventBus.js"></script>
+    
+    <script>
+    const { createApp, ref } = Vue;
+    
+    createApp({
+        setup() {
+            const handleCardClick = (data) => {
+                console.log('Card clicked:', data);
+                alert(`点击了卡片: ${data.hash} (类型: ${data.type})`);
+            };
+            
+            return {
+                handleCardClick
+            };
+        },
+        mounted() {
+            // 注册组件
+            window.ComponentLoader.registerComponents([
+                ['summary-card', '/components/common/SummaryCard', 'SummaryCard']
+            ]).then(() => {
+                console.log('✅ SummaryCard组件加载成功');
+            }).catch(error => {
+                console.error('❌ 组件加载失败:', error);
+            });
+        }
+    }).mount('#app');
+    </script>
+</body>
+</html> 

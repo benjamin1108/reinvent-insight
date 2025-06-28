@@ -1,20 +1,19 @@
 /* CreateView组件样式 - 完全独立，不依赖全局样式 */
 
-/* CreateView组件样式 - 继承全局字体设置和效果样式 */
+/* 引入基础样式 */
+@import url('/css/base/typography.css');
+@import url('/css/base/effects.css');
+@import url('/css/base/content.css');
 
 /* 主容器样式 */
 .create-view {
   max-width: 64rem;
   margin: 0 auto;
   padding: 1.5rem;
+  animation: create-view-fadeIn 0.5s ease-in-out;
 }
 
-/* 渐入动画 */
-.fade-in {
-  animation: fadeIn 0.5s ease-in-out;
-}
-
-@keyframes fadeIn {
+@keyframes create-view-fadeIn {
   from {
     opacity: 0;
     transform: translateY(20px);
@@ -26,15 +25,31 @@
 }
 
 /* 输入卡片样式 */
-.input-card {
+.create-view__input-card {
+  /* tech-gradient 效果 */
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.8) 50%, rgba(15, 23, 42, 0.9) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid #374151;
   border-radius: 0.75rem;
   padding: 2rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  /* glow-effect 效果 */
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.1), 0 0 40px rgba(6, 182, 212, 0.05), 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  transition: box-shadow 0.3s ease;
   margin-bottom: 2rem;
 }
 
-.input-card h2 {
+.create-view__input-card:hover {
+  box-shadow: 0 0 30px rgba(6, 182, 212, 0.2), 0 0 60px rgba(6, 182, 212, 0.1), 0 25px 50px -12px rgba(0, 0, 0, 0.3);
+}
+
+/* 输入卡片头部 */
+.create-view__header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.create-view__title {
   font-size: 1.875rem;
   font-weight: 700;
   background: linear-gradient(to bottom right, #d97706, #ea580c);
@@ -44,13 +59,22 @@
   margin-bottom: 0.5rem;
 }
 
-.input-card p {
+.create-view__subtitle {
   color: #9ca3af;
-  margin-bottom: 1.5rem;
 }
 
-/* 输入框样式 */
-.input-card input {
+/* 输入区域 */
+.create-view__input-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.create-view__input-wrapper {
+  width: 100%;
+}
+
+.create-view__input {
   width: 100%;
   padding: 0.75rem 1rem;
   background: rgba(31, 41, 55, 0.5);
@@ -60,17 +84,17 @@
   transition: all 0.3s ease;
 }
 
-.input-card input::placeholder {
+.create-view__input::placeholder {
   color: #9ca3af;
 }
 
-.input-card input:focus {
+.create-view__input:focus {
   outline: none;
-  ring: 2px solid #06b6d4;
+  box-shadow: 0 0 0 2px #06b6d4;
   border-color: transparent;
 }
 
-.input-card input:disabled {
+.create-view__input:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -78,7 +102,7 @@
 /* 按钮样式现在由TechButton组件统一提供 */
 
 /* 进度区域样式 */
-.progress-section {
+.create-view__progress-section {
   background: rgba(17, 24, 39, 0.5);
   border: 1px solid #374151;
   border-radius: 0.75rem;
@@ -88,7 +112,12 @@
   margin-bottom: 2rem;
 }
 
-.progress-section h3 {
+.create-view__progress-wrapper {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.create-view__progress-title {
   font-size: 1.25rem;
   font-weight: 600;
   margin-bottom: 1rem;
@@ -97,22 +126,27 @@
   align-items: center;
 }
 
-.progress-section h3 svg {
+.create-view__progress-icon {
   width: 1.25rem;
   height: 1.25rem;
   margin-right: 0.5rem;
 }
 
 /* 日志样式 */
-.progress-section .space-y-2 > * + * {
-  margin-top: 0.5rem;
+.create-view__log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.slide-in {
-  animation: slideIn 0.3s ease-out;
+.create-view__log-item {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  animation: create-view-slideIn 0.3s ease-out;
 }
 
-@keyframes slideIn {
+@keyframes create-view-slideIn {
   from {
     opacity: 0;
     transform: translateX(-20px);
@@ -123,25 +157,36 @@
   }
 }
 
-.progress-section .flex {
-  display: flex;
-  align-items: center;
-  font-size: 0.875rem;
+.create-view__log-indicator {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
 }
 
-.progress-section .text-gray-300 {
+.create-view__log-indicator--success {
+  background-color: #10b981;
+}
+
+.create-view__log-indicator--error {
+  background-color: #ef4444;
+}
+
+.create-view__log-indicator--pending {
+  background-color: #06b6d4;
+  animation: create-view-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.create-view__log-text {
   color: #d1d5db;
 }
 
-.progress-section .text-gray-400 {
+.create-view__log-text--pending {
   color: #9ca3af;
 }
 
-.progress-section .animate-pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes pulse {
+@keyframes create-view-pulse {
   0%, 100% {
     opacity: 1;
   }
@@ -151,11 +196,11 @@
 }
 
 /* 结果区域样式 */
-.result-section {
-  animation: fadeIn 0.5s ease-in-out;
+.create-view__result-section {
+  animation: create-view-fadeIn 0.5s ease-in-out;
 }
 
-.result-section > div {
+.create-view__result-card {
   background: rgba(17, 24, 39, 0.3);
   border: 1px solid #374151;
   border-radius: 0.75rem;
@@ -164,7 +209,15 @@
   backdrop-filter: blur(8px);
 }
 
-.result-section h2 {
+.create-view__result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+}
+
+.create-view__result-title {
   font-size: 1.5rem;
   font-weight: 700;
   background: linear-gradient(to right, #22d3ee, #3b82f6);
@@ -175,69 +228,70 @@
   word-break: break-words;
 }
 
-.result-section button {
-  padding: 0.5rem 1rem;
-  background: linear-gradient(to right, #9333ea, #ec4899);
-  border-radius: 0.5rem;
-  color: white;
-  font-weight: 500;
-  transition: all 0.2s;
-  transform: scale(1);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.result-section button:hover {
-  background: linear-gradient(to right, #7c3aed, #db2777);
-  transform: scale(1.05);
+.create-view__result-content {
+  /* prose-tech 全局样式应用 */
 }
 
 /* prose-tech样式现在由全局content.css提供 */
 
-/* 移动端样式 */
-.mobile-container {
-  padding: 1rem;
-}
-
-.mobile-input-card {
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.mobile-progress {
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-}
-
+/* 响应式设计 */
 @media (max-width: 768px) {
   .create-view {
     padding: 1rem;
   }
   
-  .input-card {
+  .create-view__input-card {
     padding: 1.5rem;
+    margin-bottom: 1.5rem;
   }
   
-  .input-card h2 {
+  .create-view__title {
     font-size: 1.5rem;
   }
   
-  .progress-section {
+  .create-view__progress-section {
     padding: 1rem;
+    margin-bottom: 1.5rem;
   }
   
-  .result-section > div {
+  .create-view__result-card {
     padding: 1.5rem;
   }
   
-  .result-section .flex {
+  .create-view__result-header {
     flex-direction: column;
     gap: 1rem;
     align-items: stretch;
   }
+}
+
+/* 高对比度模式支持 */
+@media (prefers-contrast: high) {
+  .create-view__input-card {
+    background: rgba(0, 0, 0, 0.9);
+    border: 1px solid #ffffff;
+    box-shadow: 0 0 0 2px #ffffff;
+  }
   
-  .result-section button {
-    white-space: normal;
-    text-align: center;
+  .create-view__input-card:hover {
+    box-shadow: 0 0 0 3px #ffffff;
+  }
+}
+
+/* 减少动画模式支持 */
+@media (prefers-reduced-motion: reduce) {
+  .create-view,
+  .create-view__result-section,
+  .create-view__log-item {
+    animation: none;
+  }
+  
+  .create-view__input-card,
+  .create-view__input {
+    transition: none;
+  }
+  
+  .create-view__log-indicator--pending {
+    animation: none;
   }
 } 

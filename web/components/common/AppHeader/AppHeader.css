@@ -17,7 +17,7 @@
 }
 
 /* 内容容器样式 */
-.app-header .app-header-container {
+.app-header__container {
   max-width: 100%;
   margin-left: auto;
   margin-right: auto;
@@ -25,12 +25,12 @@
 }
 
 /* 阅读模式的padding调整 */
-.app-header-reading .app-header-container {
+.app-header--reading .app-header__container {
   padding: 0.75rem 1rem;
 }
 
 /* 品牌标识样式 */
-.app-header-brand {
+.app-header__brand {
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -38,17 +38,17 @@
   transition: transform 0.2s ease;
 }
 
-.app-header-brand:hover {
+.app-header__brand:hover {
   transform: scale(1.02);
 }
 
-.app-header-brand svg {
+.app-header__brand svg {
   width: 1.75rem;
   height: 1.75rem;
   color: #06b6d4;
 }
 
-.app-header-brand h1 {
+.app-header__brand h1 {
   font-size: 1.25rem; /* text-xl */
   font-weight: 700; /* font-bold */
   background: linear-gradient(to right, #06b6d4, #3b82f6); /* from-cyan-400 to-blue-500 */
@@ -58,7 +58,7 @@
   margin: 0;
 }
 
-.app-header-brand h1 span {
+.app-header__brand h1 span {
   /* 使用确保span的颜色覆盖渐变色 */
   color: #a855f7 ; /* text-purple-400 */
   background: none ;
@@ -69,104 +69,104 @@
 /* 导航和布局相关的组件特定样式保留 */
 
 /* 导航布局 */
-.app-header-mobile {
+.app-header__mobile {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
 /* 左侧区域（logo和导航） */
-.app-header-left {
+.app-header__left {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
 }
 
-.app-header-left-inner {
+.app-header__left-inner {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
 /* 主导航 - 默认隐藏 */
-.app-header-nav {
+.app-header__nav {
   display: none;
   gap: 0.5rem;
 }
 
 /* 桌面端操作区 - 默认隐藏 */
-.app-header-actions {
+.app-header__actions {
   display: none;
   align-items: center;
   gap: 1rem;
 }
 
 /* 移动端导航 */
-.app-header-mobile-nav {
+.app-header__mobile-nav {
   display: flex;
   gap: 0.5rem;
   margin-top: 1rem;
 }
 
 /* 移动端认证按钮 */
-.app-header-mobile-auth {
+.app-header__mobile-auth {
   display: block;
 }
 
 /* 阅读模式样式 */
-.app-header-content {
+.app-header__content {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.app-header-reading-left {
+.app-header__reading-left {
   display: flex;
   align-items: center;
 }
 
-.app-header-reading-controls {
+.app-header__reading-controls {
   display: none;
   gap: 0.5rem;
   margin-left: 1rem;
 }
 
 /* TechButton组件在mobile-nav中的布局调整 */
-.app-header-mobile-nav tech-button {
+.app-header__mobile-nav tech-button {
   flex: 1;
 }
 
 /* 阅读模式特有样式 */
-.app-header-reading {
+.app-header--reading {
   padding: 0.75rem 0;
 }
 
 /* 阅读控制区域的TechButton样式由组件本身处理 */
 
-.app-header-right {
+.app-header__right {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.app-header-mobile-back {
+.app-header__mobile-back {
   display: block;
 }
 
-.app-header-mobile-hide-toc {
+.app-header__mobile-hide-toc {
   display: none;
 }
 
 /* 目录切换按钮特殊样式 */
-.app-header-toc-toggle {
+.app-header__toc-toggle {
   min-width: 80px ;
 }
 
 /* 桌面端样式 */
 @media (min-width: 768px) {
   /* header容器在桌面端变为横向布局 */
-  .app-header .app-header-mobile {
+  .app-header__mobile {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
@@ -174,40 +174,40 @@
   }
   
   /* 左侧区域在桌面端自适应宽度 */
-  .app-header .app-header-left {
+  .app-header__left {
     width: auto;
     flex: 0 0 auto; /* 不允许伸缩 */
   }
   
   /* 显示桌面端导航 */
-  .app-header .app-header-nav {
+  .app-header__nav {
     display: flex;
   }
   
   /* 显示桌面端操作区 */
-  .app-header .app-header-actions {
+  .app-header__actions {
     display: flex;
   }
   
   /* 隐藏移动端元素 */
-  .app-header .app-header-mobile-nav {
+  .app-header__mobile-nav {
     display: none ;
   }
   
-  .app-header .app-header-mobile-auth {
+  .app-header__mobile-auth {
     display: none ;
   }
   
   /* 显示阅读模式的控制按钮 */
-  .app-header .app-header-reading-controls {
+  .app-header__reading-controls {
     display: flex;
   }
   
-  .app-header-mobile-back {
+  .app-header__mobile-back {
     display: none;
   }
   
-  .app-header-mobile-hide-toc {
+  .app-header__mobile-hide-toc {
     display: block;
   }
 }
@@ -216,17 +216,17 @@
 @media (max-width: 768px) {
   /* 移动端保持相同的padding */
   
-  .app-header-brand h1 {
+  .app-header__brand h1 {
     font-size: 1.125rem;
   }
   
   /* TechButton组件的移动端样式由组件本身处理 */
   
-  .app-header-reading {
+  .app-header--reading {
     padding: 0.75rem 1rem;
   }
   
-  .app-header-reading .app-header-brand h1 {
+  .app-header--reading .app-header__brand h1 {
     font-size: 1rem;
   }
   
@@ -237,18 +237,18 @@
 @media (max-width: 480px) {
   /* padding由HTML中的Tailwind类控制 */
   
-  .app-header-brand h1 {
+  .app-header__brand h1 {
     font-size: 1rem;
   }
   
-  .app-header-brand svg {
+  .app-header__brand svg {
     width: 1.5rem;
     height: 1.5rem;
   }
   
   /* 极小屏幕下的TechButton样式由组件本身处理 */
   
-  .app-header-mobile-nav {
+  .app-header__mobile-nav {
     flex-direction: column;
     gap: 0.5rem;
   }
@@ -256,7 +256,7 @@
 
 /* 高对比度模式支持 */
 @media (prefers-contrast: high) {
-  .app-header-brand h1 {
+  .app-header__brand h1 {
     background: none;
     color: #ffffff;
   }
@@ -266,7 +266,7 @@
 
 /* 减少动画模式支持 */
 @media (prefers-reduced-motion: reduce) {
-  .app-header-brand {
+  .app-header__brand {
     transition: none;
   }
   

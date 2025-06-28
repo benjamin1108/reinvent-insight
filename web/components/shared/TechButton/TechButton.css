@@ -1,7 +1,7 @@
-/* TechButton组件样式 - 统一的科技风格按钮系统 */
+/* TechButton组件样式 - BEM规范 */
 
-/* 基础样式 */
-.tech-btn {
+/* 基础样式 - Block */
+.tech-button {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -22,7 +22,7 @@
   white-space: nowrap;
 }
 
-.tech-btn::before {
+.tech-button::before {
   content: '';
   position: absolute;
   top: 0;
@@ -33,19 +33,19 @@
   transition: left 0.5s;
 }
 
-.tech-btn:hover::before {
+.tech-button:hover::before {
   left: 100%;
 }
 
-/* 主要按钮 - 柔和橙色 */
-.tech-btn-primary {
+/* 主要按钮 - 柔和橙色 - Modifier */
+.tech-button--primary {
   background: linear-gradient(135deg, #d97706, #c2410c);
   border-color: #c2410c;
   color: #ffffff;
   box-shadow: 0 0 25px rgba(217, 119, 6, 0.25);
 }
 
-.tech-btn-primary:hover {
+.tech-button--primary:hover {
   background: linear-gradient(135deg, #c2410c, #9a3412);
   border-color: #9a3412;
   color: #ffffff;
@@ -53,19 +53,19 @@
   transform: translateY(-1px);
 }
 
-.tech-btn-primary:active {
+.tech-button--primary:active {
   transform: translateY(0);
 }
 
-/* 次要按钮 - 灰色科技风 */
-.tech-btn-secondary {
+/* 次要按钮 - 灰色科技风 - Modifier */
+.tech-button--secondary {
   background: linear-gradient(135deg, rgba(75, 85, 99, 0.3), rgba(55, 65, 81, 0.3));
   border-color: rgba(75, 85, 99, 0.5);
   color: #d1d5db;
   box-shadow: 0 0 15px rgba(75, 85, 99, 0.1);
 }
 
-.tech-btn-secondary:hover {
+.tech-button--secondary:hover {
   background: linear-gradient(135deg, rgba(75, 85, 99, 0.4), rgba(55, 65, 81, 0.4));
   border-color: rgba(107, 114, 128, 0.6);
   color: #f3f4f6;
@@ -73,22 +73,22 @@
   transform: translateY(-1px);
 }
 
-.tech-btn-secondary.active {
+.tech-button--secondary.tech-button--active {
   background: linear-gradient(135deg, #d97706, #c2410c);
   border-color: #c2410c;
   color: #ffffff;
   box-shadow: 0 0 25px rgba(217, 119, 6, 0.25);
 }
 
-/* 成功按钮 - 绿色科技风 */
-.tech-btn-success {
+/* 成功按钮 - 绿色科技风 - Modifier */
+.tech-button--success {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(34, 197, 94, 0.2));
   border-color: rgba(16, 185, 129, 0.4);
   color: #34d399;
   box-shadow: 0 0 20px rgba(16, 185, 129, 0.1);
 }
 
-.tech-btn-success:hover {
+.tech-button--success:hover {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(34, 197, 94, 0.3));
   border-color: rgba(16, 185, 129, 0.6);
   color: #10b981;
@@ -96,15 +96,15 @@
   transform: translateY(-1px);
 }
 
-/* 警告按钮 - 橙色科技风 */
-.tech-btn-warning {
+/* 警告按钮 - 橙色科技风 - Modifier */
+.tech-button--warning {
   background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(251, 146, 60, 0.2));
   border-color: rgba(245, 158, 11, 0.4);
   color: #fbbf24;
   box-shadow: 0 0 20px rgba(245, 158, 11, 0.1);
 }
 
-.tech-btn-warning:hover {
+.tech-button--warning:hover {
   background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(251, 146, 60, 0.3));
   border-color: rgba(245, 158, 11, 0.6);
   color: #f59e0b;
@@ -112,15 +112,15 @@
   transform: translateY(-1px);
 }
 
-/* 危险按钮 - 红色科技风 */
-.tech-btn-danger {
+/* 危险按钮 - 红色科技风 - Modifier */
+.tech-button--danger {
   background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2));
   border-color: rgba(239, 68, 68, 0.4);
   color: #f87171;
   box-shadow: 0 0 20px rgba(239, 68, 68, 0.1);
 }
 
-.tech-btn-danger:hover {
+.tech-button--danger:hover {
   background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.3));
   border-color: rgba(239, 68, 68, 0.6);
   color: #ef4444;
@@ -128,8 +128,8 @@
   transform: translateY(-1px);
 }
 
-/* 小尺寸按钮 */
-.tech-btn-sm {
+/* 小尺寸按钮 - Modifier */
+.tech-button--sm {
   padding: 0.375rem 0.75rem;
   font-size: 0.8rem;
   border-radius: 6px;
@@ -137,8 +137,8 @@
   height: 32px;
 }
 
-/* 大尺寸按钮 */
-.tech-btn-lg {
+/* 大尺寸按钮 - Modifier */
+.tech-button--lg {
   padding: 0.75rem 1.5rem;
   font-size: 1rem;
   border-radius: 10px;
@@ -146,8 +146,8 @@
   height: 48px;
 }
 
-/* 图标按钮 */
-.tech-btn-icon {
+/* 图标按钮 - Modifier */
+.tech-button--icon {
   padding: 0.5rem;
   width: 40px;
   height: 40px;
@@ -155,58 +155,56 @@
   border-radius: 8px;
 }
 
-.tech-btn-icon.tech-btn-sm {
+.tech-button--icon.tech-button--sm {
   width: 32px;
   height: 32px;
   min-width: 32px;
   padding: 0.375rem;
 }
 
-.tech-btn-icon.tech-btn-lg {
+.tech-button--icon.tech-button--lg {
   width: 48px;
   height: 48px;
   min-width: 48px;
   padding: 0.75rem;
 }
 
-/* 禁用状态 */
-.tech-btn:disabled,
-.tech-btn.disabled {
+/* 禁用状态 - Modifier */
+.tech-button:disabled,
+.tech-button--disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none ;
 }
 
-/* 加载状态 - 照搬主项目的opacity */
-.tech-btn.loading {
+/* 加载状态 - Modifier */
+.tech-button--loading {
   opacity: 0.8;
   pointer-events: none;
 }
 
-.tech-btn:disabled:hover,
-.tech-btn.disabled:hover {
+.tech-button:disabled:hover,
+.tech-button--disabled:hover {
   transform: none ;
   box-shadow: initial ;
 }
 
-.tech-btn:disabled::before,
-.tech-btn.disabled::before {
+.tech-button:disabled::before,
+.tech-button--disabled::before {
   display: none;
 }
 
 /* 确保禁用状态的按钮内部动画仍然生效 */
-.tech-btn:disabled svg.animate-spin,
-.tech-btn.disabled svg.animate-spin,
-.tech-btn:disabled .animate-spin,
-.tech-btn.disabled .animate-spin {
+.tech-button:disabled .tech-button__spinner--spinning,
+.tech-button--disabled .tech-button__spinner--spinning {
   opacity: 1 ;
-  -webkit-animation: spin 1s linear infinite ;
-  -moz-animation: spin 1s linear infinite ;
-  animation: spin 1s linear infinite ;
+  -webkit-animation: tech-button-spin 1s linear infinite ;
+  -moz-animation: tech-button-spin 1s linear infinite ;
+  animation: tech-button-spin 1s linear infinite ;
 }
 
-/* 按钮内的SVG图标样式 */
-.tech-btn svg {
+/* 按钮内的图标样式 - Element */
+.tech-button__icon {
   display: inline-block;
   vertical-align: middle;
   fill: currentColor;
@@ -215,38 +213,47 @@
   height: 1rem;
 }
 
-/* 图标尺寸类 - 替代Tailwind CSS */
-.tech-btn .w-3 { width: 0.75rem; }
-.tech-btn .h-3 { height: 0.75rem; }
-.tech-btn .w-4 { width: 1rem; }
-.tech-btn .h-4 { height: 1rem; }
-.tech-btn .w-5 { width: 1.25rem; }
-.tech-btn .h-5 { height: 1.25rem; }
-.tech-btn .w-6 { width: 1.5rem; }
-.tech-btn .h-6 { height: 1.5rem; }
+/* 图标尺寸修饰符 */
+.tech-button__icon--sm {
+  width: 0.75rem;
+  height: 0.75rem;
+}
 
-/* 间距类 - 替代Tailwind CSS */
-.tech-btn .ml-1 { margin-left: 0.25rem; }
-.tech-btn .mr-1 { margin-right: 0.25rem; }
-.tech-btn .mr-2 { margin-right: 0.5rem; }
+.tech-button__icon--lg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
 
-/* 全宽类 - 替代Tailwind CSS */
-.tech-btn.w-full {
+.tech-button__icon--xl {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* 图标间距 - Element Modifier */
+.tech-button__icon--before {
+  margin-right: 0.5rem;
+}
+
+.tech-button__icon--after {
+  margin-left: 0.5rem;
+}
+
+/* 全宽修饰符 */
+.tech-button--full-width {
   width: 100%;
   min-width: 100%;
 }
 
-/* 透明度类 - 用于SVG加载动画 */
-.tech-btn .opacity-25 {
-  opacity: 0.25;
+/* 加载动画图标 - Element */
+.tech-button__spinner {
+  fill: none;
+  stroke: currentColor;
+  width: 1rem;
+  height: 1rem;
 }
 
-.tech-btn .opacity-75 {
-  opacity: 0.75;
-}
-
-/* 旋转动画 - 保留给其他可能需要的地方 */
-@-webkit-keyframes spin {
+/* 旋转动画 - 仅用于TechButton组件 */
+@-webkit-keyframes tech-button-spin {
   from {
     transform: rotate(0deg);
   }
@@ -255,7 +262,7 @@
   }
 }
 
-@-moz-keyframes spin {
+@-moz-keyframes tech-button-spin {
   from {
     transform: rotate(0deg);
   }
@@ -264,7 +271,7 @@
   }
 }
 
-@keyframes spin {
+@keyframes tech-button-spin {
   from {
     transform: rotate(0deg);
   }
@@ -273,117 +280,94 @@
   }
 }
 
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-/* spin类 - 照搬主项目 */
-.spin,
-.animate-spin {
-  -webkit-animation: spin 1s linear infinite;
-  -moz-animation: spin 1s linear infinite;
-  animation: spin 1s linear infinite;
-}
-
-/* SVG特定动画样式 - 照搬主项目 */
-svg.animate-spin {
-  -webkit-animation: spin 1s linear infinite ;
-  -moz-animation: spin 1s linear infinite ;
-  animation: spin 1s linear infinite ;
-}
-
-/* 加载状态的按钮 - 照搬主项目 */
-.loading {
-  position: relative;
-  pointer-events: none;
-  opacity: 0.8;
-}
-
-.loading .spinner,
-.loading .animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-/* 确保SVG加载动画在按钮内正常工作 */
-.tech-btn svg.animate-spin {
-  -webkit-animation: spin 1s linear infinite;
-  -moz-animation: spin 1s linear infinite;
-  animation: spin 1s linear infinite;
+/* 加载动画样式 - Element Modifier */
+.tech-button__spinner--spinning {
+  -webkit-animation: tech-button-spin 1s linear infinite;
+  -moz-animation: tech-button-spin 1s linear infinite;
+  animation: tech-button-spin 1s linear infinite;
   display: inline-block;
 }
 
-/* 加载中的旋转图标专用样式 - 照搬主项目 */
-.tech-btn svg.animate-spin {
-  fill: none ;
+/* 确保加载动画元素显示正确 */
+.tech-button__spinner {
+  display: inline-block;
+  visibility: visible;
 }
 
-/* 调试：确保所有animate-spin类都有动画 - 照搬主项目 */
-*[class*="animate-spin"] {
-  -webkit-animation: spin 1s linear infinite ;
-  -moz-animation: spin 1s linear infinite ;
-  animation: spin 1s linear infinite ;
+/* 小尺寸按钮的加载图标 */
+.tech-button--sm .tech-button__spinner {
+  width: 0.75rem;
+  height: 0.75rem;
 }
 
-/* 确保动画在所有元素上都能工作 - 照搬主项目 */
-.animate-spin,
-.animate-spin svg,
-svg.animate-spin circle,
-svg.animate-spin path {
-  -webkit-animation: spin 1s linear infinite ;
-  -moz-animation: spin 1s linear infinite ;
-  animation: spin 1s linear infinite ;
+/* 大尺寸按钮的加载图标 */
+.tech-button--lg .tech-button__spinner {
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
-/* 保证SVG元素本身不被隐藏 - 照搬主项目 */
-svg.animate-spin {
-  display: inline-block ;
-  visibility: visible ;
+/* 确保SVG spinner继承动画 */
+svg.tech-button__spinner--spinning {
+  -webkit-animation: tech-button-spin 1s linear infinite;
+  -moz-animation: tech-button-spin 1s linear infinite;
+  animation: tech-button-spin 1s linear infinite;
 }
 
-/* 确保圆圈和路径元素显示正确 - 照搬主项目 */
-svg.animate-spin circle,
-svg.animate-spin path {
-  stroke-width: 4;
+/* 确保加载状态下的spinner显示正确 */
+.tech-button--loading .tech-button__spinner--spinning {
+  -webkit-animation: tech-button-spin 1s linear infinite ;
+  -moz-animation: tech-button-spin 1s linear infinite ;
+  animation: tech-button-spin 1s linear infinite ;
+}
+
+/* 调试：确保spinner图标本身旋转 */
+.tech-button__spinner.tech-button__spinner--spinning {
+  -webkit-transform-origin: center center;
+  -moz-transform-origin: center center;
+  transform-origin: center center;
+  -webkit-animation: tech-button-spin 1s linear infinite ;
+  -moz-animation: tech-button-spin 1s linear infinite ;
+  animation: tech-button-spin 1s linear infinite ;
 }
 
 /* 移动端优化 */
 @media (max-width: 768px) {
-  .tech-btn {
+  .tech-button {
     padding: 0.4rem 0.8rem;
     font-size: 0.8rem;
     min-width: 70px;
     height: 36px;
   }
   
-  .tech-btn-sm {
+  .tech-button--sm {
     padding: 0.3rem 0.6rem;
     font-size: 0.75rem;
     min-width: 50px;
     height: 28px;
   }
   
-  .tech-btn-lg {
+  .tech-button--lg {
     padding: 0.6rem 1.2rem;
     font-size: 0.9rem;
     min-width: 90px;
     height: 44px;
   }
   
-  .tech-btn-icon {
+  .tech-button--icon {
     width: 36px;
     height: 36px;
     min-width: 36px;
     padding: 0.4rem;
   }
   
-  .tech-btn-icon.tech-btn-sm {
+  .tech-button--icon.tech-button--sm {
     width: 28px;
     height: 28px;
     min-width: 28px;
     padding: 0.3rem;
   }
   
-  .tech-btn-icon.tech-btn-lg {
+  .tech-button--icon.tech-button--lg {
     width: 44px;
     height: 44px;
     min-width: 44px;
@@ -393,14 +377,14 @@ svg.animate-spin path {
 
 /* 极小屏幕优化 */
 @media (max-width: 480px) {
-  .tech-btn {
+  .tech-button {
     padding: 0.375rem 0.75rem;
     font-size: 0.75rem;
     min-width: 60px;
     height: 32px;
   }
   
-  .tech-btn-sm {
+  .tech-button--sm {
     padding: 0.25rem 0.5rem;
     font-size: 0.7rem;
     min-width: 40px;
@@ -410,22 +394,22 @@ svg.animate-spin path {
 
 /* 高对比度模式支持 */
 @media (prefers-contrast: high) {
-  .tech-btn {
+  .tech-button {
     border-width: 2px;
   }
   
-  .tech-btn-primary {
+  .tech-button--primary {
     background: #000000;
     color: #ffffff;
   }
   
-  .tech-btn-secondary {
+  .tech-button--secondary {
     background: #000000;
     color: #ffffff;
     border-color: #ffffff;
   }
   
-  .tech-btn:hover {
+  .tech-button:hover {
     background: #ffffff;
     color: #000000;
   }
@@ -433,23 +417,23 @@ svg.animate-spin path {
 
 /* 减少动画模式支持 */
 @media (prefers-reduced-motion: reduce) {
-  .tech-btn,
-  .tech-btn * {
+  .tech-button,
+  .tech-button * {
     transition: none;
   }
   
-  .tech-btn::before {
+  .tech-button::before {
     display: none;
   }
   
-  .tech-btn svg.animate-spin {
+  .tech-button__spinner--spinning {
     animation: none;
   }
 }
 
 /* 确保与其他组件的兼容性 */
-.tech-btn *,
-.tech-btn *::before,
-.tech-btn *::after {
+.tech-button *,
+.tech-button *::before,
+.tech-button *::after {
   box-sizing: border-box;
 } 

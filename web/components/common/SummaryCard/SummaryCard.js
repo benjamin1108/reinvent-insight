@@ -71,14 +71,6 @@ export default {
       return parts[0];
     });
     
-    // 计算级别样式类
-    const levelClass = computed(() => {
-      if (!props.level) return '';
-      const match = props.level.match(/\d+/);
-      const levelNum = match ? match[0] : '100';
-      return `level-${levelNum}`;
-    });
-    
     // 处理点击事件
     const handleClick = () => {
       emit('click', {
@@ -90,7 +82,6 @@ export default {
     return {
       formattedWordCount,
       levelText,
-      levelClass,
       handleClick
     };
   }

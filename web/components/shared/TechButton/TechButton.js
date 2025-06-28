@@ -97,30 +97,61 @@ export default {
   computed: {
     buttonClasses() {
       return [
-        'tech-btn',
-        `tech-btn-${this.variant}`,
+        'tech-button',
+        `tech-button--${this.variant}`,
         {
-          [`tech-btn-${this.size}`]: this.size !== 'normal',
-          'tech-btn-icon': this.iconOnly,
-          'w-full': this.fullWidth,
-          'loading': this.loading
+          [`tech-button--${this.size}`]: this.size !== 'normal',
+          'tech-button--icon': this.iconOnly,
+          'tech-button--full-width': this.fullWidth,
+          'tech-button--loading': this.loading,
+          'tech-button--disabled': this.disabled
         }
       ];
     },
     
     iconClasses() {
-      if (this.iconOnly) {
-        return this.size === 'sm' ? 'w-4 h-4' : this.size === 'lg' ? 'w-6 h-6' : 'w-5 h-5';
+      const baseClass = 'tech-button__icon';
+      const classes = [baseClass];
+      
+      // 位置修饰符
+      if (this.icon || this.iconBefore) {
+        classes.push('tech-button__icon--before');
+      } else if (this.iconAfter) {
+        classes.push('tech-button__icon--after');
       }
       
-      return this.size === 'sm' ? 'w-3 h-3' : 'w-4 h-4';
+      // 尺寸修饰符
+      if (this.iconOnly) {
+        classes.push(this.size === 'sm' ? 'tech-button__icon--sm' : 
+                     this.size === 'lg' ? 'tech-button__icon--xl' : 
+                     'tech-button__icon--lg');
+      } else {
+        classes.push(this.size === 'sm' ? 'tech-button__icon--sm' : 'tech-button__icon');
+      }
+      
+      return classes;
+    },
+    
+    spinnerClasses() {
+      const classes = [
+        'tech-button__spinner',
+        'tech-button__spinner--spinning',
+        'tech-button__icon',
+        'tech-button__icon--before'
+      ];
+      
+      // 添加尺寸修饰符
+      if (this.size === 'sm') {
+        classes.push('tech-button__icon--sm');
+      } else if (this.size === 'lg' && !this.iconOnly) {
+        // 非图标按钮的大尺寸使用标准图标尺寸
+      }
+      
+      return classes;
     },
     
     textClasses() {
-      return {
-        'ml-1': this.icon || this.iconBefore || this.loading,
-        'mr-1': this.iconAfter
-      };
+      return 'tech-button__text';
     }
   },
   

@@ -7,7 +7,7 @@
 }
 
 /* 触发器样式 */
-.version-selector-trigger {
+.version-selector__trigger {
   padding: 4px 12px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -21,21 +21,21 @@
 }
 
 /* 悬停效果 */
-.version-selector:hover .version-selector-trigger {
+.version-selector:hover .version-selector__trigger {
   color: #666;
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.15);
 }
 
 /* 激活状态 */
-.version-selector.active .version-selector-trigger {
+.version-selector--active .version-selector__trigger {
   color: #e0e0e0;
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.2);
 }
 
 /* 下拉菜单 - 整体圆角容器 */
-.version-dropdown {
+.version-selector__dropdown {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
@@ -50,9 +50,8 @@
   z-index: 1000;
 }
 
-/* 版本选项 - 确保没有圆角，背景色应该直接应用 */
-.version-selector .version-item,
-.version-selector-article .version-item {
+/* 版本选项 */
+.version-selector__item {
   display: block;
   padding: 6px 12px;
   color: #999;
@@ -73,8 +72,7 @@
 }
 
 /* 项目之间的分割线 */
-.version-selector .version-item:not(:last-child)::after,
-.version-selector-article .version-item:not(:last-child)::after {
+.version-selector__item:not(:last-child)::after {
   content: '';
   position: absolute;
   bottom: 0;
@@ -85,8 +83,7 @@
 }
 
 /* 选项悬停 - 整个项目的背景变化 */
-.version-selector .version-item:hover,
-.version-selector-article .version-item:hover {
+.version-selector__item:hover {
   color: #e0e0e0;
   background: rgba(255, 255, 255, 0.05);
   /* 确保hover时也没有圆角 */
@@ -94,8 +91,7 @@
 }
 
 /* 当前版本 */
-.version-selector .version-item.current,
-.version-selector-article .version-item.current {
+.version-selector__item--current {
   color: #fb923c;
   font-weight: 500;
   /* 确保当前项也没有圆角 */
@@ -103,64 +99,22 @@
   background: transparent;
 }
 
-/* 文章容器内的版本选择器特殊样式 */
-.version-selector-article {
+/* 文章容器内的版本选择器修饰符 */
+.version-selector--article {
   position: absolute;
   top: 20px;
   right: 20px;
   z-index: 10;
 }
 
-/* 继承基础样式但调整位置 */
-.version-selector-article .version-selector-trigger {
-  padding: 4px 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  color: #999;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  user-select: none;
-  white-space: nowrap;
-}
-
-.version-selector-article:hover .version-selector-trigger {
-  color: #666;
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
-.version-selector-article.active .version-selector-trigger {
-  color: #e0e0e0;
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-/* 文章容器内的下拉菜单继承主要样式 */
-.version-selector-article .version-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  background: rgba(15, 20, 25, 0.95);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  overflow: hidden;
-  min-width: 60px;
-  z-index: 1000;
-}
-
 /* 过渡动画 */
-.fade-enter-active,
-.fade-leave-active {
+.version-selector__dropdown-enter-active,
+.version-selector__dropdown-leave-active {
   transition: all 0.2s ease;
 }
 
-.fade-enter-from,
-.fade-leave-to {
+.version-selector__dropdown-enter-from,
+.version-selector__dropdown-leave-to {
   opacity: 0;
   transform: translateY(-4px);
 }
@@ -172,30 +126,29 @@
   }
   
   /* 文章容器内的版本选择器在移动端也显示 */
-  .version-selector-article {
+  .version-selector--article {
     display: inline-block;
     top: 5px;
     right: 5px;
   }
   
-  .version-selector-article .version-selector-trigger {
+  .version-selector--article .version-selector__trigger {
     padding: 3px 8px;
     font-size: 11px;
   }
   
-  .version-selector-article .version-dropdown {
+  .version-selector--article .version-selector__dropdown {
     min-width: 50px;
   }
   
-  .version-selector-article .version-item {
+  .version-selector--article .version-selector__item {
     padding: 4px 8px;
     font-size: 11px;
   }
 }
 
 /* 禁用状态 */
-.version-selector-trigger[disabled],
-.version-selector.disabled .version-selector-trigger {
+.version-selector--disabled .version-selector__trigger {
   opacity: 0.5;
   cursor: not-allowed;
   pointer-events: none;

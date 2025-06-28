@@ -1,22 +1,15 @@
 /**
  * ReadingView组件
- * 文章阅读界面，集成TableOfContents和VersionSelector组件
+ * 文章阅读界面，集成目录解析、版本选择等功能
  */
 export default {
   dependencies: [
-    ['table-of-contents', '/components/common/TableOfContents', 'TableOfContents'],
     ['version-selector', '/components/shared/VersionSelector', 'VersionSelector']
   ],
   
   props: {
     // 文章内容（HTML）
     content: {
-      type: String,
-      default: ''
-    },
-    
-    // TOC HTML内容
-    tocHtml: {
       type: String,
       default: ''
     },
@@ -61,6 +54,32 @@ export default {
     initialTocWidth: {
       type: Number,
       default: 280
+    },
+    
+    // TOC 设置
+    tocTitle: {
+      type: String,
+      default: '目录'
+    },
+    
+    tocEmptyText: {
+      type: String,
+      default: '暂无目录'
+    },
+    
+    tocMinWidth: {
+      type: Number,
+      default: 200
+    },
+    
+    tocMaxWidth: {
+      type: Number,
+      default: 600
+    },
+    
+    scrollOffset: {
+      type: Number,
+      default: 80
     }
   },
   
@@ -73,7 +92,10 @@ export default {
   ],
   
   setup(props, { emit }) {
-    const { ref, computed, onMounted, onUnmounted } = Vue;
+    const { ref, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
+    
+    // 引用
+    const tocSidebar = ref(null);
     
     // 状态管理
     const showToc = ref(props.initialShowToc);
@@ -81,10 +103,94 @@ export default {
     const isDragging = ref(false);
     const dragStartX = ref(0);
     const dragStartWidth = ref(0);
+    const parsedSections = ref([]);
+    const activeSection = ref('');
+    let scrollTimer = null;
+    
+    // 解析内容HTML生成目录结构
+    const parseContent = (html) => {
+      if (!html) return [];
+      
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const headings = doc.querySelectorAll('h1, h2, h3, h4, h5, h6');
+      
+      const sections = [];
+      const stack = [];
+      
+      headings.forEach(heading => {
+        const level = parseInt(heading.tagName.charAt(1));
+        const id = heading.id || heading.textContent.trim().toLowerCase().replace(/\s+/g, '-');
+        const text = heading.textContent.trim();
+        
+        // 确保标题有ID
+        if (!heading.id) {
+          heading.id = id;
+        }
+        
+        const section = {
+          id,
+          text,
+          level,
+          children: []
+        };
+        
+        // 构建层级结构
+        while (stack.length > 0 && stack[stack.length - 1].level >= level) {
+          stack.pop();
+        }
+        
+        if (stack.length === 0) {
+          sections.push(section);
+        } else {
+          stack[stack.length - 1].children.push(section);
+        }
+        
+        stack.push(section);
+      });
+      
+      return sections;
+    };
+    
+    // 生成目录HTML
+    const generateTocHtml = (sections) => {
+      if (!sections || sections.length === 0) return '';
+      
+      const renderSection = (section) => {
+        const hasChildren = section.children && section.children.length > 0;
+        let html = `<li>`;
+        html += `<a href="#${section.id}" data-target="${section.id}" class="${activeSection.value === section.id ? 'active' : ''}">${section.text}</a>`;
+        
+        if (hasChildren) {
+          html += '<ul>';
+          section.children.forEach(child => {
+            html += renderSection(child);
+          });
+          html += '</ul>';
+        }
+        
+        html += '</li>';
+        return html;
+      };
+      
+      let html = '<ul>';
+      sections.forEach(section => {
+        html += renderSection(section);
+      });
+      html += '</ul>';
+      
+      return html;
+    };
     
     // 计算属性
     const hasMultipleVersions = computed(() => {
       return props.versions && props.versions.length > 1;
+    });
+    
+    const tocHtml = computed(() => {
+      if (!props.content) return '';
+      parsedSections.value = parseContent(props.content);
+      return generateTocHtml(parsedSections.value);
     });
     
     // TOC相关方法
@@ -94,46 +200,73 @@ export default {
     };
     
     const handleTocClick = (event) => {
-      emit('toc-click', event);
+      const target = event.target;
+      if (target.tagName === 'A') {
+        event.preventDefault();
+        
+        const targetId = target.getAttribute('data-target');
+        if (targetId) {
+          scrollToSection(targetId);
+          emit('toc-click', { targetId, event });
+        }
+      }
     };
     
-    // 拖拽相关方法
-    const initDrag = (event) => {
-      if (event.button !== 0) return; // 只处理鼠标左键
+    // 滚动到指定章节
+    const scrollToSection = (sectionId) => {
+      const element = document.getElementById(sectionId);
+      if (!element) return;
       
-      event.preventDefault();
+      const container = document.querySelector('.reading-view__content');
+      if (!container) return;
+      
+      const elementTop = element.getBoundingClientRect().top;
+      const scrollTop = container.scrollTop;
+      const targetScrollTop = scrollTop + elementTop - props.scrollOffset;
+      
+      container.scrollTo({
+        top: targetScrollTop,
+        behavior: 'smooth'
+      });
+      
+      activeSection.value = sectionId;
+    };
+    
+    // 拖动相关方法
+    const startDrag = (e) => {
       isDragging.value = true;
+      const event = e.type.includes('touch') ? e.touches[0] : e;
+      
       dragStartX.value = event.clientX;
       dragStartWidth.value = tocWidth.value;
       
-      document.addEventListener('mousemove', handleDrag);
-      document.addEventListener('mouseup', stopDrag);
-      // 使用CSS类来控制拖拽状态，避免直接修改body
-      document.documentElement.classList.add('is-dragging-toc');
+      document.documentElement.classList.add('reading-view--dragging');
+      e.preventDefault();
     };
     
-    const handleDrag = (event) => {
+    const handleDrag = (e) => {
       if (!isDragging.value) return;
       
+      const event = e.type.includes('touch') ? e.touches[0] : e;
       const deltaX = event.clientX - dragStartX.value;
       let newWidth = dragStartWidth.value + deltaX;
       
-      // 限制TOC宽度范围
-      const minWidth = 200;
-      const maxWidth = Math.min(600, window.innerWidth * 0.5);
+      // 限制宽度范围
+      newWidth = Math.max(props.tocMinWidth, Math.min(newWidth, props.tocMaxWidth));
       
-      newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+      // 确保不超过窗口宽度的一半
+      const maxAllowedWidth = Math.min(props.tocMaxWidth, window.innerWidth * 0.5);
+      newWidth = Math.min(newWidth, maxAllowedWidth);
+      
       tocWidth.value = newWidth;
-      
       emit('toc-resize', newWidth);
     };
     
-    const stopDrag = () => {
+    const endDrag = () => {
+      if (!isDragging.value) return;
+      
       isDragging.value = false;
-      document.removeEventListener('mousemove', handleDrag);
-      document.removeEventListener('mouseup', stopDrag);
-      // 清除拖拽状态
-      document.documentElement.classList.remove('is-dragging-toc');
+      document.documentElement.classList.remove('reading-view--dragging');
     };
     
     // 文章相关方法
@@ -151,15 +284,44 @@ export default {
       // 在移动设备上自动隐藏TOC
       if (window.innerWidth <= 768) {
         showToc.value = false;
-      } else if (window.innerWidth > 768 && !showToc.value) {
-        showToc.value = props.initialShowToc;
+      } else if (window.innerWidth > 768 && !showToc.value && props.initialShowToc) {
+        showToc.value = true;
       }
+    };
+    
+    // 滚动监听：高亮当前章节
+    const handleScroll = () => {
+      if (!props.content) return;
       
-      // 调整TOC宽度以适应屏幕
-      const maxWidth = Math.min(600, window.innerWidth * 0.5);
-      if (tocWidth.value > maxWidth) {
-        tocWidth.value = maxWidth;
+      const container = document.querySelector('.reading-view__content');
+      if (!container) return;
+      
+      const scrollTop = container.scrollTop;
+      
+      // 获取所有标题元素
+      const headings = container.querySelectorAll('h1, h2, h3, h4, h5, h6');
+      let currentSection = '';
+      
+      headings.forEach(heading => {
+        if (heading.id) {
+          const rect = heading.getBoundingClientRect();
+          const top = rect.top + scrollTop - props.scrollOffset;
+          
+          if (scrollTop >= top - 10) {
+            currentSection = heading.id;
+          }
+        }
+      });
+      
+      if (currentSection && currentSection !== activeSection.value) {
+        activeSection.value = currentSection;
       }
+    };
+    
+    // 防抖处理
+    const debouncedHandleScroll = () => {
+      if (scrollTimer) clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(handleScroll, 100);
     };
     
     // 键盘快捷键
@@ -173,25 +335,67 @@ export default {
       // ESC 键隐藏TOC（仅在移动设备上）
       if (event.key === 'Escape' && window.innerWidth <= 768) {
         showToc.value = false;
+        emit('toc-toggle', false);
       }
     };
+    
+    // 监听内容变化
+    watch(() => props.content, () => {
+      if (props.content) {
+        parsedSections.value = parseContent(props.content);
+      }
+    });
+    
+    // 监听活动章节变化，触发目录更新
+    watch(activeSection, () => {
+      // 触发 Vue 重新计算 tocHtml
+    });
     
     // 生命周期
     onMounted(() => {
       window.addEventListener('resize', handleResize);
       document.addEventListener('keydown', handleKeydown);
       
+      // 添加拖动事件监听
+      document.addEventListener('mousemove', handleDrag);
+      document.addEventListener('mouseup', endDrag);
+      document.addEventListener('touchmove', handleDrag, { passive: false });
+      document.addEventListener('touchend', endDrag);
+      
+      // 添加滚动监听
+      const container = document.querySelector('.reading-view__content');
+      if (container) {
+        container.addEventListener('scroll', debouncedHandleScroll);
+      }
+      
       // 初始响应式检查
       handleResize();
+      
+      // 初始化时解析内容
+      if (props.content) {
+        parsedSections.value = parseContent(props.content);
+      }
     });
     
     onUnmounted(() => {
       window.removeEventListener('resize', handleResize);
       document.removeEventListener('keydown', handleKeydown);
       
-      // 清理拖拽事件
-      if (isDragging.value) {
-        stopDrag();
+      // 移除拖动事件监听
+      document.removeEventListener('mousemove', handleDrag);
+      document.removeEventListener('mouseup', endDrag);
+      document.removeEventListener('touchmove', handleDrag);
+      document.removeEventListener('touchend', endDrag);
+      
+      // 移除滚动监听
+      const container = document.querySelector('.reading-view__content');
+      if (container) {
+        container.removeEventListener('scroll', debouncedHandleScroll);
+      }
+      
+      // 清理定时器
+      if (scrollTimer) {
+        clearTimeout(scrollTimer);
       }
     });
     
@@ -209,22 +413,32 @@ export default {
     };
     
     return {
+      // 引用
+      tocSidebar,
+      
       // 响应式状态
       showToc,
       tocWidth,
       isDragging,
+      activeSection,
       
       // 计算属性
       hasMultipleVersions,
+      tocHtml,
       
       // 方法
       toggleToc,
       handleTocClick,
-      initDrag,
       handleArticleClick,
       handleVersionChange,
       scrollToElement,
-      resetLayout
+      resetLayout,
+      startDrag,
+      scrollToSection,
+      
+      // props
+      tocTitle: props.tocTitle,
+      tocEmptyText: props.tocEmptyText
     };
   }
 }; 

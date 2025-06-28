@@ -5,7 +5,7 @@
 
 const YearFilter = {
   dependencies: [
-    ['custom-dropdown', '../components/common/Filter', 'CustomDropdown']
+    ['custom-dropdown', '/components/common/Filter', 'CustomDropdown']
   ],
   
   props: {

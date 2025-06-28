@@ -1,30 +1,30 @@
 <div 
   :class="[
-    'summary-card tech-gradient border rounded-xl p-6 transition-all duration-200 glow-effect group flex flex-col relative',
+    'summary-card tech-gradient glow-effect',
     summaryType === 'reinvent' 
-      ? 'border-orange-700/50 justify-between h-64 reinvent-card' 
-      : 'border-gray-700 cursor-pointer hover:border-cyan-500 h-56 other-card'
+      ? 'summary-card--reinvent' 
+      : 'summary-card--other'
   ]"
   @click="handleClick">
   
   <!-- 分类光晕效果 -->
-  <div class="category-glow"></div>
+  <div class="summary-card__category-glow"></div>
   
   <!-- Main clickable area -->
-  <div class="cursor-pointer flex-grow flex flex-col">
+  <div class="summary-card__content">
     <!-- 主标题（英文） -->
-    <div class="mb-3 chinese-title-container">
+    <div class="summary-card__title-container">
       <h3 
-        class="text-base font-bold leading-snug line-clamp-3 chinese-title"
+        class="summary-card__title"
         :title="titleEn">
         {{ titleEn }}
       </h3>
     </div>
     
     <!-- 副标题（中文） -->
-    <div class="flex-1 mb-2 english-title-area">
+    <div class="summary-card__subtitle-area">
       <p 
-        class="text-xs font-normal leading-relaxed break-words w-full english-subtitle"
+        class="summary-card__subtitle"
         :title="titleCn">
         {{ titleCn }}
       </p>
@@ -32,17 +32,11 @@
   </div>
   
   <!-- Footer with metadata -->
-  <div :class="[
-    summaryType === 'reinvent' ? 'metadata-footer' : 'metadata-area',
-    'text-xs transition-colors',
-    summaryType === 'reinvent' 
-      ? 'text-orange-400 group-hover:text-white/80' 
-      : 'text-cyan-500 group-hover:text-white/80'
-  ]">
-    <div class="flex justify-between items-center">
-      <div class="flex items-center space-x-3">
-        <div class="flex items-center" title="字数">
-          <svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <div class="summary-card__metadata">
+    <div class="summary-card__metadata-container">
+      <div class="summary-card__metadata-left">
+        <div class="summary-card__word-count" title="字数">
+          <svg class="summary-card__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
             </path>
@@ -50,13 +44,12 @@
           <span>{{ formattedWordCount }}</span>
         </div>
       </div>
-      <div class="flex items-center space-x-2">
-        <div class="metadata-badge">{{ summaryType === 'reinvent' ? 're:Invent' : '精选' }}</div>
-        <div v-if="year" class="metadata-badge">{{ year }}</div>
+      <div class="summary-card__metadata-right">
+        <div class="summary-card__badge">{{ summaryType === 'reinvent' ? 're:Invent' : '精选' }}</div>
+        <div v-if="year" class="summary-card__badge">{{ year }}</div>
         <div 
           v-if="level" 
-          class="level-badge"
-          :class="levelClass">
+          class="summary-card__badge summary-card__badge--level">
           {{ levelText }}
         </div>
       </div>

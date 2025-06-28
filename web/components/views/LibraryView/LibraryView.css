@@ -2,19 +2,20 @@
 
 /* LibraryView组件样式 - 继承全局字体设置 */
 
+/* 引入基础样式 */
+@import url('/css/base/typography.css');
+@import url('/css/base/effects.css');
+@import url('/css/base/content.css');
+
 /* 主容器样式 */
 .library-view {
-  max-width: 72rem;
+  max-width: 96rem;
   margin: 0 auto;
   padding: 1.5rem;
+  animation: library-view-fadeIn 0.5s ease-in-out;
 }
 
-/* 渐入动画 */
-.fade-in {
-  animation: fadeIn 0.5s ease-in-out;
-}
-
-@keyframes fadeIn {
+@keyframes library-view-fadeIn {
   from {
     opacity: 0;
     transform: translateY(20px);
@@ -26,7 +27,11 @@
 }
 
 /* 页面标题样式 */
-.library-header h2 {
+.library-view__header {
+  margin-bottom: 2rem;
+}
+
+.library-view__title {
   font-size: 1.875rem;
   font-weight: 700;
   background: linear-gradient(to right, #22d3ee, #3b82f6);
@@ -36,31 +41,43 @@
   margin-bottom: 0.5rem;
 }
 
-.library-header p {
+.library-view__subtitle {
   color: #9ca3af;
 }
 
 /* 加载状态样式 */
-.loading-state {
+.library-view__loading {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 3rem 0;
 }
 
-.loading-state .text-center {
+.library-view__loading-content {
   text-align: center;
 }
 
-.loading-state svg {
+.library-view__loading-icon {
   width: 2rem;
   height: 2rem;
   color: #22d3ee;
-  margin: 0 auto 1rem auto;
-  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+  animation: library-view-spin 1s linear infinite;
 }
 
-@keyframes spin {
+.library-view__loading-circle {
+  opacity: 0.25;
+}
+
+.library-view__loading-path {
+  opacity: 0.75;
+}
+
+.library-view__loading-text {
+  color: #9ca3af;
+}
+
+@keyframes library-view-spin {
   from {
     transform: rotate(0deg);
   }
@@ -69,30 +86,37 @@
   }
 }
 
-.loading-state p {
-  color: #9ca3af;
-}
-
 /* 内容区域样式 */
-.content-area {
+.library-view__content {
   display: flex;
   flex-direction: column;
   gap: 3rem;
 }
 
 /* 区域容器样式 */
-.section-container {
-  width: 100%;
+.library-view__section {
+  /* 基础区域样式 */
+}
+
+.library-view__section--reinvent {
+  /* re:Invent 特定样式 */
+}
+
+.library-view__section--other {
+  /* 其他内容特定样式 */
 }
 
 /* 区域标题样式 */
-.section-header {
+.library-view__section-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
-.section-header .flex:first-child {
+.library-view__section-title-group {
   display: flex;
   align-items: center;
 }
@@ -100,14 +124,14 @@
 /* glow-effect样式现在由全局effects.css提供 */
 
 /* 区域标题文字 */
-.section-header h3 {
+.library-view__section-title {
   font-size: 1.5rem;
   font-weight: 700;
-  margin: 0;
+  margin-right: 0.75rem;
 }
 
 /* re:Invent区域标题 */
-.reinvent-section h3 {
+.library-view__section-title--reinvent {
   background: linear-gradient(to right, #fb923c, #ef4444);
   -webkit-background-clip: text;
   background-clip: text;
@@ -115,7 +139,7 @@
 }
 
 /* 其他区域标题 */
-.other-section h3 {
+.library-view__section-title--other {
   background: linear-gradient(to right, #22d3ee, #3b82f6);
   -webkit-background-clip: text;
   background-clip: text;
@@ -123,62 +147,52 @@
 }
 
 /* 文章计数样式 */
-.article-count {
-  margin-left: 0.75rem;
+.library-view__article-count {
+  background: rgba(34, 211, 238, 0.1);
+  color: #22d3ee;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
   font-size: 0.875rem;
-  color: #9ca3af;
   font-weight: 500;
 }
 
 /* 筛选器容器 */
-.filters-container {
-  margin-left: auto;
+.library-view__filters {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  margin-left: auto;
 }
 
 /* 网格布局 */
-.mobile-grid,
-.reinvent-grid,
-.other-grid {
+.library-view__grid {
   display: grid;
   gap: 1.5rem;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
 }
 
-/* 中等屏幕网格 */
-@media (min-width: 768px) {
-  .mobile-grid,
-  .reinvent-grid,
-  .other-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.library-view__grid--reinvent {
+  /* re:Invent 网格特定样式 */
 }
 
-/* 大屏幕网格 */
-@media (min-width: 1024px) {
-  .mobile-grid,
-  .reinvent-grid,
-  .other-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
+.library-view__grid--other {
+  /* 其他内容网格特定样式 */
 }
 
 /* 空状态样式 */
-.empty-state {
+.library-view__empty {
   text-align: center;
   padding: 3rem 0;
 }
 
-.empty-state h3 {
+.library-view__empty-title {
   font-size: 1.25rem;
   font-weight: 600;
   color: #d1d5db;
   margin-bottom: 0.5rem;
 }
 
-.empty-state p {
+.library-view__empty-message {
   color: #6b7280;
 }
 
@@ -193,88 +207,84 @@
     padding: 1rem;
   }
   
-  .library-header {
-    margin-bottom: 2rem;
+  .library-view__header {
+    margin-bottom: 1.5rem;
   }
   
-  .library-header h2 {
+  .library-view__title {
     font-size: 1.5rem;
   }
   
-  .section-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-  
-  .section-header h3 {
-    font-size: 1.25rem;
-  }
-  
-  .filters-container {
-    margin-left: 0;
-    width: 100%;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-  }
-  
-  .content-area {
+  .library-view__content {
     gap: 2rem;
   }
   
-  .mobile-grid,
-  .reinvent-grid,
-  .other-grid {
+  .library-view__section-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .library-view__filters {
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+  
+  .library-view__grid {
     grid-template-columns: 1fr;
     gap: 1rem;
   }
+  
+  .library-view__loading {
+    padding: 2rem 0;
+  }
+  
+  .library-view__empty {
+    padding: 2rem 0;
+  }
 }
 
-/* 极小屏幕优化 */
-@media (max-width: 480px) {
-  .library-view {
-    padding: 0.75rem;
+@media (min-width: 769px) and (max-width: 1024px) {
+  .library-view__grid {
+    grid-template-columns: repeat(2, 1fr);
   }
-  
-  .library-header h2 {
-    font-size: 1.25rem;
-  }
-  
-  .section-header h3 {
-    font-size: 1.125rem;
-  }
-  
-  .article-count {
-    font-size: 0.75rem;
+}
+
+@media (min-width: 1025px) {
+  .library-view__grid {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
 /* 高对比度模式支持 */
 @media (prefers-contrast: high) {
-  .library-header h2 {
+  .library-view__title,
+  .library-view__section-title--reinvent,
+  .library-view__section-title--other {
     background: none;
     color: #ffffff;
   }
   
-  .section-header h3 {
-    background: none;
-    color: #ffffff;
+  .library-view__section-indicator {
+    box-shadow: 0 0 0 2px #ffffff;
   }
   
-  .loading-state svg {
+  .library-view__article-count {
+    background: rgba(255, 255, 255, 0.2);
     color: #ffffff;
+    border: 1px solid #ffffff;
   }
 }
 
 /* 减少动画模式支持 */
 @media (prefers-reduced-motion: reduce) {
-  .fade-in,
-  .loading-state svg {
+  .library-view {
     animation: none;
-    transition: none;
   }
   
-  /* glow-effect减少动画支持由全局effects.css提供 */
+  .library-view__loading-icon {
+    animation: none;
+  }
 }
 
 /* 深色主题支持（默认） */

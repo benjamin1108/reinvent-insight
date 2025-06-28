@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReadingView 组件测试</title>
+  
+  <!-- Vue 3 -->
+  <script src="/js/vendor/vue.global.js"></script>
+  
+  <!-- 基础样式 -->
+  <link rel="stylesheet" href="/css/base/typography.css">
+  <link rel="stylesheet" href="/css/base/effects.css">
+  <link rel="stylesheet" href="/css/base/content.css">
+  
+  <!-- 测试框架样式 -->
+  <style>
+    :root {
+      --test-bg: #0f172a;
+      --test-surface: #1e293b;
+      --test-border: #334155;
+      --test-primary: #22d3ee;
+      --test-success: #10b981;
+      --test-warning: #f59e0b;
+      --test-error: #ef4444;
+      --test-text: #e5e7eb;
+      --test-text-dim: #9ca3af;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: var(--test-bg);
+      color: var(--test-text);
+      font-family: var(--font-primary);
+      min-height: 100vh;
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    .test-container {
+      display: flex;
+      height: 100vh;
+    }
+    
+    .test-controls {
+      width: 320px;
+      background: var(--test-surface);
+      border-right: 1px solid var(--test-border);
+      padding: 1.5rem;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+    
+    .test-controls h1 {
+      font-size: 1.5rem;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 1.5rem;
+    }
+    
+    .control-group {
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+    
+    .control-group h3 {
+      font-size: 0.875rem;
+      color: var(--test-primary);
+      margin-bottom: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .control-label {
+      display: block;
+      font-size: 0.813rem;
+      color: var(--test-text-dim);
+      margin-bottom: 0.5rem;
+    }
+    
+    .control-select,
+    .control-input {
+      width: 100%;
+      padding: 0.5rem;
+      background: var(--test-bg);
+      border: 1px solid var(--test-border);
+      border-radius: 4px;
+      color: var(--test-text);
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    
+    .control-select:focus,
+    .control-input:focus {
+      outline: none;
+      border-color: var(--test-primary);
+      box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1);
+    }
+    
+    .control-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      color: var(--test-text-dim);
+      font-size: 0.875rem;
+    }
+    
+    .control-checkbox input {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+    
+    .test-button {
+      padding: 0.5rem 1rem;
+      background: var(--gradient-primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-right: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .test-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3);
+    }
+    
+    .test-button.secondary {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+    }
+    
+    .event-log {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--test-border);
+      border-radius: 8px;
+      padding: 1rem;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .event-log h4 {
+      font-size: 0.875rem;
+      color: var(--test-primary);
+      margin-bottom: 0.5rem;
+    }
+    
+    .log-item {
+      font-size: 0.75rem;
+      color: var(--test-text-dim);
+      font-family: var(--font-code);
+      margin-bottom: 0.25rem;
+    }
+    
+    .log-item.error {
+      color: var(--test-error);
+    }
+    
+    .log-item.success {
+      color: var(--test-success);
+    }
+    
+    .content-area {
+      flex: 1;
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .status-info {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 0.75rem;
+      z-index: 100;
+    }
+    
+    .status-info div {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.25rem;
+    }
+    
+    .status-info div:last-child {
+      margin-bottom: 0;
+    }
+    
+    .status-label {
+      color: var(--test-text-dim);
+    }
+    
+    .status-value {
+      color: var(--test-primary);
+      font-weight: 500;
+    }
+    
+    /* ReadingView 容器样式 */
+    .reading-view-container {
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="test-container">
+      <!-- 测试控制面板 -->
+      <div class="test-controls">
+        <h1>ReadingView 测试</h1>
+        
+        <!-- 内容控制 -->
+        <div class="control-group">
+          <h3>内容设置</h3>
+          <label class="control-label">文章状态</label>
+          <select v-model="articleState" class="control-select">
+            <option value="normal">正常显示</option>
+            <option value="loading">加载中</option>
+            <option value="error">错误状态</option>
+            <option value="empty">无内容</option>
+          </select>
+          
+          <label class="control-label" style="margin-top: 0.75rem;">内容类型</label>
+          <select v-model="contentType" class="control-select">
+            <option value="rich">丰富内容</option>
+            <option value="simple">简单内容</option>
+            <option value="code">代码示例</option>
+            <option value="long">长文本测试</option>
+          </select>
+        </div>
+        
+        <!-- TOC 控制 -->
+        <div class="control-group">
+          <h3>目录设置</h3>
+          <label class="control-label">目录类型</label>
+          <select v-model="tocType" class="control-select">
+            <option value="full">完整目录</option>
+            <option value="simple">简单目录</option>
+            <option value="empty">无目录</option>
+          </select>
+          
+          <label class="control-checkbox" style="margin-top: 0.75rem;">
+            <input type="checkbox" v-model="showToc">
+            显示目录
+          </label>
+          
+          <label class="control-label" style="margin-top: 0.75rem;">TOC 宽度</label>
+          <input type="number" v-model.number="tocWidth" class="control-input" min="200" max="600" step="10">
+        </div>
+        
+        <!-- 版本控制 -->
+        <div class="control-group">
+          <h3>版本设置</h3>
+          <label class="control-label">版本配置</label>
+          <select v-model="versionType" class="control-select">
+            <option value="single">单版本</option>
+            <option value="multiple">多版本</option>
+          </select>
+          
+          <label class="control-label" style="margin-top: 0.75rem;">当前版本</label>
+          <select v-model="currentVersion" class="control-select">
+            <option v-for="v in versions" :key="v.version" :value="v.version">
+              {{ v.title }}
+            </option>
+          </select>
+        </div>
+        
+        <!-- 操作按钮 -->
+        <div class="control-group">
+          <h3>操作</h3>
+          <button @click="updateContent" class="test-button">更新内容</button>
+          <button @click="toggleToc" class="test-button">切换目录</button>
+          <button @click="resetLayout" class="test-button secondary">重置布局</button>
+          <button @click="clearLogs" class="test-button secondary">清空日志</button>
+        </div>
+        
+        <!-- 事件日志 -->
+        <div class="event-log">
+          <h4>事件日志</h4>
+          <div v-for="(log, index) in eventLogs" :key="index" :class="['log-item', log.type]">
+            [{{ log.time }}] {{ log.message }}
+          </div>
+          <div v-if="eventLogs.length === 0" class="log-item">
+            暂无事件
+          </div>
+        </div>
+      </div>
+      
+      <!-- 内容区域 -->
+      <div class="content-area">
+        <!-- 状态信息 -->
+        <div class="status-info" v-if="showDebugInfo">
+          <div>
+            <span class="status-label">TOC 显示:</span>
+            <span class="status-value">{{ showToc ? '是' : '否' }}</span>
+          </div>
+          <div>
+            <span class="status-label">TOC 宽度:</span>
+            <span class="status-value">{{ tocWidth }}px</span>
+          </div>
+          <div>
+            <span class="status-label">内容长度:</span>
+            <span class="status-value">{{ currentContent.length }} 字符</span>
+          </div>
+          <div>
+            <span class="status-label">版本数:</span>
+            <span class="status-value">{{ versions.length }}</span>
+          </div>
+        </div>
+        
+        <!-- ReadingView 组件 -->
+        <div class="reading-view-container">
+          <reading-view
+            :content="currentContent"
+            :loading="isLoading"
+            :error="errorMessage"
+            :loading-text="loadingText"
+            :versions="versions"
+            :current-version="currentVersion"
+            :initial-show-toc="showToc"
+            :initial-toc-width="tocWidth"
+            @toc-click="handleTocClick"
+            @article-click="handleArticleClick"
+            @version-change="handleVersionChange"
+            @toc-toggle="handleTocToggle"
+            @toc-resize="handleTocResize"
+            ref="readingViewRef">
+          </reading-view>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 组件加载器 -->
+  <script src="/js/core/component-loader.js"></script>
+  
+  <script type="module">
+    const { createApp, ref, computed, watch } = Vue;
+    
+    const app = createApp({
+      setup() {
+        // 状态
+        const articleState = ref('normal');
+        const contentType = ref('rich');
+        const tocType = ref('full');
+        const versionType = ref('multiple');
+        const currentVersion = ref('2');
+        const showToc = ref(true);
+        const tocWidth = ref(320);
+        const showDebugInfo = ref(true);
+        const eventLogs = ref([]);
+        const readingViewRef = ref(null);
+        
+        // 内容数据
+        const contentData = {
+          rich: `
+            <h1>AWS re:Invent 2023：构建可扩展的微服务架构</h1>
+            
+            <h2 id="overview">概述</h2>
+            <p>在现代云计算环境中，<strong>微服务架构</strong>已经成为构建大规模、高可用应用程序的首选方案。</p>
+            
+            <h2 id="principles">核心设计原则</h2>
+            <p>在设计微服务架构时，我们需要遵循以下关键原则：</p>
+            <ul>
+              <li>单一职责：每个服务专注于特定的业务功能</li>
+              <li>去中心化：避免单点故障和性能瓶颈</li>
+              <li>容错性：优雅处理服务间的通信失败</li>
+            </ul>
+            
+            <h3 id="tech-stack">技术栈选择</h3>
+            <p>推荐的AWS服务组合包括 Amazon EKS、AWS App Mesh 和 Amazon API Gateway。</p>
+            
+            <h2 id="implementation">实施步骤</h2>
+            <p>实施微服务架构需要循序渐进的方法。</p>
+            
+            <h3 id="phase1">第一阶段：服务拆分</h3>
+            <p>识别和拆分现有的单体应用是第一步。</p>
+            
+            <h3 id="phase2">第二阶段：基础设施搭建</h3>
+            <p>使用 Infrastructure as Code 工具来定义基础设施。</p>
+            
+            <h2 id="summary">总结</h2>
+            <p>微服务架构为现代应用提供了前所未有的灵活性和可扩展性。</p>
+          `,
+          simple: `
+            <h1>简单文档示例</h1>
+            <h2 id="section1">第一节</h2>
+            <p>这是第一节的内容。</p>
+            <h2 id="section2">第二节</h2>
+            <p>这是第二节的内容。</p>
+          `,
+                     code: `
+            <h1>代码示例文档</h1>
+            <h2 id="javascript">JavaScript 示例</h2>
+            <pre><code>function example() {
+  console.log('Hello, World!');
+}</code></pre>
+            <h2 id="python">Python 示例</h2>
+            <pre><code>def example():
+    print('Hello, World!')</code></pre>
+          `,
+          long: `
+            <h1>AWS re:Invent 2023 完整指南：构建现代化云原生应用</h1>
+            
+            <p>本文将全面深入地探讨如何在 AWS 平台上构建、部署和运维现代化的云原生应用。通过本指南，您将了解到最新的技术趋势、最佳实践以及实际案例。</p>
+            
+            <h2 id="introduction">第一章：引言</h2>
+            <p>云原生应用已经成为现代软件开发的标准范式。在本章中，我们将探讨云原生的核心概念和价值主张。</p>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+            <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+            <p>在深入技术细节之前，让我们先了解一些基础概念。云原生不仅仅是将应用部署到云上，而是一种全新的构建和运行应用的方法论。</p>
+            
+            <h3 id="cloud-native-principles">1.1 云原生原则</h3>
+            <p>云原生应用遵循以下核心原则：容器化封装、动态编排、微服务架构、持续交付和 DevOps 文化。</p>
+            <p>这些原则相互配合，使得应用能够充分利用云计算的弹性和规模优势。通过采用这些原则，组织可以更快地交付功能、更好地响应市场变化。</p>
+            <p>让我们详细探讨每个原则的具体含义和实践方法。首先是容器化，它提供了一种轻量级、可移植的应用打包方式。</p>
+            
+            <h3 id="benefits">1.2 云原生的优势</h3>
+            <p>采用云原生架构可以带来诸多好处：提高开发效率、增强系统可靠性、优化资源利用率、加速创新速度。</p>
+            <p>根据 CNCF 的调查报告，采用云原生技术的组织在部署频率上提高了 5 倍，故障恢复时间减少了 60%。</p>
+            <p>这些数据充分说明了云原生方法的价值。但要真正实现这些好处，需要在技术、流程和文化等多个层面进行转型。</p>
+            
+            <h2 id="architecture">第二章：架构设计</h2>
+            <p>良好的架构设计是构建成功云原生应用的基础。在本章中，我们将深入探讨如何设计可扩展、高可用的云原生架构。</p>
+            <p>架构设计需要考虑多个方面：服务拆分、数据管理、通信模式、安全策略等。每个决策都会对系统的长期演进产生深远影响。</p>
+            <p>我们将通过实际案例来说明如何权衡不同的架构选择，以及如何避免常见的设计陷阱。</p>
+            
+            <h3 id="microservices">2.1 微服务架构</h3>
+            <p>微服务是云原生架构的核心模式之一。它将应用拆分为一组小型、自治的服务，每个服务负责特定的业务功能。</p>
+            <p>但微服务并非银弹。它带来了分布式系统的复杂性，包括服务发现、负载均衡、容错处理、分布式追踪等挑战。</p>
+            <p>成功实施微服务需要建立相应的基础设施和工具链。AWS 提供了丰富的服务来支持微服务架构，包括 ECS、EKS、App Mesh 等。</p>
+            <pre><code>// 微服务间通信示例
+const axios = require('axios');
+
+class UserService {
+  async getUser(userId) {
+    try {
+      const response = await axios.get(\`\${this.orderServiceUrl}/users/\${userId}\`);
+      return response.data;
+    } catch (error) {
+      // 实现断路器模式
+      return this.fallbackUser(userId);
+    }
+  }
+}</code></pre>
+            
+            <h3 id="data-management">2.2 数据管理策略</h3>
+            <p>在微服务架构中，数据管理是一个关键挑战。每个服务应该拥有自己的数据存储，但这会带来数据一致性和事务处理的问题。</p>
+            <p>常见的模式包括：数据库每服务模式、事件溯源、CQRS、Saga 模式等。选择合适的模式需要根据具体的业务需求和一致性要求。</p>
+            <p>AWS 提供了多种数据存储服务，从关系型数据库 RDS 到 NoSQL 数据库 DynamoDB，再到数据仓库 Redshift，可以满足不同的数据管理需求。</p>
+            
+            <h3 id="communication">2.3 服务间通信</h3>
+            <p>服务间通信是微服务架构的另一个核心问题。主要有两种模式：同步通信（如 REST、gRPC）和异步通信（如消息队列、事件流）。</p>
+            <p>同步通信简单直观，但可能导致级联故障。异步通信提高了系统的弹性，但增加了复杂性。实践中通常需要结合使用两种模式。</p>
+            <p>AWS 提供了 API Gateway 用于管理同步 API，SQS 和 SNS 用于异步消息传递，EventBridge 用于事件驱动架构。</p>
+            
+            <h2 id="containers">第三章：容器化技术</h2>
+            <p>容器技术是云原生的基石。本章将详细介绍如何使用 Docker 容器化应用，以及如何在 AWS 上运行容器工作负载。</p>
+            <p>容器提供了一致的运行环境，使得应用可以在开发、测试和生产环境中保持一致的行为。这大大简化了部署和运维工作。</p>
+            <p>但容器化不仅仅是将应用打包到容器中。还需要考虑镜像优化、安全扫描、注册表管理等方面。</p>
+            
+            <h3 id="docker-basics">3.1 Docker 基础</h3>
+            <p>Docker 是最流行的容器技术。了解 Docker 的核心概念——镜像、容器、仓库——是使用容器技术的第一步。</p>
+            <p>编写高效的 Dockerfile 是一门艺术。需要考虑镜像大小、构建速度、安全性等多个方面。多阶段构建是优化镜像的重要技术。</p>
+            <pre><code># 多阶段构建示例
+FROM node:16-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+
+FROM node:16-alpine
+WORKDIR /app
+COPY --from=builder /app/node_modules ./node_modules
+COPY . .
+EXPOSE 3000
+CMD ["node", "server.js"]</code></pre>
+            
+            <h3 id="container-orchestration">3.2 容器编排</h3>
+            <p>当容器数量增多时，手动管理变得不可行。这时需要容器编排平台，如 Kubernetes。AWS 提供了托管的 Kubernetes 服务 EKS。</p>
+            <p>Kubernetes 提供了强大的功能：自动扩缩容、服务发现、负载均衡、滚动更新、自我修复等。但它的学习曲线较陡峭。</p>
+            <p>对于简单场景，可以考虑使用 AWS ECS，它提供了更简单的容器编排能力，与 AWS 服务深度集成。</p>
+            
+            <h3 id="container-security">3.3 容器安全</h3>
+            <p>容器安全是一个多层次的问题，包括镜像安全、运行时安全、网络安全等。需要在整个容器生命周期中实施安全措施。</p>
+            <p>最佳实践包括：使用最小基础镜像、定期扫描漏洞、实施最小权限原则、使用只读文件系统、限制资源使用等。</p>
+            <p>AWS 提供了 ECR 用于安全存储镜像，GuardDuty 用于威胁检测，Security Hub 用于集中管理安全状态。</p>
+            
+            <h2 id="devops">第四章：DevOps 实践</h2>
+            <p>DevOps 是云原生的文化基础。本章将介绍如何建立高效的 CI/CD 流水线，实现基础设施即代码，以及建立可观测性体系。</p>
+            <p>DevOps 不仅是工具和技术，更是一种文化和理念。它强调开发和运维的协作，通过自动化来提高效率和质量。</p>
+            <p>成功的 DevOps 转型需要组织层面的支持，包括调整团队结构、改变绩效指标、培养学习文化等。</p>
+            
+            <h3 id="cicd">4.1 持续集成与持续部署</h3>
+            <p>CI/CD 是 DevOps 的核心实践。它通过自动化的构建、测试和部署流程，实现快速、可靠的软件交付。</p>
+            <p>一个典型的 CI/CD 流水线包括：代码提交触发、自动化测试、构建容器镜像、安全扫描、部署到测试环境、集成测试、部署到生产环境。</p>
+            <p>AWS 提供了完整的 CI/CD 工具链：CodeCommit 用于代码托管，CodeBuild 用于构建，CodeDeploy 用于部署，CodePipeline 用于编排。</p>
+            
+            <h3 id="iac">4.2 基础设施即代码</h3>
+            <p>基础设施即代码（IaC）是将基础设施配置以代码形式管理的实践。它带来了版本控制、代码审查、自动化部署等好处。</p>
+            <p>主流的 IaC 工具包括 Terraform、AWS CloudFormation、AWS CDK 等。每种工具都有其特点和适用场景。</p>
+            <pre><code># Terraform 示例
+resource "aws_eks_cluster" "main" {
+  name     = var.cluster_name
+  role_arn = aws_iam_role.eks_cluster.arn
+
+  vpc_config {
+    subnet_ids = var.subnet_ids
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.eks_cluster_policy,
+  ]
+}</code></pre>
+            
+            <h3 id="observability">4.3 可观测性</h3>
+            <p>在分布式系统中，可观测性至关重要。它包括三个支柱：日志、指标和追踪。通过这些数据，我们可以理解系统的行为和性能。</p>
+            <p>建立有效的可观测性体系需要：统一的日志格式、合理的指标设计、端到端的追踪、智能的告警策略、直观的可视化面板。</p>
+            <p>AWS 提供了 CloudWatch 用于日志和指标，X-Ray 用于分布式追踪，还可以集成开源工具如 Prometheus、Grafana、Jaeger 等。</p>
+            
+            <h2 id="security">第五章：安全最佳实践</h2>
+            <p>安全是云原生应用的重要考量。本章将介绍如何在 AWS 上实施全面的安全策略，保护应用和数据。</p>
+            <p>云安全是共享责任模型。AWS 负责云的安全，客户负责云中的安全。理解这个模型是制定安全策略的基础。</p>
+            <p>安全需要在多个层面实施：网络安全、身份认证、数据加密、合规审计等。每个层面都有相应的最佳实践和工具。</p>
+            
+            <h3 id="identity">5.1 身份和访问管理</h3>
+            <p>IAM 是 AWS 安全的核心。正确配置 IAM 策略，实施最小权限原则，是保护资源的第一道防线。</p>
+            <p>最佳实践包括：使用角色而非用户凭证、启用 MFA、定期轮换密钥、使用临时凭证、实施细粒度的权限控制。</p>
+            <p>对于应用级别的认证，可以使用 AWS Cognito 或集成第三方身份提供商。OAuth 2.0 和 OpenID Connect 是常用的协议。</p>
+            
+            <h3 id="network-security">5.2 网络安全</h3>
+            <p>网络隔离是深度防御的重要一环。在 AWS 中，VPC 提供了逻辑隔离的网络环境，可以通过子网、安全组、NACL 等实现细粒度的访问控制。</p>
+            <p>零信任网络模型越来越受到重视。它假设网络内部也是不可信的，要求对每个请求进行验证和授权。服务网格如 App Mesh 可以帮助实现零信任架构。</p>
+            <p>还需要考虑 DDoS 防护、WAF、网络加密等。AWS Shield 和 WAF 提供了应用层的防护能力。</p>
+            
+            <h3 id="data-security">5.3 数据安全</h3>
+            <p>数据是组织最宝贵的资产。需要在数据的全生命周期中实施保护：传输中加密、静态加密、密钥管理、数据脱敏等。</p>
+            <p>AWS KMS 提供了集中的密钥管理服务，支持自动轮换和细粒度的访问控制。对于高度敏感的数据，可以使用 CloudHSM。</p>
+            <p>还需要考虑数据备份和灾难恢复。AWS Backup 提供了集中的备份管理，支持跨区域复制，确保数据的持久性。</p>
+            
+            <h2 id="performance">第六章：性能优化</h2>
+            <p>性能是用户体验的关键。本章将介绍如何优化云原生应用的性能，包括应用层、数据层和基础设施层的优化。</p>
+            <p>性能优化是一个持续的过程。需要建立性能基准、识别瓶颈、实施优化、验证效果。这个循环需要不断重复。</p>
+            <p>云环境提供了独特的优化机会，如自动扩缩容、全球分发、边缘计算等。充分利用这些能力可以显著提升性能。</p>
+            
+            <h3 id="application-performance">6.1 应用层优化</h3>
+            <p>应用层的优化包括：代码优化、缓存策略、异步处理、连接池管理等。选择合适的优化策略需要基于性能分析的结果。</p>
+            <p>缓存是提升性能的利器。AWS 提供了多层缓存方案：CloudFront 用于 CDN，ElastiCache 用于内存缓存，DAX 用于 DynamoDB 加速。</p>
+            <pre><code>// Redis 缓存示例
+const redis = require('redis');
+const client = redis.createClient({
+  host: process.env.REDIS_HOST,
+  port: process.env.REDIS_PORT
+});
+
+async function getCachedData(key) {
+  const cached = await client.get(key);
+  if (cached) {
+    return JSON.parse(cached);
+  }
+  
+  const data = await fetchFromDatabase(key);
+  await client.setex(key, 3600, JSON.stringify(data));
+  return data;
+}</code></pre>
+            
+            <h3 id="database-performance">6.2 数据库优化</h3>
+            <p>数据库往往是性能瓶颈。优化策略包括：索引优化、查询优化、分片、读写分离、连接池调优等。</p>
+            <p>选择合适的数据库类型很重要。对于高并发读取，可以考虑 NoSQL；对于复杂查询，关系型数据库更合适；对于时序数据，可以使用专门的时序数据库。</p>
+            <p>AWS 提供了多种数据库服务，每种都有其性能特点。RDS 支持多种关系型数据库，DynamoDB 提供毫秒级延迟，Aurora 提供高性能和高可用性。</p>
+            
+            <h3 id="infrastructure-performance">6.3 基础设施优化</h3>
+            <p>基础设施层的优化包括：选择合适的实例类型、优化网络配置、使用置放群组、启用增强联网等。</p>
+            <p>自动扩缩容是云原生的关键能力。需要选择合适的指标（CPU、内存、请求数等），设置合理的阈值，避免频繁扩缩容。</p>
+            <p>对于计算密集型工作负载，可以考虑使用 GPU 实例或 FPGA 实例。对于内存密集型工作负载，选择内存优化型实例。</p>
+            
+            <h2 id="case-studies">第七章：实战案例分析</h2>
+            <p>理论结合实践才能真正掌握云原生技术。本章将通过几个实际案例，展示如何应用前面介绍的概念和技术。</p>
+            <p>每个案例都代表了不同的业务场景和技术挑战。通过分析这些案例，我们可以学习如何在实际项目中做出正确的技术决策。</p>
+            <p>案例涵盖了电商平台、金融服务、游戏后端、IoT 平台等不同领域，每个都有其独特的需求和约束。</p>
+            
+            <h3 id="ecommerce-case">7.1 电商平台现代化</h3>
+            <p>某大型电商平台面临着单体应用的扩展瓶颈。我们帮助他们逐步迁移到微服务架构，实现了 10 倍的性能提升。</p>
+            <p>关键挑战包括：如何拆分服务、如何处理分布式事务、如何保证数据一致性、如何实现平滑迁移。</p>
+            <p>解决方案采用了绞杀者模式逐步迁移，使用事件驱动架构解耦服务，使用 Saga 模式处理分布式事务。整个迁移历时 18 个月，期间保持了业务的正常运行。</p>
+            
+            <h3 id="fintech-case">7.2 金融科技合规架构</h3>
+            <p>金融行业有严格的合规要求。这个案例展示了如何在满足合规要求的同时，构建高性能的云原生应用。</p>
+            <p>主要考虑点包括：数据驻留要求、审计日志、加密要求、高可用性要求、灾难恢复等。</p>
+            <p>架构采用了多区域部署，实现了 RPO 小于 1 分钟、RTO 小于 5 分钟的灾难恢复能力。所有数据都进行了端到端加密，审计日志保存 7 年。</p>
+            
+            <h3 id="gaming-case">7.3 游戏后端自动扩展</h3>
+            <p>游戏行业的流量模式极不规律，需要能够快速扩展的架构。这个案例展示了如何构建能够处理百万并发的游戏后端。</p>
+            <p>技术栈包括：EKS 用于容器编排，DynamoDB 用于游戏状态存储，ElastiCache 用于会话管理，SQS 用于异步任务处理。</p>
+            <p>通过预测性扩展和游戏特定的扩展策略，系统能够在游戏发布时处理 100 倍的流量增长，同时保持低延迟。</p>
+            
+            <h2 id="future">第八章：未来展望</h2>
+            <p>云原生技术仍在快速演进。本章将探讨一些新兴趋势和技术，帮助读者为未来做好准备。</p>
+            <p>技术趋势包括：Serverless 容器、边缘计算、机器学习运维、GitOps、服务网格的普及等。</p>
+            <p>这些技术将进一步简化云原生应用的构建和运维，使开发者能够更专注于业务逻辑。</p>
+            
+            <h3 id="serverless-containers">8.1 Serverless 容器</h3>
+            <p>AWS Fargate 代表了容器运行的新模式。它消除了管理服务器的需要，让开发者只需关注容器本身。</p>
+            <p>Serverless 容器特别适合批处理任务、定时任务、事件驱动的工作负载等场景。它提供了容器的灵活性和 Serverless 的简单性。</p>
+            <p>未来，我们预期会看到更多 Serverless 容器的创新，包括更快的冷启动、更灵活的资源配置、更好的成本优化等。</p>
+            
+            <h3 id="edge-computing">8.2 边缘计算</h3>
+            <p>随着 5G 和 IoT 的发展，边缘计算变得越来越重要。它将计算能力推到离用户更近的地方，减少延迟，提高响应速度。</p>
+            <p>AWS 提供了多个边缘计算服务：CloudFront Functions 用于简单的边缘逻辑，Lambda@Edge 用于更复杂的处理，Outposts 用于本地部署。</p>
+            <p>边缘计算的挑战包括：资源限制、网络不稳定、数据同步等。需要针对边缘环境专门设计应用架构。</p>
+            
+            <h3 id="aiops">8.3 AIOps 和智能运维</h3>
+            <p>机器学习正在改变运维方式。AIOps 使用机器学习来自动检测异常、预测故障、优化性能。</p>
+            <p>AWS 已经在多个服务中集成了机器学习能力，如 CodeGuru 用于代码审查，DevOps Guru 用于运维洞察，Forecast 用于需求预测。</p>
+            <p>未来，我们期待看到更多智能化的运维工具，能够自动修复问题、优化成本、提供架构建议等。</p>
+            
+            <h2 id="conclusion">总结</h2>
+            <p>云原生是一个广阔的领域，涉及技术、流程和文化的多个方面。通过本指南，我们系统地介绍了构建云原生应用的关键概念和实践。</p>
+            <p>成功的云原生转型需要持续的学习和实践。技术在不断演进，新的挑战和机会不断出现。保持开放的心态，持续学习，是在这个领域取得成功的关键。</p>
+            <p>希望本指南能够帮助您在云原生之旅中少走弯路，构建出高质量、高性能、高可用的现代化应用。云原生不是目的，而是帮助我们更好地服务客户、创造价值的手段。</p>
+            <p>感谢您的阅读，祝您在云原生的道路上取得成功！</p>
+          `
+        };
+        
+        // TOC 数据
+        const tocData = {
+          full: `
+            <ul>
+              <li><a href="#overview" data-target="overview">概述</a></li>
+              <li>
+                <a href="#principles" data-target="principles">核心设计原则</a>
+                <ul>
+                  <li><a href="#tech-stack" data-target="tech-stack">技术栈选择</a></li>
+                </ul>
+              </li>
+              <li>
+                <a href="#implementation" data-target="implementation">实施步骤</a>
+                <ul>
+                  <li><a href="#phase1" data-target="phase1">第一阶段：服务拆分</a></li>
+                  <li><a href="#phase2" data-target="phase2">第二阶段：基础设施搭建</a></li>
+                </ul>
+              </li>
+              <li><a href="#summary" data-target="summary">总结</a></li>
+            </ul>
+          `,
+          simple: `
+            <ul>
+              <li><a href="#section1" data-target="section1">第一节</a></li>
+              <li><a href="#section2" data-target="section2">第二节</a></li>
+            </ul>
+          `,
+          long: `
+            <ul>
+              <li>
+                <a href="#introduction" data-target="introduction">第一章：引言</a>
+                <ul>
+                  <li><a href="#cloud-native-principles" data-target="cloud-native-principles">1.1 云原生原则</a></li>
+                  <li><a href="#benefits" data-target="benefits">1.2 云原生的优势</a></li>
+                </ul>
+              </li>
+              <li>
+                <a href="#architecture" data-target="architecture">第二章：架构设计</a>
+                <ul>
+                  <li><a href="#microservices" data-target="microservices">2.1 微服务架构</a></li>
+                  <li><a href="#data-management" data-target="data-management">2.2 数据管理策略</a></li>
+                  <li><a href="#communication" data-target="communication">2.3 服务间通信</a></li>
+                </ul>
+              </li>
+              <li>
+                <a href="#containers" data-target="containers">第三章：容器化技术</a>
+                <ul>
+                  <li><a href="#docker-basics" data-target="docker-basics">3.1 Docker 基础</a></li>
+                  <li><a href="#container-orchestration" data-target="container-orchestration">3.2 容器编排</a></li>
+                  <li><a href="#container-security" data-target="container-security">3.3 容器安全</a></li>
+                </ul>
+              </li>
+              <li>
+                <a href="#devops" data-target="devops">第四章：DevOps 实践</a>
+                <ul>
+                  <li><a href="#cicd" data-target="cicd">4.1 持续集成与持续部署</a></li>
+                  <li><a href="#iac" data-target="iac">4.2 基础设施即代码</a></li>
+                  <li><a href="#observability" data-target="observability">4.3 可观测性</a></li>
+                </ul>
+              </li>
+              <li>
+                <a href="#security" data-target="security">第五章：安全最佳实践</a>
+                <ul>
+                  <li><a href="#identity" data-target="identity">5.1 身份和访问管理</a></li>
+                  <li><a href="#network-security" data-target="network-security">5.2 网络安全</a></li>
+                  <li><a href="#data-security" data-target="data-security">5.3 数据安全</a></li>
+                </ul>
+              </li>
+              <li>
+                <a href="#performance" data-target="performance">第六章：性能优化</a>
+                <ul>
+                  <li><a href="#application-performance" data-target="application-performance">6.1 应用层优化</a></li>
+                  <li><a href="#database-performance" data-target="database-performance">6.2 数据库优化</a></li>
+                  <li><a href="#infrastructure-performance" data-target="infrastructure-performance">6.3 基础设施优化</a></li>
+                </ul>
+              </li>
+              <li>
+                <a href="#case-studies" data-target="case-studies">第七章：实战案例分析</a>
+                <ul>
+                  <li><a href="#ecommerce-case" data-target="ecommerce-case">7.1 电商平台现代化</a></li>
+                  <li><a href="#fintech-case" data-target="fintech-case">7.2 金融科技合规架构</a></li>
+                  <li><a href="#gaming-case" data-target="gaming-case">7.3 游戏后端自动扩展</a></li>
+                </ul>
+              </li>
+              <li>
+                <a href="#future" data-target="future">第八章：未来展望</a>
+                <ul>
+                  <li><a href="#serverless-containers" data-target="serverless-containers">8.1 Serverless 容器</a></li>
+                  <li><a href="#edge-computing" data-target="edge-computing">8.2 边缘计算</a></li>
+                  <li><a href="#aiops" data-target="aiops">8.3 AIOps 和智能运维</a></li>
+                </ul>
+              </li>
+              <li><a href="#conclusion" data-target="conclusion">总结</a></li>
+            </ul>
+          `,
+          empty: ''
+        };
+        
+        // 版本数据
+        const versionData = {
+          single: [{ version: '1', title: '版本 1' }],
+          multiple: [
+            { version: '1', title: '版本 1' },
+            { version: '2', title: '版本 2' },
+            { version: '3', title: '版本 3' }
+          ]
+        };
+        
+        // 计算属性
+        const currentContent = computed(() => {
+          if (articleState.value === 'loading' || articleState.value === 'error' || articleState.value === 'empty') {
+            return '';
+          }
+          return contentData[contentType.value] || '';
+        });
+        
+        // TOC 现在由 ReadingView 组件自动解析生成
+        
+        const versions = computed(() => {
+          return versionData[versionType.value] || [];
+        });
+        
+        const isLoading = computed(() => articleState.value === 'loading');
+        const errorMessage = computed(() => {
+          return articleState.value === 'error' ? '加载文章时发生错误' : '';
+        });
+        const loadingText = ref('加载文章中...');
+        
+        // 方法
+        const addLog = (message, type = 'info') => {
+          const time = new Date().toLocaleTimeString();
+          eventLogs.value.unshift({ time, message, type });
+          if (eventLogs.value.length > 50) {
+            eventLogs.value = eventLogs.value.slice(0, 50);
+          }
+        };
+        
+        const updateContent = () => {
+          addLog('内容已更新', 'success');
+        };
+        
+        const toggleToc = () => {
+          showToc.value = !showToc.value;
+          addLog(`TOC ${showToc.value ? '显示' : '隐藏'}`);
+        };
+        
+        const resetLayout = () => {
+          showToc.value = true;
+          tocWidth.value = 320;
+          if (readingViewRef.value) {
+            readingViewRef.value.resetLayout();
+          }
+          addLog('布局已重置', 'success');
+        };
+        
+        const clearLogs = () => {
+          eventLogs.value = [];
+        };
+        
+        // 事件处理
+        const handleTocClick = (event) => {
+          addLog(`TOC 点击: ${event.targetId || '未知'}`);
+        };
+        
+        const handleArticleClick = (event) => {
+          const target = event.target;
+          if (target.tagName === 'A') {
+            addLog(`文章链接点击: ${target.href}`);
+          }
+        };
+        
+        const handleVersionChange = (version) => {
+          currentVersion.value = version;
+          addLog(`版本切换到: ${version}`, 'success');
+        };
+        
+        const handleTocToggle = (visible) => {
+          showToc.value = visible;
+          addLog(`TOC 切换: ${visible ? '显示' : '隐藏'}`);
+        };
+        
+        const handleTocResize = (width) => {
+          tocWidth.value = width;
+          addLog(`TOC 宽度调整: ${width}px`);
+        };
+        
+        // 监听版本类型变化
+        watch(versionType, () => {
+          const newVersions = versionData[versionType.value] || [];
+          if (newVersions.length > 0 && !newVersions.find(v => v.version === currentVersion.value)) {
+            currentVersion.value = newVersions[0].version;
+          }
+        });
+        
+        return {
+          // 状态
+          articleState,
+          contentType,
+          tocType,
+          versionType,
+          currentVersion,
+          showToc,
+          tocWidth,
+          showDebugInfo,
+          eventLogs,
+          readingViewRef,
+          
+          // 计算属性
+          currentContent,
+          versions,
+          isLoading,
+          errorMessage,
+          loadingText,
+          
+          // 方法
+          updateContent,
+          toggleToc,
+          resetLayout,
+          clearLogs,
+          handleTocClick,
+          handleArticleClick,
+          handleVersionChange,
+          handleTocToggle,
+          handleTocResize
+        };
+      }
+    });
+    
+    // 加载组件
+    (async () => {
+      try {
+        await ComponentLoader.registerComponents(app, [
+          ['reading-view', '/components/views/ReadingView', 'ReadingView'],
+          ['version-selector', '/components/shared/VersionSelector', 'VersionSelector']
+        ]);
+        
+        app.mount('#app');
+        console.log('ReadingView 测试环境初始化完成');
+      } catch (error) {
+        console.error('测试环境初始化失败:', error);
+      }
+    })();
+  </script>
+</body>
+</html> 

@@ -54,10 +54,10 @@ export default {
     // 计算进度条颜色类或样式
     const progressColorClass = computed(() => {
       const colorMap = {
-        'primary': 'bg-cyan-500',
-        'success': 'bg-green-500',
-        'warning': 'bg-yellow-500',
-        'error': 'bg-red-500'
+        'primary': 'progress-bar__fill--cyan',
+        'success': 'progress-bar__fill--green',
+        'warning': 'progress-bar__fill--yellow',
+        'error': 'progress-bar__fill--red'
       };
       return colorMap[props.color] || '';
     });
@@ -73,16 +73,16 @@ export default {
       return '';
     });
     
-    // 计算圆角类
+    // 计算圆角类（应用到wrapper上）
     const roundedClass = computed(() => {
       const roundedMap = {
-        'none': 'rounded-none',
-        'sm': 'rounded-sm',
-        'md': 'rounded-md',
-        'lg': 'rounded-lg',
-        'full': 'rounded-full'
+        'none': 'progress-bar--rounded-none',
+        'sm': 'progress-bar--rounded-sm',
+        'md': 'progress-bar--rounded-md',
+        'lg': 'progress-bar--rounded-lg',
+        'full': 'progress-bar--rounded-full'
       };
-      return roundedMap[props.rounded] || 'rounded-full';
+      return roundedMap[props.rounded] || 'progress-bar--rounded-full';
     });
     
     // 格式化进度文本
@@ -93,14 +93,16 @@ export default {
     // 条纹样式类
     const stripedClass = computed(() => {
       if (!props.striped) return '';
-      return props.animated ? 'progress-bar-striped progress-bar-animated' : 'progress-bar-striped';
+      return props.animated ? 'progress-bar__fill--striped progress-bar__fill--animated' : 'progress-bar__fill--striped';
     });
     
-    // 文本颜色（根据背景自动调整）
+    // 文本颜色已内置在CSS中，不需要单独的类
     const textColorClass = computed(() => {
-      // 对于深色背景使用白色文本
-      return 'text-white';
+      return '';
     });
+    
+    // 完成状态（100%时触发动画）
+    const isComplete = computed(() => props.percent >= 100);
     
     return {
       progressColorClass,
@@ -108,7 +110,8 @@ export default {
       roundedClass,
       progressText,
       stripedClass,
-      textColorClass
+      textColorClass,
+      isComplete
     };
   }
 }; 

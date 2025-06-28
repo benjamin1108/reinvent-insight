@@ -15,8 +15,21 @@
   justify-content: center;
 }
 
+/* 背景遮罩层 */
+.hero-section__overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(17, 24, 39, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
 /* 背景图案 */
-.hero-background {
+.hero-section__background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.2;
   background-image: 
     url('https://www.transparenttextures.com/patterns/cubes.png'), 
     linear-gradient(to right bottom, #051937, #004d7a, #008793, #00bf72, #a8eb12);
@@ -34,8 +47,14 @@
   }
 }
 
+/* 内容容器 */
+.hero-section__content {
+  position: relative;
+  z-index: 10;
+}
+
 /* 标题样式 */
-.hero-section h1 {
+.hero-section__title {
   font-size: 3rem;
   font-weight: 800;
   margin-bottom: 1rem;
@@ -43,13 +62,18 @@
   text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
-/* 渐变文字效果 */
-.hero-section .text-transparent {
+/* 标题中的渐变文字 */
+.hero-section__title-gradient {
   background: linear-gradient(135deg, #22d3ee 0%, #3b82f6 35%, #8b5cf6 70%, #ec4899 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   animation: gradient-text 3s ease-in-out infinite;
+}
+
+/* 标题中的块级元素（移动端换行） */
+.hero-section__title-part {
+  display: inline;
 }
 
 @keyframes gradient-text {
@@ -62,7 +86,7 @@
 }
 
 /* 副标题样式 */
-.hero-section p {
+.hero-section__subtitle {
   font-size: 1.25rem;
   max-width: 48rem;
   margin: 0 auto 2rem auto;
@@ -80,17 +104,21 @@
     padding: 8rem 1.5rem;
   }
   
-  .hero-section h1 {
+  .hero-section__title {
     font-size: 3.75rem;
   }
   
-  .hero-section p {
+  .hero-section__subtitle {
     font-size: 1.5rem;
+  }
+  
+  .hero-section__title-part {
+    display: inline;
   }
 }
 
 @media (min-width: 1024px) {
-  .hero-section h1 {
+  .hero-section__title {
     font-size: 4rem;
   }
 }
@@ -102,27 +130,26 @@
     min-height: 50vh;
   }
   
-  .hero-section h1 {
+  .hero-section__title {
     font-size: 2.5rem;
     margin-bottom: 1.5rem;
   }
   
-  .hero-section p {
+  .hero-section__subtitle {
     font-size: 1.125rem;
     margin-bottom: 2.5rem;
   }
   
-  /* 移动端按钮样式由TechButton组件处理 */
-  
-  .hero-section .block {
-    display: block ;
+  /* 移动端标题换行 */
+  .hero-section__title-part--block {
+    display: block;
   }
 }
 
 /* 访问性支持 */
 @media (prefers-reduced-motion: reduce) {
-  .hero-background,
-  .text-transparent {
+  .hero-section__background,
+  .hero-section__title-gradient {
     animation: none;
   }
   
