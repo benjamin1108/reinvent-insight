@@ -1,0 +1,24 @@
+<div 
+  class="custom-dropdown"
+  :class="[{ active: showDropdown, disabled: disabled }, customClass]">
+  
+  <!-- 触发器 -->
+  <div 
+    @click="toggleDropdown" 
+    class="custom-dropdown-trigger"
+    :class="{ disabled: disabled }">
+    <span>{{ displayText }}</span>
+  </div>
+  
+  <!-- 下拉菜单 -->
+  <div class="custom-dropdown-menu">
+    <div 
+      v-for="option in options" 
+      :key="option.value"
+      @click="selectOption(option.value)" 
+      class="custom-dropdown-option" 
+      :class="{ selected: modelValue === option.value }">
+      {{ option.label }}
+    </div>
+  </div>
+</div> 

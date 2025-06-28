@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TableOfContents 组件测试</title>
+  <script src="/js/vendor/vue.global.prod.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      background-color: #0a0e27;
+      color: white;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    
+    .test-layout {
+      display: flex;
+      height: 100vh;
+    }
+    
+    .content-area {
+      flex: 1;
+      padding: 2rem;
+      overflow-y: auto;
+    }
+    
+    .header {
+      margin-bottom: 2rem;
+    }
+    
+    .title {
+      font-size: 2rem;
+      font-weight: bold;
+      background: linear-gradient(to right, #22d3ee, #3b82f6);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    
+    .subtitle {
+      color: #9ca3af;
+    }
+    
+    .test-section {
+      background: rgba(17, 24, 39, 0.8);
+      border: 1px solid #374151;
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    
+    .section-title {
+      color: #06b6d4;
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 1.5rem;
+    }
+    
+    .control-group {
+      margin-bottom: 1.5rem;
+    }
+    
+    .control-label {
+      display: block;
+      color: #d1d5db;
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .control-input,
+    .control-select {
+      width: 100%;
+      max-width: 300px;
+      padding: 0.5rem;
+      background: rgba(17, 24, 39, 0.8);
+      border: 1px solid #4b5563;
+      border-radius: 4px;
+      color: white;
+      font-size: 0.875rem;
+    }
+    
+    .control-textarea {
+      width: 100%;
+      max-width: 600px;
+      min-height: 200px;
+      padding: 0.5rem;
+      background: rgba(17, 24, 39, 0.8);
+      border: 1px solid #4b5563;
+      border-radius: 4px;
+      color: white;
+      font-size: 0.875rem;
+      font-family: monospace;
+    }
+    
+    .test-button {
+      padding: 0.75rem 1.5rem;
+      background: linear-gradient(to right, #06b6d4, #3b82f6);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: transform 0.2s, opacity 0.2s;
+      margin-right: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    .test-button:hover {
+      transform: scale(1.05);
+      opacity: 0.9;
+    }
+    
+    .test-button:active {
+      transform: scale(0.98);
+    }
+    
+    .test-article {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid #374151;
+      border-radius: 12px;
+      padding: 2rem;
+      margin-top: 1rem;
+    }
+    
+    .test-article h3 {
+      color: #06b6d4;
+      margin: 1.5rem 0 1rem 0;
+      scroll-margin-top: 100px;
+    }
+    
+    .test-article p {
+      color: #d1d5db;
+      line-height: 1.6;
+      margin: 1rem 0;
+    }
+    
+    .status-panel {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid #1f2937;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+    }
+    
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+      color: #d1d5db;
+      font-size: 0.875rem;
+    }
+    
+    .status-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .status-label {
+      color: #9ca3af;
+    }
+    
+    .status-value {
+      color: #60a5fa;
+      font-weight: 500;
+    }
+    
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      color: #d1d5db;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    
+    .checkbox-label input {
+      margin-right: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="test-layout">
+      <!-- TableOfContents 组件 -->
+      <table-of-contents
+        v-model:visible="showToc"
+        v-model:width="tocWidth"
+        :toc-html="tocHtml"
+        :title="tocTitle"
+        :empty-text="emptyText"
+        :auto-adjust-width="autoAdjustWidth"
+        :min-width="200"
+        :max-width="600"
+        @toc-click="handleTocClick"
+        @width-change="handleWidthChange"
+        ref="tocComponent"
+      ></table-of-contents>
+      
+      <!-- 内容区域 -->
+      <div class="content-area">
+        <!-- 页面标题 -->
+        <div class="header">
+          <h1 class="title">TableOfContents 组件测试</h1>
+          <p class="subtitle">测试文章目录的各种功能</p>
+        </div>
+
+        <!-- 控制面板 -->
+        <div class="test-section">
+          <h2 class="section-title">控制面板</h2>
+          
+          <div class="control-group">
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="showToc">
+              显示目录
+            </label>
+          </div>
+          
+          <div class="control-group">
+            <label class="control-label">目录标题</label>
+            <input v-model="tocTitle" 
+                   class="control-input" 
+                   placeholder="输入目录标题">
+          </div>
+          
+          <div class="control-group">
+            <label class="control-label">空目录提示</label>
+            <input v-model="emptyText" 
+                   class="control-input" 
+                   placeholder="输入空目录提示文字">
+          </div>
+          
+          <div class="control-group">
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="autoAdjustWidth">
+              自动调整宽度
+            </label>
+          </div>
+          
+          <div class="control-group">
+            <label class="control-label">测试内容类型</label>
+            <select v-model="contentType" class="control-select">
+              <option value="demo">示例文章</option>
+              <option value="long">长标题文章</option>
+              <option value="nested">嵌套目录</option>
+              <option value="empty">空目录</option>
+              <option value="custom">自定义HTML</option>
+            </select>
+          </div>
+          
+          <div v-if="contentType === 'custom'" class="control-group">
+            <label class="control-label">自定义目录HTML</label>
+            <textarea v-model="customTocHtml" 
+                      class="control-textarea" 
+                      placeholder="输入目录HTML，例如：
+<ul>
+  <li><a data-target='section1'>第一节</a></li>
+  <li><a data-target='section2'>第二节</a></li>
+</ul>"></textarea>
+          </div>
+          
+          <button @click="updateContent" class="test-button">
+            更新目录内容
+          </button>
+          
+          <button @click="resetWidth" class="test-button">
+            重置宽度
+          </button>
+          
+          <button @click="resetAutoAdjust" class="test-button">
+            重置自动调整
+          </button>
+        </div>
+
+        <!-- 状态监控 -->
+        <div class="test-section">
+          <h2 class="section-title">状态监控</h2>
+          
+          <div class="status-panel">
+            <div class="status-item">
+              <span class="status-label">目录状态：</span>
+              <span class="status-value">{{ showToc ? '显示' : '隐藏' }}</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">目录宽度：</span>
+              <span class="status-value">{{ tocWidth }}px</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">最后点击：</span>
+              <span class="status-value">{{ lastClickedId || '无' }}</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">宽度变化次数：</span>
+              <span class="status-value">{{ widthChangeCount }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 测试文章 -->
+        <div class="test-section">
+          <h2 class="section-title">测试文章</h2>
+          
+          <div class="test-article" v-html="articleContent"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import ComponentLoader from '/js/core/component-loader.js';
+    
+    const { createApp, ref, reactive, computed, onMounted, getCurrentInstance } = Vue;
+    
+    createApp({
+      setup() {
+        // 状态
+        const showToc = ref(true);
+        const tocWidth = ref(320);
+        const tocTitle = ref('目录');
+        const emptyText = ref('暂无目录');
+        const autoAdjustWidth = ref(true);
+        const contentType = ref('demo');
+        const customTocHtml = ref('');
+        const tocHtml = ref('');
+        const articleContent = ref('');
+        const lastClickedId = ref('');
+        const widthChangeCount = ref(0);
+        
+        // 引用
+        const tocComponent = ref(null);
+        
+        // 预设内容
+        const presetContents = {
+          demo: {
+            toc: `
+              <ul>
+                <li><a data-target="introduction">简介</a></li>
+                <li><a data-target="features">功能特性</a></li>
+                <li><a data-target="usage">使用方法</a></li>
+                <li><a data-target="api">API 文档</a></li>
+                <li><a data-target="examples">示例代码</a></li>
+                <li><a data-target="conclusion">总结</a></li>
+              </ul>
+            `,
+            article: `
+              <h3 id="introduction">简介</h3>
+              <p>这是一个示例文章，用于测试 TableOfContents 组件的功能。文章包含多个章节，每个章节都有对应的标题。</p>
+              
+              <h3 id="features">功能特性</h3>
+              <p>TableOfContents 组件具有以下主要功能：</p>
+              <p>1. 显示文章目录结构</p>
+              <p>2. 支持点击跳转到对应章节</p>
+              <p>3. 可拖动调整目录宽度</p>
+              <p>4. 自动适应内容宽度</p>
+              
+              <h3 id="usage">使用方法</h3>
+              <p>使用 TableOfContents 组件非常简单，只需要传入目录 HTML 内容即可。</p>
+              <p>组件会自动处理点击事件，并发出相应的事件供父组件处理。</p>
+              
+              <h3 id="api">API 文档</h3>
+              <p>组件支持多个 props 和事件，详细的 API 文档请参考组件源代码。</p>
+              <p>主要的 props 包括：visible、tocHtml、title、width 等。</p>
+              
+              <h3 id="examples">示例代码</h3>
+              <p>这里是一些使用示例，展示了如何在不同场景下使用 TableOfContents 组件。</p>
+              <p>你可以根据自己的需求进行定制和扩展。</p>
+              
+              <h3 id="conclusion">总结</h3>
+              <p>TableOfContents 是一个功能强大且易于使用的目录组件，适合各种文档和文章展示场景。</p>
+            `
+          },
+          long: {
+            toc: `
+              <ul>
+                <li><a data-target="long1">这是一个非常非常非常长的标题，用于测试自动宽度调整功能</a></li>
+                <li><a data-target="long2">另一个超级长的标题：如何在复杂的应用场景中优雅地处理各种边界情况</a></li>
+                <li><a data-target="long3">第三个长标题：深入理解 Vue 3 Composition API 的设计理念与最佳实践</a></li>
+                <li><a data-target="long4">短标题</a></li>
+              </ul>
+            `,
+            article: `
+              <h3 id="long1">这是一个非常非常非常长的标题，用于测试自动宽度调整功能</h3>
+              <p>当目录中包含很长的标题时，组件应该能够自动调整宽度以完整显示内容。</p>
+              
+              <h3 id="long2">另一个超级长的标题：如何在复杂的应用场景中优雅地处理各种边界情况</h3>
+              <p>长标题在技术文档中很常见，特别是当需要描述具体的技术细节时。</p>
+              
+              <h3 id="long3">第三个长标题：深入理解 Vue 3 Composition API 的设计理念与最佳实践</h3>
+              <p>Vue 3 引入了 Composition API，为组件逻辑的组织和重用提供了更灵活的方式。</p>
+              
+              <h3 id="long4">短标题</h3>
+              <p>即使混合了短标题，组件也应该正确处理宽度。</p>
+            `
+          },
+          nested: {
+            toc: `
+              <ul>
+                <li><a data-target="chapter1">第一章</a>
+                  <ul>
+                    <li><a data-target="section1-1">1.1 介绍</a></li>
+                    <li><a data-target="section1-2">1.2 背景</a></li>
+                  </ul>
+                </li>
+                <li><a data-target="chapter2">第二章</a>
+                  <ul>
+                    <li><a data-target="section2-1">2.1 理论基础</a></li>
+                    <li><a data-target="section2-2">2.2 实践应用</a>
+                      <ul>
+                        <li><a data-target="section2-2-1">2.2.1 案例一</a></li>
+                        <li><a data-target="section2-2-2">2.2.2 案例二</a></li>
+                      </ul>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            `,
+            article: `
+              <h3 id="chapter1">第一章</h3>
+              <p>这是第一章的内容。</p>
+              
+              <h3 id="section1-1">1.1 介绍</h3>
+              <p>本节介绍基本概念。</p>
+              
+              <h3 id="section1-2">1.2 背景</h3>
+              <p>了解项目的背景信息。</p>
+              
+              <h3 id="chapter2">第二章</h3>
+              <p>进入第二章的学习。</p>
+              
+              <h3 id="section2-1">2.1 理论基础</h3>
+              <p>深入理解理论知识。</p>
+              
+              <h3 id="section2-2">2.2 实践应用</h3>
+              <p>将理论应用到实践中。</p>
+              
+              <h3 id="section2-2-1">2.2.1 案例一</h3>
+              <p>第一个实践案例。</p>
+              
+              <h3 id="section2-2-2">2.2.2 案例二</h3>
+              <p>第二个实践案例。</p>
+            `
+          },
+          empty: {
+            toc: '',
+            article: '<p>这篇文章没有目录。</p>'
+          }
+        };
+        
+        // 方法
+        const updateContent = () => {
+          if (contentType.value === 'custom') {
+            tocHtml.value = customTocHtml.value;
+            articleContent.value = '<p>自定义目录内容，文章内容请自行添加。</p>';
+          } else {
+            const content = presetContents[contentType.value];
+            tocHtml.value = content.toc;
+            articleContent.value = content.article;
+          }
+        };
+        
+        const handleTocClick = ({ targetId, event }) => {
+          lastClickedId.value = targetId;
+          console.log('目录点击:', targetId);
+          
+          // 滚动到目标元素
+          const targetElement = document.getElementById(targetId);
+          if (targetElement) {
+            targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        };
+        
+        const handleWidthChange = (width) => {
+          widthChangeCount.value++;
+          console.log('宽度变化:', width);
+        };
+        
+        const resetWidth = () => {
+          tocWidth.value = 320;
+        };
+        
+        const resetAutoAdjust = () => {
+          if (tocComponent.value) {
+            tocComponent.value.resetAutoAdjust();
+            tocComponent.value.adjustWidth();
+          }
+        };
+        
+        // 组件加载
+        onMounted(async () => {
+          try {
+            const app = getCurrentInstance().appContext.app;
+            await ComponentLoader.registerComponents(app, [
+              ['table-of-contents', '/components/common/TableOfContents', 'TableOfContents']
+            ]);
+            console.log('TableOfContents 组件加载成功');
+            
+            // 初始化内容
+            updateContent();
+          } catch (error) {
+            console.error('加载组件失败:', error);
+          }
+        });
+        
+        return {
+          // 状态
+          showToc,
+          tocWidth,
+          tocTitle,
+          emptyText,
+          autoAdjustWidth,
+          contentType,
+          customTocHtml,
+          tocHtml,
+          articleContent,
+          lastClickedId,
+          widthChangeCount,
+          
+          // 引用
+          tocComponent,
+          
+          // 方法
+          updateContent,
+          handleTocClick,
+          handleWidthChange,
+          resetWidth,
+          resetAutoAdjust
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html> 

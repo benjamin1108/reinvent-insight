@@ -1,0 +1,27 @@
+<div class="toc-container" v-if="visible">
+  <!-- TOC 侧边栏 -->
+  <div class="toc-sidebar" 
+       :style="{ width: actualWidth + 'px' }"
+       ref="tocSidebar">
+    <div class="toc-content">
+      <!-- 目录标题 -->
+      <h3 class="toc-title">{{ title }}</h3>
+      
+      <!-- 目录内容 -->
+      <div v-if="tocHtml" 
+           v-html="tocHtml" 
+           @click="handleClick"
+           class="toc-list"></div>
+      
+      <!-- 空目录提示 -->
+      <div v-else class="toc-empty">
+        {{ emptyText }}
+      </div>
+    </div>
+  </div>
+  
+  <!-- 拖动条 -->
+  <div class="toc-dragbar" 
+       @mousedown="startDrag"
+       @touchstart="startDrag"></div>
+</div> 

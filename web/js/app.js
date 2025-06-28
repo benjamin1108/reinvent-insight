@@ -6,7 +6,7 @@ const ensureMarkedReady = (callback) => {
     callback(window.marked);
   } else {
     const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/marked/marked.min.js';
+    script.src = '/js/vendor/marked.min.js';
     script.onload = () => callback(window.marked);
     document.head.appendChild(script);
   }
@@ -28,7 +28,8 @@ ensureMarkedReady((markedInstance) => {
   });
 });
 
-createApp({
+// 创建Vue应用实例并加载组件
+const app = createApp({
   setup() {
     // --- 状态管理 ---
     const url = ref('');
@@ -96,8 +97,7 @@ createApp({
     const loginUsername = ref('');
     const loginPassword = ref('');
     
-    // Toast 状态
-    const toast = reactive({ show: false, message: '', type: '' });
+    // 不再需要Toast状态，使用组件系统
 
     // 添加一个标志来防止重复加载
     let loadingPromise = null;
@@ -222,12 +222,23 @@ createApp({
 
     // --- UI & 交互 ---
     const showToast = (message, type = 'success', duration = 3000) => {
-      toast.show = true;
-      toast.message = message;
-      toast.type = type;
-      setTimeout(() => {
-        toast.show = false;
-      }, duration);
+      // 使用组件系统的Toast
+      const toast = window.useToast();
+      
+      // 将原有的类型映射到新系统
+      const typeMap = {
+        'success': 'success',
+        'danger': 'error',
+        'warning': 'warning',
+        'info': 'info'
+      };
+      
+      const mappedType = typeMap[type] || 'info';
+      toast.showToast({
+        message,
+        type: mappedType,
+        duration
+      });
     };
     
     const goHome = () => {
@@ -1018,6 +1029,20 @@ createApp({
       }
       return false;
     });
+    
+    // 测试Toast功能
+    const testToast = () => {
+      showToast('这是一个成功消息', 'success');
+      setTimeout(() => {
+        showToast('这是一个错误消息', 'danger');
+      }, 1000);
+      setTimeout(() => {
+        showToast('这是一个警告消息', 'warning');
+      }, 2000);
+      setTimeout(() => {
+        showToast('这是一个信息提示', 'info');
+      }, 3000);
+    };
 
     const finalizedLogs = computed(() => {
       if (loading.value && logs.value.length > 0) {
@@ -1443,7 +1468,6 @@ createApp({
       showLogin,
       login,
       logout,
-      toast,
       showToast,
       loginUsername,
       loginPassword,
@@ -1490,7 +1514,29 @@ createApp({
       toggleVersionDropdown,
       switchVersion,
       finalizedLogs,
-      environmentInfo
+      environmentInfo,
+      testToast
     };
   }
-}).mount('#app'); 
+});
+
+// 加载组件系统
+(async () => {
+  try {
+    // 定义要加载的组件
+    const components = [
+      ['Toast', '/components/common/Toast', 'Toast'],
+      ['ToastContainer', '/components/common/ToastContainer', 'ToastContainer']
+    ];
+    
+    // 加载并注册组件
+    await ComponentLoader.registerComponents(app, components);
+    
+    console.log('组件加载完成');
+  } catch (error) {
+    console.error('组件加载失败:', error);
+  }
+  
+  // 挂载应用
+  app.mount('#app');
+})(); 

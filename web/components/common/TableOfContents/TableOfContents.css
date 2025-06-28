@@ -1,0 +1,190 @@
+/* TableOfContents 组件样式 - 完全独立，不依赖全局CSS */
+
+/* 组件内部盒模型重置 */
+.toc-container * {
+  box-sizing: border-box;
+}
+
+/* 目录容器 */
+.toc-container {
+  display: flex;
+  height: 100%;
+  position: relative;
+}
+
+/* TOC侧边栏 */
+.toc-sidebar {
+  position: relative;
+  flex-shrink: 0;
+  height: 100%;
+  border-right: 1px solid #374151;
+  overflow-y: auto;
+  overflow-x: auto;
+  padding: 2rem 0;
+  background-color: rgba(17, 24, 39, 0.3);
+}
+
+/* TOC内容区域 */
+.toc-content {
+  padding: 0 1.5rem;
+  height: 100%;
+}
+
+/* 目录主体样式 */
+.toc-content {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid #374151;
+  border-radius: 12px;
+  padding: 1.5rem;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  height: 100%;
+  overflow-x: auto;
+}
+
+/* 目录标题 */
+.toc-title {
+  color: #06b6d4;
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+
+/* 目录列表容器 */
+.toc-list {
+  color: #94a3b8;
+}
+
+/* 目录列表样式 */
+.toc-list ul,
+.toc-list ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toc-list li {
+  margin: 0.5rem 0;
+}
+
+/* 目录链接样式 */
+.toc-list a {
+  color: #94a3b8;
+  text-decoration: none;
+  transition: all 0.2s;
+  display: block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.toc-list a:hover {
+  color: #06b6d4;
+  background: rgba(6, 182, 212, 0.1);
+}
+
+/* 嵌套列表样式 */
+.toc-list ul ul {
+  margin-left: 1rem;
+  border-left: 1px solid #374151;
+  padding-left: 0.5rem;
+}
+
+/* 空目录提示 */
+.toc-empty {
+  color: #6b7280;
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 2rem 0;
+}
+
+/* 拖动条 */
+.toc-dragbar {
+  width: 6px;
+  cursor: col-resize;
+  background: rgba(100, 116, 139, 0.4);
+  transition: background 0.2s;
+  position: relative;
+}
+
+.toc-dragbar:hover {
+  background: rgba(100, 116, 139, 0.6);
+}
+
+/* 拖动时的样式 */
+.toc-dragbar.dragging {
+  background: rgba(6, 182, 212, 0.6);
+}
+
+/* 滚动条样式 */
+.toc-sidebar::-webkit-scrollbar,
+.toc-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.toc-sidebar::-webkit-scrollbar-track,
+.toc-content::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 6px;
+}
+
+.toc-sidebar::-webkit-scrollbar-thumb,
+.toc-content::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 6px;
+}
+
+.toc-sidebar::-webkit-scrollbar-thumb:hover,
+.toc-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+}
+
+/* Firefox滚动条 */
+.toc-sidebar,
+.toc-content {
+  scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+  scrollbar-width: thin;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  /* 移动端隐藏目录 */
+  .toc-container {
+    display: none !important;
+  }
+  
+  .toc-sidebar {
+    font-size: 13px;
+    padding: 1rem 0;
+  }
+  
+  .toc-content {
+    padding: 1rem;
+  }
+  
+  .toc-title {
+    font-size: 1.1rem;
+    margin-bottom: 0.8rem;
+  }
+  
+  .toc-list a {
+    padding: 0.2rem 0.4rem;
+    font-size: 12px;
+  }
+  
+  /* 移动端隐藏拖动条 */
+  .toc-dragbar {
+    display: none !important;
+  }
+}
+
+/* 超小屏幕强制隐藏 */
+@media (max-width: 767px) {
+  .toc-container,
+  .toc-sidebar,
+  .toc-dragbar {
+    display: none !important;
+  }
+} 

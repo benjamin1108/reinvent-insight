@@ -6,14 +6,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>reinvent Insight - 深度分析笔记</title>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
-  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-  <script src="https://unpkg.com/marked/marked.min.js"></script>
-  <script src="https://unpkg.com/@highlightjs/cdn-assets@11.9.0/highlight.min.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.9.0/styles/github-dark.min.css">
+  <script src="/js/vendor/vue.global.prod.min.js"></script>
+  <script src="/js/vendor/axios.min.js"></script>
+<script src="/js/vendor/marked.min.js"></script>
+<script src="/js/vendor/highlight.min.js"></script>
+<link rel="stylesheet" href="/css/highlight-github-dark.min.css">
       <!-- 注意：生产环境应使用PostCSS插件或Tailwind CLI -->
     <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/css/style.css">
+  <!-- 组件系统脚本 -->
+  <script src="/js/core/event-bus.js"></script>
+  <script src="/js/core/component-loader.js"></script>
+  <script src="/js/composables/useToast.js" type="module"></script>
 </head>
 
 <body class="h-full" :class="{ 'dev-environment': environmentInfo.loaded && environmentInfo.is_development }">
@@ -59,6 +63,10 @@
           <button @click="currentView = 'library'" class="tech-btn tech-btn-secondary flex-1">浏览笔记库</button>
         </div>
         <div class="hidden md:flex items-center space-x-4">
+          <!-- 临时测试Toast按钮 -->
+          <button @click="testToast" class="tech-btn bg-purple-600 hover:bg-purple-700 text-white">
+            测试Toast
+          </button>
           <button v-if="!isAuthenticated" @click="showLogin = true" class="tech-btn tech-btn-primary">登录</button>
           <button v-else @click="logout" class="tech-btn tech-btn-danger">退出</button>
         </div>
@@ -691,11 +699,8 @@
         </div>
       </div>
     </transition>
-    <transition name="fade">
-      <div v-if="toast.show" :class="{ '...': toast.type === '...'}" class="fixed ...">
-        {{ toast.message }}
-      </div>
-    </transition>
+    <!-- Toast容器 -->
+    <toast-container></toast-container>
   </div>
   <script src="/js/app.js?v=1.0.2" defer></script>
 </body>

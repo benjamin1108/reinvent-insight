@@ -1,0 +1,256 @@
+/* CustomDropdown 组件样式 - 完全独立，不依赖全局样式 */
+
+/* 基础字体设置 */
+.custom-dropdown {
+  font-family: 'JetBrains Mono', 'Consolas', 'SFMono-Regular', Menlo, monospace, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+/* 自定义下拉菜单容器 */
+.custom-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+/* 触发器样式 */
+.custom-dropdown-trigger {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.1), rgba(220, 38, 38, 0.1));
+  border: 1px solid rgba(251, 146, 60, 0.3);
+  border-radius: 8px;
+  color: #fb923c;
+  padding: 6px 32px 6px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(251, 146, 60, 0.1);
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* 触发器箭头 */
+.custom-dropdown-trigger::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid #fb923c;
+  transition: transform 0.3s ease;
+}
+
+/* 激活状态的箭头旋转 */
+.custom-dropdown.active .custom-dropdown-trigger::after {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+/* 触发器悬停效果 */
+.custom-dropdown-trigger:hover {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.2), rgba(220, 38, 38, 0.2));
+  border-color: rgba(251, 146, 60, 0.5);
+  box-shadow: 0 4px 12px rgba(251, 146, 60, 0.2);
+  transform: translateY(-1px);
+  animation: pulse 2s infinite;
+}
+
+/* 禁用状态 */
+.custom-dropdown-trigger.disabled,
+.custom-dropdown.disabled .custom-dropdown-trigger {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+  background: rgba(100, 100, 100, 0.1) !important;
+  border-color: rgba(150, 150, 150, 0.3) !important;
+  color: #666 !important;
+}
+
+/* 禁用状态的悬停效果（不应有任何变化） */
+.custom-dropdown-trigger.disabled:hover,
+.custom-dropdown.disabled .custom-dropdown-trigger:hover {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.1), rgba(220, 38, 38, 0.1));
+  border-color: rgba(251, 146, 60, 0.3);
+  box-shadow: 0 2px 8px rgba(251, 146, 60, 0.1);
+  transform: none;
+  animation: none;
+}
+
+/* 禁用状态的箭头颜色 */
+.custom-dropdown-trigger.disabled::after,
+.custom-dropdown.disabled .custom-dropdown-trigger::after {
+  border-top-color: rgba(251, 146, 60, 0.5);
+}
+
+/* 下拉菜单 */
+.custom-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: rgba(15, 20, 25, 0.95);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+  transition: all 0.3s ease;
+  z-index: 1000;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+/* 激活状态的下拉菜单 */
+.custom-dropdown.active .custom-dropdown-menu {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  animation: dropdownSlideIn 0.3s ease forwards;
+}
+
+/* 禁用状态下永远不显示下拉菜单 */
+.custom-dropdown.disabled .custom-dropdown-menu,
+.custom-dropdown.disabled.active .custom-dropdown-menu {
+  opacity: 0 !important;
+  transform: translateY(-10px) !important;
+  pointer-events: none !important;
+  animation: none !important;
+}
+
+/* 下拉选项 */
+.custom-dropdown-option {
+  padding: 10px 16px;
+  color: #e0e0e0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 13px;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 最后一个选项无边框 */
+.custom-dropdown-option:last-child {
+  border-bottom: none;
+}
+
+/* 选项悬停效果 */
+.custom-dropdown-option:hover {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.2), rgba(220, 38, 38, 0.2));
+  color: #fb923c;
+  padding-left: 20px;
+}
+
+/* 选项悬停动画效果 */
+.custom-dropdown-option::before {
+  content: '';
+  position: absolute;
+  left: -100%;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(251, 146, 60, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.custom-dropdown-option:hover::before {
+  left: 100%;
+}
+
+/* 选中状态 */
+.custom-dropdown-option.selected {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.15), rgba(220, 38, 38, 0.15));
+  color: #fb923c;
+  font-weight: 600;
+}
+
+/* 滚动条样式 */
+.custom-dropdown-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-dropdown-menu::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.custom-dropdown-menu::-webkit-scrollbar-thumb {
+  background: rgba(251, 146, 60, 0.4);
+  border-radius: 3px;
+}
+
+.custom-dropdown-menu::-webkit-scrollbar-thumb:hover {
+  background: rgba(251, 146, 60, 0.6);
+}
+
+/* Firefox滚动条 */
+.custom-dropdown-menu {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(251, 146, 60, 0.4) rgba(0, 0, 0, 0.2);
+}
+
+/* 下拉动画 */
+@keyframes dropdownSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 脉冲动画 */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 2px 8px rgba(251, 146, 60, 0.1);
+  }
+  50% {
+    box-shadow: 0 2px 16px rgba(251, 146, 60, 0.2);
+  }
+  100% {
+    box-shadow: 0 2px 8px rgba(251, 146, 60, 0.1);
+  }
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .custom-dropdown-trigger {
+    min-width: 90px;
+    font-size: 12px;
+    padding: 5px 24px 5px 8px;
+  }
+
+  .custom-dropdown-trigger::after {
+    right: 8px;
+    border-left-width: 4px;
+    border-right-width: 4px;
+    border-top-width: 4px;
+  }
+  
+  .custom-dropdown-option {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .custom-dropdown-option:hover {
+    padding-left: 14px;
+  }
+  
+  .custom-dropdown-menu {
+    min-width: 110px;
+  }
+} 

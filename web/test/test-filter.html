@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Filter组件测试</title>
+  <script src="/js/vendor/vue.global.prod.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- 组件系统脚本 -->
+  <script src="/js/core/event-bus.js" type="module"></script>
+  <script src="/js/core/component-loader.js" type="module"></script>
+  
+  <!-- 直接引入CustomDropdown的CSS -->
+  <link rel="stylesheet" href="/components/common/Filter/CustomDropdown.css">
+  
+  <style>
+    /* 测试页面背景样式 */
+    body {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+      background-attachment: fixed;
+      min-height: 100vh;
+      font-family: 'JetBrains Mono', 'Consolas', 'SFMono-Regular', Menlo, monospace, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    
+    /* 测试页面专用样式 */
+    .test-container {
+      min-height: 100vh;
+      color: #e5e7eb;
+    }
+    
+    .test-section {
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    .test-title {
+      color: #60a5fa;
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+    }
+    
+    .test-description {
+      color: #9ca3af;
+      margin-bottom: 1rem;
+    }
+    
+    .filter-group {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    
+    .result-box {
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      margin-top: 1rem;
+      font-family: monospace;
+      font-size: 0.875rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="test-app" class="test-container p-8">
+    <h1 class="text-3xl font-bold text-cyan-400 mb-8">Filter 组件测试</h1>
+    
+    <!-- 基础测试 -->
+    <div class="test-section">
+      <h2 class="test-title">基础筛选器测试</h2>
+      <p class="test-description">测试LevelFilter和YearFilter的基本功能</p>
+      
+      <div class="filter-group">
+        <level-filter v-if="componentsLoaded" v-model="selectedLevel" @change="onLevelChange" />
+        <year-filter v-if="componentsLoaded" v-model="selectedYear" :available-years="availableYears" @change="onYearChange" />
+      </div>
+      
+      <div class="result-box">
+        <div>选中的级别: {{ selectedLevel || '未选择' }}</div>
+        <div>选中的年份: {{ selectedYear || '未选择' }}</div>
+      </div>
+    </div>
+    
+    <!-- 组合使用测试 -->
+    <div class="test-section">
+      <h2 class="test-title">组合筛选测试</h2>
+      <p class="test-description">模拟实际使用场景，筛选re:Invent文章</p>
+      
+      <div class="mb-4">
+        <div class="filter-group">
+          <level-filter v-if="componentsLoaded" v-model="filterLevel" />
+          <year-filter v-if="componentsLoaded" v-model="filterYear" :available-years="reinventYears" />
+          <button @click="resetFilters" 
+                  class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded text-white text-sm transition">
+            重置筛选
+          </button>
+        </div>
+      </div>
+      
+      <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div v-for="article in filteredArticles" :key="article.id"
+             class="bg-gray-800 border border-gray-700 rounded p-4">
+          <h3 class="text-sm font-bold text-cyan-400 mb-2">{{ article.title }}</h3>
+          <div class="text-xs text-gray-400">
+            <span class="mr-3">级别: {{ article.level }}</span>
+            <span>年份: {{ article.year }}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div v-if="filteredArticles.length === 0" class="text-center text-gray-500 py-8">
+        没有找到符合条件的文章
+      </div>
+    </div>
+    
+    <!-- 禁用状态测试 -->
+    <div class="test-section">
+      <h2 class="test-title">禁用状态测试</h2>
+      <p class="test-description">测试筛选器的禁用状态</p>
+      
+      <div class="filter-group">
+        <level-filter v-if="componentsLoaded" v-model="disabledLevel" :disabled="isDisabled" />
+        <year-filter v-if="componentsLoaded" v-model="disabledYear" :available-years="availableYears" :disabled="isDisabled" />
+        <button @click="toggleDisabled" 
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white text-sm transition">
+          {{ isDisabled ? '启用' : '禁用' }}筛选器
+        </button>
+      </div>
+    </div>
+    
+    <!-- 动态年份测试 -->
+    <div class="test-section">
+      <h2 class="test-title">动态年份测试</h2>
+      <p class="test-description">测试动态更新可用年份列表</p>
+      
+      <div class="mb-4">
+        <button @click="addYear" 
+                class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-white text-sm transition mr-2">
+          添加年份
+        </button>
+        <button @click="removeYear" 
+                class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-white text-sm transition">
+          移除年份
+        </button>
+      </div>
+      
+      <div class="filter-group">
+        <year-filter v-if="componentsLoaded" v-model="dynamicYear" :available-years="dynamicYears" />
+      </div>
+      
+      <div class="result-box">
+        <div>可用年份: {{ dynamicYears.join(', ') }}</div>
+        <div>选中年份: {{ dynamicYear || '未选择' }}</div>
+      </div>
+    </div>
+    
+    <!-- 事件日志 -->
+    <div class="test-section">
+      <h2 class="test-title">事件日志</h2>
+      <p class="test-description">查看筛选器触发的事件</p>
+      
+      <div v-if="eventLogs.length > 0" class="space-y-2">
+        <div v-for="(log, index) in eventLogs" :key="index" 
+             class="p-3 bg-gray-800 rounded text-sm font-mono">
+          [{{ log.time }}] {{ log.message }}
+        </div>
+      </div>
+      <div v-else class="text-gray-500">暂无事件记录</div>
+      
+      <button @click="clearLogs" 
+              class="mt-4 px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded text-white transition">
+        清空日志
+      </button>
+    </div>
+  </div>
+
+  <script type="module">
+    import ComponentLoader from '/js/core/component-loader.js';
+    
+    const { createApp } = Vue;
+    
+    const testApp = createApp({
+      data() {
+        return {
+          // 组件加载状态
+          componentsLoaded: false,
+          
+          // 基础测试数据
+          selectedLevel: '',
+          selectedYear: '',
+          availableYears: ['2024', '2023', '2022', '2021', '2020'],
+          
+          // 组合筛选测试数据
+          filterLevel: '',
+          filterYear: '',
+          reinventYears: ['2024', '2023', '2022'],
+          
+          // 模拟文章数据
+          articles: [
+            { id: 1, title: 'AWS re:Invent 2024 Keynote', level: 'Level 100', year: '2024' },
+            { id: 2, title: 'Deep Dive into S3', level: 'Level 300', year: '2024' },
+            { id: 3, title: 'Getting Started with Lambda', level: 'Level 100', year: '2023' },
+            { id: 4, title: 'Advanced DynamoDB Patterns', level: 'Level 400', year: '2023' },
+            { id: 5, title: 'Keynote by Werner Vogels', level: 'Keynote', year: '2022' },
+            { id: 6, title: 'EC2 Best Practices', level: 'Level 200', year: '2022' }
+          ],
+          
+          // 禁用状态测试
+          isDisabled: true,  // 默认为禁用状态
+          disabledLevel: '',
+          disabledYear: '',
+          
+          // 动态年份测试
+          dynamicYears: ['2024', '2023'],
+          dynamicYear: '',
+          
+          // 事件日志
+          eventLogs: []
+        };
+      },
+      computed: {
+        // 筛选后的文章
+        filteredArticles() {
+          return this.articles.filter(article => {
+            // 级别筛选
+            if (this.filterLevel) {
+              if (this.filterLevel === 'Keynote') {
+                if (article.level !== 'Keynote') return false;
+              } else {
+                if (!article.level.includes(this.filterLevel)) return false;
+              }
+            }
+            
+            // 年份筛选
+            if (this.filterYear && article.year !== this.filterYear) {
+              return false;
+            }
+            
+            return true;
+          });
+        }
+      },
+      methods: {
+        onLevelChange(value) {
+          this.addLog(`级别筛选器变化: ${value || '全部级别'}`);
+        },
+        
+        onYearChange(value) {
+          this.addLog(`年份筛选器变化: ${value || '全部年份'}`);
+        },
+        
+        resetFilters() {
+          this.filterLevel = '';
+          this.filterYear = '';
+          this.addLog('重置所有筛选器');
+        },
+        
+        toggleDisabled() {
+          this.isDisabled = !this.isDisabled;
+          this.addLog(`筛选器${this.isDisabled ? '已禁用' : '已启用'}`);
+        },
+        
+        addYear() {
+          const nextYear = Math.max(...this.dynamicYears.map(Number)) + 1;
+          this.dynamicYears.push(String(nextYear));
+          this.dynamicYears.sort((a, b) => b - a);
+          this.addLog(`添加年份: ${nextYear}`);
+        },
+        
+        removeYear() {
+          if (this.dynamicYears.length > 0) {
+            const removed = this.dynamicYears.pop();
+            this.addLog(`移除年份: ${removed}`);
+            // 如果移除的是当前选中的年份，清空选择
+            if (this.dynamicYear === removed) {
+              this.dynamicYear = '';
+            }
+          }
+        },
+        
+        addLog(message) {
+          const time = new Date().toLocaleTimeString();
+          this.eventLogs.unshift({ time, message });
+          if (this.eventLogs.length > 10) {
+            this.eventLogs.pop();
+          }
+        },
+        
+        clearLogs() {
+          this.eventLogs = [];
+        }
+      }
+    });
+    
+    // 加载组件系统（必须在mount之前）
+    (async () => {
+      try {
+        // 先加载CustomDropdown，确保其CSS被加载
+        await ComponentLoader.registerComponents(testApp, [
+          ['custom-dropdown', '/components/common/Filter', 'CustomDropdown']
+        ]);
+        console.log('CustomDropdown组件加载完成');
+        
+        // 然后加载依赖CustomDropdown的组件
+        await ComponentLoader.registerComponents(testApp, [
+          ['level-filter', '/components/common/Filter', 'LevelFilter'],
+          ['year-filter', '/components/common/Filter', 'YearFilter']
+        ]);
+        console.log('LevelFilter和YearFilter组件加载完成');
+        
+        const instance = testApp.mount('#test-app');
+        console.log('应用挂载完成');
+        
+        // 使用nextTick确保DOM更新完成
+        await Vue.nextTick();
+        
+        // 设置组件加载完成标志
+        instance.componentsLoaded = true;
+        console.log('组件加载标志已设置');
+        
+        // 检查是否有CSS样式被加载
+        const styles = document.querySelectorAll('[data-component-style]');
+        console.log('已加载的组件样式:', Array.from(styles).map(s => s.getAttribute('data-component-style')));
+      } catch (error) {
+        console.error('组件加载失败:', error);
+        testApp.mount('#test-app');
+      }
+    })();
+  </script>
+</body>
+</html> 

@@ -567,6 +567,16 @@ if web_dir.is_dir():
     app.mount("/js", StaticFiles(directory=web_dir / "js"), name="js")
     app.mount("/css", StaticFiles(directory=web_dir / "css"), name="css")
     
+    # Mount components directory for component system
+    components_dir = web_dir / "components"
+    if components_dir.is_dir():
+        app.mount("/components", StaticFiles(directory=components_dir), name="components")
+    
+    # Mount test directory for component testing
+    test_dir = web_dir / "test"
+    if test_dir.is_dir():
+        app.mount("/test", StaticFiles(directory=test_dir, html=True), name="test")
+    
     # Mount fonts directory for PDF generation
     fonts_dir = web_dir / "fonts"
     if fonts_dir.is_dir():

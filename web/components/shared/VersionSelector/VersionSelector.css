@@ -1,0 +1,173 @@
+/* VersionSelector 组件样式 - 完全独立，不依赖全局样式 */
+
+/* 版本选择器容器 */
+.version-selector {
+  position: relative;
+  display: inline-block;
+  font-family: 'JetBrains Mono', 'Consolas', 'SFMono-Regular', Menlo, monospace, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+/* 触发器样式 */
+.version-selector-trigger {
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #999;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+/* 悬停效果 */
+.version-selector:hover .version-selector-trigger {
+  color: #666;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* 激活状态 */
+.version-selector.active .version-selector-trigger {
+  color: #e0e0e0;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* 下拉菜单 */
+.version-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: rgba(15, 20, 25, 0.95);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  min-width: 60px;
+  z-index: 1000;
+}
+
+/* 版本选项 */
+.version-item {
+  padding: 6px 12px;
+  color: #999;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 12px;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* 选项悬停 */
+.version-item:hover {
+  color: #e0e0e0;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* 当前版本 */
+.version-item.current {
+  color: #fb923c;
+  position: relative;
+}
+
+/* 当前版本底部指示器 */
+.version-item.current::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 12px;
+  right: 12px;
+  height: 1px;
+  background: #fb923c;
+}
+
+/* 文章容器内的版本选择器特殊样式 */
+.version-selector-article {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
+}
+
+/* 使文章容器相对定位以支持版本选择器的绝对定位 */
+.tech-gradient.border.border-gray-700.rounded-xl.p-10 {
+  position: relative;
+}
+
+/* 继承基础样式但调整位置 */
+.version-selector-article .version-selector-trigger {
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #999;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.version-selector-article:hover .version-selector-trigger {
+  color: #666;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.version-selector-article.active .version-selector-trigger {
+  color: #e0e0e0;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* 过渡动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .version-selector {
+    display: none; /* 移动端暂时隐藏版本选择器，保持界面简洁 */
+  }
+  
+  /* 文章容器内的版本选择器在移动端也显示 */
+  .version-selector-article {
+    display: inline-block;
+    top: 5px;
+    right: 5px;
+  }
+  
+  .version-selector-article .version-selector-trigger {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+  
+  .version-selector-article .version-dropdown {
+    min-width: 50px;
+  }
+  
+  .version-selector-article .version-item {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+}
+
+/* 禁用状态 */
+.version-selector-trigger[disabled],
+.version-selector.disabled .version-selector-trigger {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}

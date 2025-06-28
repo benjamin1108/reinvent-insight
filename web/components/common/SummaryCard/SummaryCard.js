@@ -1,0 +1,95 @@
+/**
+ * SummaryCard组件
+ * 用于展示文章摘要卡片，支持两种类型：re:Invent和其他精选内容
+ */
+export default {
+  props: {
+    // 类型：'reinvent' 或 'other'
+    summaryType: {
+      type: String,
+      default: 'other',
+      validator: (value) => ['reinvent', 'other'].includes(value)
+    },
+    
+    // 文章标题（英文）
+    titleEn: {
+      type: String,
+      required: true
+    },
+    
+    // 文章标题（中文）
+    titleCn: {
+      type: String,
+      required: true
+    },
+    
+    // 字数
+    wordCount: {
+      type: Number,
+      default: 0
+    },
+    
+    // 年份（可选，主要用于re:Invent）
+    year: {
+      type: String,
+      default: ''
+    },
+    
+    // 级别（可选，如 "Level 200 - 中级"）
+    level: {
+      type: String,
+      default: ''
+    },
+    
+    // 文档哈希值（用于跳转）
+    hash: {
+      type: String,
+      required: true
+    }
+  },
+  
+  setup(props, { emit }) {
+    const { computed } = Vue;
+    
+    // 格式化字数显示
+    const formattedWordCount = computed(() => {
+      const count = props.wordCount;
+      if (!count) return '0';
+      if (count >= 10000) {
+        return `${(count / 10000).toFixed(1)}万`;
+      }
+      return count.toString();
+    });
+    
+    // 处理级别文本（提取级别数字和显示文本）
+    const levelText = computed(() => {
+      if (!props.level) return '';
+      // 从 "Level 200 - 中级" 格式中提取 "Level 200"
+      const parts = props.level.split(' - ');
+      return parts[0];
+    });
+    
+    // 计算级别样式类
+    const levelClass = computed(() => {
+      if (!props.level) return '';
+      const match = props.level.match(/\d+/);
+      const levelNum = match ? match[0] : '100';
+      return `level-${levelNum}`;
+    });
+    
+    // 处理点击事件
+    const handleClick = () => {
+      emit('click', {
+        hash: props.hash,
+        type: props.summaryType
+      });
+    };
+    
+    return {
+      formattedWordCount,
+      levelText,
+      levelClass,
+      handleClick
+    };
+  }
+}; 

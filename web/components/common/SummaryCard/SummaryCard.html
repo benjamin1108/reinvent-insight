@@ -1,0 +1,62 @@
+<div 
+  :class="[
+    'summary-card tech-gradient border rounded-xl p-6 transition-all duration-200 glow-effect group flex flex-col relative',
+    summaryType === 'reinvent' 
+      ? 'border-orange-700/50 justify-between h-64 reinvent-card' 
+      : 'border-gray-700 cursor-pointer hover:border-cyan-500 h-56 other-card'
+  ]"
+  @click="handleClick">
+  
+  <!-- 分类光晕效果 -->
+  <div class="category-glow"></div>
+  
+  <!-- Main clickable area -->
+  <div class="cursor-pointer flex-grow flex flex-col">
+    <!-- 中文标题 -->
+    <div class="mb-3 chinese-title-container">
+      <h3 
+        class="text-base font-bold leading-snug line-clamp-3 chinese-title"
+        :title="titleEn">
+        {{ titleEn }}
+      </h3>
+    </div>
+    
+    <!-- 英文副标题 -->
+    <div class="flex-1 mb-2 english-title-area">
+      <p 
+        class="text-xs font-normal leading-relaxed break-words w-full english-subtitle"
+        :title="titleCn">
+        {{ titleCn }}
+      </p>
+    </div>
+  </div>
+  
+  <!-- Footer with metadata -->
+  <div class="metadata-area">
+    <div class="flex justify-between items-center">
+      <!-- 左侧：字数 -->
+      <div class="flex items-center space-x-3">
+        <div class="flex items-center" title="字数">
+          <svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+            </path>
+          </svg>
+          <span>{{ formattedWordCount }}</span>
+        </div>
+      </div>
+      
+      <!-- 右侧：标签和级别 -->
+      <div class="flex items-center space-x-2">
+        <div class="metadata-badge">{{ summaryType === 'reinvent' ? 'RE:INVENT' : '精选' }}</div>
+        <div v-if="year" class="metadata-badge">{{ year }}</div>
+        <div 
+          v-if="level" 
+          class="level-badge"
+          :class="levelClass">
+          {{ levelText }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 

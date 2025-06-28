@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>组件测试模板</title>
+  <script src="/js/vendor/vue.global.prod.min.js"></script>
+  <link href="https://cdn.tailwindcss.com" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  
+  <!-- 组件系统脚本 -->
+  <script src="/js/core/event-bus.js" type="module"></script>
+  <script src="/js/core/component-loader.js" type="module"></script>
+  
+  <style>
+    /* 测试页面专用样式 */
+    .test-container {
+      min-height: 100vh;
+      background: #111827;
+      color: #e5e7eb;
+    }
+    
+    .test-section {
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    .test-title {
+      color: #60a5fa;
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+    }
+    
+    .test-description {
+      color: #9ca3af;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="test-app" class="test-container p-8">
+    <h1 class="text-3xl font-bold text-cyan-400 mb-8">组件测试页面模板</h1>
+    
+    <div class="test-section">
+      <h2 class="test-title">使用说明</h2>
+      <p class="test-description">
+        这是一个组件测试页面模板。复制此文件并修改以测试你的组件。
+      </p>
+    </div>
+    
+    <!-- 在这里添加你的测试内容 -->
+    
+  </div>
+
+  <script type="module">
+    import ComponentLoader from '/js/core/component-loader.js';
+    
+    const { createApp, ref } = Vue;
+    
+    const testApp = createApp({
+      setup() {
+        // 在这里添加你的测试逻辑
+        
+        return {
+          // 返回需要在模板中使用的数据和方法
+        };
+      }
+    });
+    
+    // 加载组件系统
+    (async () => {
+      try {
+        const components = [
+          // 在这里添加要测试的组件
+          // ['component-name', '/components/path/to/Component', 'ComponentFileName']
+          // 例如: ['progress-bar', '/components/shared/ProgressBar', 'ProgressBar']
+        ];
+        
+        await ComponentLoader.registerComponents(testApp, components);
+        console.log('测试页面组件加载完成');
+        
+        testApp.mount('#test-app');
+      } catch (error) {
+        console.error('测试页面组件加载失败:', error);
+      }
+    })();
+  </script>
+</body>
+</html> 

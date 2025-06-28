@@ -1,0 +1,22 @@
+<div 
+  v-if="versions.length > 1"
+  class="version-selector"
+  :class="[customClass, { active: isOpen, disabled: disabled }]"
+>
+  <div @click="toggleDropdown" class="version-selector-trigger">
+    <span>v{{ currentVersion }}</span>
+  </div>
+  <transition name="fade">
+    <div v-if="isOpen" class="version-dropdown">
+      <div 
+        v-for="version in versions" 
+        :key="version.version"
+        @click="selectVersion(version.version)"
+        class="version-item"
+        :class="{ current: version.version === currentVersion }"
+      >
+        v{{ version.version }}
+      </div>
+    </div>
+  </transition>
+</div>

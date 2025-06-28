@@ -1,0 +1,109 @@
+/* ProgressBar 组件样式 */
+.progress-bar-wrapper {
+  width: 100%;
+}
+
+/* 进度条容器 */
+.progress-bar-container {
+  width: 100%;
+  background-color: rgba(31, 41, 55, 0.8); /* bg-gray-800/80 */
+  overflow: hidden;
+  position: relative;
+}
+
+/* 进度条填充 */
+.progress-bar-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 外部文本（在进度条上方） */
+.progress-text-outside {
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  color: #9CA3AF; /* text-gray-400 */
+  text-align: right;
+}
+
+/* 内部文本 */
+.progress-text-inside {
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* 条纹效果 */
+.progress-bar-striped {
+  background-image: linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.15) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0.15) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 1rem 1rem;
+}
+
+/* 条纹动画 */
+.progress-bar-animated {
+  animation: progress-bar-stripes 1s linear infinite;
+}
+
+@keyframes progress-bar-stripes {
+  from {
+    background-position: 1rem 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 640px) {
+  .progress-text-inside {
+    font-size: 0.625rem;
+  }
+  
+  .progress-text-outside {
+    font-size: 0.75rem;
+  }
+}
+
+/* 特殊状态样式 */
+.progress-bar-wrapper[data-status="complete"] .progress-bar-fill {
+  animation: progress-complete 0.5s ease;
+}
+
+@keyframes progress-complete {
+  0% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(1.05);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+/* 高亮效果 */
+.progress-bar-fill {
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* 发光效果（可选） */
+.progress-bar-fill.glow {
+  box-shadow: 
+    inset 0 1px 3px rgba(0, 0, 0, 0.2),
+    0 0 10px currentColor;
+} 

@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VersionSelector组件测试</title>
+  <script src="/js/vendor/vue.global.prod.min.js"></script>
+  <link href="https://cdn.tailwindcss.com" rel="stylesheet">
+  
+  <!-- 组件系统脚本 -->
+  <script src="/js/core/event-bus.js" type="module"></script>
+  <script src="/js/core/component-loader.js" type="module"></script>
+  
+  <style>
+    body {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+      background-attachment: fixed;
+      min-height: 100vh;
+      color: #e5e7eb;
+      margin: 0;
+      padding: 0;
+      font-family: 'JetBrains Mono', 'Consolas', 'SFMono-Regular', Menlo, monospace, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    }
+    
+    .test-section {
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    .test-title {
+      color: #60a5fa;
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+    }
+    
+    .test-description {
+      color: #9ca3af;
+      margin-bottom: 1rem;
+    }
+    
+    /* 模拟文章容器样式 */
+    .article-container {
+      background: rgba(31, 41, 55, 0.5);
+      border: 1px solid #374151;
+      border-radius: 12px;
+      padding: 40px;
+      position: relative;
+      min-height: 300px;
+    }
+    
+    .article-title {
+      font-size: 24px;
+      font-weight: bold;
+      color: #e5e7eb;
+      margin-bottom: 20px;
+    }
+    
+    .article-content {
+      color: #9ca3af;
+      line-height: 1.6;
+    }
+    
+    .result-box {
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      margin-top: 1rem;
+      font-family: monospace;
+      font-size: 0.875rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="test-app" class="container mx-auto p-8">
+    <h1 class="text-3xl font-bold text-cyan-400 mb-8">VersionSelector 组件测试</h1>
+    
+    <!-- 基础测试 -->
+    <div class="test-section">
+      <h2 class="test-title">基础版本选择器</h2>
+      <p class="test-description">测试基本的版本选择功能</p>
+      
+      <div class="mb-4">
+        <version-selector
+          v-model="currentVersion1"
+          :versions="versions1"
+          @change="onVersionChange1"
+        />
+      </div>
+      
+      <div class="result-box">
+        <div>当前版本: v{{ currentVersion1 }}</div>
+        <div>可用版本: {{ versions1.map(v => 'v' + v.version).join(', ') }}</div>
+        <div class="mt-2">事件日志:</div>
+        <div v-for="(log, index) in logs1" :key="index" class="text-sm text-gray-400">
+          {{ log }}
+        </div>
+      </div>
+    </div>
+    
+    <!-- 文章容器内的版本选择器 -->
+    <div class="test-section">
+      <h2 class="test-title">文章容器内的版本选择器</h2>
+      <p class="test-description">模拟在文章阅读页面的版本选择器</p>
+      
+      <div class="article-container">
+        <version-selector
+          v-model="currentVersion2"
+          :versions="versions2"
+          custom-class="version-selector-article"
+          @change="onVersionChange2"
+        />
+        
+        <div class="article-title">AWS re:Invent 2024 Keynote 深度解读</div>
+        <div class="article-content">
+          <p>当前查看的是版本 {{ currentVersion2 }} 的内容。</p>
+          <p>版本 {{ currentVersion2 }} 更新于: {{ getVersionDate(currentVersion2) }}</p>
+          <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+        </div>
+      </div>
+      
+      <div class="result-box mt-4">
+        <div>版本切换历史:</div>
+        <div v-for="(log, index) in logs2" :key="index" class="text-sm text-gray-400">
+          {{ log }}
+        </div>
+      </div>
+    </div>
+    
+    <!-- 多种配置测试 -->
+    <div class="test-section">
+      <h2 class="test-title">多种配置测试</h2>
+      <p class="test-description">测试不同的版本列表配置</p>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- 单版本 -->
+        <div>
+          <h3 class="text-sm font-bold text-cyan-400 mb-2">单版本（不显示选择器）</h3>
+          <version-selector
+            v-model="currentVersion3"
+            :versions="singleVersion"
+          />
+          <p class="text-xs text-gray-500 mt-2">只有一个版本时应该隐藏选择器</p>
+        </div>
+        
+        <!-- 多版本 -->
+        <div>
+          <h3 class="text-sm font-bold text-cyan-400 mb-2">多版本</h3>
+          <version-selector
+            v-model="currentVersion4"
+            :versions="multiVersions"
+          />
+        </div>
+        
+        <!-- 禁用状态 -->
+        <div>
+          <h3 class="text-sm font-bold text-cyan-400 mb-2">禁用状态</h3>
+          <version-selector
+            v-model="currentVersion5"
+            :versions="versions1"
+            :disabled="true"
+          />
+        </div>
+      </div>
+    </div>
+    
+    <!-- 动态版本测试 -->
+    <div class="test-section">
+      <h2 class="test-title">动态版本测试</h2>
+      <p class="test-description">测试动态添加/删除版本</p>
+      
+      <div class="mb-4">
+        <version-selector
+          v-model="currentVersionDynamic"
+          :versions="dynamicVersions"
+        />
+      </div>
+      
+      <div class="flex gap-2 mb-4">
+        <button @click="addVersion" 
+                class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-white transition">
+          添加版本
+        </button>
+        <button @click="removeVersion" 
+                class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-white transition"
+                :disabled="dynamicVersions.length <= 1">
+          删除最新版本
+        </button>
+      </div>
+      
+      <div class="result-box">
+        <div>当前版本: v{{ currentVersionDynamic }}</div>
+        <div>版本列表: {{ dynamicVersions.map(v => 'v' + v.version).join(', ') }}</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import ComponentLoader from '/js/core/component-loader.js';
+    
+    const { createApp } = Vue;
+    
+    const testApp = createApp({
+      data() {
+        return {
+          // 基础测试数据
+          currentVersion1: 3,
+          versions1: [
+            { version: 1, date: '2024-01-01' },
+            { version: 2, date: '2024-01-15' },
+            { version: 3, date: '2024-02-01' }
+          ],
+          logs1: [],
+          
+          // 文章容器测试数据
+          currentVersion2: 2,
+          versions2: [
+            { version: 1, date: '2024-01-10', author: 'Alice' },
+            { version: 2, date: '2024-01-20', author: 'Bob' },
+            { version: 3, date: '2024-01-25', author: 'Charlie' },
+            { version: 4, date: '2024-02-01', author: 'David' }
+          ],
+          logs2: [],
+          
+          // 多种配置测试
+          currentVersion3: 1,
+          singleVersion: [{ version: 1 }],
+          
+          currentVersion4: 2,
+          multiVersions: [
+            { version: 1 },
+            { version: 2 },
+            { version: 3 },
+            { version: 4 },
+            { version: 5 }
+          ],
+          
+          currentVersion5: 1,
+          
+          // 动态版本测试
+          currentVersionDynamic: 1,
+          dynamicVersions: [
+            { version: 1, date: '2024-01-01' }
+          ],
+          nextVersion: 2
+        };
+      },
+      
+      methods: {
+        onVersionChange1(version) {
+          this.logs1.unshift(`[${new Date().toLocaleTimeString()}] 切换到版本 ${version}`);
+          if (this.logs1.length > 5) this.logs1.pop();
+        },
+        
+        onVersionChange2(version) {
+          this.logs2.unshift(`[${new Date().toLocaleTimeString()}] 从版本 ${this.currentVersion2} 切换到版本 ${version}`);
+          if (this.logs2.length > 5) this.logs2.pop();
+        },
+        
+        getVersionDate(version) {
+          const versionInfo = this.versions2.find(v => v.version === version);
+          return versionInfo ? versionInfo.date : '未知';
+        },
+        
+        addVersion() {
+          this.dynamicVersions.push({
+            version: this.nextVersion,
+            date: new Date().toISOString().split('T')[0]
+          });
+          this.currentVersionDynamic = this.nextVersion;
+          this.nextVersion++;
+        },
+        
+        removeVersion() {
+          if (this.dynamicVersions.length > 1) {
+            const removed = this.dynamicVersions.pop();
+            if (this.currentVersionDynamic === removed.version) {
+              this.currentVersionDynamic = this.dynamicVersions[this.dynamicVersions.length - 1].version;
+            }
+          }
+        }
+      }
+    });
+    
+    // 加载组件
+    (async () => {
+      try {
+        await ComponentLoader.registerComponents(testApp, [
+          ['version-selector', '/components/shared/VersionSelector', 'VersionSelector']
+        ]);
+        console.log('VersionSelector组件加载完成');
+        
+        testApp.mount('#test-app');
+        console.log('应用挂载完成');
+      } catch (error) {
+        console.error('组件加载失败:', error);
+        testApp.mount('#test-app');
+      }
+    })();
+  </script>
+</body>
+</html> 

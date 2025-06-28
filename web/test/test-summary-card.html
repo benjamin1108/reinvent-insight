@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SummaryCard组件测试</title>
+  <script src="/js/vendor/vue.global.prod.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- 组件系统脚本 -->
+  <script src="/js/core/event-bus.js" type="module"></script>
+  <script src="/js/core/component-loader.js" type="module"></script>
+  
+  <style>
+    /* 测试页面背景样式 */
+    body {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+      background-attachment: fixed;
+      min-height: 100vh;
+      font-family: 'JetBrains Mono', 'Consolas', 'SFMono-Regular', Menlo, monospace, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    
+    /* 测试页面专用样式 */
+    .test-container {
+      min-height: 100vh;
+      color: #e5e7eb;
+    }
+    
+    .test-section {
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    .test-title {
+      color: #60a5fa;
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+    }
+    
+    .test-description {
+      color: #9ca3af;
+      margin-bottom: 1rem;
+    }
+    
+    .card-grid {
+      display: grid;
+      gap: 1.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    }
+  </style>
+</head>
+<body>
+  <div id="test-app" class="test-container p-8">
+    <h1 class="text-3xl font-bold text-cyan-400 mb-8">SummaryCard 组件测试</h1>
+    
+    <!-- re:Invent 卡片测试 -->
+    <div class="test-section">
+      <h2 class="test-title">re:Invent 卡片</h2>
+      <p class="test-description">AWS re:Invent 深度解读文章卡片</p>
+      
+      <div class="card-grid">
+        <summary-card
+          v-for="(card, index) in reinventCards"
+          :key="index"
+          :summary-type="'reinvent'"
+          :title-en="card.titleEn"
+          :title-cn="card.titleCn"
+          :word-count="card.wordCount"
+          :year="card.year"
+          :level="card.level"
+          :hash="card.hash"
+          @click="handleCardClick"
+        />
+      </div>
+    </div>
+    
+    <!-- 其他精选卡片测试 -->
+    <div class="test-section">
+      <h2 class="test-title">其他精选卡片</h2>
+      <p class="test-description">其他精选内容的文章卡片</p>
+      
+      <div class="card-grid">
+        <summary-card
+          v-for="(card, index) in otherCards"
+          :key="index"
+          :summary-type="'other'"
+          :title-en="card.titleEn"
+          :title-cn="card.titleCn"
+          :word-count="card.wordCount"
+          :hash="card.hash"
+          @click="handleCardClick"
+        />
+      </div>
+    </div>
+    
+    <!-- 混合展示测试 -->
+    <div class="test-section">
+      <h2 class="test-title">混合展示</h2>
+      <p class="test-description">同时展示两种类型的卡片</p>
+      
+      <div class="card-grid">
+        <summary-card
+          v-for="(card, index) in allCards"
+          :key="index"
+          :summary-type="card.summaryType"
+          :title-en="card.titleEn"
+          :title-cn="card.titleCn"
+          :word-count="card.wordCount"
+          :year="card.year"
+          :level="card.level"
+          :hash="card.hash"
+          @click="handleCardClick"
+        />
+      </div>
+    </div>
+    
+    <!-- 事件日志 -->
+    <div class="test-section">
+      <h2 class="test-title">事件日志</h2>
+      <p class="test-description">显示点击事件的日志</p>
+      
+      <div v-if="clickLogs.length > 0" class="space-y-2">
+        <div v-for="(log, index) in clickLogs" :key="index" 
+             class="p-3 bg-gray-800 rounded text-sm font-mono">
+          [{{ log.time }}] 点击了{{ log.summaryType === 'reinvent' ? 're:Invent' : '精选' }}卡片: {{ log.hash }}
+        </div>
+      </div>
+      <div v-else class="text-gray-500">暂无点击记录</div>
+      
+      <button @click="clearLogs" 
+              class="mt-4 px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded text-white transition">
+        清空日志
+      </button>
+    </div>
+  </div>
+
+  <script type="module">
+    import ComponentLoader from '/js/core/component-loader.js';
+    
+    const { createApp, ref } = Vue;
+    
+    const testApp = createApp({
+      setup() {
+        // 测试数据
+        const reinventCards = ref([
+          {
+            titleEn: "Building Scalable GenAI Apps using Knowledge Bases for Amazon Bedrock",
+            titleCn: "使用 Amazon Bedrock 知识库构建可扩展的生成式 AI 应用",
+            wordCount: 15832,
+            year: "2024",
+            level: "Level 200 - 中级",
+            hash: "abc123"
+          },
+          {
+            titleEn: "AWS re:Invent 2024 Keynote with Dr. Werner Vogels",
+            titleCn: "AWS re:Invent 2024 主题演讲 - Werner Vogels 博士",
+            wordCount: 25600,
+            year: "2024",
+            level: "Level 100 - 初级",
+            hash: "def456"
+          },
+          {
+            titleEn: "Deep Dive into Amazon S3 Performance Optimization",
+            titleCn: "深入探讨 Amazon S3 性能优化",
+            wordCount: 8900,
+            year: "2023",
+            level: "Level 300 - 高级",
+            hash: "ghi789"
+          },
+          {
+            titleEn: "Building Event-Driven Architectures on AWS",
+            titleCn: "在 AWS 上构建事件驱动架构",
+            wordCount: 12500,
+            year: "2024",
+            level: "Level 400 - 专家",
+            hash: "jkl012"
+          }
+        ]);
+        
+        const otherCards = ref([
+          {
+            titleEn: "Introduction to Machine Learning Fundamentals",
+            titleCn: "机器学习基础入门",
+            wordCount: 6800,
+            hash: "mno345"
+          },
+          {
+            titleEn: "Best Practices for Cloud Cost Optimization",
+            titleCn: "云成本优化最佳实践",
+            wordCount: 9200,
+            hash: "pqr678"
+          },
+          {
+            titleEn: "Understanding Kubernetes Architecture",
+            titleCn: "理解 Kubernetes 架构",
+            wordCount: 11000,
+            hash: "stu901"
+          }
+        ]);
+        
+        // 混合数据
+        const allCards = ref([
+          ...reinventCards.value.map(card => ({ ...card, summaryType: 'reinvent' })),
+          ...otherCards.value.map(card => ({ ...card, summaryType: 'other' }))
+        ].sort(() => Math.random() - 0.5)); // 随机排序
+        
+        // 点击日志
+        const clickLogs = ref([]);
+        
+        const handleCardClick = (data) => {
+          const time = new Date().toLocaleTimeString();
+          clickLogs.value.unshift({
+            time,
+            ...data
+          });
+          
+          console.log('Card clicked:', data);
+        };
+        
+        const clearLogs = () => {
+          clickLogs.value = [];
+        };
+        
+        return {
+          reinventCards,
+          otherCards,
+          allCards,
+          clickLogs,
+          handleCardClick,
+          clearLogs
+        };
+      }
+    });
+    
+    // 加载组件系统
+    (async () => {
+      try {
+        await ComponentLoader.registerComponents(testApp, [
+          ['summary-card', '/components/common/SummaryCard', 'SummaryCard']
+        ]);
+        console.log('SummaryCard组件加载完成');
+        
+        testApp.mount('#test-app');
+      } catch (error) {
+        console.error('组件加载失败:', error);
+      }
+    })();
+  </script>
+</body>
+</html> 
