@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "youtube-summarizer"
+name = "reinvent-insight"
 version = "0.1.0"
 description = "A tool to summarize YouTube video subtitles."
 authors = [{ name = "Your Name", email = "you@example.com" }]
@@ -22,10 +22,15 @@ dependencies = [
     "beautifulsoup4>=4.12.3",
     "weasyprint>=60.2",
     "PyYAML>=6.0.1",
+    "pydantic>=2.0.0",
+    "zhon>=1.1.5",
 ]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[project.scripts]
+reinvent-insight = "reinvent_insight.main:cli"
 
 [tool.uv]
 dev-dependencies = []

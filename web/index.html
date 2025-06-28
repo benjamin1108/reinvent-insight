@@ -604,17 +604,18 @@
     <!--                           Modals and Toasts                             -->
     <!-- ======================================================================= -->
     <!-- 浮动视频播放器 -->
-    <div v-if="showVideoPlayer" 
-         class="floating-video-player" 
-         :class="{ minimized: videoPlayerMinimized, resizing: isVideoResizing, dragging: isVideoDragging }"
-         :style="{
-           left: videoPlayerPosition.x !== null ? videoPlayerPosition.x + 'px' : 'auto',
-           top: videoPlayerPosition.y !== null ? videoPlayerPosition.y + 'px' : 'auto',
-           right: videoPlayerPosition.x !== null ? 'auto' : '20px',
-           bottom: videoPlayerPosition.y !== null ? 'auto' : '20px',
-           width: videoPlayerMinimized ? '300px' : videoPlayerSize.width + 'px',
-           height: videoPlayerMinimized ? 'auto' : videoPlayerSize.height + 'px'
-         }">
+    <transition name="video-player-fade">
+      <div v-if="showVideoPlayer" 
+           class="floating-video-player" 
+           :class="{ minimized: videoPlayerMinimized, resizing: isVideoResizing, dragging: isVideoDragging }"
+           :style="{
+             left: videoPlayerPosition.x !== null ? videoPlayerPosition.x + 'px' : 'auto',
+             top: videoPlayerPosition.y !== null ? videoPlayerPosition.y + 'px' : 'auto',
+             right: videoPlayerPosition.x !== null ? 'auto' : '20px',
+             bottom: videoPlayerPosition.y !== null ? 'auto' : '20px',
+             width: videoPlayerMinimized ? '300px' : videoPlayerSize.width + 'px',
+             height: videoPlayerMinimized ? 'auto' : videoPlayerSize.height + 'px'
+           }">
       <div class="video-player-header" @mousedown="startVideoDrag" @touchstart="startVideoDrag" @dblclick="toggleVideoPlayerMinimize" title="拖动移动位置，双击最小化">
         <div class="video-player-title">{{ currentVideoTitle }}</div>
         <div class="video-player-controls">
@@ -640,6 +641,7 @@
       </div>
       <div v-show="!videoPlayerMinimized" class="resize-handle" @mousedown="startVideoResize"></div>
     </div>
+    </transition>
 
     <transition name="fade">
       <div v-if="showLogin" class="modal inset-0 fixed bg-black/70 z-50 flex items-center justify-center">

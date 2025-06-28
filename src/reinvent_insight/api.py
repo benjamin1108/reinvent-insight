@@ -391,7 +391,7 @@ async def get_summary_pdf(filename: str, response: Response):
             logger.info(f"生成PDF文件: {pdf_filename}")
             
             # 构建生成PDF的命令
-            script_path = config.BASE_DIR / "tools" / "generate_pdfs.py"
+            script_path = config.PROJECT_ROOT / "tools" / "generate_pdfs.py"
             if not script_path.exists():
                 raise HTTPException(status_code=500, detail="PDF生成工具不存在")
             
@@ -516,7 +516,7 @@ async def get_summary(filename: str, authorization: str = Header(None)):
         raise HTTPException(status_code=500, detail="读取摘要文件失败")
 
 # --- Frontend Serving ---
-web_dir = config.BASE_DIR / "web"
+web_dir = config.PROJECT_ROOT / "web"
 
 if web_dir.is_dir():
     # Mount static file directories first.
@@ -625,8 +625,12 @@ def serve(host: str = "0.0.0.0", port: int = 8001, reload: bool = False):
     """使用 uvicorn 启动 Web 服务器。"""
     import uvicorn
     uvicorn.run(
-        "src.youtube_summarizer.api:app",
+        "reinvent_insight.api:app",
         host=host,
         port=port,
         reload=reload
-    ) 
+    )
+
+if __name__ == "__main__":
+    # uvicorn.run("src.youtube_summarizer.api:app", host="0.0.0.0", port=8001, reload=True)
+    uvicorn.run("src.reinvent_insight.api:app", host="0.0.0.0", port=8001, reload=True) 

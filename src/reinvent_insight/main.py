@@ -117,8 +117,8 @@ def cli():
     """定义和处理命令行参数"""
     parser = argparse.ArgumentParser(
         description="""YouTube 视频字幕深度摘要工具。""",
-        epilog="""使用 'python -m src.youtube_summarizer.main <子命令> --help' 来查看特定子命令的详细帮助。
-例如: python -m src.youtube_summarizer.main --file my_videos.txt""",
+        epilog="""使用 'python -m reinvent_insight.main <子命令> --help' 来查看特定子命令的详细帮助。
+例如: python -m reinvent_insight.main --file my_videos.txt""",
         formatter_class=argparse.RawTextHelpFormatter
     )
     
@@ -137,7 +137,7 @@ def cli():
 
     # 'web' 子命令
     parser_web = subparsers.add_parser('web', help='启动 Web UI 和 API 服务器。')
-    parser_web.add_argument('--host', type=str, default='0.0.0.0', help='服务器监听的 IP 地址。')
+    parser_web.add_argument('--host', type=str, default='127.0.0.1', help='绑定的主机地址,默认为127.0.0.1')
     parser_web.add_argument('--port', type=int, default=8001, help='服务器监听的端口。')
     parser_web.add_argument('--reload', action='store_true', help='开启开发模式，代码变动时自动重启服务。')
 

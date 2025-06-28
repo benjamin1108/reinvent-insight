@@ -253,7 +253,7 @@ PREFERRED_MODEL="Gemini"                     # 默认AI模型
 youtube-summarizer
 
 # 方式2：Web 界面（推荐）
-python -m src.youtube_summarizer.main web
+python -m src.reinvent_insight.main web
 
 # 然后访问：http://localhost:8001
 ```
@@ -442,7 +442,7 @@ Response: PDF文件流
 ### 项目结构
 ```
 reinvent-insight/
-├── src/youtube_summarizer/      # 核心代码
+├── src/reinvent_insight/      # 核心代码
 │   ├── __init__.py             # 包初始化
 │   ├── config.py               # 配置管理
 │   ├── logger.py               # 日志系统
@@ -548,7 +548,7 @@ COPY . .
 EXPOSE 8001
 
 # 启动命令
-CMD ["python", "-m", "src.youtube_summarizer.main", "web", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["python", "-m", "src.reinvent_insight.main", "web", "--host", "0.0.0.0", "--port", "8001"]
 ```
 
 ### 生产环境配置
@@ -579,83 +579,16 @@ server {
 
 3. **使用 Supervisor 管理进程**:
 ```ini
-[program:reinvent-insight]
-command=/app/.venv/bin/python -m src.youtube_summarizer.main web
-directory=/app
+[program:reinvent_insight_web]
+command=/app/.venv/bin/python -m src.reinvent_insight.main web --host 0.0.0.0 --port 8001
+directory=/app/
 autostart=true
 autorestart=true
-stderr_logfile=/var/log/reinvent-insight.err.log
-stdout_logfile=/var/log/reinvent-insight.out.log
+stderr_logfile=/var/log/reinvent_insight_web.err.log
+stdout_logfile=/var/log/reinvent_insight_web.out.log
+user=your_user
 ```
 
 ### 性能优化建议
 
-1. **API 并发限制**: 在 `config.py` 中调整 `CHAPTER_GENERATION_DELAY_SECONDS`
-2. **缓存策略**: 已处理的视频直接返回现有结果
-3. **CDN 加速**: 静态资源使用 CDN
-4. **数据库升级**: 考虑使用 PostgreSQL 存储元数据
-
-## ❓ 常见问题
-
-### Q1: 如何获取 Gemini API Key？
-访问 [Google AI Studio](https://makersuite.google.com/app/apikey) 创建免费的 API Key。
-
-### Q2: 支持哪些视频？
-- 必须有英文字幕（人工或自动生成）
-- 建议时长在 10-90 分钟
-- 技术类内容效果最佳
-
-### Q3: 生成失败怎么办？
-1. 检查网络连接
-2. 确认 API Key 有效
-3. 查看日志文件了解详情
-4. 尝试使用 `reassemble` 命令重新生成
-
-### Q4: 如何优化生成质量？
-1. 调整 `temperature` 参数（在 `summarizer.py` 中）
-2. 修改提示词模板
-3. 增加重试次数
-
-## 🤝 贡献指南
-
-我们欢迎所有形式的贡献！
-
-### 贡献方式
-1. 🐛 提交 Bug 报告
-2. 💡 提出新功能建议
-3. 📝 改进文档
-4. 🔧 提交代码改进
-
-### 开发流程
-1. Fork 项目
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启 Pull Request
-
-### 代码规范
-- 使用 `ruff` 进行代码格式化
-- 遵循 PEP 8 规范
-- 添加适当的注释和文档
-- 编写单元测试
-
-## 📄 许可协议
-
-本项目基于 MIT License 开源。详见 [LICENSE](LICENSE) 文件。
-
-## 🙏 致谢
-
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) - 强大的视频下载工具
-- [Google Gemini](https://deepmind.google/technologies/gemini/) - 先进的语言模型
-- [FastAPI](https://fastapi.tiangolo.com/) - 现代化的 Python Web 框架
-- [Vue.js](https://vuejs.org/) - 渐进式 JavaScript 框架
-
----
-
-<div align="center">
-
-**⭐ 如果这个项目对你有帮助，请给我们一个 Star！**
-
-[提交 Issue](https://github.com/benjamin1108/reinvent-insight/issues) | [查看 Wiki](https://github.com/benjamin1108/reinvent-insight/wiki) | [加入讨论](https://github.com/benjamin1108/reinvent-insight/discussions)
-
-</div>
+1. **API 并发限制**: 在 `config.py` 中调整 `

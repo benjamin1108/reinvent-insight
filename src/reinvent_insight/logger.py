@@ -50,4 +50,16 @@ def success(self, message, *args, **kws):
     if self.isEnabledFor(logging.SUCCESS):
         self._log(logging.SUCCESS, message, args, **kws)
 
-logging.Logger.success = success 
+logging.Logger.success = success
+
+def get_logger(name: str = None) -> logging.Logger:
+    """
+    获取一个日志记录器实例。
+    
+    Args:
+        name (str): 日志记录器的名称，通常使用 __name__
+        
+    Returns:
+        logging.Logger: 配置好的日志记录器实例
+    """
+    return logging.getLogger(name) 

@@ -10,13 +10,13 @@ import sys
 from pathlib import Path
 import yaml
 import logging
+from pydantic import BaseModel
+from reinvent_insight.downloader import VideoMetadata
 
 # 添加src目录到Python路径
 script_dir = Path(__file__).parent
 project_root = script_dir.parent
 sys.path.insert(0, str(project_root / "src"))
-
-from youtube_summarizer.downloader import VideoMetadata
 
 # 设置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

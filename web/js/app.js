@@ -685,11 +685,6 @@ createApp({
           currentVersion.value = 0;
         }
         
-        // 切换文档时关闭视频播放器
-        if (showVideoPlayer.value) {
-          closeVideoPlayer();
-        }
-
         // 在解析前，移除 YAML Front Matter
         const cleanContent = content.replace(/^---[\s\S]*?---/, '').trim();
         
