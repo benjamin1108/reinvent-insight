@@ -1,0 +1,541 @@
+/* AppHeader组件样式 - 完全独立，包含所有必要的科技风格样式 */
+
+/* AppHeader组件样式 - 继承全局字体设置和效果样式 */
+
+/* Header基础样式 */
+.app-header {
+  /* tech-gradient效果 - 从主项目style.css复制 */
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.8) 50%, rgba(15, 23, 42, 0.9) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  
+  border-bottom: 1px solid #374151;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  
+  /* 定义header高度变量供其他组件使用 */
+  --app-header-height: 80px;
+  height: var(--app-header-height);
+}
+
+/* 内容容器样式 */
+.app-header__container {
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 1rem; /* 标准padding */
+  height: 100%; /* 填充header高度 */
+  display: flex;
+  align-items: center; /* 垂直居中 */
+}
+
+/* 阅读模式的padding调整 - 保持与普通模式相同的高度 */
+.app-header--reading {
+  --app-header-height: 80px;
+  height: var(--app-header-height);
+}
+
+.app-header--reading .app-header__container {
+  padding: 0.5rem 1rem; /* 减少垂直padding，利用flex居中 */
+}
+
+/* 品牌标识样式 */
+.app-header__brand {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: transform 0.2s ease;
+}
+
+.app-header__brand:hover {
+  transform: scale(1.03); /* 稍微增强hover效果 */
+}
+
+.app-header__brand:hover svg {
+  filter: drop-shadow(0 0 12px rgba(34, 211, 238, 0.6));
+  transform: rotate(2deg); /* 微妙的旋转效果 */
+}
+
+.app-header__brand:hover h1 {
+  text-shadow: 0 0 25px rgba(34, 211, 238, 0.5);
+}
+
+.app-header__brand svg {
+  width: 2rem; /* 从 1.75rem 增大到 2rem，与文字大小匹配 */
+  height: 2rem;
+  color: #22d3ee;
+  /* 添加微妙的发光效果 */
+  filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.4));
+  transition: all 0.3s ease;
+}
+
+.app-header__brand h1 {
+  /* 科技感大气Logo字体设计 */
+  font-family: 'Outfit', 'PingFang SC', 'SF Pro Display', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  font-size: 1.875rem; /* 从 1.25rem 增大到 1.875rem (30px) */
+  font-weight: 800; /* 增强字重，更大气 */
+  letter-spacing: -0.02em; /* 收紧字符间距，增强现代感 */
+  line-height: 1.1; /* 紧凑行高 */
+  
+  /* 高级渐变效果 - 三色渐变更有层次 */
+  background: linear-gradient(135deg, 
+    #22d3ee 0%,     /* 青色起点 */
+    #3b82f6 50%,    /* 蓝色中间 */
+    #8b5cf6 100%    /* 紫色终点 */
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  
+  margin: 0;
+  
+  /* 高级字体特性 */
+  font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+  text-rendering: optimizeLegibility;
+  
+  /* 添加微妙阴影效果 */
+  text-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+}
+
+.app-header__brand h1 span {
+  /* "Insight"部分的强调样式 */
+  background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%); /* 紫色到粉色渐变 */
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 900; /* 更强的字重突出"Insight" */
+  text-shadow: 0 0 15px rgba(168, 85, 247, 0.4); /* 紫色光晕 */
+}
+
+/* 导航和布局相关的组件特定样式保留 */
+
+/* 导航布局 */
+.app-header__mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* 移动端强制水平布局 */
+@media (max-width: 768px) {
+  .app-header__mobile {
+    flex-direction: row !important;
+    align-items: center;          /* 确保垂直居中 */
+    justify-content: flex-start;  /* 改为左对齐，用order控制顺序 */
+    gap: 0.5rem;
+    width: 100%; /* 确保占据全宽 */
+    height: 100%; /* 确保占据全高 */
+    align-content: center;        /* 多行时也居中对齐 */
+  }
+  
+  /* 强制所有AppHeader中的tech-button在移动端保持相同基线 */
+  .app-header tech-button {
+    vertical-align: middle !important; /* 改为middle对齐 */
+    align-self: center !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  
+  /* 特别确保mobile-auth中的按钮完全居中 */
+  .app-header__mobile-auth {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    align-content: center !important;
+  }
+}
+
+/* 左侧区域（logo和导航） */
+.app-header__left {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+/* 移动端左侧区域优化 */
+@media (max-width: 768px) {
+  .app-header__left {
+    display: contents;  /* 让内部元素直接参与父级flex布局 */
+  }
+  
+  /* Logo品牌区域排第一 */
+  .app-header__left-inner {
+    order: 1;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    height: 100%; /* 确保占据全高以便垂直居中 */
+  }
+  
+  /* 移动端导航按钮排第二 */
+  .app-header__mobile-nav {
+    order: 2;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    height: 100%; /* 确保占据全高以便垂直居中 */
+  }
+  
+  /* 确保mobile-nav中的按钮高度一致 */
+  .app-header__mobile-nav tech-button {
+    height: auto !important;
+    align-self: center;
+  }
+  
+  /* 移动端退出/登录按钮排第三 */
+  .app-header__mobile-auth {
+    order: 3;
+    flex-shrink: 0;
+    margin-left: auto;  /* 推到最右边 */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important; /* 内容居中 */
+    height: 100%; /* 确保占据全高以便垂直居中 */
+    min-height: 2.5rem; /* 设置最小高度确保居中有效 */
+  }
+  
+  /* 确保mobile-auth中的按钮高度一致和居中 */
+  .app-header__mobile-auth tech-button {
+    height: auto !important;
+    align-self: center !important;
+    margin: 0 !important; /* 清除所有margin */
+    vertical-align: middle !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  
+  /* 额外强制对齐 - 处理.app-header__left的display:contents影响 */
+  .app-header__mobile .app-header__mobile-auth {
+    align-self: center !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 100% !important;
+  }
+}
+
+.app-header__left-inner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* 主导航 - 默认隐藏 */
+.app-header__nav {
+  display: none;
+  gap: 0.5rem;
+}
+
+/* 桌面端操作区 - 默认隐藏 */
+.app-header__actions {
+  display: none;
+  align-items: center;
+  gap: 1rem;
+  height: 100%; /* 确保占据全高以便垂直居中 */
+}
+
+/* 移动端导航 */
+.app-header__mobile-nav {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* 移动端导航强制不换行 */
+@media (max-width: 768px) {
+  .app-header__mobile-nav {
+    margin-top: 0 !important;
+    flex-shrink: 0;
+    flex-wrap: nowrap !important;
+    display: flex;
+    gap: 0.375rem;
+  }
+}
+
+/* 移动端认证按钮 */
+.app-header__mobile-auth {
+  display: block;
+}
+
+/* 阅读模式样式 */
+.app-header__content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%; /* 确保占据全宽 */
+  height: 100%; /* 确保占据全高 */
+}
+
+.app-header__reading-left {
+  display: flex;
+  align-items: center;
+  height: 100%; /* 确保占据全高以便垂直居中 */
+}
+
+.app-header__reading-controls {
+  display: none;
+  gap: 0.5rem;
+  margin-left: 1rem;
+}
+
+/* TechButton组件在mobile-nav中的布局调整 */
+.app-header__mobile-nav tech-button {
+  flex: 1;
+}
+
+/* 移动端按钮不要占据等分空间 */
+@media (max-width: 768px) {
+  .app-header__mobile-nav tech-button {
+    flex: none !important;
+    flex-shrink: 0;
+  }
+}
+
+/* 阅读模式特有样式已在上方定义 */
+
+/* 阅读控制区域的TechButton样式由组件本身处理 */
+
+.app-header__right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 100%; /* 确保占据全高以便垂直居中 */
+}
+
+.app-header__mobile-back {
+  display: block;
+}
+
+.app-header__mobile-hide-toc {
+  display: none;
+}
+
+/* 目录切换按钮特殊样式 */
+.app-header__toc-toggle {
+  min-width: 80px ;
+}
+
+/* 桌面端样式 */
+@media (min-width: 768px) {
+  /* header容器在桌面端变为横向布局 */
+  .app-header__mobile {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0;
+    width: 100%; /* 确保占据全宽 */
+    height: 100%; /* 确保占据全高 */
+  }
+  
+  /* 确保桌面端阅读模式logo字体与正常模式一致 */
+  .app-header--reading .app-header__brand h1 {
+    font-size: 1.875rem; /* 与桌面端正常模式保持一致，避免跳动 */
+  }
+  
+  /* 左侧区域在桌面端自适应宽度 */
+  .app-header__left {
+    width: auto;
+    flex: 0 0 auto; /* 不允许伸缩 */
+  }
+  
+  /* 显示桌面端导航 */
+  .app-header__nav {
+    display: flex;
+  }
+  
+  /* 显示桌面端操作区 */
+  .app-header__actions {
+    display: flex;
+  }
+  
+  /* 隐藏移动端元素 */
+  .app-header__mobile-nav {
+    display: none ;
+  }
+  
+  .app-header__mobile-auth {
+    display: none ;
+  }
+  
+  /* 显示阅读模式的控制按钮 */
+  .app-header__reading-controls {
+    display: flex;
+  }
+  
+  .app-header__mobile-back {
+    display: none;
+  }
+  
+  .app-header__mobile-hide-toc {
+    display: block;
+  }
+}
+
+/* 移动端优化 - 匹配原项目规范 */
+@media (max-width: 768px) {
+  .app-header__container {
+    padding: 0.75rem 0.75rem;     /* 减少垂直padding，利用flex居中 */
+  }
+  
+  .app-header__brand h1 {
+    font-size: 1.625rem;          /* 从1.25rem增大到1.625rem，移动端也要大气 */
+  }
+  
+  .app-header__brand svg {
+    width: 1.75rem;               /* 调大图标保持与文字的平衡 */
+    height: 1.75rem;
+  }
+  
+  /* 移动端导航改为水平布局 */
+  .app-header__mobile-nav {
+    gap: 0.5rem;                  /* 适当间距 */
+    margin-top: 0;                /* 取消上边距，保持同行 */
+    flex-direction: row;          /* 水平布局 */
+    flex-wrap: nowrap;            /* 禁止换行 */
+  }
+  
+  /* 确保mobile-nav中的tech-button保持合适大小 */
+  .app-header__mobile-nav tech-button {
+    flex: none;                   /* 取消flex:1，让按钮保持自然大小 */
+    min-width: auto !important;   /* 强制取消最小宽度限制 */
+    width: auto;                  /* 让宽度自适应内容 */
+    white-space: nowrap;          /* 防止文字换行 */
+    vertical-align: baseline !important; /* 强制基线对齐 */
+    align-self: center !important; /* 在flex容器中居中对齐 */
+  }
+  
+  /* 确保mobile-auth中的tech-button也有相同对齐 */
+  .app-header__mobile-auth tech-button {
+    vertical-align: baseline !important; /* 强制基线对齐 */
+    align-self: center !important; /* 在flex容器中居中对齐 */
+  }
+  
+  .app-header--reading .app-header__container {
+    padding: 0.5rem 0.75rem;      /* 阅读模式移动端padding */
+  }
+  
+  .app-header--reading .app-header__brand h1 {
+    font-size: 1.625rem;          /* 与移动端正常模式保持一致，避免跳动 */
+  }
+}
+
+/* 极小屏幕优化 */
+@media (max-width: 480px) {
+  .app-header__container {
+    padding: 0.625rem 0.5rem;     /* 减少垂直padding，利用flex居中 */
+  }
+  
+  .app-header__brand h1 {
+    font-size: 1.375rem;          /* 保持相对较大的品牌标题 */
+  }
+  
+  .app-header__brand svg {
+    width: 1.5rem;                /* 保持相对较大的图标 */
+    height: 1.5rem;
+  }
+  
+  .app-header--reading .app-header__container {
+    padding: 0.375rem 0.5rem;     /* 极小屏幕阅读模式padding */
+  }
+  
+  .app-header--reading .app-header__brand h1 {
+    font-size: 1.375rem;          /* 与极小屏正常模式保持一致，避免跳动 */
+  }
+  
+  .app-header__mobile-nav {
+    flex-direction: row;          /* 极小屏幕也保持水平布局 */
+    gap: 0.375rem;                /* 稍微减少间距 */
+    margin-top: 0;                /* 保持同行 */
+    flex-wrap: nowrap;            /* 禁止换行 */
+  }
+  
+  /* 极小屏幕按钮对齐优化 */
+  .app-header__mobile-nav tech-button,
+  .app-header__mobile-auth tech-button {
+    vertical-align: baseline !important;
+    align-self: center !important;
+    margin: 0 !important; /* 清除可能的margin */
+  }
+}
+
+/* 高对比度模式支持 */
+@media (prefers-contrast: high) {
+  .app-header__brand h1 {
+    font-family: 'Outfit', 'PingFang SC', 'SF Pro Display', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    background: none;
+    color: #ffffff;
+    text-shadow: none; /* 去除阴影效果 */
+    font-weight: 800; /* 保持字重 */
+  }
+  
+  .app-header__brand h1 span {
+    background: none;
+    color: #ffffff;
+    text-shadow: none;
+  }
+  
+  .app-header__brand svg {
+    filter: none; /* 去除发光效果 */
+  }
+  
+  /* TechButton组件自身支持高对比度模式 */
+}
+
+/* 减少动画模式支持 */
+@media (prefers-reduced-motion: reduce) {
+  .app-header__brand {
+    transition: none;
+  }
+  
+  /* TechButton组件自身支持减少动画模式 */
+}
+
+/* 深色主题支持（默认） */
+.app-header {
+  color: #e5e7eb;
+}
+
+/* 确保与其他组件的兼容性 */
+.app-header *,
+.app-header *::before,
+.app-header *::after {
+  box-sizing: border-box;
+}
+
+/* 清除默认样式 - 注意不要影响TechButton组件 */
+.app-header h1,
+.app-header h2,
+.app-header h3,
+.app-header h4,
+.app-header h5,
+.app-header h6 {
+  margin: 0;
+  font-weight: inherit;
+}
+
+.app-header p {
+  margin: 0;
+}
+
+.app-header ul,
+.app-header ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 删除button的全局重置，让TechButton保持自己的样式 */
+/* TechButton组件会自己处理按钮样式 */
+
+.app-header a {
+  text-decoration: none;
+  color: inherit;
+} 

@@ -1,0 +1,76 @@
+<transition name="floating-video-player-fade">
+  <div v-if="visible" 
+       class="floating-video-player" 
+       :class="{ 
+         'floating-video-player--minimized': minimized, 
+         'floating-video-player--resizing': isResizing, 
+         'floating-video-player--dragging': isDragging 
+       }"
+       :style="{
+         left: position.x !== null ? position.x + 'px' : 'auto',
+         top: position.y !== null ? position.y + 'px' : 'auto',
+         right: position.x !== null ? 'auto' : '20px',
+         bottom: position.y !== null ? 'auto' : '20px',
+         width: minimized ? '300px' : size.width + 'px',
+         height: minimized ? 'auto' : size.height + 'px'
+       }">
+    
+    <!-- 标题栏 -->
+    <div class="floating-video-player__header" 
+         @mousedown="startDrag" 
+         @touchstart="startDrag" 
+         @dblclick="toggleMinimize" 
+         title="拖动移动位置，双击最小化">
+      
+      <!-- 视频标题 -->
+      <div class="floating-video-player__title">{{ title }}</div>
+      
+      <!-- 控制按钮 -->
+      <div class="floating-video-player__controls">
+        <!-- 最小化/恢复按钮 -->
+        <button @click="toggleMinimize" 
+                class="floating-video-player__control-btn" 
+                :title="minimized ? '恢复' : '最小化'">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path v-if="!minimized" 
+                  stroke-linecap="round" 
+                  stroke-linejoin="round" 
+                  stroke-width="2" 
+                  d="M20 12H4"></path>
+            <path v-else 
+                  stroke-linecap="round" 
+                  stroke-linejoin="round" 
+                  stroke-width="2" 
+                  d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+          </svg>
+        </button>
+        
+        <!-- 关闭按钮 -->
+        <button @click="close" 
+                class="floating-video-player__control-btn" 
+                title="关闭">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" 
+                  stroke-linejoin="round" 
+                  stroke-width="2" 
+                  d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+    
+    <!-- 视频内容区域 -->
+    <div v-show="!minimized" class="floating-video-player__content">
+      <iframe 
+        :src="iframeSrc"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen>
+      </iframe>
+    </div>
+    
+    <!-- 调整大小手柄 -->
+    <div v-show="!minimized" 
+         class="floating-video-player__resize-handle" 
+         @mousedown="startResize"></div>
+  </div>
+</transition> 

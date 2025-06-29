@@ -1,0 +1,28 @@
+<div 
+  v-if="normalizedVersions.length > 1"
+  class="version-selector"
+  :class="[
+    customClass, 
+    { 
+      'version-selector--active': isOpen, 
+      'version-selector--disabled': disabled
+    }
+  ]"
+>
+  <div @click="toggleDropdown" class="version-selector__trigger">
+    <span>v{{ currentVersion }}</span>
+  </div>
+  <transition name="version-selector__dropdown">
+    <div v-if="isOpen" class="version-selector__dropdown">
+      <div 
+        v-for="item in normalizedVersions" 
+        :key="item.version"
+        @click="selectVersion(item.version)"
+        class="version-selector__item"
+        :class="{ 'version-selector__item--current': item.version === currentVersion }"
+      >
+        v{{ item.version }}
+      </div>
+    </div>
+  </transition>
+</div>

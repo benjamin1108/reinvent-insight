@@ -1,0 +1,103 @@
+<div class="library-view">
+  <!-- 页面标题 -->
+  <!-- <div class="library-view__header">
+    <h2 class="library-view__title">
+      笔记库
+    </h2>
+    <p class="library-view__subtitle">浏览深度分析笔记</p>
+  </div> -->
+
+  <!-- 加载状态 -->
+  <div v-if="loading" class="library-view__loading">
+    <div class="library-view__loading-content">
+      <svg class="library-view__loading-icon" fill="none" viewBox="0 0 24 24">
+        <circle class="library-view__loading-circle" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="library-view__loading-path" fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+        </path>
+      </svg>
+      <p class="library-view__loading-text">{{ loadingText }}</p>
+    </div>
+  </div>
+
+  <!-- 内容区域 -->
+  <div v-else-if="summaries.length > 0" class="library-view__content">
+    
+    <!-- re:Invent 深度解读区域 -->
+    <div v-if="reinventSummaries.length > 0" class="library-view__section library-view__section--reinvent">
+      <div class="library-view__section-header">
+        <div class="library-view__section-title-group">
+          <div class="library-view__section-indicator library-view__section-indicator--reinvent"></div>
+          <h3 class="library-view__section-title library-view__section-title--reinvent">
+            AWS re:Invent 深度解读
+          </h3>
+          <span class="library-view__article-count">{{ filteredReinventCount }} 篇</span>
+        </div>
+        
+        <!-- 筛选器区域 -->
+        <div class="library-view__filters">
+          <level-filter 
+            v-model="selectedLevel"
+            @change="handleLevelChange">
+          </level-filter>
+          
+          <year-filter 
+            v-model="selectedYear"
+            :available-years="availableYears"
+            @change="handleYearChange">
+          </year-filter>
+        </div>
+      </div>
+      
+      <!-- re:Invent 卡片网格 -->
+      <div class="library-view__grid library-view__grid--reinvent">
+        <summary-card
+          v-for="summary in filteredReinventSummaries"
+          :key="summary.filename || summary.hash"
+          summary-type="reinvent"
+          :title-en="summary.title_en"
+          :title-cn="summary.title_cn"
+          :word-count="summary.word_count || summary.size"
+          :year="extractYear(summary)"
+          :level="summary.level"
+          :hash="summary.hash"
+          @click="handleSummaryClick">
+        </summary-card>
+      </div>
+    </div>
+
+    <!-- 其他精选内容区域 -->
+    <div v-if="otherSummaries.length > 0" class="library-view__section library-view__section--other">
+      <div class="library-view__section-header">
+        <div class="library-view__section-title-group">
+          <div class="library-view__section-indicator library-view__section-indicator--other"></div>
+          <h3 class="library-view__section-title library-view__section-title--other">
+            其他精选内容
+          </h3>
+          <span class="library-view__article-count">{{ otherSummaries.length }} 篇</span>
+        </div>
+      </div>
+      
+      <!-- 其他精选卡片网格 -->
+      <div class="library-view__grid library-view__grid--other">
+        <summary-card
+          v-for="summary in otherSummaries"
+          :key="summary.filename || summary.hash"
+          summary-type="other"
+          :title-en="summary.title_en"
+          :title-cn="summary.title_cn"
+          :word-count="summary.word_count || summary.size"
+          :level="summary.level"
+          :hash="summary.hash"
+          @click="handleSummaryClick">
+        </summary-card>
+      </div>
+    </div>
+  </div>
+
+  <!-- 空状态 -->
+  <div v-else class="library-view__empty">
+    <h3 class="library-view__empty-title">{{ emptyTitle }}</h3>
+    <p class="library-view__empty-message">{{ emptyMessage }}</p>
+  </div>
+</div> 

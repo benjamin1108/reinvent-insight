@@ -1,0 +1,169 @@
+<!-- 普通页面Header -->
+<header v-if="mode === 'normal'"
+  class="app-header tech-gradient border-b border-gray-800 shadow-lg sticky top-0 z-40">
+  <div class="app-header__container app-header__mobile">
+    <div class="app-header__left">
+      <div class="app-header__left-inner">
+        <!-- 品牌标识 -->
+        <a @click="handleHomeClick" class="app-header__brand">
+          <svg class="w-7 h-7 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          <h1 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+            reinvent <span class="text-purple-400">Insight</span>
+          </h1>
+        </a>
+        
+        <!-- 桌面端主导航 -->
+        <div v-if="isAuthenticated" class="app-header__nav">
+          <tech-button 
+            variant="secondary" 
+            :class="{ 'active': currentView === 'create' }"
+            @click="handleViewChange('create')">
+            新解读
+          </tech-button>
+          <tech-button 
+            variant="secondary" 
+            :class="{ 'active': currentView === 'library' }"
+            @click="handleViewChange('library')">
+            笔记库
+          </tech-button>
+        </div>
+      </div>
+      
+      <!-- 移动端登录/退出按钮 -->
+      <div class="app-header__mobile-auth">
+        <tech-button 
+          v-if="!isAuthenticated" 
+          variant="secondary"
+          @click="handleLoginShow">
+          登录
+        </tech-button>
+        <tech-button 
+          v-else 
+          variant="danger"
+          @click="handleLogout">
+          退出
+        </tech-button>
+      </div>
+    </div>
+    
+    <!-- 移动端导航 -->
+    <div v-if="isAuthenticated" class="app-header__mobile-nav">
+      <tech-button 
+        variant="secondary" 
+        full-width
+        :class="{ 'active': currentView === 'create' }"
+        @click="handleViewChange('create')">
+        新解读
+      </tech-button>
+      <tech-button 
+        variant="secondary" 
+        full-width
+        :class="{ 'active': currentView === 'library' }"
+        @click="handleViewChange('library')">
+        笔记库
+      </tech-button>
+    </div>
+    
+    <!-- 桌面端右侧操作区 -->
+    <div class="app-header__actions">
+      <!-- 临时测试Toast按钮 -->
+      <tech-button 
+        v-if="showTestToast" 
+        variant="warning"
+        @click="handleTestToast">
+        测试Toast
+      </tech-button>
+      
+      <!-- 登录/退出按钮 -->
+      <tech-button 
+        v-if="!isAuthenticated" 
+        variant="primary"
+        @click="handleLoginShow">
+        登录
+      </tech-button>
+      <tech-button 
+        v-else 
+        variant="danger"
+        @click="handleLogout">
+        退出
+      </tech-button>
+    </div>
+  </div>
+</header>
+
+<!-- 阅读页面Header -->
+<header v-else-if="mode === 'reading'"
+  class="app-header tech-gradient border-b border-gray-800 shadow-lg sticky top-0 z-40 app-header--reading">
+  <div class="app-header__container app-header__content">
+    <!-- 左侧品牌和操作区 -->
+    <div class="app-header__reading-left">
+      <!-- 品牌标识 -->
+      <a @click="handleHomeClick" class="app-header__brand">
+        <svg class="w-7 h-7 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+        <h1 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+          reinvent <span class="text-purple-400">Insight</span>
+        </h1>
+      </a>
+
+      <!-- 桌面端操作按钮组 -->
+      <div class="app-header__reading-controls">
+        <!-- 返回按钮 -->
+        <tech-button 
+          v-if="!isShareView" 
+          variant="secondary" 
+          icon-before="M10 19l-7-7m0 0l7-7m-7 7h18"
+          @click="handleBackToLibrary">
+          返回笔记库
+        </tech-button>
+
+        <!-- 观看原视频按钮 -->
+        <tech-button 
+          v-if="readingVideoUrl" 
+          variant="secondary" 
+          icon-before="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+          @click="() => { console.log('DEBUG: Watch Video button clicked on template'); handleOpenVideo(); }">
+          观看原视频
+        </tech-button>
+
+        <!-- 下载PDF按钮 -->
+        <tech-button 
+          variant="secondary" 
+          :loading="pdfDownloading"
+          :icon-before="pdfDownloading ? '' : 'M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'"
+          loading-text="生成中..."
+          @click="handleDownloadPDF">
+          {{ pdfDownloading ? '生成中...' : '下载PDF' }}
+        </tech-button>
+
+        <!-- 目录切换按钮 -->
+        <tech-button 
+          variant="secondary" 
+          min-width="80px"
+          :icon-before="showToc ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h7'"
+          :title="showToc ? '隐藏目录' : '显示目录'"
+          @click="handleToggleToc">
+          目录
+        </tech-button>
+      </div>
+    </div>
+    
+    <!-- 右侧操作区 -->
+    <div class="app-header__right">
+      <!-- 移动端返回按钮 -->
+      <tech-button 
+        v-if="!isShareView" 
+        variant="secondary" 
+        icon-before="M10 19l-7-7m0 0l7-7m-7 7h18"
+        class="app-header__mobile-back"
+        @click="handleBackToLibrary">
+        返回
+      </tech-button>
+    </div>
+  </div>
+</header> 

@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VideoPlayer 组件测试</title>
+  
+  <!-- Vue 3 -->
+  <script src="/js/vendor/vue.global.js"></script>
+  
+  <!-- 基础样式 -->
+  
+  <link rel="stylesheet" href="/css/base/effects.css">
+  
+  <!-- VideoPlayer组件样式 -->
+  <link rel="stylesheet" href="/components/common/VideoPlayer/VideoPlayer.css">
+  
+  <!-- 测试框架样式 -->
+  <style>
+    :root {
+      /* 测试页面变量 */
+      --test-bg: #0f172a;
+      --test-surface: #1e293b;
+      --test-border: #334155;
+      --test-text: #e2e8f0;
+      --test-text-dim: #94a3b8;
+      --test-primary: #22d3ee;
+      --test-secondary: #3b82f6;
+      --test-success: #10b981;
+      --test-warning: #f59e0b;
+      --test-danger: #ef4444;
+      
+      /* 渐变 */
+      --gradient-primary: linear-gradient(135deg, #22d3ee 0%, #3b82f6 100%);
+      --gradient-secondary: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: var(--test-bg);
+      color: var(--test-text);
+      font-family: var(--font-primary);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    
+    .test-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    
+    .test-header h1 {
+      font-size: 2.5rem;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    
+    .test-header p {
+      color: var(--test-text-dim);
+      font-size: 1.125rem;
+    }
+    
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .test-case {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    
+    .test-case-header {
+      margin-bottom: 1.5rem;
+    }
+    
+    .test-case-title {
+      font-size: 1.25rem;
+      color: var(--test-primary);
+    }
+    
+    .test-case-description {
+      color: var(--test-text-dim);
+      font-size: 0.875rem;
+      margin-top: 0.5rem;
+    }
+    
+    .test-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+    
+    .control-group {
+      flex: 1;
+      min-width: 200px;
+    }
+    
+    .control-label {
+      display: block;
+      color: var(--test-text-dim);
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .control-input {
+      width: 100%;
+      padding: 0.5rem;
+      background: var(--test-bg);
+      border: 1px solid var(--test-border);
+      border-radius: 6px;
+      color: var(--test-text);
+      font-size: 0.875rem;
+    }
+    
+    .test-button {
+      padding: 0.5rem 1.5rem;
+      background: var(--gradient-primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .test-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3);
+    }
+    
+    .test-button.secondary {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+    }
+    
+    .test-button.danger {
+      background: var(--test-danger);
+    }
+    
+    .status-display {
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    
+    .status-item {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    
+    .status-label {
+      color: var(--test-text-dim);
+      font-size: 0.875rem;
+    }
+    
+    .status-value {
+      font-weight: 600;
+      color: var(--test-primary);
+    }
+    
+    .test-output {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--test-border);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+      font-family: var(--font-code);
+      font-size: 0.875rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .back-link {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      padding: 0.5rem 1rem;
+      background: var(--test-surface);
+      border: 1px solid var(--test-primary);
+      border-radius: 6px;
+      color: var(--test-primary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+      z-index: 100;
+    }
+    
+    .back-link:hover {
+      background: rgba(34, 211, 238, 0.1);
+    }
+    
+    .position-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      font-size: 0.875rem;
+    }
+    
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .checkbox-group input[type="checkbox"] {
+      cursor: pointer;
+    }
+    
+    .video-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .video-item {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--test-border);
+      border-radius: 8px;
+      padding: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .video-item:hover {
+      border-color: var(--test-primary);
+      transform: translateY(-2px);
+    }
+    
+    .video-item h3 {
+      color: var(--test-primary);
+      font-size: 1rem;
+      margin-bottom: 0.25rem;
+    }
+    
+    .video-item p {
+      color: var(--test-text-dim);
+      font-size: 0.875rem;
+    }
+  </style>
+</head>
+<body>
+  <a href="/test/" class="back-link">← 返回测试目录</a>
+  
+  <div id="app">
+    <div class="test-header">
+      <h1>VideoPlayer 组件测试</h1>
+      <p>浮动YouTube视频播放器组件，支持拖动、调整大小、最小化</p>
+    </div>
+    
+    <div class="test-container">
+      <!-- 测试用例1：基础播放器 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">基础播放器功能</h2>
+          <p class="test-case-description">点击视频打开浮动播放器</p>
+        </div>
+        
+        <div class="video-list">
+          <div v-for="video in sampleVideos" :key="video.id" 
+               @click="openVideo(video)"
+               class="video-item">
+            <h3>{{ video.title }}</h3>
+            <p>YouTube ID: {{ video.id }}</p>
+            <p>{{ video.description }}</p>
+          </div>
+        </div>
+        
+        <div class="status-display">
+          <div class="status-item">
+            <span class="status-label">播放器状态:</span>
+            <span class="status-value">{{ playerVisible ? '显示' : '隐藏' }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">当前视频:</span>
+            <span class="status-value">{{ currentVideo?.title || '无' }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">最小化状态:</span>
+            <span class="status-value">{{ isMinimized ? '是' : '否' }}</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 测试用例2：位置和大小控制 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">位置和大小控制</h2>
+          <p class="test-case-description">测试播放器的位置和大小调整</p>
+        </div>
+        
+        <div class="test-controls">
+          <div class="control-group">
+            <label class="control-label">初始X位置</label>
+            <input v-model.number="customPosition.x" type="number" class="control-input" placeholder="留空使用默认">
+          </div>
+          <div class="control-group">
+            <label class="control-label">初始Y位置</label>
+            <input v-model.number="customPosition.y" type="number" class="control-input" placeholder="留空使用默认">
+          </div>
+          <div class="control-group">
+            <label class="control-label">宽度</label>
+            <input v-model.number="customSize.width" type="number" class="control-input" min="320">
+          </div>
+          <div class="control-group">
+            <label class="control-label">高度</label>
+            <input v-model.number="customSize.height" type="number" class="control-input" min="240">
+          </div>
+        </div>
+        
+        <div class="test-controls">
+          <div class="checkbox-group">
+            <input type="checkbox" id="defaultMinimized" v-model="defaultMinimized">
+            <label for="defaultMinimized">默认最小化</label>
+          </div>
+          <button @click="openCustomVideo" class="test-button">
+            打开自定义播放器
+          </button>
+        </div>
+        
+        <div class="position-info" v-if="playerVisible">
+          <div>
+            <span class="status-label">当前位置:</span>
+            <span class="status-value">{{ currentPosition.x }}, {{ currentPosition.y }}</span>
+          </div>
+          <div>
+            <span class="status-label">当前大小:</span>
+            <span class="status-value">{{ currentSize.width }} x {{ currentSize.height }}</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 测试用例3：多实例测试 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">多实例测试</h2>
+          <p class="test-case-description">测试多个播放器实例</p>
+        </div>
+        
+        <div class="test-controls">
+          <button @click="openMultipleVideos" class="test-button">
+            打开3个播放器
+          </button>
+          <button @click="closeAllVideos" class="test-button danger">
+            关闭所有播放器
+          </button>
+        </div>
+        
+        <div class="video-list">
+          <div v-for="(player, index) in multiPlayers" :key="index" class="video-item">
+            <h3>播放器 {{ index + 1 }}</h3>
+            <p>视频: {{ player.title }}</p>
+            <p>状态: {{ player.visible ? '显示' : '隐藏' }}</p>
+            <div class="test-controls" style="margin-top: 0.5rem;">
+              <button v-if="!player.visible" @click="player.visible = true" class="test-button">
+                打开
+              </button>
+              <button v-else @click="player.visible = false" class="test-button secondary">
+                关闭
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 测试用例4：事件监听 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">事件监听</h2>
+          <p class="test-case-description">监听播放器的各种事件</p>
+        </div>
+        
+        <button @click="clearLog" class="test-button secondary">
+          清空日志
+        </button>
+        
+        <div class="test-output">
+          <div v-if="eventLog.length === 0" style="color: var(--test-text-dim);">
+            暂无事件记录
+          </div>
+          <div v-for="(log, index) in eventLog" :key="index">
+            {{ log }}
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- VideoPlayer 组件 -->
+    <video-player
+      v-if="playerVisible"
+      :visible="playerVisible"
+      :video-id="currentVideoId"
+      :title="currentVideoTitle"
+      :initial-position="initialPosition"
+      :initial-size="initialSize"
+      :default-minimized="defaultMinimized"
+      @update:visible="playerVisible = $event"
+      @close="handleClose"
+      @position-change="handlePositionChange"
+      @size-change="handleSizeChange"
+      @minimize-change="handleMinimizeChange"
+    ></video-player>
+    
+    <!-- 多实例播放器 -->
+    <template v-for="(player, index) in multiPlayers" :key="index">
+      <video-player
+        v-if="player.visible"
+        :visible="player.visible"
+        :video-id="player.videoId"
+        :title="player.title"
+        :initial-position="{ x: 50 + index * 100, y: 50 + index * 50 }"
+        @update:visible="player.visible = $event"
+        @close="() => handleMultiClose(index)"
+      ></video-player>
+    </template>
+  </div>
+  
+  <!-- 组件加载器 -->
+  <script src="/js/core/component-loader.js"></script>
+  
+  <script type="module">
+    const { createApp, ref, reactive, computed } = Vue;
+    
+    // 先创建应用但不挂载
+    const app = createApp({
+      setup() {
+        // 示例视频
+        const sampleVideos = [
+          {
+            id: 'UTyLNzTgEMw',
+            title: 'AWS re:Invent 2023 - Keynote',
+            description: 'Adam Selipsky主题演讲'
+          },
+          {
+            id: 'ScT98IKy3D4',
+            title: 'Vue.js 3 教程',
+            description: 'Vue 3 基础教程视频'
+          },
+          {
+            id: 'PMivT7MJ41M',
+            title: 'AWS re:Invent 2023 - Werner Vogels',
+            description: 'CTO主题演讲'
+          }
+        ];
+        
+        // 播放器状态
+        const playerVisible = ref(false);
+        const currentVideo = ref(null);
+        const currentVideoId = computed(() => currentVideo.value?.id || '');
+        const currentVideoTitle = computed(() => currentVideo.value?.title || '');
+        const isMinimized = ref(false);
+        
+        // 位置和大小
+        const customPosition = reactive({ x: null, y: null });
+        const customSize = reactive({ width: 480, height: 320 });
+        const currentPosition = reactive({ x: null, y: null });
+        const currentSize = reactive({ width: 480, height: 320 });
+        const defaultMinimized = ref(false);
+        
+        const initialPosition = computed(() => ({
+          x: customPosition.x,
+          y: customPosition.y
+        }));
+        
+        const initialSize = computed(() => ({
+          width: customSize.width,
+          height: customSize.height
+        }));
+        
+        // 多实例
+        const multiPlayers = ref([
+          {
+            visible: false,
+            videoId: 'UTyLNzTgEMw',
+            title: 'AWS Keynote 1'
+          },
+          {
+            visible: false,
+            videoId: 'ScT98IKy3D4',
+            title: 'Vue.js 教程'
+          },
+          {
+            visible: false,
+            videoId: 'PMivT7MJ41M',
+            title: 'AWS Keynote 3'
+          }
+        ]);
+        
+        // 事件日志
+        const eventLog = ref([]);
+        
+        const addLog = (message) => {
+          const time = new Date().toLocaleTimeString();
+          eventLog.value.unshift(`[${time}] ${message}`);
+          if (eventLog.value.length > 50) {
+            eventLog.value.pop();
+          }
+        };
+        
+        // 方法
+        const openVideo = (video) => {
+          currentVideo.value = video;
+          playerVisible.value = true;
+          addLog(`打开视频: ${video.title}`);
+        };
+        
+        const openCustomVideo = () => {
+          currentVideo.value = sampleVideos[0];
+          playerVisible.value = true;
+          addLog('打开自定义配置播放器');
+        };
+        
+        const openMultipleVideos = () => {
+          multiPlayers.value.forEach((player, index) => {
+            setTimeout(() => {
+              player.visible = true;
+              addLog(`打开播放器 ${index + 1}`);
+            }, index * 200);
+          });
+        };
+        
+        const closeAllVideos = () => {
+          playerVisible.value = false;
+          multiPlayers.value.forEach(player => {
+            player.visible = false;
+          });
+          addLog('关闭所有播放器');
+        };
+        
+        const clearLog = () => {
+          eventLog.value = [];
+        };
+        
+        // 事件处理
+        const handleClose = () => {
+          addLog('播放器关闭');
+          playerVisible.value = false;
+        };
+        
+        const handlePositionChange = (position) => {
+          currentPosition.x = position.x;
+          currentPosition.y = position.y;
+          addLog(`位置变化: ${position.x}, ${position.y}`);
+        };
+        
+        const handleSizeChange = (size) => {
+          currentSize.width = size.width;
+          currentSize.height = size.height;
+          addLog(`大小变化: ${size.width} x ${size.height}`);
+        };
+        
+        const handleMinimizeChange = (minimized) => {
+          isMinimized.value = minimized;
+          addLog(`最小化状态: ${minimized ? '是' : '否'}`);
+        };
+        
+        const handleMultiClose = (index) => {
+          addLog(`播放器 ${index + 1} 关闭`);
+          multiPlayers.value[index].visible = false;
+        };
+        
+        return {
+          // 数据
+          sampleVideos,
+          playerVisible,
+          currentVideo,
+          currentVideoId,
+          currentVideoTitle,
+          isMinimized,
+          customPosition,
+          customSize,
+          currentPosition,
+          currentSize,
+          defaultMinimized,
+          initialPosition,
+          initialSize,
+          multiPlayers,
+          eventLog,
+          
+          // 方法
+          openVideo,
+          openCustomVideo,
+          openMultipleVideos,
+          closeAllVideos,
+          clearLog,
+          handleClose,
+          handlePositionChange,
+          handleSizeChange,
+          handleMinimizeChange,
+          handleMultiClose
+        };
+      }
+    });
+    
+    // 异步初始化
+    (async () => {
+      try {
+        // 先加载组件
+        await window.ComponentLoader.registerComponents(app, [
+          ['video-player', '/components/common/VideoPlayer', 'VideoPlayer']
+        ]);
+        
+        // 然后挂载应用
+        app.mount('#app');
+        
+        console.log('VideoPlayer 测试环境初始化完成');
+      } catch (error) {
+        console.error('初始化失败:', error);
+      }
+    })();
+  </script>
+</body>
+</html> 

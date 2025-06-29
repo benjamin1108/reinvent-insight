@@ -1,0 +1,20 @@
+<div class="hero-section">
+  <div class="hero-section__overlay"></div>
+  <div class="hero-section__background"></div>
+  <div class="hero-section__content">
+    <h1 class="hero-section__title">
+      <span class="hero-section__title-gradient">与顶尖架构师</span>
+      <span class="hero-section__title-part hero-section__title-part--block">思维同步</span>
+    </h1>
+    <p class="hero-section__subtitle">
+      洞悉架构取舍，解码设计精髓。行业最前沿思考,云计算必读洞见。
+    </p>
+    <tech-button 
+      v-if="!isAuthenticated" 
+      variant="primary" 
+      size="lg"
+      @click="handleLoginClick">
+      即刻登录，开启洞察之旅
+    </tech-button>
+  </div>
+</div> 

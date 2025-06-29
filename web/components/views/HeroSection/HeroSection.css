@@ -1,0 +1,175 @@
+/* HeroSection组件样式 - 完全独立，不依赖全局样式 */
+
+/* HeroSection组件样式 - 继承全局字体设置 */
+
+/* 英雄区域容器 */
+.hero-section {
+  position: relative;
+  color: white;
+  text-align: center;
+  padding: 3rem 1.5rem;        /* 从5rem减少到3rem */
+  overflow: hidden;
+  min-height: 40vh;            /* 从60vh减少到40vh */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 背景遮罩层 */
+.hero-section__overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(17, 24, 39, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* 背景图案 */
+.hero-section__background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.2;
+  background-image: 
+    url('https://www.transparenttextures.com/patterns/cubes.png'), 
+    linear-gradient(to right bottom, #051937, #004d7a, #008793, #00bf72, #a8eb12);
+  background-size: auto, cover;
+  background-attachment: fixed;
+  animation: subtle-shift 20s ease-in-out infinite;
+}
+
+@keyframes subtle-shift {
+  0%, 100% { 
+    background-position: 0% 0%, 0% 50%; 
+  }
+  50% { 
+    background-position: 100% 100%, 100% 50%; 
+  }
+}
+
+/* 内容容器 */
+.hero-section__content {
+  position: relative;
+  z-index: 10;
+}
+
+/* 标题样式 */
+.hero-section__title {
+  font-size: 3rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  line-height: 1.1;
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* 标题中的渐变文字 */
+.hero-section__title-gradient {
+  background: linear-gradient(135deg, #22d3ee 0%, #3b82f6 35%, #8b5cf6 70%, #ec4899 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradient-text 3s ease-in-out infinite;
+}
+
+/* 标题中的块级元素（移动端换行） */
+.hero-section__title-part {
+  display: inline;
+}
+
+@keyframes gradient-text {
+  0%, 100% { 
+    filter: hue-rotate(0deg) brightness(1); 
+  }
+  50% { 
+    filter: hue-rotate(15deg) brightness(1.1); 
+  }
+}
+
+/* 副标题样式 */
+.hero-section__subtitle {
+  font-size: 1.25rem;
+  max-width: 48rem;
+  margin: 0 auto 2rem auto;
+  color: #d1d5db;
+  opacity: 0.9;
+  line-height: 1.5;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* 按钮样式现在由TechButton组件统一提供 */
+
+/* 响应式设计 */
+@media (min-width: 768px) {
+  .hero-section {
+    padding: 4rem 1.5rem;        /* 从8rem减少到4rem */
+  }
+  
+  .hero-section__title {
+    font-size: 3.75rem;
+  }
+  
+  .hero-section__subtitle {
+    font-size: 1.5rem;
+  }
+  
+  .hero-section__title-part {
+    display: inline;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero-section__title {
+    font-size: 4rem;
+  }
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .hero-section {
+    padding: 1rem 0.5rem;        /* 大幅减少padding */
+    min-height: 25vh;            /* 进一步减少高度 */
+  }
+  
+  .hero-section__title {
+    font-size: 1.75rem;          /* 大幅缩小标题 */
+    margin-bottom: 0.75rem;      /* 减少边距 */
+  }
+  
+  .hero-section__subtitle {
+    font-size: 0.875rem;         /* 大幅缩小副标题 */
+    margin-bottom: 1.5rem;       /* 减少边距 */
+  }
+  
+  /* 移动端标题换行 */
+  .hero-section__title-part--block {
+    display: block;
+  }
+}
+
+/* 极小屏幕进一步优化 */
+@media (max-width: 480px) {
+  .hero-section {
+    padding: 0.75rem 0.25rem;    /* 极致精简padding */
+    min-height: 20vh;            /* 进一步减少高度 */
+  }
+  
+  .hero-section__title {
+    font-size: 1.5rem;           /* 进一步缩小标题 */
+    margin-bottom: 0.5rem;
+  }
+  
+  .hero-section__subtitle {
+    font-size: 0.75rem;          /* 进一步缩小副标题 */
+    margin-bottom: 1rem;
+  }
+}
+
+/* 访问性支持 */
+@media (prefers-reduced-motion: reduce) {
+  .hero-section__background,
+  .hero-section__title-gradient {
+    animation: none;
+  }
+  
+  /* TechButton组件自身支持访问性选项 */
+} 

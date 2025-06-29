@@ -1,0 +1,27 @@
+<div class="progress-bar" :class="[roundedClass, { 'progress-bar--complete': isComplete }]">
+  <!-- 外部文本（在进度条上方） -->
+  <div v-if="showText && textPosition === 'outside'" class="progress-bar__text--outside">
+    {{ progressText }}
+  </div>
+  
+  <!-- 进度条容器 -->
+  <div 
+    class="progress-bar__container"
+    :style="{ height: height }"
+  >
+    <!-- 进度条填充 -->
+    <div 
+      class="progress-bar__fill"
+      :class="[progressColorClass, stripedClass]"
+      :style="[{ width: percent + '%' }, progressColorStyle]"
+    >
+      <!-- 内部文本 -->
+      <span 
+        v-if="showText && textPosition === 'inside'" 
+        class="progress-bar__text--inside"
+      >
+        {{ progressText }}
+      </span>
+    </div>
+  </div>
+</div> 

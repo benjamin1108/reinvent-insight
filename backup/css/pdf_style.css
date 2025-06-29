@@ -1,0 +1,313 @@
+/*
+ * PDF Generation Stylesheet - 流暢優化版
+ * 目的：最大限度減少不必要的頁底空白和空白頁，提升頁面連貫性。
+ */
+
+/* === PDF 頁面設定 === */
+@page {
+    size: A4;
+    margin: 2.5cm 2cm;
+
+    @bottom-left {
+        content: element(pageFooter); /* 將 HTML 中定義的 footer 放在這裡 */
+        vertical-align: top;
+        padding-top: 5mm;
+    }
+
+    @bottom-right {
+        content: "第 " counter(page) " 页";
+        font-family: Helvetica, Arial, sans-serif;
+        font-size: 9pt;
+        font-weight: normal;
+        color: #666;
+        text-align: right;
+        vertical-align: top;
+        padding-top: 5mm;
+    }
+}
+
+/* === 新增：HTML 頁腳樣式 === */
+.page-footer {
+    position: running(pageFooter); /* 定義這是一個可在頁眉/頁腳重複使用的元素 */
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 9pt;
+    font-weight: bold;
+}
+
+.footer-reinvent {
+    color: #06b6d4; /* 品牌主色調 - 青色 */
+}
+
+.footer-insight {
+    color: #f59e0b; /* 品牌按鈕色 - 橙色 */
+}
+
+/* === 基礎元素樣式 === */
+html, body {
+    font-family: "Noto Serif SC", serif;
+    font-size: 16px;
+    line-height: 1.6;
+    color: rgba(0,0,0,.85);
+    margin: 0;
+    padding: 0;
+}
+
+#nice { 
+    text-align: justify;
+    text-justify: inter-character; /* 优化中英文混排的对齐方式 */
+    padding: 0;
+}
+
+/* === 標題 === */
+#nice h1, #nice h2, #nice h3, #nice h4, #nice h5, #nice h6 {
+    margin-top: 24px; /* 稍微減小上邊距 */
+    margin-bottom: 15px;
+    color: black;
+    font-weight: 700;
+    
+    /* 關鍵規則：讓標題盡量和後面的內容待在一起，這是好的實踐，予以保留 */
+    page-break-after: avoid; 
+    
+    page-break-before: auto; /* 允許瀏覽器在標題前自由換頁，但非強制 */
+    page-break-inside: avoid; /* 保留，盡量避免標題自身被切斷 */
+}
+
+#nice h1 {
+    font-size: 24px;
+    color: #06b6d4; /* 主题色 */
+}
+#nice h2 { font-size: 22px; }
+#nice h3 { font-size: 20px; }
+#nice h4 { font-size: 18px; }
+#nice h5 { font-size: 16px; }
+#nice h6 { font-size: 16px; }
+
+/* === 段落、列表和引用 === */
+#nice p { 
+    margin: 0; 
+    padding: 8px 0; 
+    line-height: 26px;
+    /* 【優化一】: 將孤行寡行數從3降為2，給予排版引擎更大彈性 */
+    orphans: 2;
+    widows: 2;
+} 
+
+#nice ul, #nice ol { 
+    margin: 8px 0;
+    padding-left: 30px; /* 增加左边距，给数字和符号留出空间 */
+    /* 【優化二 - 核心修改】: 移除此處的 page-break-inside: avoid; 
+       允許長列表自然地跨頁，這是解決大段空白的最主要手段。 */
+}
+
+/* 有序列表样式修复 */
+#nice ol { 
+    list-style-type: decimal;
+    list-style-position: outside; /* 确保数字在内容外部 */
+    margin: 8px 0;
+    padding-left: 35px; /* 给数字留出足够空间 */
+}
+
+#nice ol > li {
+    margin-bottom: 5px;
+    padding-left: 5px; /* 内容稍微缩进 */
+}
+
+/* 无序列表样式修复 */
+#nice ul { 
+    list-style-type: disc;
+    list-style-position: outside;
+}
+
+#nice ul > li {
+    list-style-type: disc;
+    margin-bottom: 5px;
+}
+
+/* 调整无序列表的圆点大小 */
+#nice ul > li::marker {
+    font-size: 1.2em; /* 增大圆点 */
+    line-height: 1;
+}
+
+/* 二级无序列表使用方块 */
+#nice ul ul { 
+    list-style-type: square;
+    margin-top: 5px;
+}
+
+#nice ul ul > li::marker {
+    font-size: 1em; /* 二级列表符号稍小 */
+}
+
+/* 三级及以下使用圆圈 */
+#nice ul ul ul { 
+    list-style-type: circle;
+}
+
+#nice li {
+    /* 将孤行寡行控制应用到列表项上 */
+    orphans: 2;
+    widows: 2;
+    line-height: 26px;
+}
+
+#nice li section { 
+    margin: 5px 0;
+    line-height: 26px; 
+    text-align: left;
+} 
+
+#nice blockquote { 
+    display: block; 
+    font-size: 0.9em; 
+    border-left: 3px solid #06b6d4; /* 主题色 */
+    background: rgba(6, 182, 212, 0.05); /* 主题色的浅色背景 */
+    color: #37474f; /* 深灰色文本以保证可读性 */
+    padding: 10px 20px;
+    margin: 20px 0;
+    page-break-inside: avoid; /* 對於引用，保留此規則通常是好的 */
+} 
+#nice blockquote p { 
+    margin: 0; 
+    padding: 0;
+    line-height: 26px; 
+}
+
+/* === 連結 === */
+#nice a { 
+    color: #06b6d4; /* 主题色 */
+    border-bottom: 1px solid #06b6d4; /* 主题色 */
+    text-decoration: none; 
+    font-weight: 700;
+}
+#nice a:hover {
+    text-decoration: none;
+    border-top: 1px solid #ddd;
+}
+
+/* === 其他元素 === */
+#nice hr { 
+    height: 1px; 
+    margin: 15px 0;
+    border: none; 
+    border-top: 1px solid #ddd;
+}
+
+#nice code {
+    font-family: SFMono-Regular,Consolas,"Liberation Mono",Menlo,Courier,monospace;
+}
+
+#nice p code, #nice li section code { 
+    font-size: 14px; 
+    padding: 2px 4px; 
+    border-radius: 4px; 
+    margin: 0 2px; 
+    color: #06b6d4; /* 主题色 */
+    background-color: rgba(6, 182, 212, 0.1); /* 主题色的浅色背景 */
+    font-family: SFMono-Regular,Consolas,"Liberation Mono",Menlo,Courier,monospace;
+}
+
+#nice strong { 
+    font-weight: 700;
+}
+
+/* H2 標題的特殊主題樣式 */
+#nice h2 .content {
+    display: inline-block;
+    background: #06b6d4; /* 主题色 */
+    color: #ffffff;
+    padding: 3px 10px 1px;
+    border-top-right-radius: 3px;
+    border-top-left-radius: 3px;
+    margin-right: 3px;
+}
+#nice h2:after {
+   display: inline-block;
+   content: " ";
+   vertical-align: bottom;
+   border-bottom: 22px solid #e0f7fa; /* 高度與字號匹配, 同样使用主题色的浅色背景 */
+   border-right: 15px solid transparent;
+}
+
+/* === 英文副标题样式 === */
+.english-subtitle {
+    display: block;
+    margin: -5px 0 20px 0;
+    font-size: 16px;
+    line-height: 1.4;
+    color: #666;
+}
+
+.english-subtitle a {
+    color: #666;
+    text-decoration: none;
+    border-bottom: 1px solid #ddd;
+    font-weight: 400;
+}
+
+.english-subtitle a:hover {
+    color: #06b6d4;
+    border-bottom-color: #06b6d4;
+}
+
+/* Hero Section for PDF */
+.pdf-hero {
+    padding: 60px 40px 40px 40px;
+    text-align: center;
+    margin: -40px -40px 30px -40px;
+    position: relative;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.pdf-hero-content {
+    position: relative;
+}
+
+.pdf-hero h1 {
+    font-size: 56px;
+    font-weight: 800;
+    margin: 0;
+    line-height: 1.2;
+    letter-spacing: -1px;
+}
+
+.pdf-hero .reinvent {
+    color: #1e293b;
+    font-weight: 900;
+}
+
+.pdf-hero .insight {
+    color: #7c3aed;
+    font-weight: 300;
+    font-style: italic;
+}
+
+/* English title link styling - H3 size */
+.english-title-link,
+#nice .english-title-link,
+#nice a.english-title-link {
+    display: block;
+    margin-top: 8px;
+    margin-bottom: 16px;
+    font-size: 14px;  /* 缩小字体 */
+    line-height: 1.4;
+    font-weight: 600 !important;  /* 加粗字体 */
+    font-family: Helvetica, Arial, sans-serif;  /* 使用无衬线字体 */
+    color: #ea580c !important;  /* 暖橙色 */
+    text-decoration: none !important;
+    border: none !important;  /* 移除所有边框 */
+    border-bottom: none !important;  /* 确保移除底部边框 */
+    white-space: nowrap;  /* 防止换行 */
+    overflow: hidden;  /* 超出部分隐藏 */
+    text-overflow: ellipsis;  /* 显示省略号 */
+}
+
+.english-title-link:hover,
+#nice .english-title-link:hover,
+#nice a.english-title-link:hover {
+    color: #dc2626 !important;  /* hover时更深的红橙色 */
+    text-decoration: none !important;
+    border: none !important;
+    border-bottom: none !important;
+    border-top: none !important;  /* 确保没有顶部边框 */
+}

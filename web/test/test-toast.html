@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Toast 组件测试</title>
+  
+  <!-- Vue 3 -->
+  <script src="/js/vendor/vue.global.js"></script>
+  
+  <!-- 基础样式 -->
+  
+  <link rel="stylesheet" href="/css/base/effects.css">
+  
+  <!-- 测试框架样式 -->
+  <style>
+    :root {
+      --test-bg: #0f172a;
+      --test-surface: #1e293b;
+      --test-border: #334155;
+      --test-primary: #22d3ee;
+      --test-success: #10b981;
+      --test-warning: #f59e0b;
+      --test-error: #ef4444;
+      --test-text: #e5e7eb;
+      --test-text-dim: #9ca3af;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: var(--test-bg);
+      color: var(--test-text);
+      font-family: var(--font-primary);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    
+    .test-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    
+    .test-header h1 {
+      font-size: 2.5rem;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    
+    .test-header p {
+      color: var(--test-text-dim);
+      font-size: 1.125rem;
+    }
+    
+    .warning-box {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+    
+    .test-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .test-case {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    
+    .test-case-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    
+    .test-case-title {
+      font-size: 1.25rem;
+      color: var(--test-primary);
+    }
+    
+    .test-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+    
+    .control-group {
+      flex: 1;
+      min-width: 200px;
+    }
+    
+    .control-label {
+      display: block;
+      color: var(--test-text-dim);
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .control-input,
+    .control-select {
+      width: 100%;
+      padding: 0.5rem;
+      background: var(--test-bg);
+      border: 1px solid var(--test-border);
+      border-radius: 6px;
+      color: var(--test-text);
+      font-size: 0.875rem;
+    }
+    
+    .test-button {
+      padding: 0.5rem 1.5rem;
+      background: var(--gradient-primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-right: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .test-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3);
+    }
+    
+    .test-button.success {
+      background: var(--test-success);
+    }
+    
+    .test-button.warning {
+      background: var(--test-warning);
+    }
+    
+    .test-button.error {
+      background: var(--test-error);
+    }
+    
+    .test-button.secondary {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+    }
+    
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 0.5rem;
+    }
+    
+    .test-output {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--test-border);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+      font-family: var(--font-code);
+      font-size: 0.875rem;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .back-link {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      padding: 0.5rem 1rem;
+      background: var(--test-surface);
+      border: 1px solid var(--test-primary);
+      border-radius: 6px;
+      color: var(--test-primary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    
+    .back-link:hover {
+      background: rgba(34, 211, 238, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <a href="/test/" class="back-link">← 返回测试目录</a>
+  
+  <div id="app">
+    <div class="test-header">
+      <h1>Toast 组件测试</h1>
+      <p>消息提示组件，支持多种类型、自动消失和手动关闭</p>
+    </div>
+    
+    <div class="warning-box">
+      <p>⚠️ 注意：Toast是新增功能，原项目中没有对应的UI实现</p>
+    </div>
+    
+    <div class="test-container">
+      <!-- 测试用例1：基础类型 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">基础类型测试</h2>
+        </div>
+        
+        <div class="button-grid">
+          <button @click="showSuccess" class="test-button success">
+            成功提示
+          </button>
+          <button @click="showError" class="test-button error">
+            错误提示
+          </button>
+          <button @click="showWarning" class="test-button warning">
+            警告提示
+          </button>
+          <button @click="showInfo" class="test-button">
+            信息提示
+          </button>
+        </div>
+      </div>
+      
+      <!-- 测试用例2：自定义配置 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">自定义配置测试</h2>
+        </div>
+        
+        <div class="test-controls">
+          <div class="control-group">
+            <label class="control-label">消息内容</label>
+            <input v-model="customMessage" class="control-input" placeholder="输入自定义消息">
+          </div>
+          <div class="control-group">
+            <label class="control-label">类型</label>
+            <select v-model="customType" class="control-select">
+              <option value="success">成功</option>
+              <option value="error">错误</option>
+              <option value="warning">警告</option>
+              <option value="info">信息</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label class="control-label">持续时间 (ms)</label>
+            <input v-model.number="customDuration" type="number" class="control-input" 
+                   min="0" step="1000" placeholder="0表示不自动关闭">
+          </div>
+        </div>
+        
+        <button @click="showCustom" class="test-button">
+          显示自定义Toast
+        </button>
+      </div>
+      
+      <!-- 测试用例3：批量显示 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">批量显示测试</h2>
+        </div>
+        
+        <button @click="showMultiple" class="test-button">
+          快速显示多个Toast
+        </button>
+        <button @click="showSequence" class="test-button secondary">
+          顺序显示Toast
+        </button>
+        <button @click="showPersistent" class="test-button secondary">
+          显示不自动关闭的Toast
+        </button>
+      </div>
+      
+      <!-- 测试用例4：长文本测试 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">长文本测试</h2>
+        </div>
+        
+        <button @click="showLongText" class="test-button">
+          显示长文本Toast
+        </button>
+        <button @click="showMultiLine" class="test-button secondary">
+          显示多行文本Toast
+        </button>
+      </div>
+      
+      <!-- 事件日志 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">事件日志</h2>
+        </div>
+        
+        <button @click="clearLog" class="test-button secondary">
+          清空日志
+        </button>
+        
+        <div class="test-output" v-if="eventLog.length > 0">
+          <div v-for="(log, index) in eventLog" :key="index">
+            {{ log }}
+          </div>
+        </div>
+        <div v-else class="test-output">
+          暂无事件记录
+        </div>
+      </div>
+    </div>
+    
+    <!-- Toast容器 -->
+    <toast-container></toast-container>
+  </div>
+  
+  <!-- 组件加载器 -->
+  <script src="/js/core/component-loader.js"></script>
+  <script src="/js/core/event-bus.js"></script>
+  
+  <script type="module">
+    import { useToast } from '/js/composables/useToast.js';
+    
+    const { createApp, ref } = Vue;
+    
+    const app = createApp({
+      setup() {
+        const toast = useToast();
+        
+        // 自定义配置
+        const customMessage = ref('这是一条自定义消息');
+        const customType = ref('info');
+        const customDuration = ref(3000);
+        
+        // 事件日志
+        const eventLog = ref([]);
+        
+        const addLog = (message) => {
+          const time = new Date().toLocaleTimeString();
+          eventLog.value.unshift(`[${time}] ${message}`);
+          if (eventLog.value.length > 15) {
+            eventLog.value.pop();
+          }
+        };
+        
+        // 基础类型
+        const showSuccess = () => {
+          toast.success('操作成功完成！');
+          addLog('显示成功提示');
+        };
+        
+        const showError = () => {
+          toast.error('操作失败，请重试');
+          addLog('显示错误提示');
+        };
+        
+        const showWarning = () => {
+          toast.warning('请注意，这是一个警告');
+          addLog('显示警告提示');
+        };
+        
+        const showInfo = () => {
+          toast.info('这是一条信息提示');
+          addLog('显示信息提示');
+        };
+        
+        // 自定义Toast
+        const showCustom = () => {
+          toast.showToast({
+            message: customMessage.value,
+            type: customType.value,
+            duration: customDuration.value
+          });
+          addLog(`显示自定义${customType.value}提示，持续${customDuration.value}ms`);
+        };
+        
+        // 批量显示
+        const showMultiple = () => {
+          const types = ['success', 'error', 'warning', 'info'];
+          for (let i = 0; i < 5; i++) {
+            const type = types[i % 4];
+            toast.showToast({
+              message: `消息 #${i + 1}`,
+              type,
+              duration: 5000
+            });
+          }
+          addLog('快速显示5个Toast');
+        };
+        
+        const showSequence = () => {
+          const messages = [
+            { text: '开始处理...', type: 'info', delay: 0 },
+            { text: '正在验证数据...', type: 'warning', delay: 1000 },
+            { text: '数据验证完成', type: 'success', delay: 2000 },
+            { text: '处理完成！', type: 'success', delay: 3000 }
+          ];
+          
+          messages.forEach(({ text, type, delay }) => {
+            setTimeout(() => {
+              toast.showToast({ message: text, type });
+            }, delay);
+          });
+          addLog('顺序显示Toast序列');
+        };
+        
+        const showPersistent = () => {
+          toast.showToast({
+            message: '这个Toast不会自动关闭，请手动关闭',
+            type: 'info',
+            duration: 0
+          });
+          addLog('显示不自动关闭的Toast');
+        };
+        
+        // 长文本测试
+        const showLongText = () => {
+          toast.showToast({
+            message: '这是一条非常长的消息，用于测试Toast组件在显示长文本时的表现效果，确保文本能够正确换行并保持良好的可读性',
+            type: 'info',
+            duration: 5000
+          });
+          addLog('显示长文本Toast');
+        };
+        
+        const showMultiLine = () => {
+          toast.showToast({
+            message: '第一行文本\n第二行文本\n第三行文本',
+            type: 'warning',
+            duration: 5000
+          });
+          addLog('显示多行文本Toast');
+        };
+        
+        const clearLog = () => {
+          eventLog.value = [];
+        };
+        
+        return {
+          customMessage,
+          customType,
+          customDuration,
+          eventLog,
+          showSuccess,
+          showError,
+          showWarning,
+          showInfo,
+          showCustom,
+          showMultiple,
+          showSequence,
+          showPersistent,
+          showLongText,
+          showMultiLine,
+          clearLog
+        };
+      }
+    });
+    
+    // 加载组件
+    (async () => {
+      try {
+        await ComponentLoader.registerComponents(app, [
+          ['toast', '/components/common/Toast', 'Toast'],
+          ['toast-container', '/components/common/ToastContainer', 'ToastContainer']
+        ]);
+        
+        app.mount('#app');
+        console.log('Toast 测试环境初始化完成');
+      } catch (error) {
+        console.error('测试环境初始化失败:', error);
+      }
+    })();
+  </script>
+</body>
+</html> 

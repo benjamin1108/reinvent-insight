@@ -1,0 +1,33 @@
+/* ToastContainer组件样式 */
+.toast-container {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* 为多个Toast添加间距 */
+.toast-container .toast {
+  margin-bottom: 10px;
+  position: relative;
+  top: auto;
+  right: auto;
+  margin-top: 20px;
+  margin-right: 20px;
+}
+
+.toast-container .toast:last-child {
+  margin-bottom: 0;
+}
+
+/* 移动端适配 */
+@media (max-width: 640px) {
+  .toast-container {
+    left: 0;
+  }
+  
+  .toast-container .toast {
+    margin: 10px;
+  }
+} 

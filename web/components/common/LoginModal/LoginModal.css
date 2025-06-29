@@ -1,0 +1,315 @@
+/* LoginModal 组件样式 - BEM规范 */
+/* 
+ * 样式策略：
+ * - 遵循BEM命名规范 (Block__Element--Modifier)
+ * - 使用全局基础样式类（tech-gradient, glow-effect）来自 /css/base/effects.css
+ * - 组件只定义自身特有的样式
+ * - 继承全局字体设置
+ */
+
+/* 组件内部盒模型重置 */
+.login-modal * {
+  box-sizing: border-box;
+}
+
+/* 模态框背景遮罩 - Block */
+.login-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 模态框内容容器 - Element */
+.login-modal__content {
+  position: relative;
+  border: 1px solid #374151;
+  border-radius: 16px;
+  padding: 3rem 2.5rem 2.5rem;
+  max-width: 26rem;
+  width: 100%;
+  margin: 1rem;
+  box-sizing: border-box;
+  /* 添加微妙的阴影 */
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* 关闭按钮 - Element */
+.login-modal__close {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #6B7280;
+}
+
+.login-modal__close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.login-modal__close svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* 模态框标题 - Element */
+.login-modal__title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  text-align: center;
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 2rem;
+  letter-spacing: -0.025em;
+}
+
+/* 表单样式 - Element */
+.login-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.login-modal__form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  width: 100%;
+  position: relative;
+  /* 为错误信息预留底部空间 */
+  padding-bottom: 1.25rem;
+}
+
+.login-modal__form-label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #94a3b8;
+  display: block;
+  letter-spacing: 0.025em;
+}
+
+/* 表单居中修饰符 - Modifier */
+.login-modal__form--text-center .login-modal__form-label {
+  text-align: center;
+}
+
+.login-modal__form--text-center .login-modal__form-input {
+  text-align: center;
+}
+
+/* 输入框样式 - Element */
+.login-modal__form-input {
+  width: 100%;
+  padding: 1rem 1.25rem;
+  background-color: rgba(15, 23, 42, 0.4);
+  border: 1.5px solid rgba(71, 85, 105, 0.4);
+  border-radius: 0.625rem;
+  color: #e2e8f0;
+  font-size: 1rem;
+  transition: all 0.2s;
+  box-sizing: border-box;
+  display: block;
+}
+
+.login-modal__form-input::placeholder {
+  color: #64748b;
+  font-size: 0.9375rem;
+}
+
+.login-modal__form-input:focus {
+  outline: none;
+  border-color: #06b6d4;
+  background-color: rgba(15, 23, 42, 0.6);
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* 模态框进入/离开动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fade-enter-from {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.fade-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+/* 确保模态框在移动端正确显示 */
+@media (max-width: 640px) {
+  .login-modal__content {
+    margin: 1rem;
+    width: calc(100% - 2rem);
+    padding: 2.5rem 1.75rem 2rem;
+    border-radius: 12px;
+  }
+  
+  .login-modal__title {
+    font-size: 1.625rem;
+    margin-bottom: 1.75rem;
+  }
+  
+  .login-modal__form-input {
+    padding: 0.875rem 1rem;
+  }
+}
+
+/* 提示容器 - Element */
+.login-modal__alert-container {
+  height: 60px; /* 固定高度 */
+  margin-bottom: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 内联提示样式 - Element */
+.login-modal__alert {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-radius: 0.625rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  animation: alertSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 动画效果 */
+@keyframes alertSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 错误提示修饰符 - Modifier */
+.login-modal__alert--error {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.15) 100%);
+  border: 1.5px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+/* 成功提示修饰符 - Modifier */
+.login-modal__alert--success {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.15) 100%);
+  border: 1.5px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+
+/* 提示图标 - Element */
+.login-modal__alert-icon {
+  width: 1.375rem;
+  height: 1.375rem;
+  flex-shrink: 0;
+}
+
+/* 表单组在前面已经定义，这里删除重复定义 */
+
+/* 字段级错误样式 - Element */
+.login-modal__field-error {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: block;
+  color: #f87171;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  animation: fadeIn 0.2s ease-out;
+  line-height: 1.25rem;
+  height: 1.25rem;
+}
+
+/* 输入框错误状态修饰符 - Modifier */
+.login-modal__form-input--error {
+  border-color: rgba(239, 68, 68, 0.6);
+  background-color: rgba(239, 68, 68, 0.03);
+}
+
+.login-modal__form-input--error:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15), 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 移动端调整 */
+@media (max-width: 640px) {
+  .login-modal__alert-container {
+    height: 56px;
+    margin-bottom: 1.25rem;
+  }
+  
+  .login-modal__form-group {
+    padding-bottom: 1.125rem;
+  }
+}
+
+/* 提交按钮增加上边距 */
+.login-modal__form button[type="submit"] {
+  margin-top: 0.75rem;
+  height: 48px;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 100%; /* 替代w-full */
+}
+
+/* 按钮悬停效果优化 */
+.login-modal__form button[type="submit"]:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px 0 rgba(217, 119, 6, 0.35);
+}
+
+.login-modal__form button[type="submit"]:not(:disabled):active {
+  transform: translateY(0);
+}
+
+/* 修复tech-btn在模态框中的图标和文字间距 */
+.login-modal__content .tech-btn svg {
+  margin-right: 0.5rem;
+}
+
+.login-modal__content .tech-btn span {
+  display: inline-flex;
+  align-items: center;
+} 

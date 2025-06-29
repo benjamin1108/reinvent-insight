@@ -1,3 +1,1 @@
-graft web
-graft src/reinvent_insight/web
-prune src/youtube_summarizer 
+graft web 

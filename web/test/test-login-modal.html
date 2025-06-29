@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LoginModal 组件测试</title>
+  
+  <!-- Vue 3 -->
+  <script src="/js/vendor/vue.global.js"></script>
+  
+  <!-- 基础样式 -->
+  
+  <link rel="stylesheet" href="/css/base/effects.css">
+  
+  <!-- 主样式（包含tech-btn） -->
+  <link rel="stylesheet" href="/css/style.css">
+  
+  <!-- 测试框架样式 -->
+  <style>
+    :root {
+      --test-bg: #0f172a;
+      --test-surface: #1e293b;
+      --test-border: #334155;
+      --test-primary: #22d3ee;
+      --test-success: #10b981;
+      --test-warning: #f59e0b;
+      --test-error: #ef4444;
+      --test-text: #e5e7eb;
+      --test-text-dim: #9ca3af;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: var(--test-bg);
+      color: var(--test-text);
+      font-family: var(--font-primary);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    
+    .test-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    
+    .test-header h1 {
+      font-size: 2.5rem;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    
+    .test-header p {
+      color: var(--test-text-dim);
+      font-size: 1.125rem;
+    }
+    
+    .test-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .test-case {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    
+    .test-case-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    
+    .test-case-title {
+      font-size: 1.25rem;
+      color: var(--test-primary);
+    }
+    
+    .test-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+    
+    .control-group {
+      flex: 1;
+      min-width: 200px;
+    }
+    
+    .control-label {
+      display: block;
+      color: var(--test-text-dim);
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .control-input {
+      width: 100%;
+      padding: 0.5rem;
+      background: var(--test-bg);
+      border: 1px solid var(--test-border);
+      border-radius: 6px;
+      color: var(--test-text);
+      font-size: 0.875rem;
+    }
+    
+    .test-button {
+      padding: 0.5rem 1.5rem;
+      background: var(--gradient-primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-right: 0.5rem;
+    }
+    
+    .test-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3);
+    }
+    
+    .test-button.secondary {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+    }
+    
+    .test-output {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--test-border);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+      font-family: var(--font-code);
+      font-size: 0.875rem;
+    }
+    
+    .info-box {
+      background: rgba(34, 211, 238, 0.1);
+      border: 1px solid rgba(34, 211, 238, 0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    .status-box {
+      padding: 1rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+    }
+    
+    .status-success {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--test-success);
+    }
+    
+    .back-link {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      padding: 0.5rem 1rem;
+      background: var(--test-surface);
+      border: 1px solid var(--test-primary);
+      border-radius: 6px;
+      color: var(--test-primary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    
+    .back-link:hover {
+      background: rgba(34, 211, 238, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <a href="/test/" class="back-link">← 返回测试目录</a>
+  
+  <div id="app">
+    <div class="test-header">
+      <h1>LoginModal 组件测试</h1>
+      <p>用户登录模态框，支持表单验证、加载状态和响应式设计</p>
+    </div>
+    
+    <div class="test-container">
+      <!-- 测试用例1：基础功能 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">基础功能测试</h2>
+        </div>
+        
+        <div class="info-box">
+          <p>测试账号：user@example.com / password123</p>
+          <p>API延迟已设置为2秒，用于测试加载状态</p>
+        </div>
+        
+        <div class="test-controls">
+          <button @click="showBasicModal" class="test-button">
+            打开登录模态框
+          </button>
+          <button @click="isAuthenticated = !isAuthenticated" class="test-button secondary">
+            {{ isAuthenticated ? '退出登录' : '模拟已登录' }}
+          </button>
+        </div>
+        
+        <div class="status-box status-success" v-if="isAuthenticated">
+          ✅ 已登录 - 用户：{{ currentUser }}
+        </div>
+        
+        <login-modal 
+          ref="basicModalRef"
+          v-model:visible="basicModalVisible"
+          :loading="loginLoading"
+          @submit="handleLogin"
+        ></login-modal>
+      </div>
+      
+      <!-- 测试用例2：错误处理 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">错误处理测试</h2>
+        </div>
+        
+        <div class="test-controls">
+          <div class="control-group">
+            <label class="control-label">
+              <input type="checkbox" v-model="simulateError" style="margin-right: 0.5rem;">
+              模拟网络错误
+            </label>
+          </div>
+          <div class="control-group">
+            <label class="control-label">
+              <input type="checkbox" v-model="simulateTimeout" style="margin-right: 0.5rem;">
+              模拟超时
+            </label>
+          </div>
+        </div>
+        
+        <button @click="showErrorModal" class="test-button">
+          测试错误场景
+        </button>
+        
+        <login-modal 
+          ref="errorModalRef"
+          v-model:visible="errorModalVisible"
+          :loading="loginLoading"
+          @submit="handleLogin"
+        ></login-modal>
+      </div>
+      
+      <!-- 测试用例3：响应式布局 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">响应式布局测试</h2>
+        </div>
+        
+        <div class="info-box">
+          <p>调整浏览器窗口大小，观察模态框的响应式变化</p>
+          <p>移动端：全屏显示 | 桌面端：居中弹窗</p>
+        </div>
+        
+        <button @click="showResponsiveModal" class="test-button">
+          打开响应式测试
+        </button>
+        
+        <login-modal 
+          ref="responsiveModalRef"
+          v-model:visible="responsiveModalVisible"
+          :loading="loginLoading"
+          @submit="handleLogin"
+        ></login-modal>
+      </div>
+      
+      <!-- 测试用例4：表单验证 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">表单验证测试</h2>
+        </div>
+        
+        <div class="info-box">
+          <p>测试用例：</p>
+          <p>1. 空邮箱/密码提交</p>
+          <p>2. 无效邮箱格式</p>
+          <p>3. 密码长度不足</p>
+          <p>4. 错误的登录凭证</p>
+        </div>
+        
+        <button @click="showValidationModal" class="test-button">
+          测试表单验证
+        </button>
+        
+        <login-modal 
+          ref="validationModalRef"
+          v-model:visible="validationModalVisible"
+          :loading="loginLoading"
+          @submit="handleLogin"
+        ></login-modal>
+      </div>
+      
+      <!-- 测试用例5：灵活登录类型 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">灵活登录类型测试</h2>
+        </div>
+        
+        <div class="info-box">
+          <p>支持三种登录模式：</p>
+          <p>1. 仅邮箱（默认）</p>
+          <p>2. 仅用户名</p>
+          <p>3. 邮箱或用户名</p>
+          <p style="margin-top: 0.5rem;"><strong>测试账号：</strong></p>
+          <p>邮箱: user@example.com / 密码: password123</p>
+          <p>用户名: admin 或 testuser / 密码: password123</p>
+        </div>
+        
+        <div class="test-controls">
+          <div class="control-group">
+            <label class="control-label">登录类型</label>
+            <select v-model="flexibleLoginType" class="control-input">
+              <option value="email">仅邮箱</option>
+              <option value="username">仅用户名</option>
+              <option value="both">邮箱或用户名</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label class="control-label">最小密码长度</label>
+            <input type="number" v-model.number="minPasswordLength" class="control-input" min="1" max="20">
+          </div>
+          <div class="control-group">
+            <label class="control-label">用户名标签</label>
+            <input type="text" v-model="usernameLabel" class="control-input">
+          </div>
+        </div>
+        
+        <button @click="showFlexibleModal" class="test-button">
+          打开灵活登录模态框
+        </button>
+        
+        <login-modal 
+          ref="flexibleModalRef"
+          v-model:visible="flexibleModalVisible"
+          :login-type="flexibleLoginType"
+          :min-password-length="minPasswordLength"
+          :username-label="usernameLabel"
+          :username-placeholder="`请输入${usernameLabel.toLowerCase()}`"
+          :loading="loginLoading"
+          @submit="handleFlexibleLogin"
+        ></login-modal>
+      </div>
+      
+      <!-- 事件日志 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">事件日志</h2>
+        </div>
+        
+        <button @click="clearLogs" class="test-button secondary" style="margin-bottom: 1rem;">
+          清空日志
+        </button>
+        
+        <div class="test-output" v-if="eventLogs.length > 0">
+          <div v-for="(log, index) in eventLogs" :key="index">
+            [{{ log.time }}] {{ log.message }}
+          </div>
+        </div>
+        <div v-else class="test-output">
+          暂无事件记录
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 组件加载器 -->
+  <script src="/js/core/component-loader.js"></script>
+  
+  <script type="module">
+    const { createApp, ref } = Vue;
+    
+    const app = createApp({
+      setup() {
+        // 模态框控制
+        const basicModalVisible = ref(false);
+        const errorModalVisible = ref(false);
+        const responsiveModalVisible = ref(false);
+        const validationModalVisible = ref(false);
+        const flexibleModalVisible = ref(false);
+        
+        // 组件引用
+        const basicModalRef = ref(null);
+        const errorModalRef = ref(null);
+        const responsiveModalRef = ref(null);
+        const validationModalRef = ref(null);
+        const flexibleModalRef = ref(null);
+        
+        // 登录状态
+        const isAuthenticated = ref(false);
+        const currentUser = ref('');
+        const loginLoading = ref(false);
+        
+        // 错误模拟
+        const simulateError = ref(false);
+        const simulateTimeout = ref(false);
+        
+        // 事件日志
+        const eventLogs = ref([]);
+        
+        // 登录类型
+        const flexibleLoginType = ref('email');
+        const minPasswordLength = ref(8);
+        const usernameLabel = ref('用户名');
+        
+        // 添加日志
+        const addLog = (message) => {
+          const time = new Date().toLocaleTimeString();
+          eventLogs.value.unshift({ time, message });
+          if (eventLogs.value.length > 10) {
+            eventLogs.value.pop();
+          }
+        };
+        
+        // 显示模态框
+        const showBasicModal = () => {
+          basicModalVisible.value = true;
+          addLog('打开基础登录模态框');
+        };
+        
+        const showErrorModal = () => {
+          errorModalVisible.value = true;
+          addLog(`打开错误测试模态框 (错误: ${simulateError.value}, 超时: ${simulateTimeout.value})`);
+        };
+        
+        const showResponsiveModal = () => {
+          responsiveModalVisible.value = true;
+          addLog('打开响应式测试模态框');
+        };
+        
+        const showValidationModal = () => {
+          validationModalVisible.value = true;
+          addLog('打开表单验证测试模态框');
+        };
+        
+        const showFlexibleModal = () => {
+          flexibleModalVisible.value = true;
+          addLog('打开灵活登录模态框');
+        };
+        
+        // 获取当前活动的模态框引用
+        const getActiveModalRef = () => {
+          if (basicModalVisible.value) return basicModalRef;
+          if (errorModalVisible.value) return errorModalRef;
+          if (responsiveModalVisible.value) return responsiveModalRef;
+          if (validationModalVisible.value) return validationModalRef;
+          if (flexibleModalVisible.value) return flexibleModalRef;
+          return null;
+        };
+        
+        // 处理登录
+        const handleLogin = async (data) => {
+          loginLoading.value = true;
+          addLog(`尝试登录：${data.email}`);
+          
+          const modalRef = getActiveModalRef();
+          
+          try {
+            // 模拟API调用
+            await new Promise((resolve, reject) => {
+              setTimeout(() => {
+                if (simulateError.value) {
+                  reject(new Error('网络错误'));
+                } else if (simulateTimeout.value) {
+                  reject(new Error('请求超时'));
+                } else if (data.email === 'user@example.com' && data.password === 'password123') {
+                  resolve({ email: data.email });
+                } else {
+                  reject(new Error('邮箱或密码错误'));
+                }
+              }, 2000);
+            });
+            
+            // 登录成功
+            isAuthenticated.value = true;
+            currentUser.value = data.email;
+            addLog(`登录成功！用户: ${currentUser.value}`);
+            
+            // 显示成功消息
+            if (modalRef?.value) {
+              modalRef.value.setSuccess('登录成功！即将跳转...');
+              // 延迟关闭模态框
+              setTimeout(() => {
+                basicModalVisible.value = false;
+                errorModalVisible.value = false;
+                responsiveModalVisible.value = false;
+                validationModalVisible.value = false;
+                flexibleModalVisible.value = false;
+              }, 1500);
+            }
+          } catch (error) {
+            addLog(`登录失败: ${error.message}`);
+            // 显示错误消息
+            if (modalRef?.value) {
+              modalRef.value.setError(error.message);
+            }
+          } finally {
+            loginLoading.value = false;
+          }
+        };
+        
+        // 清空日志
+        const clearLogs = () => {
+          eventLogs.value = [];
+        };
+        
+        // 处理灵活登录
+        const handleFlexibleLogin = async (data) => {
+          loginLoading.value = true;
+          const loginId = data.email || data.username || '';
+          addLog(`尝试登录：${loginId}`);
+          
+          const modalRef = getActiveModalRef();
+          
+          try {
+            // 模拟API调用
+            await new Promise((resolve, reject) => {
+              setTimeout(() => {
+                if (simulateError.value) {
+                  reject(new Error('网络错误'));
+                } else if (simulateTimeout.value) {
+                  reject(new Error('请求超时'));
+                } else if (
+                  // 支持多种测试账号
+                  (data.email === 'user@example.com' || data.username === 'admin' || data.username === 'testuser') 
+                  && data.password === 'password123'
+                ) {
+                  resolve({ user: loginId });
+                } else {
+                  reject(new Error('用户名/邮箱或密码错误'));
+                }
+              }, 2000);
+            });
+            
+            // 登录成功
+            isAuthenticated.value = true;
+            currentUser.value = loginId;
+            addLog(`登录成功！用户: ${currentUser.value}`);
+            
+            // 显示成功消息
+            if (modalRef?.value) {
+              modalRef.value.setSuccess('登录成功！即将跳转...');
+              // 延迟关闭模态框
+              setTimeout(() => {
+                basicModalVisible.value = false;
+                errorModalVisible.value = false;
+                responsiveModalVisible.value = false;
+                validationModalVisible.value = false;
+                flexibleModalVisible.value = false;
+              }, 1500);
+            }
+          } catch (error) {
+            addLog(`登录失败: ${error.message}`);
+            // 显示错误消息
+            if (modalRef?.value) {
+              modalRef.value.setError(error.message);
+            }
+          } finally {
+            loginLoading.value = false;
+          }
+        };
+        
+        // 模拟API (已移除axios拦截器，使用纯JS模拟)
+        
+        return {
+          basicModalVisible,
+          errorModalVisible,
+          responsiveModalVisible,
+          validationModalVisible,
+          flexibleModalVisible,
+          basicModalRef,
+          errorModalRef,
+          responsiveModalRef,
+          validationModalRef,
+          flexibleModalRef,
+          isAuthenticated,
+          currentUser,
+          loginLoading,
+          simulateError,
+          simulateTimeout,
+          eventLogs,
+          flexibleLoginType,
+          minPasswordLength,
+          usernameLabel,
+          showBasicModal,
+          showErrorModal,
+          showResponsiveModal,
+          showValidationModal,
+          showFlexibleModal,
+          handleLogin,
+          handleFlexibleLogin,
+          clearLogs
+        };
+      }
+    });
+    
+    // 加载组件
+    (async () => {
+      try {
+        await ComponentLoader.registerComponents(app, [
+          ['login-modal', '/components/common/LoginModal', 'LoginModal']
+        ]);
+        
+        app.mount('#app');
+        console.log('LoginModal 测试环境初始化完成');
+      } catch (error) {
+        console.error('测试环境初始化失败:', error);
+      }
+    })();
+  </script>
+</body>
+</html> 

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>按钮加载动画测试</title>
+    
+    <!-- 基础样式 -->
+    <link rel="stylesheet" href="/css/base/reset.css">
+    <link rel="stylesheet" href="/css/base/variables.css">
+
+    <link rel="stylesheet" href="/css/base/effects.css">
+    
+    <!-- 组件样式 -->
+    <link rel="stylesheet" href="/components/shared/TechButton/TechButton.css">
+    
+    <style>
+        body {
+            background: #1a1a1a;
+            color: #e0e0e0;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .test-row {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .label {
+            font-size: 0.875rem;
+            color: #9ca3af;
+            min-width: 150px;
+        }
+        
+        .debug-info {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #333;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.875rem;
+        }
+        
+        /* 测试动画是否工作 */
+        @keyframes test-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .test-spin {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #06b6d4;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: test-spin 1s linear infinite;
+            margin-left: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="container">
+        <h1 style="font-size: 2rem; margin-bottom: 2rem; color: #06b6d4;">
+            按钮加载动画测试
+            <span class="test-spin"></span>
+        </h1>
+        
+        <p style="margin-bottom: 2rem; color: #9ca3af;">
+            ↑ 如果上方的测试圆圈在旋转，说明浏览器动画正常
+        </p>
+        
+        <div class="test-row">
+            <span class="label">常驻加载状态：</span>
+            <tech-button text="加载中..." :loading="true"></tech-button>
+            <tech-button text="Primary加载" :loading="true" variant="primary"></tech-button>
+            <tech-button text="Success加载" :loading="true" variant="success"></tech-button>
+        </div>
+        
+        <div class="test-row">
+            <span class="label">不同尺寸加载：</span>
+            <tech-button text="小" :loading="true" size="sm"></tech-button>
+            <tech-button text="中" :loading="true"></tech-button>
+            <tech-button text="大" :loading="true" size="lg"></tech-button>
+        </div>
+        
+        <div class="test-row">
+            <span class="label">点击触发加载：</span>
+            <tech-button 
+                :text="testButtonText" 
+                :loading="isTestLoading"
+                @click="triggerLoading"
+                variant="primary">
+            </tech-button>
+            <span style="color: #9ca3af; margin-left: 1rem;">{{ testMessage }}</span>
+        </div>
+        
+        <div class="test-row">
+            <span class="label">禁用+加载：</span>
+            <tech-button text="禁用加载中" :loading="true" :disabled="true"></tech-button>
+        </div>
+        
+        <div class="debug-info">
+            <h3 style="margin-bottom: 0.5rem;">调试信息</h3>
+            <p>测试加载状态: {{ isTestLoading }}</p>
+            <p>CSS动画名称: tech-button-spin</p>
+            <p>Spinner类: tech-button__spinner--spinning</p>
+        </div>
+    </div>
+
+    <!-- Vue 3 -->
+    <script src="/js/vendor/vue.global.js"></script>
+    
+    <!-- 核心工具 -->
+    <script src="/js/core/component-loader.js"></script>
+    <script src="/js/core/eventBus.js"></script>
+    
+    <script>
+    const { createApp, ref } = Vue;
+    
+    createApp({
+        setup() {
+            const isTestLoading = ref(false);
+            const testButtonText = ref('点击测试加载');
+            const testMessage = ref('');
+            
+            const triggerLoading = () => {
+                if (isTestLoading.value) return;
+                
+                isTestLoading.value = true;
+                testButtonText.value = '处理中...';
+                testMessage.value = '加载动画应该在旋转';
+                
+                setTimeout(() => {
+                    isTestLoading.value = false;
+                    testButtonText.value = '点击测试加载';
+                    testMessage.value = '加载完成！';
+                    
+                    setTimeout(() => {
+                        testMessage.value = '';
+                    }, 2000);
+                }, 3000);
+            };
+            
+            return {
+                isTestLoading,
+                testButtonText,
+                testMessage,
+                triggerLoading
+            };
+        },
+        mounted() {
+            // 注册组件
+            window.ComponentLoader.registerComponents([
+                ['tech-button', '/components/shared/TechButton', 'TechButton']
+            ]).then(() => {
+                console.log('✅ TechButton组件加载成功');
+                
+                // 检查动画
+                setTimeout(() => {
+                    const spinners = document.querySelectorAll('.tech-button__spinner--spinning');
+                    console.log('找到的spinner元素:', spinners.length);
+                    spinners.forEach((spinner, index) => {
+                        const styles = window.getComputedStyle(spinner);
+                        console.log(`Spinner ${index + 1} 动画:`, styles.animationName, styles.animationDuration);
+                    });
+                }, 500);
+            }).catch(error => {
+                console.error('❌ 组件加载失败:', error);
+            });
+        }
+    }).mount('#app');
+    </script>
+</body>
+</html> 

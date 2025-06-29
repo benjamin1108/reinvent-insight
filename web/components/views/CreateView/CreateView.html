@@ -1,0 +1,91 @@
+<div class="create-view">
+  <!-- Input Card -->
+  <div class="create-view__input-card">
+    <div class="create-view__header">
+      <h2 class="create-view__title">
+        reInvent Insights
+      </h2>
+      <p class="create-view__subtitle">输入 YouTube 链接，获得深度解读</p>
+    </div>
+
+    <div class="create-view__input-section">
+      <div class="create-view__input-wrapper">
+        <input 
+          v-model="url" 
+          @keyup.enter="handleStartAnalysis" 
+          :disabled="loading" 
+          type="url"
+          placeholder="https://www.youtube.com/watch?v=..."
+          class="create-view__input" />
+      </div>
+
+      <tech-button 
+        variant="primary" 
+        size="lg"
+        full-width
+        :disabled="!url || !isValidUrl"
+        :loading="loading"
+        loading-text="AI 分析中..."
+        icon-before="M13 10V3L4 14h7v7l9-11h-7z"
+        @click="handleStartAnalysis">
+        开始分析
+      </tech-button>
+    </div>
+  </div>
+
+  <!-- Progress & Logs -->
+  <div v-if="loading || logs.length"
+    class="create-view__progress-section">
+    <!-- 进度条组件 -->
+    <div v-if="showProgressBar" class="create-view__progress-wrapper">
+      <progress-bar 
+        :percent="progressPercent" 
+        :show-text="true"
+        text-position="outside"
+        :striped="true"
+        :animated="loading"
+        height="24px"
+        color="gradient"
+        rounded="md">
+      </progress-bar>
+    </div>
+    
+    <h3 class="create-view__progress-title">
+      <svg class="create-view__progress-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+      处理进度
+    </h3>
+    <div class="create-view__log-list">
+      <div v-for="(log, index) in finalizedLogs" :key="index" 
+           class="create-view__log-item">
+        <div :class="['create-view__log-indicator', 
+                      log.includes('错误') ? 'create-view__log-indicator--error' : 'create-view__log-indicator--success']"></div>
+        <span class="create-view__log-text">{{ log }}</span>
+      </div>
+      <div v-if="loading && logs.length > 0" 
+           class="create-view__log-item">
+        <div class="create-view__log-indicator create-view__log-indicator--pending"></div>
+        <span class="create-view__log-text create-view__log-text--pending">{{ logs[logs.length - 1] }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div v-if="summary" class="create-view__result-section">
+    <div class="create-view__result-card">
+      <div class="create-view__result-header">
+        <h2 class="create-view__result-title">
+          {{ title }}
+        </h2>
+        <tech-button 
+          variant="warning"
+          @click="handleViewSummary">
+          全屏阅读
+        </tech-button>
+      </div>
+      <div v-html="cleanRendered" class="create-view__result-content prose-tech"></div>
+    </div>
+  </div>
+</div> 

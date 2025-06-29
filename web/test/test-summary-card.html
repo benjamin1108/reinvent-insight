@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SummaryCard 组件测试</title>
+  
+  <!-- Vue 3 -->
+  <script src="/js/vendor/vue.global.js"></script>
+  
+  <!-- 科技感字体 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&family=Exo+2:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- 基础样式 -->
+      <link rel="stylesheet" href="/css/base/effects.css">
+  
+  <!-- 测试框架样式 -->
+  <style>
+    :root {
+      --test-bg: #0f172a;
+      --test-surface: #1e293b;
+      --test-border: #334155;
+      --test-primary: #22d3ee;
+      --test-success: #10b981;
+      --test-warning: #f59e0b;
+      --test-error: #ef4444;
+      --test-text: #e5e7eb;
+      --test-text-dim: #9ca3af;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: var(--test-bg);
+      color: var(--test-text);
+      font-family: var(--font-primary);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    
+    .test-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    
+    .test-header h1 {
+      font-size: 2.5rem;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    
+    .test-header p {
+      color: var(--test-text-dim);
+      font-size: 1.125rem;
+    }
+    
+    .test-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .test-case {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    
+    .test-case-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    
+    .test-case-title {
+      font-size: 1.25rem;
+      color: var(--test-primary);
+    }
+    
+    .test-status {
+      font-size: 0.875rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+    
+    .test-status--pass {
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--test-success);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    
+    .test-status--info {
+      background: rgba(34, 211, 238, 0.2);
+      color: var(--test-primary);
+      border: 1px solid rgba(34, 211, 238, 0.3);
+    }
+    
+    .test-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+    
+    .control-group {
+      flex: 1;
+      min-width: 200px;
+    }
+    
+    .control-label {
+      display: block;
+      color: var(--test-text-dim);
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .control-input,
+    .control-select {
+      width: 100%;
+      padding: 0.5rem;
+      background: var(--test-bg);
+      border: 1px solid var(--test-border);
+      border-radius: 6px;
+      color: var(--test-text);
+      font-size: 0.875rem;
+    }
+    
+    .control-textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 0.5rem;
+      background: var(--test-bg);
+      border: 1px solid var(--test-border);
+      border-radius: 6px;
+      color: var(--test-text);
+      font-size: 0.875rem;
+      resize: vertical;
+    }
+    
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 2rem;
+      margin-top: 1rem;
+    }
+    
+    .test-button {
+      padding: 0.5rem 1.5rem;
+      background: var(--gradient-primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .test-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3);
+    }
+    
+    .test-button.secondary {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+    }
+    
+    .test-output {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--test-border);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+      font-family: var(--font-code);
+      font-size: 0.875rem;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .back-link {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      padding: 0.5rem 1rem;
+      background: var(--test-surface);
+      border: 1px solid var(--test-primary);
+      border-radius: 6px;
+      color: var(--test-primary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    
+    .back-link:hover {
+      background: rgba(34, 211, 238, 0.1);
+    }
+    
+    .test-case-description {
+      color: var(--test-text-dim);
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: rgba(34, 211, 238, 0.05);
+      border-left: 3px solid var(--test-primary);
+      border-radius: 0 6px 6px 0;
+    }
+    
+    .font-showcase {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    .font-showcase h3 {
+      color: var(--test-primary);
+      margin-bottom: 1rem;
+      font-size: 1.25rem;
+    }
+    
+    .font-sample {
+      margin-bottom: 1rem;
+      padding: 0.75rem;
+      background: rgba(6, 182, 212, 0.05);
+      border-radius: 4px;
+    }
+    
+    .font-sample-label {
+      font-size: 0.875rem;
+      color: var(--test-text-dim);
+      margin-bottom: 0.25rem;
+    }
+    
+    .font-sample-text {
+      font-size: 1rem;
+      color: var(--test-text);
+    }
+    
+    .demo-title {
+      font-family: 'Outfit', 'Inter', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      color: #22d3ee;
+      font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+    }
+    
+    .demo-subtitle {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 500;
+      letter-spacing: 0;
+      line-height: 1.4;
+      color: #64748b;
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: 'kern' 1, 'liga' 1;
+    }
+    
+    .demo-metadata {
+      font-family: 'Exo 2', 'Inter', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      font-variant-numeric: tabular-nums;
+      color: #9ca3af;
+    }
+    
+    .demo-badge {
+      font-family: 'Exo 2', 'Inter', sans-serif;
+      font-size: 0.625rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, rgba(8, 145, 178, 0.9), rgba(29, 78, 216, 0.9));
+      color: white;
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <a href="/test/" class="back-link">← 返回测试目录</a>
+  
+  <div id="app">
+    <div class="test-header">
+      <h1>SummaryCard 组件测试</h1>
+      <p>文章摘要卡片组件，支持re:Invent和其他精选两种类型</p>
+    </div>
+    
+    <div class="test-container">
+      <div class="font-showcase">
+        <h3>🎨 科技感字体系统展示</h3>
+        <div class="test-case-description">
+          全新的科技感字体系统：<strong>Outfit</strong>（标题几何感）+ <strong>Inter</strong>（现代易读）+ <strong>Exo 2</strong>（技术元素）。
+          <br>专为技术文档设计，提升现代感和未来感。
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+          <div class="font-sample">
+            <div class="font-sample-label">标题 - Outfit (几何感，强视觉)</div>
+            <div class="demo-title">Building Serverless Applications with AWS Lambda</div>
+          </div>
+          
+          <div class="font-sample">
+            <div class="font-sample-label">副标题 - Inter (现代感，易读性)</div>
+            <div class="demo-subtitle">使用 AWS Lambda 构建无服务器应用程序完整指南</div>
+          </div>
+          
+          <div class="font-sample">
+            <div class="font-sample-label">元数据 - Exo 2 (科技感，未来感)</div>
+            <div class="demo-metadata">1.2k 字 • Level 200 • 2024</div>
+          </div>
+          
+          <div class="font-sample">
+            <div class="font-sample-label">技术标签 - Exo 2 (强科技感)</div>
+            <div class="demo-badge">re:Invent</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 测试用例1：基础类型展示 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">基础类型展示</h2>
+        </div>
+        
+        <div class="card-grid">
+          <summary-card
+            :key="'reinvent-1'"
+            summary-type="reinvent"
+            hash="test-hash-1"
+            title-cn="深入探讨 AWS Lambda 性能优化"
+            title-en="Deep Dive into AWS Lambda Performance Optimization"
+            :word-count="12500"
+            level="Level 300"
+            year="2024"
+            @click="handleCardClick"
+          ></summary-card>
+          
+          <summary-card
+            :key="'featured-1'"
+            summary-type="other"
+            hash="test-hash-2"
+            title-cn="使用 AWS 构建弹性微服务"
+            title-en="Building Resilient Microservices with AWS"
+            :word-count="8900"
+            @click="handleCardClick"
+          ></summary-card>
+        </div>
+      </div>
+      
+      <!-- 测试用例2：动态内容控制 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">动态内容控制</h2>
+        </div>
+        
+        <div class="test-controls">
+          <div class="control-group">
+            <label class="control-label">类型</label>
+            <select v-model="customType" class="control-select">
+              <option value="reinvent">re:Invent</option>
+              <option value="featured">精选</option>
+            </select>
+          </div>
+          
+          <div class="control-group">
+            <label class="control-label">标题</label>
+            <input v-model="customTitle" class="control-input" placeholder="输入标题">
+          </div>
+          
+          <div class="control-group">
+            <label class="control-label">描述</label>
+            <textarea v-model="customDescription" class="control-textarea" 
+                      placeholder="输入描述文本"></textarea>
+          </div>
+          
+          <div class="control-group" v-if="customType === 'reinvent'">
+            <label class="control-label">级别</label>
+            <select v-model="customLevel" class="control-select">
+              <option value="Level 100">Level 100</option>
+              <option value="Level 200">Level 200</option>
+              <option value="Level 300">Level 300</option>
+              <option value="Level 400">Level 400</option>
+              <option value="Keynote">Keynote</option>
+            </select>
+          </div>
+          
+          <div class="control-group" v-if="customType === 'reinvent'">
+            <label class="control-label">年份</label>
+            <input v-model.number="customYear" type="number" class="control-input" 
+                   min="2020" max="2030">
+          </div>
+        </div>
+        
+        <div class="card-grid">
+          <summary-card
+            :key="customKey"
+            :summary-type="customType === 'featured' ? 'other' : customType"
+            hash="custom-hash"
+            :title-cn="customTitle"
+            :title-en="customDescription"
+            :word-count="10000"
+            :level="customLevel"
+            :year="customType === 'reinvent' ? String(customYear) : null"
+            @click="handleCardClick"
+          ></summary-card>
+        </div>
+      </div>
+      
+      <!-- 测试用例3：多卡片布局 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">多卡片布局测试</h2>
+        </div>
+        
+        <div class="test-controls">
+          <button @click="addCard" class="test-button">
+            添加卡片
+          </button>
+          <button @click="removeCard" class="test-button secondary">
+            移除卡片
+          </button>
+          <button @click="shuffleCards" class="test-button secondary">
+            随机排序
+          </button>
+        </div>
+        
+        <div class="card-grid">
+          <summary-card
+            v-for="card in dynamicCards"
+            :key="card.id"
+            :summary-type="card.type === 'featured' ? 'other' : card.type"
+            :hash="`hash-${card.id}`"
+            :title-cn="card.titleCn"
+            :title-en="card.titleEn"
+            :word-count="card.wordCount"
+            :level="card.level"
+            :year="card.year"
+            @click="handleCardClick"
+          ></summary-card>
+        </div>
+      </div>
+      
+      <!-- 事件日志 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">事件日志</h2>
+        </div>
+        
+        <button @click="clearLog" class="test-button secondary">
+          清空日志
+        </button>
+        
+        <div class="test-output" v-if="eventLog.length > 0">
+          <div v-for="(log, index) in eventLog" :key="index">
+            {{ log }}
+          </div>
+        </div>
+        <div v-else class="test-output">
+          暂无事件记录
+        </div>
+      </div>
+
+      <!-- 原有的测试用例... -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h3 class="test-case-title">re:Invent 卡片</h3>
+          <span class="test-status test-status--pass">✅ 优化完成</span>
+        </div>
+        <div class="test-case-description">
+          re:Invent 类型的卡片，采用橙色主题和更强的字重层次，hover时有发光效果。
+        </div>
+        <div class="test-content">
+          <div class="cards-grid">
+            <div id="reinvent-card-1"></div>
+            <div id="reinvent-card-2"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="test-case">
+        <div class="test-case-header">
+          <h3 class="test-case-title">精选内容卡片</h3>
+          <span class="test-status test-status--pass">✅ 优化完成</span>
+        </div>
+        <div class="test-case-description">
+          其他精选内容卡片，采用青色主题和适中的字重，具有科技感的字符间距。
+        </div>
+        <div class="test-content">
+          <div class="cards-grid">
+            <div id="other-card-1"></div>
+            <div id="other-card-2"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="test-case">
+        <div class="test-case-header">
+          <h3 class="test-case-title">响应式字体测试</h3>
+          <span class="test-status test-status--info">📱 移动端优化</span>
+        </div>
+        <div class="test-case-description">
+          移动端字体自动调整，保持良好的可读性和适度的科技感。请缩放窗口测试响应式效果。
+        </div>
+        <div class="test-content">
+          <div class="cards-grid">
+            <div id="responsive-card-1"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 组件加载器 -->
+  <script src="/js/core/component-loader.js"></script>
+  
+  <script type="module">
+    const { createApp, ref, computed, onMounted } = Vue;
+    
+    const app = createApp({
+      setup() {
+        // 自定义内容控制
+        const customType = ref('reinvent');
+        const customTitle = ref('自定义标题示例');
+        const customDescription = ref('这是一个自定义的描述文本，可以包含任意内容。');
+        const customLevel = ref('Level 200');
+        const customYear = ref(2024);
+        const customImage = computed(() => {
+          const color = customType.value === 'reinvent' ? '22d3ee' : '3b82f6';
+          return `https://via.placeholder.com/400x200/0f172a/${color}?text=Custom`;
+        });
+        const customKey = computed(() => `custom-${customType.value}-${Date.now()}`);
+        
+        // 动态卡片列表
+        const dynamicCards = ref([
+          {
+            id: 1,
+            type: 'reinvent',
+            titleCn: 'AWS 入门指南',
+            titleEn: 'Getting Started with AWS',
+            wordCount: 5600,
+            level: 'Level 100',
+            year: '2024'
+          },
+          {
+            id: 2,
+            type: 'featured',
+            titleCn: '无服务器架构模式',
+            titleEn: 'Serverless Architecture Patterns',
+            wordCount: 7800
+          }
+        ]);
+        
+        // 事件日志
+        const eventLog = ref([]);
+        
+        const addLog = (message) => {
+          const time = new Date().toLocaleTimeString();
+          eventLog.value.unshift(`[${time}] ${message}`);
+          if (eventLog.value.length > 20) {
+            eventLog.value.pop();
+          }
+        };
+        
+        // 事件处理
+        const handleCardClick = (data) => {
+          console.log('Card clicked event:', data);
+          if (data && typeof data === 'object' && data.hash) {
+            addLog(`卡片点击 - Hash: ${data.hash}, 类型: ${data.type}`);
+          }
+        };
+        
+        // 动态操作
+        const addCard = () => {
+          const id = Math.max(...dynamicCards.value.map(c => c.id)) + 1;
+          const isReinvent = Math.random() > 0.5;
+          
+          dynamicCards.value.push({
+            id,
+            type: isReinvent ? 'reinvent' : 'featured',
+            titleCn: `动态卡片 ${id} - 中文标题`,
+            titleEn: `Dynamic Card ${id} - English Title`,
+            wordCount: Math.floor(Math.random() * 20000) + 5000,
+            level: isReinvent ? `Level ${Math.floor(Math.random() * 4 + 1) * 100}` : undefined,
+            year: isReinvent ? String(2020 + Math.floor(Math.random() * 5)) : undefined
+          });
+          
+          addLog(`添加新卡片 - ID: ${id}`);
+        };
+        
+        const removeCard = () => {
+          if (dynamicCards.value.length > 0) {
+            const removed = dynamicCards.value.pop();
+            addLog(`移除卡片 - ID: ${removed.id}`);
+          }
+        };
+        
+        const shuffleCards = () => {
+          dynamicCards.value = [...dynamicCards.value].sort(() => Math.random() - 0.5);
+          addLog('卡片已随机排序');
+        };
+        
+        const clearLog = () => {
+          eventLog.value = [];
+        };
+        
+        // 测试数据
+        const testCards = [
+          {
+            id: 'reinvent-card-1',
+            props: {
+              summaryType: 'reinvent',
+              titleEn: 'Building Serverless Applications with AWS Lambda',
+              titleCn: '使用 AWS Lambda 构建无服务器应用程序完整指南',
+              wordCount: 1234,
+              year: '2024',
+              level: 'Level 200 - 中级',
+              hash: 'lambda-serverless-guide'
+            }
+          },
+          {
+            id: 'reinvent-card-2',
+            props: {
+              summaryType: 'reinvent',
+              titleEn: 'Advanced Container Security with Amazon ECS and EKS',
+              titleCn: '使用 Amazon ECS 和 EKS 实现高级容器安全',
+              wordCount: 2567,
+              year: '2024',
+              level: 'Level 300 - 高级',
+              hash: 'container-security-advanced'
+            }
+          },
+          {
+            id: 'other-card-1',
+            props: {
+              summaryType: 'other',
+              titleEn: 'Deep Dive into AWS Network Architecture Patterns',
+              titleCn: '深入探讨 AWS 网络架构模式与最佳实践',
+              wordCount: 3456,
+              year: '2024',
+              hash: 'aws-network-patterns'
+            }
+          },
+          {
+            id: 'other-card-2',
+            props: {
+              summaryType: 'other',
+              titleEn: 'Optimizing Cost Management in Multi-Account AWS Environments',
+              titleCn: '多账户 AWS 环境中的成本管理优化策略',
+              wordCount: 1876,
+              year: '2024',
+              hash: 'cost-optimization-multi-account'
+            }
+          },
+          {
+            id: 'responsive-card-1',
+            props: {
+              summaryType: 'reinvent',
+              titleEn: 'Machine Learning Model Deployment at Scale with Amazon SageMaker',
+              titleCn: '使用 Amazon SageMaker 大规模部署机器学习模型',
+              wordCount: 4321,
+              year: '2024',
+              level: 'Level 400 - 专家级',
+              hash: 'sagemaker-ml-deployment'
+            }
+          }
+        ];
+        
+        onMounted(() => {
+          console.log('🚀 测试页面加载完成');
+          
+          // 创建所有测试卡片
+          testCards.forEach(card => {
+            const targetElement = document.getElementById(card.id);
+            if (targetElement) {
+              const cardApp = Vue.createApp({
+                template: `
+                  <summary-card
+                    :summary-type="summaryType"
+                    :title-en="titleEn"
+                    :title-cn="titleCn"
+                    :word-count="wordCount"
+                    :year="year"
+                    :level="level"
+                    :hash="hash"
+                    @click="handleCardClick"
+                  />
+                `,
+                setup() {
+                  const handleCardClick = (data) => {
+                    console.log('📋 卡片点击:', data);
+                    alert(`点击了卡片: ${data.hash}`);
+                  };
+                  
+                  return {
+                    ...card.props,
+                    handleCardClick
+                  };
+                }
+              });
+              
+              // 注册组件
+              ComponentLoader.register(cardApp, [
+                ['summary-card', '/components/common/SummaryCard', 'SummaryCard']
+              ]);
+              
+              cardApp.mount(`#${card.id}`);
+              console.log(`✅ 创建卡片: ${card.id}`);
+            }
+          });
+        });
+        
+        return {
+          customType,
+          customTitle,
+          customDescription,
+          customLevel,
+          customYear,
+          customImage,
+          customKey,
+          dynamicCards,
+          eventLog,
+          handleCardClick,
+          addCard,
+          removeCard,
+          shuffleCards,
+          clearLog,
+          testCards,
+          onMounted
+        };
+      }
+    });
+    
+    // 加载组件
+    (async () => {
+      try {
+        await ComponentLoader.registerComponents(app, [
+          ['summary-card', '/components/common/SummaryCard', 'SummaryCard'],
+          ['tech-button', '/components/shared/TechButton', 'TechButton']
+        ]);
+        
+        app.mount('#app');
+        console.log('SummaryCard 测试环境初始化完成');
+      } catch (error) {
+        console.error('测试环境初始化失败:', error);
+      }
+    })();
+  </script>
+</body>
+</html> 

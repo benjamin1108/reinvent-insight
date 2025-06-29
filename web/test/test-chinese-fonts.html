@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>中文字体科技感对比测试</title>
+  
+  <!-- 科技感字体 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&family=Exo+2:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- 中文字体 -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- 基础样式 -->
+  <link rel="stylesheet" href="/css/base/effects.css">
+  
+  <style>
+    :root {
+      --test-bg: #0f172a;
+      --test-surface: #1e293b;
+      --test-border: #334155;
+      --test-primary: #22d3ee;
+      --test-success: #10b981;
+      --test-warning: #f59e0b;
+      --test-error: #ef4444;
+      --test-text: #e5e7eb;
+      --test-text-dim: #9ca3af;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: var(--test-bg);
+      color: var(--test-text);
+      min-height: 100vh;
+      padding: 2rem;
+      line-height: 1.6;
+    }
+    
+    .test-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    
+    .test-header h1 {
+      font-size: 2.5rem;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.5rem;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+    }
+    
+    .test-header p {
+      color: var(--test-text-dim);
+      font-size: 1.125rem;
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .font-section {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    
+    .font-title {
+      font-size: 1.5rem;
+      color: var(--test-primary);
+      margin-bottom: 1rem;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+    }
+    
+    .font-info {
+      background: rgba(34, 211, 238, 0.1);
+      border: 1px solid rgba(34, 211, 238, 0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.875rem;
+    }
+    
+    .font-stack {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 0.5rem;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #22d3ee;
+      margin: 0.5rem 0;
+    }
+    
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1rem;
+    }
+    
+    .demo-card {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--test-border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      transition: all 0.3s ease;
+    }
+    
+    .demo-card:hover {
+      border-color: var(--test-primary);
+      transform: translateY(-2px);
+    }
+    
+    .demo-label {
+      font-size: 0.75rem;
+      color: var(--test-text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+      font-family: 'Exo 2', sans-serif;
+      font-weight: 600;
+    }
+    
+    /* 字体方案样式 */
+    .font-system {
+      font-family: 'PingFang SC', 'SF Pro SC', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif;
+    }
+    
+    .font-source-han {
+      font-family: 'Noto Sans SC', 'Source Han Sans SC', 'Noto Sans CJK SC', 'PingFang SC', sans-serif;
+    }
+    
+    .font-alibaba {
+      font-family: 'Alibaba PuHuiTi', 'Source Han Sans SC', 'PingFang SC', sans-serif;
+    }
+    
+    .font-harmony {
+      font-family: 'HarmonyOS Sans SC', 'OPPO Sans', 'Source Han Sans SC', sans-serif;
+    }
+    
+    .title-demo {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #22d3ee 0%, #3b82f6 50%, #8b5cf6 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      letter-spacing: -0.01em;
+    }
+    
+    .subtitle-demo {
+      font-size: 0.875rem;
+      color: #64748b;
+      margin-bottom: 1rem;
+      font-weight: 500;
+    }
+    
+    .content-demo {
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: var(--test-text);
+    }
+    
+    .tech-badge {
+      display: inline-block;
+      background: rgba(34, 211, 238, 0.1);
+      color: #22d3ee;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-top: 0.75rem;
+      border: 1px solid rgba(34, 211, 238, 0.3);
+    }
+    
+    .comparison-section {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    
+    .pros-cons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    
+    .pros, .cons {
+      background: rgba(0, 0, 0, 0.2);
+      padding: 1rem;
+      border-radius: 6px;
+    }
+    
+    .pros {
+      border-left: 3px solid var(--test-success);
+    }
+    
+    .cons {
+      border-left: 3px solid var(--test-warning);
+    }
+    
+    .pros h4 {
+      color: var(--test-success);
+      margin-bottom: 0.5rem;
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .cons h4 {
+      color: var(--test-warning);
+      margin-bottom: 0.5rem;
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .pros ul, .cons ul {
+      list-style: none;
+      font-size: 0.875rem;
+    }
+    
+    .pros li, .cons li {
+      margin-bottom: 0.25rem;
+      padding-left: 1rem;
+      position: relative;
+    }
+    
+    .pros li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: var(--test-success);
+    }
+    
+    .cons li::before {
+      content: '⚠';
+      position: absolute;
+      left: 0;
+      color: var(--test-warning);
+    }
+    
+    .recommendation {
+      background: linear-gradient(135deg, rgba(34, 211, 238, 0.1), rgba(59, 130, 246, 0.05));
+      border: 1px solid rgba(34, 211, 238, 0.3);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-top: 2rem;
+    }
+    
+    .recommendation h3 {
+      color: var(--test-primary);
+      margin-bottom: 1rem;
+      font-family: 'Outfit', sans-serif;
+    }
+    
+    .back-link {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      padding: 0.5rem 1rem;
+      background: var(--test-surface);
+      border: 1px solid var(--test-primary);
+      border-radius: 6px;
+      color: var(--test-primary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .back-link:hover {
+      background: rgba(34, 211, 238, 0.1);
+    }
+    
+    @media (max-width: 768px) {
+      .demo-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .pros-cons {
+        grid-template-columns: 1fr;
+      }
+      
+      body {
+        padding: 1rem;
+      }
+      
+      .back-link {
+        position: static;
+        display: block;
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a href="/test/" class="back-link">← 返回测试目录</a>
+  
+  <div class="container">
+    <div class="test-header">
+      <h1>中文字体科技感对比测试</h1>
+      <p>为reinvent-insight项目选择最适合的中文字体方案</p>
+    </div>
+    
+    <!-- 方案一：现代系统字体 -->
+    <div class="font-section">
+      <h2 class="font-title">方案一：现代系统字体（推荐）</h2>
+      <div class="font-info">
+        <strong>适用场景：</strong>生产环境首选，兼容性最佳，加载速度最快
+        <div class="font-stack">font-family: 'PingFang SC', 'SF Pro SC', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif;</div>
+      </div>
+      
+      <div class="demo-grid">
+        <div class="demo-card font-system">
+          <div class="demo-label">标题示例</div>
+          <div class="title-demo">深入探讨 AWS Lambda 性能优化</div>
+          <div class="subtitle-demo">Building Event-Driven Architectures on AWS</div>
+          <div class="content-demo">
+            本文将深入分析AWS Lambda的性能优化策略，包括冷启动优化、内存配置调优、并发控制等关键技术点。通过实际案例展示如何将Lambda函数的响应时间从500ms优化到50ms以下。
+          </div>
+          <div class="tech-badge font-system">Level 300</div>
+        </div>
+        
+        <div class="demo-card font-system">
+          <div class="demo-label">技术文档</div>
+          <div class="title-demo">微服务架构设计原则</div>
+          <div class="subtitle-demo">Microservices Design Patterns</div>
+          <div class="content-demo">
+            现代微服务架构需要考虑服务发现、负载均衡、熔断机制、分布式追踪等多个维度。本指南将从零开始构建一个完整的微服务生态系统。
+          </div>
+          <div class="tech-badge font-system">精选</div>
+        </div>
+      </div>
+      
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>优势</h4>
+          <ul>
+            <li>系统自带，无需下载</li>
+            <li>兼容性极佳</li>
+            <li>加载速度快</li>
+            <li>现代感强</li>
+            <li>适合科技风格</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>局限</h4>
+          <ul>
+            <li>字重选择有限</li>
+            <li>不同系统效果略有差异</li>
+            <li>个性化程度一般</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 方案二：思源黑体 -->
+    <div class="font-section">
+      <h2 class="font-title">方案二：思源黑体系列（平衡选择）</h2>
+      <div class="font-info">
+        <strong>适用场景：</strong>需要更多字重选择，追求设计一致性
+        <div class="font-stack">font-family: 'Noto Sans SC', 'Source Han Sans SC', 'Noto Sans CJK SC', 'PingFang SC', sans-serif;</div>
+      </div>
+      
+      <div class="demo-grid">
+        <div class="demo-card font-source-han">
+          <div class="demo-label">标题示例</div>
+          <div class="title-demo">深入探讨 AWS Lambda 性能优化</div>
+          <div class="subtitle-demo">Building Event-Driven Architectures on AWS</div>
+          <div class="content-demo">
+            本文将深入分析AWS Lambda的性能优化策略，包括冷启动优化、内存配置调优、并发控制等关键技术点。通过实际案例展示如何将Lambda函数的响应时间从500ms优化到50ms以下。
+          </div>
+          <div class="tech-badge font-source-han">Level 300</div>
+        </div>
+        
+        <div class="demo-card font-source-han">
+          <div class="demo-label">技术文档</div>
+          <div class="title-demo">微服务架构设计原则</div>
+          <div class="subtitle-demo">Microservices Design Patterns</div>
+          <div class="content-demo">
+            现代微服务架构需要考虑服务发现、负载均衡、熔断机制、分布式追踪等多个维度。本指南将从零开始构建一个完整的微服务生态系统。
+          </div>
+          <div class="tech-badge font-source-han">精选</div>
+        </div>
+      </div>
+      
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>优势</h4>
+          <ul>
+            <li>开源免费</li>
+            <li>字重丰富(300-900)</li>
+            <li>Google Fonts支持</li>
+            <li>科技感强</li>
+            <li>跨平台一致性好</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>局限</h4>
+          <ul>
+            <li>需要网络加载</li>
+            <li>文件体积较大</li>
+            <li>首次加载稍慢</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 方案三：企业级字体 -->
+    <div class="font-section">
+      <h2 class="font-title">方案三：企业级字体（现代选择）</h2>
+      <div class="font-info">
+        <strong>适用场景：</strong>追求企业级设计质感，强调品牌形象
+        <div class="font-stack">font-family: 'Alibaba PuHuiTi', 'Source Han Sans SC', 'PingFang SC', sans-serif;</div>
+      </div>
+      
+      <div class="demo-grid">
+        <div class="demo-card font-alibaba">
+          <div class="demo-label">标题示例</div>
+          <div class="title-demo">深入探讨 AWS Lambda 性能优化</div>
+          <div class="subtitle-demo">Building Event-Driven Architectures on AWS</div>
+          <div class="content-demo">
+            本文将深入分析AWS Lambda的性能优化策略，包括冷启动优化、内存配置调优、并发控制等关键技术点。通过实际案例展示如何将Lambda函数的响应时间从500ms优化到50ms以下。
+          </div>
+          <div class="tech-badge font-alibaba">Level 300</div>
+        </div>
+        
+        <div class="demo-card font-alibaba">
+          <div class="demo-label">技术文档</div>
+          <div class="title-demo">微服务架构设计原则</div>
+          <div class="subtitle-demo">Microservices Design Patterns</div>
+          <div class="content-demo">
+            现代微服务架构需要考虑服务发现、负载均衡、熔断机制、分布式追踪等多个维度。本指南将从零开始构建一个完整的微服务生态系统。
+          </div>
+          <div class="tech-badge font-alibaba">精选</div>
+        </div>
+      </div>
+      
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>优势</h4>
+          <ul>
+            <li>企业级设计</li>
+            <li>科技感极强</li>
+            <li>开源可商用</li>
+            <li>现代化程度高</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>局限</h4>
+          <ul>
+            <li>需要自行托管</li>
+            <li>用户设备可能无此字体</li>
+            <li>回退策略重要</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 推荐方案 -->
+    <div class="recommendation">
+      <h3>🎯 推荐方案</h3>
+      <p><strong>对于reinvent-insight项目，建议采用方案一（现代系统字体）：</strong></p>
+      <ul style="margin: 1rem 0; padding-left: 2rem;">
+        <li>✅ 与当前英文字体（Outfit + Inter + Exo 2）搭配和谐</li>
+        <li>✅ 兼容性好，适合生产环境</li>
+        <li>✅ 加载速度快，用户体验佳</li>
+        <li>✅ 科技感适中，符合项目定位</li>
+      </ul>
+      <div class="font-stack" style="margin-top: 1rem;">
+        /* 推荐字体栈 */<br>
+        font-family: 'PingFang SC', 'SF Pro SC', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif;
+      </div>
+    </div>
+  </div>
+</body>
+</html> 

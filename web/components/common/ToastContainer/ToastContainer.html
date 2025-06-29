@@ -1,0 +1,11 @@
+<div class="toast-container">
+  <toast
+    v-for="toast in toasts"
+    :key="toast.id"
+    :message="toast.message"
+    :type="toast.type"
+    :duration="toast.duration"
+    :closable="toast.closable"
+    @close="removeToast(toast.id)"
+  />
+</div> 

@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 import os
 import sys
+import uvicorn
 from typing import Set, Optional, Dict, List
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -95,6 +96,41 @@ def extract_text_from_markdown(content: str) -> str:
     
     return content
 
+def clean_content_metadata(content: str, title: str = '') -> str:
+    """清理内容中的元数据，返回干净的markdown内容"""
+    if not content:
+        return ''
+    
+    cleaned_content = content
+    
+    # 使用yaml库安全地解析和移除YAML Front Matter
+    if content.startswith('---'):
+        try:
+            # 使用正则表达式匹配完整的YAML front matter块
+            match = re.match(r'^---\s*\n(.*?)\n---\s*\n', content, re.DOTALL)
+            if match:
+                # 验证YAML是否有效
+                yaml_content = match.group(1)
+                yaml.safe_load(yaml_content)  # 验证YAML语法
+                
+                # 移除YAML front matter，保留后面的内容
+                cleaned_content = content[match.end():]
+                logger.debug(f"成功移除YAML front matter，剩余内容长度: {len(cleaned_content)}")
+            else:
+                logger.warning("检测到---开头但未找到完整的YAML front matter格式")
+        except yaml.YAMLError as e:
+            logger.warning(f"YAML front matter解析失败，保留原始内容: {e}")
+        except Exception as e:
+            logger.error(f"处理YAML front matter时发生错误: {e}")
+    
+    # 可选：如果标题存在，去除可能重复的H1标题
+    if title:
+        escaped_title = re.escape(title)
+        markdown_title_pattern = rf'^#+\s*{escaped_title}\s*$'
+        cleaned_content = re.sub(markdown_title_pattern, '', cleaned_content, flags=re.MULTILINE | re.IGNORECASE).lstrip()
+    
+    return cleaned_content
+
 def parse_metadata_from_md(md_content: str) -> dict:
     """从 Markdown 文件内容中解析 YAML front matter。"""
     try:
@@ -144,13 +180,6 @@ def verify_token(authorization: str = None):
     if token not in session_tokens:
         raise HTTPException(status_code=401, detail="令牌无效，请重新登录")
     return True
-
-async def summary_task_worker(url: str, task_id: str):
-    """
-    异步启动器：将同步的工作函数抛到后台线程执行。
-    """
-    loop = asyncio.get_running_loop()
-    await asyncio.to_thread(summary_task_worker_sync, loop, url, task_id)
 
 # --- API 端点 ---
 class SummarizeRequest(BaseModel):
@@ -369,15 +398,20 @@ async def get_public_summary(filename: str):
         if video_url:
             versions = discover_versions(video_url)
 
-        return {
+        # 清理内容中的元数据
+        cleaned_content = clean_content_metadata(content, title_cn)
+
+        response_data = {
             "filename": filename,
             "title": title_cn,  # 保持向后兼容
             "title_cn": title_cn,
             "title_en": title_en,
-            "content": content,
+            "content": cleaned_content,  # 返回清理后的内容
             "video_url": video_url,
             "versions": versions  # 添加版本信息
         }
+        
+        return response_data
     except HTTPException:
         raise
     except Exception as e:
@@ -394,6 +428,39 @@ async def get_public_summary_by_hash(doc_hash: str):
     
     # 复用现有的获取文档逻辑
     return await get_public_summary(filename)
+
+@app.get("/api/public/doc/{doc_hash}/{version}")
+async def get_public_summary_by_hash_and_version(doc_hash: str, version: int):
+    """通过hash和version获取指定摘要文件的公开内容，无需认证。"""
+    # 查找默认文件名以获取video_url
+    default_filename = hash_to_filename.get(doc_hash)
+    if not default_filename:
+        raise HTTPException(status_code=404, detail="主文档未找到")
+        
+    default_file_path = config.OUTPUT_DIR / default_filename
+    if not default_file_path.exists():
+        raise HTTPException(status_code=404, detail="主文档文件不存在")
+
+    content = default_file_path.read_text(encoding="utf-8")
+    metadata = parse_metadata_from_md(content)
+    video_url = metadata.get("video_url")
+
+    if not video_url:
+        # 如果没有video_url，说明没有多版本，直接返回当前文档
+        if version == metadata.get("version", 1):
+             return await get_public_summary(default_filename)
+        else:
+             raise HTTPException(status_code=404, detail=f"版本 {version} 未找到")
+
+    # 根据video_url和version查找目标文件名
+    versions = discover_versions(video_url)
+    target_version_info = next((v for v in versions if v.get("version") == version), None)
+
+    if not target_version_info or not target_version_info.get("filename"):
+        raise HTTPException(status_code=404, detail=f"版本 {version} 的文件未找到")
+
+    # 复用现有的获取文档逻辑
+    return await get_public_summary(target_version_info["filename"])
 
 @app.get("/api/public/summaries/{filename}/pdf")
 async def get_summary_pdf(filename: str, response: Response):
@@ -542,12 +609,15 @@ async def get_summary(filename: str, authorization: str = Header(None)):
         if video_url:
             versions = discover_versions(video_url)
 
+        # 清理内容中的元数据
+        cleaned_content = clean_content_metadata(content, title_cn)
+
         return {
             "filename": filename,
             "title": title_cn,  # 保持向后兼容
             "title_cn": title_cn,
             "title_en": title_en,
-            "content": content,
+            "content": cleaned_content,  # 返回清理后的内容
             "video_url": video_url,
             "versions": versions  # 添加版本信息
         }
@@ -566,6 +636,16 @@ if web_dir.is_dir():
     # Any other static assets in the root of /web can be added here too.
     app.mount("/js", StaticFiles(directory=web_dir / "js"), name="js")
     app.mount("/css", StaticFiles(directory=web_dir / "css"), name="css")
+    
+    # Mount components directory for component system
+    components_dir = web_dir / "components"
+    if components_dir.is_dir():
+        app.mount("/components", StaticFiles(directory=components_dir), name="components")
+    
+    # Mount test directory for component testing
+    test_dir = web_dir / "test"
+    if test_dir.is_dir():
+        app.mount("/test", StaticFiles(directory=test_dir, html=True), name="test")
     
     # Mount fonts directory for PDF generation
     fonts_dir = web_dir / "fonts"
@@ -665,7 +745,6 @@ else:
 
 def serve(host: str = "0.0.0.0", port: int = 8001, reload: bool = False):
     """使用 uvicorn 启动 Web 服务器。"""
-    import uvicorn
     uvicorn.run(
         "reinvent_insight.api:app",
         host=host,

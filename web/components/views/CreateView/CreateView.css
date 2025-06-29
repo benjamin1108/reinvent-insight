@@ -1,0 +1,656 @@
+/* 
+ * CreateView 组件样式 - 完全独立实现
+ * 不依赖任何全局基础样式，彻底解决CSS污染问题
+ */
+
+/* 主容器样式 */
+.create-view {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+  animation: create-view-fadeIn 0.5s ease-in-out;
+}
+
+@keyframes create-view-fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 输入卡片样式 */
+.create-view__input-card {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.8) 50%, rgba(15, 23, 42, 0.9) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid #374151;
+  border-radius: 0.75rem;
+  padding: 2rem;
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.1), 0 0 40px rgba(6, 182, 212, 0.05), 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  transition: box-shadow 0.3s ease;
+  margin-bottom: 2rem;
+}
+
+.create-view__input-card:hover {
+  box-shadow: 0 0 30px rgba(6, 182, 212, 0.2), 0 0 60px rgba(6, 182, 212, 0.1), 0 25px 50px -12px rgba(0, 0, 0, 0.3);
+}
+
+/* 输入卡片头部 */
+.create-view__header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.create-view__title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  background: linear-gradient(to bottom right, #d97706, #ea580c);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 0.5rem;
+}
+
+.create-view__subtitle {
+  color: #9ca3af;
+}
+
+/* 输入区域 */
+.create-view__input-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.create-view__input-wrapper {
+  width: 100%;
+}
+
+.create-view__input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(31, 41, 55, 0.5);
+  border: 1px solid #4b5563;
+  border-radius: 0.5rem;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.create-view__input::placeholder {
+  color: #9ca3af;
+}
+
+.create-view__input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #06b6d4;
+  border-color: transparent;
+}
+
+.create-view__input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 按钮样式现在由TechButton组件统一提供 */
+
+/* 进度区域样式 */
+.create-view__progress-section {
+  background: rgba(17, 24, 39, 0.5);
+  border: 1px solid #374151;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  backdrop-filter: blur(8px);
+  margin-bottom: 2rem;
+}
+
+.create-view__progress-wrapper {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+/* 进度条样式覆盖 - 增加高度和改善文本显示 */
+.create-view__progress-wrapper .progress-bar__container {
+  height: 24px !important; /* 增加高度 */
+}
+
+.create-view__progress-wrapper .progress-bar__text--inside {
+  font-size: 0.875rem !important; /* 增大字体 */
+  font-weight: 600 !important;
+  color: #ffffff !important;
+}
+
+.create-view__progress-wrapper .progress-bar__text--outside {
+  font-size: 0.875rem !important; /* 增大字体 */
+  font-weight: 500 !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.create-view__progress-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #22d3ee;
+  display: flex;
+  align-items: center;
+}
+
+.create-view__progress-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-right: 0.5rem;
+}
+
+/* 日志样式 */
+.create-view__log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.create-view__log-item {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  animation: create-view-slideIn 0.3s ease-out;
+}
+
+@keyframes create-view-slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.create-view__log-indicator {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+}
+
+.create-view__log-indicator--success {
+  background-color: #10b981;
+}
+
+.create-view__log-indicator--error {
+  background-color: #ef4444;
+}
+
+.create-view__log-indicator--pending {
+  background-color: #06b6d4;
+  animation: create-view-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.create-view__log-text {
+  color: #d1d5db;
+}
+
+.create-view__log-text--pending {
+  color: #9ca3af;
+}
+
+@keyframes create-view-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .5;
+  }
+}
+
+/* 结果区域样式 */
+.create-view__result-section {
+  animation: create-view-fadeIn 0.5s ease-in-out;
+}
+
+.create-view__result-card {
+  background: rgba(17, 24, 39, 0.3);
+  border: 1px solid #374151;
+  border-radius: 0.75rem;
+  padding: 2rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(8px);
+}
+
+.create-view__result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+}
+
+.create-view__result-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: linear-gradient(to right, #22d3ee, #3b82f6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  min-width: 0;
+  word-break: break-words;
+}
+
+.create-view__result-content {
+  /* 完整的独立prose-tech样式 */
+}
+
+/* =============================================== */
+/* == CreateView独立prose-tech样式系统 == */
+/* =============================================== */
+
+.create-view .prose-tech {
+  max-width: none;
+  color: #9ca3af;
+  line-height: 1.75;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 标题样式 */
+.create-view .prose-tech h1 {
+  color: #f9fafb;
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 2rem;
+  margin-top: 0;
+  background: linear-gradient(135deg, #22d3ee, #3b82f6, #8b5cf6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Pro Display", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.create-view .prose-tech h2 {
+  color: #f3f4f6;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-top: 3rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 3px solid rgba(34, 211, 238, 0.4);
+  position: relative;
+  line-height: 1.3;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Pro Display", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.create-view .prose-tech h2::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -3px;
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(to right, #22d3ee, #3b82f6);
+  border-radius: 2px;
+}
+
+.create-view .prose-tech h3 {
+  color: #22d3ee;
+  font-size: 1.625rem;
+  font-weight: 600;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  position: relative;
+  padding-left: 1rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Pro Display", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.create-view .prose-tech h3::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.5rem;
+  width: 4px;
+  height: 1.5rem;
+  background: linear-gradient(to bottom, #22d3ee, #3b82f6);
+  border-radius: 2px;
+}
+
+.create-view .prose-tech h4 {
+  color: #22d3ee;
+  font-size: 1.375rem;
+  font-weight: 600;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Pro Display", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.create-view .prose-tech h5,
+.create-view .prose-tech h6 {
+  color: #d1d5db;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 1.125rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Pro Display", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* 段落和文本 */
+.create-view .prose-tech p {
+  margin-bottom: 1.25rem;
+  color: #9ca3af;
+  font-size: 1.0625rem;
+  line-height: 1.8;
+}
+
+.create-view .prose-tech strong,
+.create-view .prose-tech b {
+  color: #f3f4f6;
+  font-weight: 600;
+  font-size: inherit;
+}
+
+/* 列表 */
+.create-view .prose-tech ul, 
+.create-view .prose-tech ol {
+  margin: 1.5rem 0;
+  padding-left: 2rem;
+  color: #9ca3af;
+}
+
+.create-view .prose-tech ul {
+  list-style: none;
+}
+
+.create-view .prose-tech ul > li {
+  position: relative;
+  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+  line-height: 1.7;
+}
+
+.create-view .prose-tech ul > li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.75rem;
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(45deg, #22d3ee, #3b82f6);
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+
+.create-view .prose-tech ol > li {
+  margin-bottom: 0.75rem;
+  line-height: 1.7;
+  counter-increment: list-counter;
+}
+
+.create-view .prose-tech ol {
+  counter-reset: list-counter;
+  list-style: none;
+}
+
+.create-view .prose-tech ol > li::before {
+  content: counter(list-counter);
+  position: absolute;
+  left: 0;
+  top: 0;
+  background: linear-gradient(45deg, #22d3ee, #3b82f6);
+  color: #111827;
+  font-weight: 600;
+  font-size: 0.875rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: -2rem;
+}
+
+/* 代码 */
+.create-view .prose-tech code {
+  background: rgba(34, 211, 238, 0.15);
+  color: #22d3ee;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.9em;
+  font-family: "SF Mono", "JetBrains Mono", "Fira Code", "Consolas", "SFMono-Regular", Menlo, monospace;
+  font-weight: 500;
+  border: 1px solid rgba(34, 211, 238, 0.2);
+}
+
+.create-view .prose-tech pre {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.6), rgba(17, 24, 39, 0.8));
+  border: 1px solid #374151;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  overflow-x: auto;
+  margin: 2rem 0;
+  position: relative;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.create-view .prose-tech pre::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(to right, #22d3ee, #3b82f6);
+  border-radius: 0.75rem 0.75rem 0 0;
+}
+
+.create-view .prose-tech pre code {
+  background: none;
+  color: #e5e7eb;
+  padding: 0;
+  border: none;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* 引用块 */
+.create-view .prose-tech blockquote {
+  border-left: 4px solid #22d3ee;
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.08), rgba(59, 130, 246, 0.05));
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border-radius: 0 0.75rem 0.75rem 0;
+  color: #6b7280;
+  font-style: italic;
+  position: relative;
+  box-shadow: 0 4px 15px rgba(34, 211, 238, 0.1);
+}
+
+.create-view .prose-tech blockquote::before {
+  content: '"';
+  position: absolute;
+  top: -10px;
+  left: 1rem;
+  font-size: 3rem;
+  color: #22d3ee;
+  opacity: 0.3;
+  font-family: serif;
+}
+
+.create-view .prose-tech blockquote p {
+  color: #6b7280;
+  margin-bottom: 0.75rem;
+}
+
+.create-view .prose-tech blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* 表格 */
+.create-view .prose-tech table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2rem 0;
+  border: 1px solid #374151;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.create-view .prose-tech th {
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.15), rgba(59, 130, 246, 0.1));
+  color: #22d3ee;
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid #374151;
+  font-size: 0.95rem;
+  letter-spacing: 0.025em;
+}
+
+.create-view .prose-tech td {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(55, 65, 81, 0.5);
+  color: #9ca3af;
+  line-height: 1.6;
+}
+
+.create-view .prose-tech tr:last-child td {
+  border-bottom: none;
+}
+
+.create-view .prose-tech tr:nth-child(even) {
+  background: rgba(17, 24, 39, 0.3);
+}
+
+/* 链接 */
+.create-view .prose-tech a {
+  color: #22d3ee;
+  text-decoration: underline;
+  text-decoration-color: rgba(34, 211, 238, 0.3);
+  transition: all 0.2s ease;
+  font-size: inherit;
+}
+
+.create-view .prose-tech a:hover {
+  color: #06b6d4;
+  text-decoration-color: rgba(6, 182, 212, 0.6);
+}
+
+/* 分割线 */
+.create-view .prose-tech hr {
+  border: none;
+  height: 2px;
+  background: linear-gradient(to right, transparent, #374151, transparent);
+  margin: 2rem 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .create-view {
+    padding: 1rem;                /* 恢复合适的边距，防止贴边 */
+  }
+  
+  .create-view__input-card {
+    padding: 1rem;                /* 减少卡片内边距 */
+    margin-bottom: 1rem;          /* 减少下边距 */
+  }
+  
+  .create-view__title {
+    font-size: 1.25rem;           /* 缩小标题 */
+  }
+  
+  .create-view__progress-section {
+    padding: 0.75rem;             /* 减少进度区域padding */
+    margin-bottom: 1rem;          /* 减少下边距 */
+  }
+  
+  .create-view__result-card {
+    padding: 1rem;                /* 减少结果卡片padding */
+  }
+  
+  .create-view__result-header {
+    flex-direction: column;
+    gap: 0.75rem;                 /* 减少间距 */
+    align-items: stretch;
+  }
+}
+
+/* 极小屏幕进一步优化 */
+@media (max-width: 480px) {
+  .create-view {
+    padding: 0.75rem;             /* 极小屏幕保持适度边距 */
+  }
+  
+  .create-view__input-card {
+    padding: 0.75rem;             /* 进一步减少padding */
+    margin-bottom: 0.75rem;
+  }
+  
+  .create-view__title {
+    font-size: 1.125rem;          /* 进一步缩小标题 */
+  }
+  
+  .create-view__subtitle {
+    font-size: 0.75rem;           /* 缩小副标题 */
+  }
+  
+  .create-view__progress-section {
+    padding: 0.5rem;              /* 进一步减少padding */
+    margin-bottom: 0.75rem;
+  }
+  
+  .create-view__result-card {
+    padding: 0.75rem;             /* 进一步减少padding */
+  }
+  
+  .create-view__result-header {
+    gap: 0.5rem;                  /* 进一步减少间距 */
+  }
+  
+  .create-view__result-title {
+    font-size: 1.125rem;          /* 缩小结果标题 */
+  }
+}
+
+/* 高对比度模式支持 */
+@media (prefers-contrast: high) {
+  .create-view__input-card {
+    background: rgba(0, 0, 0, 0.9);
+    border: 1px solid #ffffff;
+    box-shadow: 0 0 0 2px #ffffff;
+  }
+  
+  .create-view__input-card:hover {
+    box-shadow: 0 0 0 3px #ffffff;
+  }
+}
+
+/* 减少动画模式支持 */
+@media (prefers-reduced-motion: reduce) {
+  .create-view,
+  .create-view__result-section,
+  .create-view__log-item {
+    animation: none;
+  }
+  
+  .create-view__input-card,
+  .create-view__input {
+    transition: none;
+  }
+  
+  .create-view__log-indicator--pending {
+    animation: none;
+  }
+} 

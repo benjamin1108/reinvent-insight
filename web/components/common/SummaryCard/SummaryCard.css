@@ -1,0 +1,435 @@
+/* SummaryCard组件样式 - BEM规范 */
+/* 
+ * 样式策略：
+ * - 遵循BEM命名规范 (Block__Element--Modifier)
+ * - 使用全局基础样式类（tech-gradient, glow-effect）来自 /css/base/effects.css
+ * - 组件只定义自身特有的样式和修饰符
+ * - 包含组件独立的CSS变量定义，不依赖全局字体设置
+ */
+
+/* 基础卡片样式 - Block，包含所有需要的CSS变量 */
+.summary-card {
+  /* 组件内部专用CSS变量 - 避免污染全局 */
+  --summary-card-font-display: 'Outfit', 'Inter', sans-serif;      /* 标题专用 - 强几何感 */
+  --summary-card-font-primary: 'Inter', 'Source Han Sans SC', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --summary-card-font-tech: 'Exo 2', 'Inter', sans-serif;          /* 技术元素专用 - 未来感 */
+  
+  /* 组件专用字体大小 */
+  --summary-card-title-size: 1.25rem;      /* 20px */
+  --summary-card-subtitle-size: 0.875rem;  /* 14px */
+  --summary-card-metadata-size: 0.75rem;   /* 12px */
+  --summary-card-badge-size: 0.625rem;     /* 10px */
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* 高度设置 - 修饰符 Modifier */
+.summary-card--reinvent {
+  height: 16rem;
+  justify-content: space-between;
+}
+
+.summary-card--other {
+  height: 16rem;
+}
+
+.summary-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(6, 182, 212, 0.15), 0 4px 16px rgba(6, 182, 212, 0.1);
+}
+
+/* Re:Invent 卡片特殊样式 - 修饰符 */
+.summary-card--reinvent {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(55, 65, 81, 0.8) 50%, rgba(30, 41, 59, 0.9) 100%);
+  border: 1px solid rgba(251, 146, 60, 0.3);
+}
+
+.summary-card--reinvent:hover {
+  border-color: rgba(249, 115, 22, 0.6);
+  box-shadow: 0 0 30px rgba(249, 115, 22, 0.15), 0 0 60px rgba(249, 115, 22, 0.08);
+}
+
+/* 其他精选卡片样式 - 修饰符 */
+.summary-card--other {
+  border: 1px solid transparent;
+}
+
+.summary-card--other:hover {
+  border-color: rgba(6, 182, 212, 0.6);
+}
+
+/* 分类光晕效果 - Element */
+.summary-card__category-glow {
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 12px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.summary-card--reinvent .summary-card__category-glow {
+  background: linear-gradient(45deg, #f97316, #ea580c, #dc2626, #f97316);
+  background-size: 300% 300%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+.summary-card--other .summary-card__category-glow {
+  background: linear-gradient(45deg, #06b6d4, #3b82f6, #8b5cf6, #06b6d4);
+  background-size: 300% 300%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+.summary-card:hover .summary-card__category-glow {
+  opacity: 0.3;
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* 内容区域 - Element */
+.summary-card__content {
+  cursor: pointer;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 标题容器样式 - Element */
+.summary-card__title-container {
+  height: 5rem; /* 桌面端固定高度，给标题更多空间 */
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  margin-bottom: 0.75rem;
+}
+
+/* 中文标题样式 - Element */
+.summary-card__title {
+  color: rgb(12, 175, 193); /* 提高饱和度、降低明度的蓝色 - 来自主项目 */
+  transition: all 0.3s ease;
+  font-family: var(--summary-card-font-display); /* 使用Outfit字体增强几何感 */
+  font-size: var(--summary-card-title-size); /* 使用组件变量 */
+  font-weight: 700; /* 标题专用加粗 */
+  line-height: 1.2; /* 收紧行高，增强现代感 */
+  letter-spacing: -0.02em; /* 标题收紧 - Outfit专用 */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1; /* 启用字符调整、连字和上下文替换 */
+  text-rendering: optimizeLegibility; /* 优化文本渲染 */
+  /* 多行文本截断 */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Reinvent卡片的标题颜色 - 橙色系 */
+.summary-card--reinvent .summary-card__title {
+  background: linear-gradient(135deg, #fb923c 0%, #ea580c 50%, #dc2626 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 700; /* 使用bold保持一致性，避免过度突出 */
+}
+
+/* Hover时的渐变效果 - 来自主项目 */
+.summary-card:hover .summary-card__title {
+  background: linear-gradient(135deg, #22d3ee 0%, #3b82f6 35%, #8b5cf6 70%, #ec4899 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  /* 移除字重和间距变化，避免文字跳动 */
+}
+
+/* Reinvent卡片hover时的渐变效果 - 橙色系 */
+.summary-card--reinvent:hover .summary-card__title {
+  background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.3); /* 添加微妙发光效果 */
+}
+
+/* 删除Tailwind工具类，样式已内联到相应的BEM类中 */
+
+/* 英文副标题区域 - Element */
+.summary-card__subtitle-area {
+  flex: 1;
+  margin-bottom: 0.5rem;
+  min-height: 3rem; /* 增加最小高度：从2.5rem增加到3rem */
+}
+
+/* 英文副标题样式 - Element */
+.summary-card__subtitle {
+  color: #64748b; /* 更低饱和度的灰色 - 来自主项目 */
+  opacity: 0.85; /* 稍微提高不透明度 */
+  font-family: var(--summary-card-font-primary); /* 使用Inter字体增强现代感 */
+  font-weight: 500; /* 使用中等字重提升可读性 */
+  letter-spacing: 0; /* 正常字符间距 */
+  transition: all 0.3s ease;
+  font-size: var(--summary-card-subtitle-size); /* 使用组件变量 */
+  line-height: 1.4; /* 收紧行高 */
+  word-break: break-word;
+  width: 100%;
+  font-variant-numeric: tabular-nums; /* 使用等宽数字增强技术感 */
+  font-feature-settings: 'kern' 1, 'liga' 1; /* 启用字符调整和连字 */
+  text-rendering: optimizeLegibility;
+}
+
+/* Reinvent卡片的副标题颜色 - 橙色系 */
+.summary-card--reinvent .summary-card__subtitle {
+  color: #64748b !important; /* 使用和精选卡片一样的底色，强制生效 */
+  opacity: 0.85; /* 保持一致的透明度 */
+  font-weight: 400; /* Reinvent使用正常字重保持对比 */
+}
+
+/* Hover时的样式 - 来自主项目 */
+.summary-card:hover .summary-card__subtitle {
+  color: #6b7280; /* hover时稍微提亮但仍然低调 */
+  opacity: 0.95;
+  /* 移除字重和间距变化，避免文字跳动 */
+}
+
+/* Reinvent卡片hover时的副标题样式 */
+.summary-card--reinvent:hover .summary-card__subtitle {
+  color: #6b7280 !important; /* 使用和精选卡片一样的hover颜色，强制生效 */
+  opacity: 0.95;
+  /* 移除字重变化，避免文字跳动 */
+}
+
+/* 删除Tailwind颜色工具类 */
+
+/* 元数据区域 - Element（统一使用metadata） */
+.summary-card__metadata {
+  font-family: var(--summary-card-font-tech); /* 使用Exo 2字体增强科技感 */
+  font-size: var(--summary-card-metadata-size); /* 使用组件变量 */
+  font-weight: 600; /* 技术专用字重 */
+  letter-spacing: 0.05em; /* 技术元素拉开 - Exo 2专用 */
+  opacity: 0.85;
+  transition: all 0.2s ease-in-out;
+  border-top: 1px solid rgba(100, 116, 139, 0.2);
+  padding-top: 0.75rem;
+  font-variant-numeric: tabular-nums; /* 使用等宽数字 */
+  text-rendering: optimizeSpeed; /* 优化小字体渲染 */
+}
+
+.summary-card:hover .summary-card__metadata {
+  opacity: 1;
+  /* 移除间距变化，避免文字跳动 */
+}
+
+/* Reinvent卡片的metadata边框 */
+.summary-card--reinvent .summary-card__metadata {
+  border-top-color: rgba(251, 146, 60, 0.15);
+}
+
+/* 元数据容器 - Element */
+.summary-card__metadata-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+/* 左侧字数区域 - Element */
+.summary-card__metadata-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* 右侧标签区域 - Element */
+.summary-card__metadata-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* 字数统计 - Element */
+.summary-card__word-count {
+  display: flex;
+  align-items: center;
+}
+
+/* 文档图标样式 - Element */
+.summary-card__icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  margin-right: 0.25rem;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+}
+
+/* 元数据标签 - Element */
+.summary-card__badge {
+  font-family: var(--summary-card-font-tech); /* 使用Exo 2字体增强科技感 */
+  font-size: var(--summary-card-badge-size); /* 使用组件变量 */
+  padding: 3px 8px; /* 稍微增加内边距 */
+  font-weight: 600; /* 技术专用字重 */
+  letter-spacing: 0.06em; /* 强科技感 */
+  text-transform: uppercase;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(4px);
+  background: linear-gradient(135deg, rgba(8, 145, 178, 0.9), rgba(29, 78, 216, 0.9));
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  color: white;
+  text-rendering: optimizeSpeed; /* 优化小字体渲染 */
+  font-variant-numeric: tabular-nums; /* 等宽数字 */
+  transition: all 0.2s ease; /* 添加过渡效果 */
+}
+
+.summary-card--reinvent .summary-card__badge {
+  background: linear-gradient(135deg, rgba(234, 88, 12, 0.9), rgba(220, 38, 38, 0.9));
+  border: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+/* 级别标签样式 - Element with Modifier */
+.summary-card__badge--level {
+  display: inline-flex;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(234, 88, 12, 0.9), rgba(220, 38, 38, 0.9));
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  color: white;
+  padding: 3px 8px; /* 与普通badge一致 */
+  border-radius: 6px;
+  font-family: var(--summary-card-font-tech); /* 使用Exo 2字体增强科技感 */
+  font-size: var(--summary-card-badge-size); /* 使用组件变量 */
+  font-weight: 600; /* 技术专用字重 */
+  text-transform: uppercase;
+  white-space: nowrap;
+  letter-spacing: 0.06em; /* 强科技感 */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(4px);
+  text-rendering: optimizeSpeed;
+  font-variant-numeric: tabular-nums;
+  transition: all 0.2s ease;
+}
+
+/* 徽章hover效果 */
+.summary-card:hover .summary-card__badge {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  /* 移除间距变化，避免文字跳动 */
+}
+
+/* Level标签悬停效果 */
+.summary-card:hover .summary-card__badge--level {
+  background: linear-gradient(135deg, rgba(234, 88, 12, 1), rgba(220, 38, 38, 1));
+  border-color: rgba(249, 115, 22, 0.5);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px); /* 统一hover效果 */
+}
+
+/* 删除所有全局工具类 - 样式已整合到BEM类中 */
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .summary-card {
+    height: auto;
+    min-height: auto;
+    padding: 0.75rem;             /* 减少padding */
+  }
+  
+  .summary-card--reinvent,
+  .summary-card--other {
+    height: auto;
+  }
+
+  .summary-card__title-container {
+    height: auto;
+    min-height: 2.5rem;           /* 进一步减少最小高度 */
+    margin-bottom: 0.375rem;      /* 减少间距 */
+  }
+
+  .summary-card__title {
+    font-size: 1rem;              /* 16px - 进一步缩小 */
+    line-height: 1.25;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    -webkit-line-clamp: 2;        /* 移动端只显示2行 */
+    line-clamp: 2;
+  }
+
+  .summary-card__subtitle {
+    font-size: 0.75rem;           /* 12px - 进一步缩小 */
+    line-height: 1.25;
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+
+  .summary-card__subtitle-area {
+    min-height: 1.5rem;           /* 进一步减少最小高度 */
+    margin-bottom: 0.25rem;       /* 减少边距 */
+  }
+  
+  .summary-card__metadata {
+    font-size: 0.625rem;          /* 10px - 进一步缩小 */
+    font-weight: 500;
+    letter-spacing: 0;
+    min-height: 1rem;             /* 减少最小高度 */
+    padding-top: 0.375rem;        /* 减少padding */
+  }
+
+  .summary-card__badge,
+  .summary-card__badge--level {
+    font-size: 0.5rem;            /* 8px - 进一步缩小 */
+    font-weight: 600;
+    letter-spacing: 0; /* 减少字符间距避免太密集 */
+    padding: 1px 4px;             /* 减少padding */
+  }
+}
+
+/* 极小屏幕进一步优化 */
+@media (max-width: 480px) {
+  .summary-card {
+    padding: 0.5rem;              /* 极致精简padding */
+  }
+
+  .summary-card__title-container {
+    min-height: 2rem;             /* 进一步减少 */
+    margin-bottom: 0.25rem;
+  }
+
+  .summary-card__title {
+    font-size: 0.875rem;          /* 14px - 极小屏幕进一步缩小 */
+    line-height: 1.2;
+  }
+
+  .summary-card__subtitle {
+    font-size: 0.6875rem;         /* 11px - 极小屏幕进一步缩小 */
+    line-height: 1.2;
+  }
+
+  .summary-card__subtitle-area {
+    min-height: 1.25rem;
+    margin-bottom: 0.125rem;      /* 极小边距 */
+  }
+  
+  .summary-card__metadata {
+    font-size: 0.5625rem;         /* 9px - 极小屏幕进一步缩小 */
+    min-height: 0.875rem;
+    padding-top: 0.25rem;
+  }
+
+  .summary-card__badge,
+  .summary-card__badge--level {
+    font-size: 0.4375rem;         /* 7px - 极小字体 */
+    padding: 1px 3px;             /* 极小padding */
+  }
+} 

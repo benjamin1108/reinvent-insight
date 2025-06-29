@@ -1,0 +1,86 @@
+<div class="reading-view">
+  <!-- 错误状态 -->
+  <div v-if="error" class="reading-view__error">
+    {{ error }}
+  </div>
+
+  <!-- 加载状态 -->
+  <div v-else-if="loading" class="reading-view__loading">
+    <div class="reading-view__loading-content">
+      <svg class="reading-view__loading-spinner" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+        </path>
+      </svg>
+      <p class="reading-view__loading-text">{{ loadingText }}</p>
+    </div>
+  </div>
+
+  <!-- 主要内容 -->
+  <div v-else class="reading-view__layout" :style="{ '--toc-width': tocWidth + 'px' }">
+    
+    <!-- 目录 -->
+    <div v-if="isTocVisible" class="reading-view__toc">
+      <!-- 新增：TOC包装器，用于对齐和间距 -->
+      <div class="reading-view__toc-wrapper" 
+           :style="{ width: tocWidth + 'px' }"
+           ref="tocSidebar">
+        <div class="reading-view__toc-sidebar">
+        <div class="reading-view__toc-content">
+          <!-- 目录标题 -->
+          <h3 class="reading-view__toc-title">{{ tocTitle }}</h3>
+          
+          <!-- 目录内容 -->
+          <div v-if="tocHtml" 
+               v-html="tocHtml" 
+               @click="handleTocClick"
+               class="reading-view__toc-list"></div>
+          
+          <!-- 空目录提示 -->
+          <div v-else class="reading-view__toc-empty">
+            {{ tocEmptyText }}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 拖动条 -->
+      <div class="reading-view__toc-dragbar" 
+           @mousedown="startDrag"
+           @touchstart="startDrag"></div>
+    </div>
+
+    <!-- 文章内容区域 -->
+    <div class="reading-view__content" :class="{ 'reading-view__content--no-toc': !isTocVisible }">
+      <div class="reading-view__article-wrapper">
+        <div 
+          v-if="cleanContent" 
+          @click="handleArticleClick"
+          class="reading-view__article">
+          
+          <!-- 版本选择器（移至滚动容器外部） -->
+          <div v-if="hasMultipleVersions" class="reading-view__version-selector">
+            <version-selector
+              :versions="versions"
+              :current-version="currentVersion"
+              @change="handleVersionChange">
+            </version-selector>
+          </div>
+          
+          <!-- 可滚动的内容容器 -->
+          <div class="reading-view__scroll-content">
+            <!-- 文章头部，包含标题和分割线 -->
+            <div v-if="documentTitleEn || documentTitle" class="reading-view__article-header">
+              <h1 v-if="documentTitleEn" class="reading-view__title-en">{{ documentTitleEn }}</h1>
+              <h2 v-if="documentTitle" class="reading-view__title-cn">{{ documentTitle }}</h2>
+          </div>
+
+          <!-- 文章正文 -->
+          <div v-html="cleanContent" class="reading-view__body prose-tech"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 

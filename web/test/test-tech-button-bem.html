@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechButton BEM测试</title>
+    
+    <!-- 基础样式 -->
+    <link rel="stylesheet" href="/css/base/reset.css">
+    <link rel="stylesheet" href="/css/base/variables.css">
+
+    <link rel="stylesheet" href="/css/base/effects.css">
+    
+    <!-- 组件样式 -->
+    <link rel="stylesheet" href="/components/shared/TechButton/TechButton.css">
+    
+    <style>
+        body {
+            background: #1a1a1a;
+            color: #e0e0e0;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .test-section {
+            margin-bottom: 3rem;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+            color: #06b6d4;
+        }
+        
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .button-row {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .info-box {
+            background: rgba(6, 182, 212, 0.1);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .info-box h3 {
+            color: #06b6d4;
+            margin-bottom: 0.5rem;
+        }
+        
+        .info-box ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .info-box li {
+            margin-bottom: 0.25rem;
+        }
+        
+        .info-box code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.125rem 0.25rem;
+            border-radius: 3px;
+            color: #22d3ee;
+        }
+        
+        .label {
+            font-size: 0.875rem;
+            color: #9ca3af;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="container">
+        <h1 style="font-size: 2rem; margin-bottom: 2rem; color: #06b6d4;">TechButton BEM重构测试</h1>
+        
+        <div class="info-box">
+            <h3>BEM命名规范改动说明</h3>
+            <ul>
+                <li>✅ 删除了全局选择器 <code>*[class*="animate-spin"]</code></li>
+                <li>✅ 删除了内部工具类（<code>.w-3</code>, <code>.h-3</code>, <code>.ml-1</code>等）</li>
+                <li>✅ 所有类名改为BEM格式：<code>tech-button__element--modifier</code></li>
+                <li>✅ 动画改为组件专用：<code>tech-button-spin</code></li>
+            </ul>
+        </div>
+        
+        <div class="test-section">
+            <h2 class="section-title">按钮变体（Variants）</h2>
+            <div class="button-row">
+                <tech-button variant="primary" text="Primary"></tech-button>
+                <tech-button variant="secondary" text="Secondary"></tech-button>
+                <tech-button variant="success" text="Success"></tech-button>
+                <tech-button variant="warning" text="Warning"></tech-button>
+                <tech-button variant="danger" text="Danger"></tech-button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2 class="section-title">按钮尺寸（Sizes）</h2>
+            <div class="button-row">
+                <tech-button size="sm" text="Small"></tech-button>
+                <tech-button text="Normal"></tech-button>
+                <tech-button size="lg" text="Large"></tech-button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2 class="section-title">图标按钮</h2>
+            <div class="button-row">
+                <tech-button icon="⭐" text="收藏"></tech-button>
+                <tech-button icon="❤️" text="喜欢" variant="danger"></tech-button>
+                <tech-button icon="📤" text="分享" variant="primary"></tech-button>
+            </div>
+            
+            <div class="label">纯图标按钮：</div>
+            <div class="button-row">
+                <tech-button icon="⚙️" :icon-only="true" size="sm"></tech-button>
+                <tech-button icon="✏️" :icon-only="true"></tech-button>
+                <tech-button icon="🗑️" :icon-only="true" size="lg" variant="danger"></tech-button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2 class="section-title">按钮状态</h2>
+            <div class="button-row">
+                <tech-button text="正常状态"></tech-button>
+                <tech-button text="禁用状态" :disabled="true"></tech-button>
+                <tech-button text="加载中..." :loading="true"></tech-button>
+                <tech-button text="加载中..." :loading="true" variant="primary"></tech-button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2 class="section-title">全宽按钮</h2>
+            <div style="max-width: 400px;">
+                <tech-button text="全宽按钮" :full-width="true" variant="primary" style="margin-bottom: 1rem;"></tech-button>
+                <tech-button text="全宽次要按钮" :full-width="true"></tech-button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2 class="section-title">交互测试</h2>
+            <div class="button-row">
+                <tech-button 
+                    text="点击测试" 
+                    variant="primary"
+                    @click="handleTestClick">
+                </tech-button>
+                <tech-button 
+                    :text="loadingButtonText" 
+                    :loading="isLoading"
+                    variant="success"
+                    @click="handleLoadingTest">
+                </tech-button>
+            </div>
+            <p style="margin-top: 1rem; color: #9ca3af;">{{ clickMessage }}</p>
+        </div>
+    </div>
+
+    <!-- Vue 3 -->
+    <script src="/js/vendor/vue.global.js"></script>
+    
+    <!-- 核心工具 -->
+    <script src="/js/core/component-loader.js"></script>
+    <script src="/js/core/eventBus.js"></script>
+    
+    <script>
+    const { createApp, ref } = Vue;
+    
+    createApp({
+        setup() {
+            const clickMessage = ref('');
+            const isLoading = ref(false);
+            const loadingButtonText = ref('模拟加载');
+            
+            const handleTestClick = () => {
+                clickMessage.value = '按钮被点击了！时间：' + new Date().toLocaleTimeString();
+            };
+            
+            const handleLoadingTest = () => {
+                if (isLoading.value) return;
+                
+                isLoading.value = true;
+                loadingButtonText.value = '处理中...';
+                
+                setTimeout(() => {
+                    isLoading.value = false;
+                    loadingButtonText.value = '模拟加载';
+                    clickMessage.value = '加载完成！';
+                }, 2000);
+            };
+            
+            return {
+                clickMessage,
+                isLoading,
+                loadingButtonText,
+                handleTestClick,
+                handleLoadingTest
+            };
+        },
+        mounted() {
+            // 注册组件
+            window.ComponentLoader.registerComponents([
+                ['tech-button', '/components/shared/TechButton', 'TechButton']
+            ]).then(() => {
+                console.log('✅ TechButton组件加载成功');
+            }).catch(error => {
+                console.error('❌ 组件加载失败:', error);
+            });
+        }
+    }).mount('#app');
+    </script>
+</body>
+</html> 

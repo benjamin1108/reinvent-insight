@@ -1,0 +1,45 @@
+<button 
+  :class="buttonClasses"
+  :disabled="disabled || loading"
+  :title="title"
+  @click="handleClick"
+  :type="type">
+  
+  <!-- 简单图标（文本/表情） -->
+  <span v-if="icon && !loading" :class="iconClasses" style="display: inline-flex; align-items: center; justify-content: center;">
+    {{ icon }}
+  </span>
+  
+  <!-- 前置图标 -->
+  <svg v-if="iconBefore && !loading" 
+       :class="iconClasses" 
+       fill="none" 
+       stroke="currentColor" 
+       viewBox="0 0 24 24">
+    <path :d="iconBefore" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+  </svg>
+  
+  <!-- 加载图标 -->
+  <svg v-if="loading" 
+       :class="spinnerClasses" 
+       fill="none" 
+       stroke="currentColor"
+       viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="10" stroke-width="3" opacity="0.25"></circle>
+    <path d="M12 2 A10 10 0 0 1 22 12" stroke-width="3" stroke-linecap="round"></path>
+  </svg>
+  
+  <!-- 按钮文字 -->
+  <span v-if="$slots.default || text" :class="textClasses">
+    <slot>{{ loading ? loadingText : text }}</slot>
+  </span>
+  
+  <!-- 后置图标 -->
+  <svg v-if="iconAfter && !loading" 
+       :class="iconClasses" 
+       fill="none" 
+       stroke="currentColor" 
+       viewBox="0 0 24 24">
+    <path :d="iconAfter" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+  </svg>
+</button> 

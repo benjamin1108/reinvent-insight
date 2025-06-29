@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LibraryView 组件测试</title>
+  
+  <!-- Vue 3 -->
+  <script src="/js/vendor/vue.global.js"></script>
+  
+  <!-- 基础样式 -->
+      <link rel="stylesheet" href="/css/base/effects.css">
+  
+  <!-- 组件样式 -->
+  <link rel="stylesheet" href="/components/common/SummaryCard/SummaryCard.css">
+  <link rel="stylesheet" href="/components/views/LibraryView/LibraryView.css">
+  
+  <!-- 测试框架样式 -->
+  <style>
+    :root {
+      --test-bg: #0f172a;
+      --test-surface: #1e293b;
+      --test-border: #334155;
+      --test-primary: #22d3ee;
+      --test-success: #10b981;
+      --test-warning: #f59e0b;
+      --test-error: #ef4444;
+      --test-text: #e5e7eb;
+      --test-text-dim: #9ca3af;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: var(--test-bg);
+      color: var(--test-text);
+      font-family: var(--font-primary);
+      min-height: 100vh;
+    }
+    
+    .test-header {
+      text-align: center;
+      padding: 2rem;
+      background: var(--test-surface);
+      border-bottom: 1px solid var(--test-border);
+    }
+    
+    .test-header h1 {
+      font-size: 2.5rem;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    
+    .test-header p {
+      color: var(--test-text-dim);
+      font-size: 1.125rem;
+    }
+    
+    .test-container {
+      max-width: 100%;
+      margin: 0 auto;
+    }
+    
+    .test-case {
+      margin-bottom: 2rem;
+    }
+    
+    .test-case-header {
+      background: var(--test-surface);
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--test-border);
+    }
+    
+    .test-case-title {
+      font-size: 1.25rem;
+      color: var(--test-primary);
+    }
+    
+    .test-case-description {
+      color: var(--test-text-dim);
+      font-size: 0.875rem;
+      margin-top: 0.5rem;
+    }
+    
+    .test-controls {
+      background: var(--test-surface);
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--test-border);
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    
+    .control-group {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    
+    .control-label {
+      color: var(--test-text-dim);
+      font-size: 0.875rem;
+    }
+    
+    .test-button {
+      padding: 0.5rem 1.5rem;
+      background: var(--gradient-primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .test-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3);
+    }
+    
+    .test-button.secondary {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+    }
+    
+    .test-button.danger {
+      background: var(--test-error);
+    }
+    
+    .library-container {
+      background: var(--test-bg);
+      min-height: 600px;
+    }
+    
+    .status-display {
+      background: var(--test-surface);
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--test-border);
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+    
+    .status-item {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    
+    .status-label {
+      color: var(--test-text-dim);
+      font-size: 0.875rem;
+    }
+    
+    .status-value {
+      font-weight: 600;
+      color: var(--test-primary);
+    }
+    
+    .test-output {
+      background: var(--test-surface);
+      border-top: 1px solid var(--test-border);
+      padding: 1.5rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .test-output-header {
+      color: var(--test-text-dim);
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+    }
+    
+    .log-entry {
+      font-family: var(--font-code);
+      font-size: 0.875rem;
+      padding: 0.25rem 0;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+    }
+    
+    .back-link {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      padding: 0.5rem 1rem;
+      background: var(--test-surface);
+      border: 1px solid var(--test-primary);
+      border-radius: 6px;
+      color: var(--test-primary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+      z-index: 1000;
+    }
+    
+    .back-link:hover {
+      background: rgba(34, 211, 238, 0.1);
+    }
+    
+    .sample-data-controls {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    
+    .sample-btn {
+      padding: 0.25rem 0.75rem;
+      background: rgba(34, 211, 238, 0.2);
+      border: 1px solid var(--test-primary);
+      border-radius: 4px;
+      color: var(--test-primary);
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .sample-btn:hover {
+      background: rgba(34, 211, 238, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <a href="/test/" class="back-link">← 返回测试目录</a>
+  
+  <div id="app">
+    <div class="test-header">
+      <h1>LibraryView 组件测试</h1>
+      <p>文档库视图组件，展示文档列表、筛选和搜索功能</p>
+    </div>
+    
+    <div class="test-container">
+      <!-- 测试用例1：基础功能 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">基础功能测试</h2>
+          <p class="test-case-description">默认文档列表展示和基本交互</p>
+        </div>
+        
+        <div class="status-display">
+          <div class="status-item">
+            <span class="status-label">文档总数:</span>
+            <span class="status-value">{{ documents1.length }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">当前选中:</span>
+            <span class="status-value">{{ selectedDoc1?.title || '无' }}</span>
+          </div>
+        </div>
+        
+        <div class="library-container">
+          <library-view
+            :summaries="documents1"
+            :loading="false"
+            @summary-click="handleSelect1"
+            @level-change="handleFilter1"
+            @year-change="handleSearch1"
+          ></library-view>
+        </div>
+      </div>
+      
+      <!-- 测试用例2：动态数据管理 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">动态数据管理</h2>
+          <p class="test-case-description">添加、删除、更新文档数据</p>
+        </div>
+        
+        <div class="test-controls">
+          <button @click="addDocument" class="test-button">
+            添加文档
+          </button>
+          <button @click="removeDocument" class="test-button danger">
+            删除最后一个
+          </button>
+          <button @click="updateDocument" class="test-button secondary">
+            更新第一个
+          </button>
+          <button @click="shuffleDocuments" class="test-button secondary">
+            随机排序
+          </button>
+        </div>
+        
+        <div class="test-controls">
+          <div class="control-group">
+            <span class="control-label">加载示例数据：</span>
+            <div class="sample-data-controls">
+              <button @click="loadReinventData" class="sample-btn">
+                re:Invent 文档
+              </button>
+              <button @click="loadTechnicalData" class="sample-btn">
+                技术文档
+              </button>
+              <button @click="loadMixedData" class="sample-btn">
+                混合内容
+              </button>
+              <button @click="loadEmptyData" class="sample-btn">
+                清空
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="status-display">
+          <div class="status-item">
+            <span class="status-label">文档总数:</span>
+            <span class="status-value">{{ documents2.length }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">筛选后:</span>
+            <span class="status-value">{{ filteredCount }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">当前类型:</span>
+            <span class="status-value">{{ currentFilter || '全部' }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">搜索词:</span>
+            <span class="status-value">{{ currentSearch || '无' }}</span>
+          </div>
+        </div>
+        
+        <div class="library-container">
+          <library-view
+            :summaries="documents2"
+            :loading="false"
+            @summary-click="handleSelect2"
+            @level-change="handleFilter2"
+            @year-change="handleSearch2"
+          ></library-view>
+        </div>
+      </div>
+      
+      <!-- 测试用例3：性能测试 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">性能测试</h2>
+          <p class="test-case-description">大量数据渲染和搜索性能</p>
+        </div>
+        
+        <div class="test-controls">
+          <button @click="generateDocuments(100)" class="test-button secondary">
+            生成 100 个
+          </button>
+          <button @click="generateDocuments(500)" class="test-button secondary">
+            生成 500 个
+          </button>
+          <button @click="generateDocuments(1000)" class="test-button secondary">
+            生成 1000 个
+          </button>
+          <button @click="clearDocuments" class="test-button">
+            清空
+          </button>
+        </div>
+        
+        <div class="status-display">
+          <div class="status-item">
+            <span class="status-label">文档总数:</span>
+            <span class="status-value">{{ documents3.length }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">渲染耗时:</span>
+            <span class="status-value">{{ renderTime }}ms</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">搜索耗时:</span>
+            <span class="status-value">{{ searchTime }}ms</span>
+          </div>
+        </div>
+        
+        <div class="library-container">
+          <library-view
+            :summaries="documents3"
+            :loading="false"
+            @summary-click="handleSelect3"
+            @level-change="handleSearch3"
+          ></library-view>
+        </div>
+      </div>
+      
+      <!-- 事件日志 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">事件日志</h2>
+        </div>
+        
+        <div class="test-controls">
+          <button @click="clearLog" class="test-button secondary">
+            清空日志
+          </button>
+        </div>
+        
+        <div class="test-output">
+          <div class="test-output-header">事件记录：</div>
+          <div v-if="eventLog.length === 0" style="color: var(--test-text-dim);">
+            暂无事件记录
+          </div>
+          <div v-for="(log, index) in eventLog" :key="index" class="log-entry">
+            {{ log }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 组件加载器 -->
+  <script src="/js/core/component-loader.js"></script>
+  
+  <script type="module">
+    const { createApp, ref, computed, onMounted } = Vue;
+    
+    const app = createApp({
+      setup() {
+        // 基础测试数据
+        const documents1 = ref([
+          {
+            id: 1,
+            title_en: 'Getting Started with AWS Lambda',
+            title_cn: 'AWS Lambda 入门指南',
+            filename: 'lambda-basics',
+            hash: 'hash1',
+            level: 'Level 200',
+            year: 2024,
+            word_count: 5000,
+            upload_date: '2024-01-15',
+            tags: ['serverless', 'lambda', 'compute']
+          },
+          {
+            id: 2,
+            title_en: 'Building Microservices on AWS',
+            title_cn: '在 AWS 上构建微服务',
+            filename: 'microservices-aws',
+            hash: 'hash2',
+            level: 'Level 300',
+            word_count: 8000,
+            upload_date: '2024-02-20',
+            tags: ['microservices', 'architecture', 'ecs']
+          },
+          {
+            id: 3,
+            title_en: 'AWS re:Invent 2023 - Deep Dive into DynamoDB',
+            title_cn: 'AWS re:Invent 2023 - DynamoDB 深度解析',
+            filename: 'dynamodb-deep-dive',
+            hash: 'hash3',
+            level: 'Level 300',
+            year: 2023,
+            word_count: 12000,
+            upload_date: '2023-12-10',
+            tags: ['database', 'nosql', 'dynamodb']
+          }
+        ]);
+        const selectedId1 = ref(null);
+        const selectedDoc1 = computed(() => 
+          documents1.value.find(d => d.id === selectedId1.value)
+        );
+        
+        // 动态数据测试
+        const documents2 = ref([...documents1.value]);
+        const selectedId2 = ref(null);
+        const currentFilter = ref('');
+        const currentSearch = ref('');
+        const filteredCount = ref(documents2.value.length);
+        
+        // 性能测试
+        const documents3 = ref([]);
+        const renderTime = ref(0);
+        const searchTime = ref(0);
+        let searchStartTime = 0;
+        
+        // 事件日志
+        const eventLog = ref([]);
+        
+        const addLog = (message) => {
+          const time = new Date().toLocaleTimeString();
+          eventLog.value.unshift(`[${time}] ${message}`);
+          if (eventLog.value.length > 100) {
+            eventLog.value.pop();
+          }
+        };
+        
+        // 事件处理 - 基础测试
+        const handleSelect1 = (document) => {
+          selectedId1.value = document.hash;
+          addLog(`基础测试：选择文档 - ${document.title_en || document.title_cn}`);
+        };
+        
+        const handleFilter1 = (filter) => {
+          addLog(`基础测试：筛选类型 - ${filter || '全部'}`);
+        };
+        
+        const handleSearch1 = (query) => {
+          addLog(`基础测试：搜索 - "${query}"`);
+        };
+        
+        // 事件处理 - 动态数据
+        const handleSelect2 = (document) => {
+          selectedId2.value = document.hash;
+          addLog(`动态测试：选择文档 - ${document.title_en || document.title_cn}`);
+        };
+        
+        const handleFilter2 = (filter) => {
+          currentFilter.value = filter;
+          updateFilteredCount();
+          addLog(`动态测试：筛选类型 - ${filter || '全部'}`);
+        };
+        
+        const handleSearch2 = (query) => {
+          currentSearch.value = query;
+          updateFilteredCount();
+          addLog(`动态测试：搜索 - "${query}"`);
+        };
+        
+        const handleCreate = () => {
+          addLog('动态测试：触发创建新文档');
+        };
+        
+        // 文档操作
+        const addDocument = () => {
+          const isReinvent = Math.random() > 0.5;
+          const docNum = documents2.value.length + 1;
+          const newDoc = {
+            id: Date.now(),
+            title_en: isReinvent ? `AWS re:Invent 2024 - New Document ${docNum}` : `New Document ${docNum}`,
+            title_cn: `新文档 ${docNum}`,
+            filename: `new-document-${docNum}`,
+            hash: `hash-new-${Date.now()}`,
+            word_count: Math.floor(Math.random() * 5000) + 1000,
+            upload_date: new Date().toISOString().split('T')[0],
+            tags: ['new', 'dynamic']
+          };
+          
+          if (isReinvent) {
+            newDoc.level = `Level ${Math.floor(Math.random() * 4 + 1) * 100}`;
+            newDoc.year = 2020 + Math.floor(Math.random() * 5);
+          }
+          
+          documents2.value.push(newDoc);
+          addLog(`添加文档：${newDoc.title_cn}`);
+        };
+        
+        const removeDocument = () => {
+          if (documents2.value.length > 0) {
+            const removed = documents2.value.pop();
+            addLog(`删除文档：${removed.title_cn || removed.title_en}`);
+          }
+        };
+        
+        const updateDocument = () => {
+          if (documents2.value.length > 0) {
+            documents2.value[0] = {
+              ...documents2.value[0],
+              title_cn: `${documents2.value[0].title_cn} (已更新)`,
+              updated: new Date().toISOString()
+            };
+            addLog(`更新文档：${documents2.value[0].title_cn}`);
+          }
+        };
+        
+        const shuffleDocuments = () => {
+          documents2.value = [...documents2.value].sort(() => Math.random() - 0.5);
+          addLog('文档列表已随机排序');
+        };
+        
+        // 加载示例数据
+        const loadReinventData = () => {
+          documents2.value = [
+            {
+              id: 101,
+              title_en: 'AWS re:Invent 2024 Keynote',
+              title_cn: 'AWS re:Invent 2024 主题演讲',
+              filename: 'reinvent-2024-keynote',
+              hash: 'hash101',
+              level: 'Keynote',
+              year: 2024,
+              word_count: 15000,
+              upload_date: '2024-12-01',
+              tags: ['keynote', 'announcements']
+            },
+            {
+              id: 102,
+              title_en: 'AWS re:Invent 2024 - Advanced VPC Networking',
+              title_cn: 'AWS re:Invent 2024 - 高级 VPC 网络',
+              filename: 'advanced-vpc-networking',
+              hash: 'hash102',
+              level: 'Level 400',
+              year: 2024,
+              word_count: 10000,
+              upload_date: '2024-12-02',
+              tags: ['networking', 'vpc', 'security']
+            },
+            {
+              id: 103,
+              title_en: 'AWS re:Invent 2024 - ML/AI Services Overview',
+              title_cn: 'AWS re:Invent 2024 - ML/AI 服务概览',
+              filename: 'ml-ai-services-overview',
+              hash: 'hash103',
+              level: 'Level 200',
+              year: 2024,
+              word_count: 8000,
+              upload_date: '2024-12-03',
+              tags: ['ml', 'ai', 'sagemaker']
+            }
+          ];
+          addLog('加载 re:Invent 示例数据');
+        };
+        
+        const loadTechnicalData = () => {
+          documents2.value = [
+            {
+              id: 201,
+              title_en: 'Kubernetes Best Practices',
+              title_cn: 'Kubernetes 最佳实践',
+              filename: 'kubernetes-best-practices',
+              hash: 'hash201',
+              word_count: 6000,
+              upload_date: '2024-01-10',
+              tags: ['kubernetes', 'containers', 'eks']
+            },
+            {
+              id: 202,
+              title_en: 'CI/CD Pipeline Design',
+              title_cn: 'CI/CD 流水线设计',
+              filename: 'cicd-pipeline-design',
+              hash: 'hash202',
+              word_count: 7500,
+              upload_date: '2024-02-15',
+              tags: ['devops', 'cicd', 'automation']
+            },
+            {
+              id: 203,
+              title_en: 'Security Architecture Guide',
+              title_cn: '安全架构指南',
+              filename: 'security-architecture-guide',
+              hash: 'hash203',
+              word_count: 9000,
+              upload_date: '2024-03-20',
+              tags: ['security', 'compliance', 'architecture']
+            }
+          ];
+          addLog('加载技术文档示例数据');
+        };
+        
+        const loadMixedData = () => {
+          documents2.value = [...documents1.value];
+          addLog('加载混合内容示例数据');
+        };
+        
+        const loadEmptyData = () => {
+          documents2.value = [];
+          addLog('清空文档列表');
+        };
+        
+        const updateFilteredCount = () => {
+          let count = documents2.value.length;
+          
+          if (currentFilter.value) {
+            count = documents2.value.filter(d => d.type === currentFilter.value).length;
+          }
+          
+          if (currentSearch.value) {
+            const search = currentSearch.value.toLowerCase();
+            count = documents2.value.filter(d => {
+              const titleEn = (d.title_en || '').toLowerCase();
+              const titleCn = (d.title_cn || '').toLowerCase();
+              return titleEn.includes(search) || titleCn.includes(search);
+            }).length;
+          }
+          
+          filteredCount.value = count;
+        };
+        
+        // 性能测试
+        const generateDocuments = (count) => {
+          const startTime = performance.now();
+          const docs = [];
+          
+          for (let i = 1; i <= count; i++) {
+            const isReinvent = Math.random() > 0.5;
+            const title = generateTitle();
+            const doc = {
+              id: 1000 + i,
+              title_en: isReinvent ? `AWS re:Invent 2024 - ${title}` : title,
+              title_cn: `文档 ${i}: ${title}`,
+              filename: `document-${i}`,
+              hash: `hash${1000 + i}`,
+              word_count: Math.floor(Math.random() * 10000) + 2000,
+              upload_date: `2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
+              tags: generateTags()
+            };
+            
+            if (isReinvent) {
+              doc.level = `Level ${Math.floor(Math.random() * 4 + 1) * 100}`;
+              doc.year = 2020 + Math.floor(Math.random() * 5);
+            }
+            
+            docs.push(doc);
+          }
+          
+          documents3.value = docs;
+          const endTime = performance.now();
+          renderTime.value = Math.round(endTime - startTime);
+          addLog(`生成 ${count} 个文档，耗时 ${renderTime.value}ms`);
+        };
+        
+        const generateTitle = () => {
+          const topics = ['AWS', 'Cloud', 'Serverless', 'Security', 'Database', 'Network'];
+          const actions = ['Building', 'Optimizing', 'Scaling', 'Securing', 'Monitoring'];
+          const targets = ['Applications', 'Infrastructure', 'Services', 'Systems', 'Workloads'];
+          
+          return `${actions[Math.floor(Math.random() * actions.length)]} ${
+            targets[Math.floor(Math.random() * targets.length)]
+          } with ${topics[Math.floor(Math.random() * topics.length)]}`;
+        };
+        
+        const generateDescription = () => {
+          const descriptions = [
+            'Learn best practices and patterns.',
+            'Deep dive into advanced techniques.',
+            'Comprehensive guide for professionals.',
+            'Practical examples and use cases.',
+            'Step-by-step implementation guide.'
+          ];
+          return descriptions[Math.floor(Math.random() * descriptions.length)];
+        };
+        
+        const generateTags = () => {
+          const allTags = ['aws', 'cloud', 'serverless', 'security', 'database', 'compute', 'storage'];
+          const numTags = Math.floor(Math.random() * 3) + 2;
+          const tags = [];
+          
+          for (let i = 0; i < numTags; i++) {
+            const tag = allTags[Math.floor(Math.random() * allTags.length)];
+            if (!tags.includes(tag)) {
+              tags.push(tag);
+            }
+          }
+          
+          return tags;
+        };
+        
+        const clearDocuments = () => {
+          documents3.value = [];
+          renderTime.value = 0;
+          searchTime.value = 0;
+          addLog('性能测试文档已清空');
+        };
+        
+        // 性能测试事件
+        const handleSelect3 = (document) => {
+          addLog(`性能测试：选择文档 - ${document.title_en || document.title_cn}`);
+        };
+        
+        const handleSearch3 = (query) => {
+          searchStartTime = performance.now();
+          addLog(`性能测试：搜索 - "${query}"`);
+        };
+        
+        const handleRenderComplete = () => {
+          if (searchStartTime > 0) {
+            searchTime.value = Math.round(performance.now() - searchStartTime);
+            searchStartTime = 0;
+            addLog(`搜索完成，耗时 ${searchTime.value}ms`);
+          }
+        };
+        
+        const clearLog = () => {
+          eventLog.value = [];
+        };
+        
+        return {
+          // 基础测试
+          documents1,
+          selectedId1,
+          selectedDoc1,
+          handleSelect1,
+          handleFilter1,
+          handleSearch1,
+          
+          // 动态数据
+          documents2,
+          selectedId2,
+          currentFilter,
+          currentSearch,
+          filteredCount,
+          handleSelect2,
+          handleFilter2,
+          handleSearch2,
+          handleCreate,
+          addDocument,
+          removeDocument,
+          updateDocument,
+          shuffleDocuments,
+          loadReinventData,
+          loadTechnicalData,
+          loadMixedData,
+          loadEmptyData,
+          
+          // 性能测试
+          documents3,
+          renderTime,
+          searchTime,
+          generateDocuments,
+          clearDocuments,
+          handleSelect3,
+          handleSearch3,
+          handleRenderComplete,
+          
+          // 事件日志
+          eventLog,
+          clearLog
+        };
+      }
+    });
+    
+    // 加载组件
+    (async () => {
+      try {
+        await ComponentLoader.registerComponents(app, [
+          ['library-view', '/components/views/LibraryView', 'LibraryView'],
+          ['summary-card', '/components/common/SummaryCard', 'SummaryCard'],
+          ['level-filter', '/components/common/Filter', 'LevelFilter'],
+          ['year-filter', '/components/common/Filter', 'YearFilter'],
+          ['custom-dropdown', '/components/common/Filter', 'CustomDropdown']
+        ]);
+        
+        app.mount('#app');
+        console.log('LibraryView 测试环境初始化完成');
+      } catch (error) {
+        console.error('测试环境初始化失败:', error);
+      }
+    })();
+  </script>
+</body>
+</html> 

@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TechButton 组件测试</title>
+  
+  <!-- Vue 3 -->
+  <script src="/js/vendor/vue.global.js"></script>
+  
+  <!-- 科技感字体系统 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=Exo+2:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- 基础样式 -->
+  
+  <link rel="stylesheet" href="/css/base/effects.css">
+  
+  <!-- 测试框架样式 -->
+  <style>
+    :root {
+      --test-bg: #0f172a;
+      --test-surface: #1e293b;
+      --test-border: #334155;
+      --test-primary: #22d3ee;
+      --test-success: #10b981;
+      --test-warning: #f59e0b;
+      --test-error: #ef4444;
+      --test-text: #e5e7eb;
+      --test-text-dim: #9ca3af;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: var(--test-bg);
+      color: var(--test-text);
+      font-family: var(--font-primary);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    
+    .test-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    
+    .test-header h1 {
+      font-size: 2.5rem;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    
+    .test-header p {
+      color: var(--test-text-dim);
+      font-size: 1.125rem;
+    }
+    
+    .test-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .test-case {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    
+    .test-case-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    
+    .test-case-title {
+      font-size: 1.25rem;
+      color: var(--test-primary);
+    }
+    
+    .test-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+    
+    .control-group {
+      flex: 1;
+      min-width: 200px;
+    }
+    
+    .control-label {
+      display: block;
+      color: var(--test-text-dim);
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .control-select {
+      width: 100%;
+      padding: 0.5rem;
+      background: var(--test-bg);
+      border: 1px solid var(--test-border);
+      border-radius: 6px;
+      color: var(--test-text);
+      font-size: 0.875rem;
+    }
+    
+    .control-checkbox {
+      margin-right: 0.5rem;
+    }
+    
+    .component-display {
+      padding: 2rem;
+      background: var(--test-bg);
+      border: 1px solid var(--test-border);
+      border-radius: 8px;
+      margin-top: 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+    }
+    
+    .test-output {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--test-border);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+      font-family: var(--font-code);
+      font-size: 0.875rem;
+    }
+    
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      width: 100%;
+    }
+    
+    .back-link {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      padding: 0.5rem 1rem;
+      background: var(--test-surface);
+      border: 1px solid var(--test-primary);
+      border-radius: 6px;
+      color: var(--test-primary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    
+    .back-link:hover {
+      background: rgba(34, 211, 238, 0.1);
+    }
+    
+    /* 测试旋转动画是否工作 */
+    @keyframes test-spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    
+    .test-spin {
+      display: inline-block;
+      animation: test-spin 1s linear infinite;
+    }
+  </style>
+</head>
+<body>
+  <a href="/test/" class="back-link">← 返回测试目录</a>
+  
+  <div id="app">
+    <div class="test-header">
+      <h1>TechButton 组件测试</h1>
+      <p>统一的科技风格按钮组件，支持多种变体、尺寸、状态和图标</p>
+      <div style="margin-top: 1rem;">
+        <span class="test-spin" style="color: #22d3ee;">⚙️</span> 
+        <span style="color: #9ca3af; font-size: 0.875rem; margin-left: 0.5rem;">如果这个齿轮在旋转，说明CSS动画正常工作</span>
+      </div>
+    </div>
+    
+    <div class="test-container">
+      <!-- 测试用例1：基础变体 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">按钮变体测试</h2>
+        </div>
+        
+        <div class="component-display">
+          <tech-button variant="primary">Primary</tech-button>
+          <tech-button variant="secondary">Secondary</tech-button>
+          <tech-button variant="success">Success</tech-button>
+          <tech-button variant="warning">Warning</tech-button>
+          <tech-button variant="danger">Danger</tech-button>
+        </div>
+      </div>
+      
+      <!-- 测试用例2：尺寸测试 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">按钮尺寸测试</h2>
+        </div>
+        
+        <div class="component-display" style="align-items: baseline;">
+          <tech-button size="sm">小尺寸</tech-button>
+          <tech-button size="normal">标准尺寸</tech-button>
+          <tech-button size="lg">大尺寸</tech-button>
+        </div>
+      </div>
+      
+      <!-- 测试用例3：状态测试 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">按钮状态测试</h2>
+        </div>
+        
+        <div class="test-controls">
+          <div class="control-group">
+            <label class="control-label">
+              <input type="checkbox" v-model="isLoading" class="control-checkbox">
+              加载状态
+            </label>
+          </div>
+          <div class="control-group">
+            <label class="control-label">
+              <input type="checkbox" v-model="isDisabled" class="control-checkbox">
+              禁用状态
+            </label>
+          </div>
+        </div>
+        
+        <div class="component-display">
+          <tech-button :loading="isLoading" :disabled="isDisabled">
+            状态测试按钮
+          </tech-button>
+          <tech-button variant="success" :loading="isLoading" :disabled="isDisabled">
+            成功按钮
+          </tech-button>
+          <tech-button variant="danger" :loading="isLoading" :disabled="isDisabled">
+            危险按钮
+          </tech-button>
+        </div>
+      </div>
+      
+      <!-- 测试用例4：图标测试 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">图标按钮测试</h2>
+        </div>
+        
+        <div class="component-display">
+          <tech-button icon="📥">下载</tech-button>
+          <tech-button icon="✏️" variant="secondary">编辑</tech-button>
+          <tech-button icon="🗑️" variant="danger">删除</tech-button>
+          <tech-button icon="🚀" variant="success">发布</tech-button>
+        </div>
+      </div>
+      
+      <!-- 测试用例5：事件测试 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">事件响应测试</h2>
+        </div>
+        
+        <div class="component-display">
+          <tech-button @click="handleClick">点击测试</tech-button>
+          <tech-button @click="handleAsyncClick" :loading="asyncLoading">
+            异步操作
+          </tech-button>
+        </div>
+        
+        <div class="test-output" v-if="eventLog.length > 0">
+          <div v-for="(log, index) in eventLog" :key="index">
+            {{ log }}
+          </div>
+        </div>
+      </div>
+      
+      <!-- 测试用例6：组合测试 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">综合样式测试</h2>
+        </div>
+        
+        <div class="test-controls">
+          <div class="control-group">
+            <label class="control-label">变体</label>
+            <select v-model="testVariant" class="control-select">
+              <option value="primary">Primary</option>
+              <option value="secondary">Secondary</option>
+              <option value="success">Success</option>
+              <option value="warning">Warning</option>
+              <option value="danger">Danger</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label class="control-label">尺寸</label>
+            <select v-model="testSize" class="control-select">
+              <option value="sm">小</option>
+              <option value="normal">标准</option>
+              <option value="lg">大</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label class="control-label">图标</label>
+            <select v-model="testIcon" class="control-select">
+              <option value="">无图标</option>
+              <option value="⭐">星星</option>
+              <option value="❤️">爱心</option>
+              <option value="📌">图钉</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="component-display">
+          <tech-button 
+            :variant="testVariant" 
+            :size="testSize" 
+            :icon="testIcon"
+          >
+            自定义按钮
+          </tech-button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 组件加载器 -->
+  <script src="/js/core/component-loader.js"></script>
+  
+  <script type="module">
+    const { createApp, ref } = Vue;
+    
+    const app = createApp({
+      setup() {
+        // 状态控制
+        const isLoading = ref(false);
+        const isDisabled = ref(false);
+        const asyncLoading = ref(false);
+        
+        // 组合测试
+        const testVariant = ref('primary');
+        const testSize = ref('normal');
+        const testIcon = ref('');
+        
+        // 事件日志
+        const eventLog = ref([]);
+        
+        // 事件处理
+        const handleClick = () => {
+          const time = new Date().toLocaleTimeString();
+          eventLog.value.unshift(`[${time}] 按钮被点击`);
+          if (eventLog.value.length > 5) {
+            eventLog.value.pop();
+          }
+        };
+        
+        const handleAsyncClick = async () => {
+          asyncLoading.value = true;
+          const time = new Date().toLocaleTimeString();
+          eventLog.value.unshift(`[${time}] 开始异步操作...`);
+          
+          // 模拟异步操作
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          asyncLoading.value = false;
+          const endTime = new Date().toLocaleTimeString();
+          eventLog.value.unshift(`[${endTime}] 异步操作完成！`);
+        };
+        
+        return {
+          isLoading,
+          isDisabled,
+          asyncLoading,
+          testVariant,
+          testSize,
+          testIcon,
+          eventLog,
+          handleClick,
+          handleAsyncClick
+        };
+      }
+    });
+    
+    // 加载组件
+    (async () => {
+      try {
+        await ComponentLoader.registerComponents(app, [
+          ['tech-button', '/components/shared/TechButton', 'TechButton']
+        ]);
+        
+        app.mount('#app');
+        console.log('TechButton 测试环境初始化完成');
+      } catch (error) {
+        console.error('测试环境初始化失败:', error);
+      }
+    })();
+  </script>
+</body>
+</html> 

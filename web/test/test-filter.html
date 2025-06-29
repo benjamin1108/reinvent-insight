@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Filter 组件测试</title>
+  
+  <!-- Vue 3 -->
+  <script src="/js/vendor/vue.global.js"></script>
+  
+  <!-- 基础样式 -->
+  
+  <link rel="stylesheet" href="/css/base/effects.css">
+  
+  <!-- 测试框架样式 -->
+  <style>
+    :root {
+      --test-bg: #0f172a;
+      --test-surface: #1e293b;
+      --test-border: #334155;
+      --test-primary: #22d3ee;
+      --test-success: #10b981;
+      --test-warning: #f59e0b;
+      --test-error: #ef4444;
+      --test-text: #e5e7eb;
+      --test-text-dim: #9ca3af;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: var(--test-bg);
+      color: var(--test-text);
+      font-family: var(--font-primary);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    
+    .test-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    
+    .test-header h1 {
+      font-size: 2.5rem;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    
+    .test-header p {
+      color: var(--test-text-dim);
+      font-size: 1.125rem;
+    }
+    
+    .test-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .test-case {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    
+    .test-case-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    
+    .test-case-title {
+      font-size: 1.25rem;
+      color: var(--test-primary);
+    }
+    
+    .filter-container {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    
+    .test-output {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--test-border);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+      font-family: var(--font-code);
+      font-size: 0.875rem;
+    }
+    
+    .test-button {
+      padding: 0.5rem 1.5rem;
+      background: var(--gradient-primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .test-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3);
+    }
+    
+    .test-button.secondary {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+    }
+    
+    .article-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    
+    .article-card {
+      background: var(--test-bg);
+      border: 1px solid var(--test-border);
+      border-radius: 8px;
+      padding: 1rem;
+      transition: all 0.2s;
+    }
+    
+    .article-card:hover {
+      border-color: var(--test-primary);
+      transform: translateY(-2px);
+    }
+    
+    .article-title {
+      color: var(--test-primary);
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .article-meta {
+      color: var(--test-text-dim);
+      font-size: 0.875rem;
+    }
+    
+    .info-box {
+      background: rgba(34, 211, 238, 0.1);
+      border: 1px solid rgba(34, 211, 238, 0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+    
+    .back-link {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      padding: 0.5rem 1rem;
+      background: var(--test-surface);
+      border: 1px solid var(--test-primary);
+      border-radius: 6px;
+      color: var(--test-primary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    
+    .back-link:hover {
+      background: rgba(34, 211, 238, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <a href="/test/" class="back-link">← 返回测试目录</a>
+  
+  <div id="app">
+    <div class="test-header">
+      <h1>Filter 组件测试</h1>
+      <p>筛选器组件集合，包含级别筛选器和年份筛选器</p>
+    </div>
+    
+    <div class="test-container">
+      <!-- 测试用例1：基础筛选功能 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">基础筛选功能</h2>
+        </div>
+        
+        <div class="filter-container">
+          <level-filter v-model="selectedLevel" @change="onLevelChange"></level-filter>
+          <year-filter v-model="selectedYear" :available-years="availableYears" @change="onYearChange"></year-filter>
+          <button @click="resetFilters" class="test-button secondary">
+            重置筛选
+          </button>
+        </div>
+        
+        <div class="test-output">
+          <div>当前级别：{{ selectedLevel || '全部' }}</div>
+          <div>当前年份：{{ selectedYear || '全部' }}</div>
+        </div>
+      </div>
+      
+      <!-- 测试用例2：实际筛选效果 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">实际筛选效果演示</h2>
+        </div>
+        
+        <div class="filter-container">
+          <level-filter v-model="filterLevel"></level-filter>
+          <year-filter v-model="filterYear" :available-years="['2024', '2023', '2022']"></year-filter>
+        </div>
+        
+        <div class="info-box" v-if="filteredArticles.length === 0">
+          没有找到符合条件的文章
+        </div>
+        
+        <div class="article-grid">
+          <div v-for="article in filteredArticles" :key="article.id" class="article-card">
+            <h3 class="article-title">{{ article.title }}</h3>
+            <div class="article-meta">
+              <span>{{ article.level }}</span> | 
+              <span>{{ article.year }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 测试用例3：禁用状态 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">禁用状态测试</h2>
+        </div>
+        
+        <div style="margin-bottom: 1rem;">
+          <label style="color: var(--test-text-dim);">
+            <input type="checkbox" v-model="isDisabled" style="margin-right: 0.5rem;">
+            禁用筛选器
+          </label>
+        </div>
+        
+        <div class="filter-container">
+          <level-filter v-model="disabledLevel" :disabled="isDisabled"></level-filter>
+          <year-filter v-model="disabledYear" :available-years="availableYears" :disabled="isDisabled"></year-filter>
+        </div>
+      </div>
+      
+      <!-- 测试用例4：动态年份列表 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">动态年份列表</h2>
+        </div>
+        
+        <div style="margin-bottom: 1rem;">
+          <button @click="addYear" class="test-button" style="margin-right: 0.5rem;">
+            添加年份
+          </button>
+          <button @click="removeYear" class="test-button secondary">
+            移除年份
+          </button>
+        </div>
+        
+        <div class="filter-container">
+          <year-filter v-model="dynamicYear" :available-years="dynamicYears"></year-filter>
+        </div>
+        
+        <div class="test-output">
+          <div>可用年份：{{ dynamicYears.join(', ') }}</div>
+          <div>选中年份：{{ dynamicYear || '未选择' }}</div>
+        </div>
+      </div>
+      
+      <!-- 事件日志 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">事件日志</h2>
+        </div>
+        
+        <button @click="clearLog" class="test-button secondary" style="margin-bottom: 1rem;">
+          清空日志
+        </button>
+        
+        <div class="test-output" style="max-height: 200px; overflow-y: auto;">
+          <div v-for="(log, index) in eventLog" :key="index">
+            {{ log }}
+          </div>
+          <div v-if="eventLog.length === 0" style="color: var(--test-text-dim);">
+            暂无事件记录
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 组件加载器 -->
+  <script src="/js/core/component-loader.js"></script>
+  
+  <script type="module">
+    const { createApp, ref, computed } = Vue;
+    
+    const app = createApp({
+      setup() {
+        // 基础筛选
+        const selectedLevel = ref('');
+        const selectedYear = ref('');
+        const availableYears = ref(['2024', '2023', '2022', '2021', '2020']);
+        
+        // 实际筛选
+        const filterLevel = ref('');
+        const filterYear = ref('');
+        
+        // 禁用状态
+        const isDisabled = ref(false);
+        const disabledLevel = ref('');
+        const disabledYear = ref('');
+        
+        // 动态年份
+        const dynamicYears = ref(['2024', '2023']);
+        const dynamicYear = ref('');
+        
+        // 事件日志
+        const eventLog = ref([]);
+        
+        // 模拟文章数据
+        const articles = ref([
+          { id: 1, title: 'AWS re:Invent 2024 Keynote', level: 'Keynote', year: '2024' },
+          { id: 2, title: 'Getting Started with EC2', level: 'Level 100', year: '2024' },
+          { id: 3, title: 'Deep Dive into Lambda', level: 'Level 300', year: '2024' },
+          { id: 4, title: 'Advanced DynamoDB Patterns', level: 'Level 400', year: '2023' },
+          { id: 5, title: 'Werner Vogels Keynote', level: 'Keynote', year: '2023' },
+          { id: 6, title: 'Introduction to S3', level: 'Level 100', year: '2023' },
+          { id: 7, title: 'Serverless Best Practices', level: 'Level 200', year: '2022' },
+          { id: 8, title: 'Machine Learning on AWS', level: 'Level 300', year: '2022' }
+        ]);
+        
+        // 计算筛选后的文章
+        const filteredArticles = computed(() => {
+          return articles.value.filter(article => {
+            if (filterLevel.value && !article.level.includes(filterLevel.value)) {
+              return false;
+            }
+            if (filterYear.value && article.year !== filterYear.value) {
+              return false;
+            }
+            return true;
+          });
+        });
+        
+        // 添加日志
+        const addLog = (message) => {
+          const time = new Date().toLocaleTimeString();
+          eventLog.value.unshift(`[${time}] ${message}`);
+          if (eventLog.value.length > 20) {
+            eventLog.value.pop();
+          }
+        };
+        
+        // 事件处理
+        const onLevelChange = (value) => {
+          addLog(`级别筛选器变化: ${value || '全部'}`);
+        };
+        
+        const onYearChange = (value) => {
+          addLog(`年份筛选器变化: ${value || '全部'}`);
+        };
+        
+        const resetFilters = () => {
+          selectedLevel.value = '';
+          selectedYear.value = '';
+          addLog('重置所有筛选器');
+        };
+        
+        const addYear = () => {
+          const nextYear = Math.max(...dynamicYears.value.map(Number)) + 1;
+          dynamicYears.value.unshift(String(nextYear));
+          addLog(`添加年份: ${nextYear}`);
+        };
+        
+        const removeYear = () => {
+          if (dynamicYears.value.length > 0) {
+            const removed = dynamicYears.value.pop();
+            addLog(`移除年份: ${removed}`);
+            if (dynamicYear.value === removed) {
+              dynamicYear.value = '';
+            }
+          }
+        };
+        
+        const clearLog = () => {
+          eventLog.value = [];
+        };
+        
+        return {
+          selectedLevel,
+          selectedYear,
+          availableYears,
+          filterLevel,
+          filterYear,
+          isDisabled,
+          disabledLevel,
+          disabledYear,
+          dynamicYears,
+          dynamicYear,
+          articles,
+          filteredArticles,
+          eventLog,
+          onLevelChange,
+          onYearChange,
+          resetFilters,
+          addYear,
+          removeYear,
+          clearLog
+        };
+      }
+    });
+    
+    // 加载组件
+    (async () => {
+      try {
+        await ComponentLoader.registerComponents(app, [
+          ['custom-dropdown', '/components/common/Filter', 'CustomDropdown'],
+          ['level-filter', '/components/common/Filter', 'LevelFilter'],
+          ['year-filter', '/components/common/Filter', 'YearFilter']
+        ]);
+        
+        app.mount('#app');
+        console.log('Filter 测试环境初始化完成');
+      } catch (error) {
+        console.error('测试环境初始化失败:', error);
+      }
+    })();
+  </script>
+</body>
+</html> 

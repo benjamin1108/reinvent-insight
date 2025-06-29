@@ -1,0 +1,120 @@
+/* 
+ * 基础字体样式 - reinvent-insight项目
+ * 统一的字体定义，供所有组件继承使用
+ */
+
+/* 主要字体栈 - 恢复原有简洁字体 */
+:root {
+  /* 主字体：保持原有项目的字体风格 */
+  --font-primary: 'PingFang SC', 'Helvetica Neue', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  
+  /* 代码字体：保持原有等宽字体 */
+  --font-code: 'JetBrains Mono', 'Consolas', 'SFMono-Regular', Menlo, monospace;
+  
+  /* UI控件字体：与主字体保持一致 */
+  --font-ui: 'PingFang SC', 'Helvetica Neue', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  
+  /* 字体权重定义 */
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+  
+  /* 卡片专用字体大小 */
+  --font-size-card-title: 1.25rem;      /* 20px */
+  --font-size-card-subtitle: 0.875rem;  /* 14px - 缩小一号 */
+  --font-size-card-metadata: 0.75rem;   /* 12px */
+  --font-size-card-badge: 0.625rem;     /* 10px */
+  
+  /* 字符间距变量 */
+  --letter-spacing-tight: -0.025em;     /* 标题收紧 */
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.025em;       /* 科技感 */
+  --letter-spacing-wider: 0.05em;       /* 强科技感 */
+}
+
+/* 全局字体应用 */
+html {
+  font-family: var(--font-primary);
+  line-height: 1.6;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;      /* macOS/iOS 字体平滑 */
+  -moz-osx-font-smoothing: grayscale;       /* Firefox 字体平滑 */
+  text-rendering: optimizeLegibility;       /* 优化文本渲染 */
+  font-feature-settings: 'kern' 1;         /* 启用字符间距调整 */
+}
+
+body {
+  font-family: inherit;
+  font-weight: 400;
+  letter-spacing: 0.01em;                   /* 轻微字符间距增加科技感 */
+}
+
+/* 组件字体继承 - 确保所有组件都使用统一字体 */
+* {
+  font-family: inherit;
+}
+
+/* 代码字体 */
+code, pre, kbd, samp {
+  font-family: var(--font-code);
+}
+
+/* UI控件字体 */
+input, textarea, select, button {
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 标题字体增强 */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-tight);
+  line-height: 1.3;
+}
+
+/* 科技感字体类 */
+.font-tech {
+  font-family: var(--font-primary);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.font-tech-bold {
+  font-family: var(--font-primary);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-normal);
+}
+
+.font-tech-title {
+  font-family: var(--font-primary);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-tight);
+  line-height: 1.3;
+  font-feature-settings: 'kern' 1, 'liga' 1;
+}
+
+.font-tech-subtitle {
+  font-family: var(--font-primary);
+  font-weight: var(--font-weight-normal);
+  letter-spacing: var(--letter-spacing-normal);
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.font-tech-metadata {
+  font-family: var(--font-primary);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-wide);
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  text-rendering: optimizeSpeed;
+}
+
+.font-mono {
+  font-family: var(--font-code);
+  font-variant-ligatures: common-ligatures; /* 支持编程字体连字 */
+} 

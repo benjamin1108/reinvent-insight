@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProgressBar 组件测试</title>
+  
+  <!-- Vue 3 -->
+  <script src="/js/vendor/vue.global.js"></script>
+  
+  <!-- 基础样式 -->
+  
+  <link rel="stylesheet" href="/css/base/effects.css">
+  
+  <!-- 测试框架样式 -->
+  <style>
+    :root {
+      --test-bg: #0f172a;
+      --test-surface: #1e293b;
+      --test-border: #334155;
+      --test-primary: #22d3ee;
+      --test-success: #10b981;
+      --test-warning: #f59e0b;
+      --test-error: #ef4444;
+      --test-text: #e5e7eb;
+      --test-text-dim: #9ca3af;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: var(--test-bg);
+      color: var(--test-text);
+      font-family: var(--font-primary);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    
+    .test-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    
+    .test-header h1 {
+      font-size: 2.5rem;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    
+    .test-header p {
+      color: var(--test-text-dim);
+      font-size: 1.125rem;
+    }
+    
+    .test-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .test-case {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    
+    .test-case-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    
+    .test-case-title {
+      font-size: 1.25rem;
+      color: var(--test-primary);
+    }
+    
+    .test-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+    
+    .control-group {
+      flex: 1;
+      min-width: 200px;
+    }
+    
+    .control-label {
+      display: block;
+      color: var(--test-text-dim);
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .control-input,
+    .control-select {
+      width: 100%;
+      padding: 0.5rem;
+      background: var(--test-bg);
+      border: 1px solid var(--test-border);
+      border-radius: 6px;
+      color: var(--test-text);
+      font-size: 0.875rem;
+    }
+    
+    .control-range {
+      width: 100%;
+    }
+    
+    .control-value {
+      color: var(--test-primary);
+      font-weight: 600;
+      margin-left: 0.5rem;
+    }
+    
+    .control-checkbox {
+      margin-right: 0.5rem;
+    }
+    
+    .component-display {
+      padding: 2rem;
+      background: var(--test-bg);
+      border: 1px solid var(--test-border);
+      border-radius: 8px;
+      margin-top: 1rem;
+    }
+    
+    .progress-item {
+      margin-bottom: 1.5rem;
+    }
+    
+    .progress-label {
+      color: var(--test-text-dim);
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .test-button {
+      padding: 0.5rem 1.5rem;
+      background: var(--gradient-primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-right: 0.5rem;
+    }
+    
+    .test-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3);
+    }
+    
+    .test-button.secondary {
+      background: var(--test-surface);
+      border: 1px solid var(--test-border);
+    }
+    
+    .back-link {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      padding: 0.5rem 1rem;
+      background: var(--test-surface);
+      border: 1px solid var(--test-primary);
+      border-radius: 6px;
+      color: var(--test-primary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    
+    .back-link:hover {
+      background: rgba(34, 211, 238, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <a href="/test/" class="back-link">← 返回测试目录</a>
+  
+  <div id="app">
+    <div class="test-header">
+      <h1>ProgressBar 组件测试</h1>
+      <p>进度条组件，支持多种样式、动画效果和自定义配置</p>
+    </div>
+    
+    <div class="test-container">
+      <!-- 测试用例1：基础进度条 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">基础进度条测试</h2>
+        </div>
+        
+        <div class="test-controls">
+          <div class="control-group">
+            <label class="control-label">
+              进度值: <span class="control-value">{{ basicProgress }}%</span>
+            </label>
+            <input 
+              type="range" 
+              v-model.number="basicProgress" 
+              min="0" 
+              max="100" 
+              class="control-range"
+            >
+          </div>
+        </div>
+        
+        <div class="component-display">
+          <div class="progress-item">
+            <div class="progress-label">默认样式</div>
+            <progress-bar :percent="basicProgress"></progress-bar>
+          </div>
+          
+          <div class="progress-item">
+            <div class="progress-label">带文本显示</div>
+            <progress-bar :percent="basicProgress" :show-text="true"></progress-bar>
+          </div>
+          
+          <div class="progress-item">
+            <div class="progress-label">外部文本</div>
+            <progress-bar :percent="basicProgress" :show-text="true" text-position="outside"></progress-bar>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 测试用例2：颜色变体 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">颜色变体测试</h2>
+        </div>
+        
+        <div class="component-display">
+          <div class="progress-item">
+            <div class="progress-label">渐变色（默认）</div>
+            <progress-bar :percent="70" color="gradient" :show-text="true"></progress-bar>
+          </div>
+          
+          <div class="progress-item">
+            <div class="progress-label">主色调</div>
+            <progress-bar :percent="70" color="primary" :show-text="true"></progress-bar>
+          </div>
+          
+          <div class="progress-item">
+            <div class="progress-label">成功</div>
+            <progress-bar :percent="70" color="success" :show-text="true"></progress-bar>
+          </div>
+          
+          <div class="progress-item">
+            <div class="progress-label">警告</div>
+            <progress-bar :percent="70" color="warning" :show-text="true"></progress-bar>
+          </div>
+          
+          <div class="progress-item">
+            <div class="progress-label">错误</div>
+            <progress-bar :percent="70" color="error" :show-text="true"></progress-bar>
+          </div>
+          
+          <div class="progress-item">
+            <div class="progress-label">自定义颜色</div>
+            <progress-bar :percent="70" color="#8b5cf6" :show-text="true"></progress-bar>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 测试用例3：条纹和动画 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">条纹和动画效果</h2>
+        </div>
+        
+        <div class="test-controls">
+          <div class="control-group">
+            <label class="control-label">
+              <input type="checkbox" v-model="striped" class="control-checkbox">
+              显示条纹
+            </label>
+          </div>
+          <div class="control-group">
+            <label class="control-label">
+              <input type="checkbox" v-model="animated" :disabled="!striped" class="control-checkbox">
+              条纹动画
+            </label>
+          </div>
+        </div>
+        
+        <div class="component-display">
+          <progress-bar 
+            :percent="75" 
+            :striped="striped" 
+            :animated="animated"
+            height="20px"
+            :show-text="true"
+          ></progress-bar>
+        </div>
+      </div>
+      
+      <!-- 测试用例4：尺寸和圆角 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">尺寸和圆角测试</h2>
+        </div>
+        
+        <div class="test-controls">
+          <div class="control-group">
+            <label class="control-label">高度</label>
+            <select v-model="testHeight" class="control-select">
+              <option value="4px">细 (4px)</option>
+              <option value="8px">标准 (8px)</option>
+              <option value="16px">中等 (16px)</option>
+              <option value="24px">大 (24px)</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label class="control-label">圆角</label>
+            <select v-model="testRounded" class="control-select">
+              <option value="none">无</option>
+              <option value="sm">小</option>
+              <option value="md">中</option>
+              <option value="lg">大</option>
+              <option value="full">完全</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="component-display">
+          <progress-bar 
+            :percent="60" 
+            :height="testHeight"
+            :rounded="testRounded"
+            :show-text="true"
+          ></progress-bar>
+        </div>
+      </div>
+      
+      <!-- 测试用例5：动态进度模拟 -->
+      <div class="test-case">
+        <div class="test-case-header">
+          <h2 class="test-case-title">动态进度模拟</h2>
+        </div>
+        
+        <div class="test-controls">
+          <button @click="startSimulation" class="test-button" :disabled="isSimulating">
+            {{ isSimulating ? '进行中...' : '开始模拟' }}
+          </button>
+          <button @click="resetSimulation" class="test-button secondary">
+            重置
+          </button>
+        </div>
+        
+        <div class="component-display">
+          <div class="progress-item">
+            <div class="progress-label">文件上传进度</div>
+            <progress-bar 
+              :percent="uploadProgress" 
+              :show-text="true"
+              :striped="uploadProgress < 100"
+              :animated="uploadProgress < 100"
+              :color="uploadProgress === 100 ? 'success' : 'primary'"
+            ></progress-bar>
+          </div>
+          
+          <div class="progress-item">
+            <div class="progress-label">数据处理进度</div>
+            <progress-bar 
+              :percent="processProgress" 
+              :show-text="true"
+              color="gradient"
+              text-position="outside"
+            ></progress-bar>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 组件加载器 -->
+  <script src="/js/core/component-loader.js"></script>
+  
+  <script type="module">
+    const { createApp, ref } = Vue;
+    
+    const app = createApp({
+      setup() {
+        // 基础进度控制
+        const basicProgress = ref(30);
+        
+        // 条纹和动画
+        const striped = ref(false);
+        const animated = ref(false);
+        
+        // 尺寸和圆角
+        const testHeight = ref('8px');
+        const testRounded = ref('full');
+        
+        // 动态模拟
+        const isSimulating = ref(false);
+        const uploadProgress = ref(0);
+        const processProgress = ref(0);
+        
+        // 开始模拟
+        const startSimulation = () => {
+          isSimulating.value = true;
+          uploadProgress.value = 0;
+          processProgress.value = 0;
+          
+          // 模拟上传进度
+          const uploadInterval = setInterval(() => {
+            if (uploadProgress.value < 100) {
+              uploadProgress.value += Math.random() * 15 + 5;
+              if (uploadProgress.value > 100) uploadProgress.value = 100;
+            } else {
+              clearInterval(uploadInterval);
+            }
+          }, 500);
+          
+          // 模拟处理进度（延迟开始）
+          setTimeout(() => {
+            const processInterval = setInterval(() => {
+              if (processProgress.value < 100) {
+                processProgress.value += Math.random() * 10 + 3;
+                if (processProgress.value > 100) processProgress.value = 100;
+              } else {
+                clearInterval(processInterval);
+                isSimulating.value = false;
+              }
+            }, 400);
+          }, 1000);
+        };
+        
+        // 重置模拟
+        const resetSimulation = () => {
+          isSimulating.value = false;
+          uploadProgress.value = 0;
+          processProgress.value = 0;
+        };
+        
+        return {
+          basicProgress,
+          striped,
+          animated,
+          testHeight,
+          testRounded,
+          isSimulating,
+          uploadProgress,
+          processProgress,
+          startSimulation,
+          resetSimulation
+        };
+      }
+    });
+    
+    // 加载组件
+    (async () => {
+      try {
+        await ComponentLoader.registerComponents(app, [
+          ['progress-bar', '/components/shared/ProgressBar', 'ProgressBar']
+        ]);
+        
+        app.mount('#app');
+        console.log('ProgressBar 测试环境初始化完成');
+      } catch (error) {
+        console.error('测试环境初始化失败:', error);
+      }
+    })();
+  </script>
+</body>
+</html> 

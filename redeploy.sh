@@ -7,6 +7,7 @@
 #   --port PORT  指定端口号（默认：8001）
 #   --host HOST  指定主机地址（默认：0.0.0.0）
 #   --dry-run    显示将要执行的操作但不实际执行
+#   --fix-permissions 只修复现有部署的文件权限
 
 set -e  # 遇到错误立即退出
 
@@ -26,6 +27,7 @@ DEPLOY_DIR="$HOME/${PROJECT_NAME}-prod"
 BACKUP_ROOT="$HOME/${PROJECT_NAME}-backups"  # 统一的备份根目录
 SERVICE_NAME="${PROJECT_NAME}"
 VENV_NAME=".venv-dist"
+FIX_PERMISSIONS=false
 
 # 状态变量
 LATEST_BACKUP=""  # 最新的备份目录
@@ -49,6 +51,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --dry-run)
       DRY_RUN=true
+      shift
+      ;;
+    --fix-permissions)
+      FIX_PERMISSIONS=true
       shift
       ;;
     *)
@@ -362,7 +368,12 @@ deploy_new_version() {
     pip install .
     
     # 创建必要的目录
-    mkdir -p downloads/subtitles downloads/summaries
+    mkdir -p downloads/subtitles downloads/summaries downloads/pdfs
+    
+    # 确保所有文件和目录的权限正确
+    print_info "修复文件权限..."
+    sudo chown -R "$USER:$USER" "$DEPLOY_DIR"
+    chmod -R u+rwX,g+rX,o+rX "$DEPLOY_DIR"
     
     print_success "部署完成"
 }
@@ -395,6 +406,13 @@ restore_data() {
         else
             print_info "备份中没有 .env 文件"
         fi
+        
+        # 修复恢复数据的权限
+        print_info "修复恢复数据的权限..."
+        sudo chown -R "$USER:$USER" "$DEPLOY_DIR/reinvent_insight-0.1.0/downloads/"
+        if [ -f "$DEPLOY_DIR/reinvent_insight-0.1.0/.env" ]; then
+            sudo chown "$USER:$USER" "$DEPLOY_DIR/reinvent_insight-0.1.0/.env"
+        fi
     else
         if [ "$FRESH_INSTALL" = true ]; then
             print_info "全新安装，没有数据需要恢复"
@@ -418,6 +436,7 @@ After=network.target
 [Service]
 Type=simple
 User=$USER
+Group=$USER
 WorkingDirectory=$DEPLOY_DIR/reinvent_insight-0.1.0
 Environment="PATH=$DEPLOY_DIR/reinvent_insight-0.1.0/$VENV_NAME/bin"
 Environment="ENVIRONMENT=production"
@@ -590,6 +609,12 @@ main() {
         echo ""
     fi
     
+    # 如果只是修复权限，执行权限修复后退出
+    if [ "$FIX_PERMISSIONS" = true ]; then
+        fix_permissions_only
+        exit 0
+    fi
+    
     print_info "开始自动化部署流程..."
     
     # 检查是否在项目根目录
@@ -622,6 +647,19 @@ main() {
     # 启动服务
     start_service
     
+    # 最终权限检查和修复（保险措施）
+    print_info "执行最终权限检查..."
+    if [ -d "$DEPLOY_DIR" ]; then
+        # 检查是否有 root 权限的文件
+        if find "$DEPLOY_DIR" -user root 2>/dev/null | head -1 | grep -q .; then
+            print_warning "发现 root 权限文件，正在修复..."
+            sudo chown -R "$USER:$USER" "$DEPLOY_DIR"
+            print_success "权限修复完成"
+        else
+            print_success "权限检查通过"
+        fi
+    fi
+    
     # 显示部署信息
     show_deployment_info
     
@@ -651,6 +689,64 @@ cleanup_old_backups() {
             
             print_success "备份清理完成"
         fi
+    fi
+}
+
+# 只修复文件权限
+fix_permissions_only() {
+    print_info "开始修复现有部署的文件权限..."
+    
+    if [ ! -d "$DEPLOY_DIR" ]; then
+        print_error "部署目录不存在: $DEPLOY_DIR"
+        exit 1
+    fi
+    
+    print_info "检查当前权限状态..."
+    
+    # 显示当前权限问题
+    local root_files=$(find "$DEPLOY_DIR" -user root 2>/dev/null | wc -l)
+    if [ "$root_files" -gt 0 ]; then
+        print_warning "发现 $root_files 个 root 权限文件"
+        
+        echo ""
+        echo "示例文件权限问题："
+        find "$DEPLOY_DIR" -user root 2>/dev/null | head -5 | while read file; do
+            ls -ld "$file"
+        done
+        
+        if [ "$DRY_RUN" = true ]; then
+            print_info "演练模式：将执行以下命令修复权限："
+            echo "  chown -R $USER:$USER $DEPLOY_DIR"
+            echo "  chmod -R u+rwX,g+rX,o+rX $DEPLOY_DIR"
+            return
+        fi
+        
+        echo ""
+        echo -n -e "${YELLOW}是否修复这些权限问题？(y/N): ${NC}"
+        read -r confirm
+        
+        if [[ "$confirm" =~ ^[Yy]$ ]]; then
+            print_info "正在修复权限..."
+            sudo chown -R "$USER:$USER" "$DEPLOY_DIR"
+            chmod -R u+rwX,g+rX,o+rX "$DEPLOY_DIR"
+            print_success "权限修复完成"
+            
+            # 重启服务确保使用正确权限
+            if systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
+                print_info "重启服务以应用权限更改..."
+                sudo systemctl restart "$SERVICE_NAME"
+                sleep 2
+                if systemctl is-active --quiet "$SERVICE_NAME"; then
+                    print_success "服务重启成功"
+                else
+                    print_error "服务重启失败"
+                fi
+            fi
+        else
+            print_info "已取消权限修复"
+        fi
+    else
+        print_success "所有文件权限正常，无需修复"
     fi
 }
 
