@@ -9,30 +9,16 @@
 
 /* 基础卡片样式 - Block，包含所有需要的CSS变量 */
 .summary-card {
-  /* 字体栈定义 */
-  --font-primary: 'PingFang SC', 'Helvetica Neue', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-  --font-code: 'JetBrains Mono', 'Consolas', 'SFMono-Regular', Menlo, monospace;
-  --font-ui: 'PingFang SC', 'Helvetica Neue', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  /* 组件内部专用CSS变量 - 避免污染全局 */
+  --summary-card-font-display: 'Outfit', 'Inter', sans-serif;      /* 标题专用 - 强几何感 */
+  --summary-card-font-primary: 'Inter', 'Source Han Sans SC', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --summary-card-font-tech: 'Exo 2', 'Inter', sans-serif;          /* 技术元素专用 - 未来感 */
   
-  /* 字体权重定义 */
-  --font-weight-light: 300;
-  --font-weight-normal: 400;
-  --font-weight-medium: 500;
-  --font-weight-semibold: 600;
-  --font-weight-bold: 700;
-  --font-weight-extrabold: 800;
-  
-  /* 卡片专用字体大小 */
-  --font-size-card-title: 1.25rem;      /* 20px */
-  --font-size-card-subtitle: 0.875rem;  /* 14px - 缩小一号 */
-  --font-size-card-metadata: 0.75rem;   /* 12px */
-  --font-size-card-badge: 0.625rem;     /* 10px */
-  
-  /* 字符间距变量 */
-  --letter-spacing-tight: -0.025em;     /* 标题收紧 */
-  --letter-spacing-normal: 0;
-  --letter-spacing-wide: 0.025em;       /* 科技感 */
-  --letter-spacing-wider: 0.05em;       /* 强科技感 */
+  /* 组件专用字体大小 */
+  --summary-card-title-size: 1.25rem;      /* 20px */
+  --summary-card-subtitle-size: 0.875rem;  /* 14px */
+  --summary-card-metadata-size: 0.75rem;   /* 12px */
+  --summary-card-badge-size: 0.625rem;     /* 10px */
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
@@ -133,15 +119,15 @@
 .summary-card__title {
   color: rgb(12, 175, 193); /* 提高饱和度、降低明度的蓝色 - 来自主项目 */
   transition: all 0.3s ease;
-  font-size: var(--font-size-card-title); /* 使用全局变量 */
-  font-weight: var(--font-weight-bold);
-  line-height: 1.25; /* 稍微收紧行高，提升紧凑感 */
-  letter-spacing: var(--letter-spacing-tight); /* 标题收紧字符间距 */
+  font-family: var(--summary-card-font-display); /* 使用Outfit字体增强几何感 */
+  font-size: var(--summary-card-title-size); /* 使用组件变量 */
+  font-weight: 700; /* 标题专用加粗 */
+  line-height: 1.2; /* 收紧行高，增强现代感 */
+  letter-spacing: -0.02em; /* 标题收紧 - Outfit专用 */
   word-wrap: break-word;
   overflow-wrap: break-word;
   hyphens: auto;
-  font-family: inherit;
-  font-feature-settings: 'kern' 1, 'liga' 1; /* 启用字符调整和连字 */
+  font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1; /* 启用字符调整、连字和上下文替换 */
   text-rendering: optimizeLegibility; /* 优化文本渲染 */
   /* 多行文本截断 */
   display: -webkit-box;
@@ -157,7 +143,7 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  font-weight: var(--font-weight-bold); /* 使用bold保持一致性，避免过度突出 */
+  font-weight: 700; /* 使用bold保持一致性，避免过度突出 */
 }
 
 /* Hover时的渐变效果 - 来自主项目 */
@@ -191,15 +177,16 @@
 .summary-card__subtitle {
   color: #64748b; /* 更低饱和度的灰色 - 来自主项目 */
   opacity: 0.85; /* 稍微提高不透明度 */
-  font-weight: var(--font-weight-medium); /* 使用中等字重提升可读性 */
-  letter-spacing: var(--letter-spacing-normal); /* 正常字符间距 */
+  font-family: var(--summary-card-font-primary); /* 使用Inter字体增强现代感 */
+  font-weight: 500; /* 使用中等字重提升可读性 */
+  letter-spacing: 0; /* 正常字符间距 */
   transition: all 0.3s ease;
-  font-size: var(--font-size-card-subtitle); /* 使用全局变量 */
+  font-size: var(--summary-card-subtitle-size); /* 使用组件变量 */
   line-height: 1.4; /* 收紧行高 */
   word-break: break-word;
   width: 100%;
-  font-family: inherit;
-  font-variant-numeric: oldstyle-nums; /* 使用老式数字增强阅读体验 */
+  font-variant-numeric: tabular-nums; /* 使用等宽数字增强技术感 */
+  font-feature-settings: 'kern' 1, 'liga' 1; /* 启用字符调整和连字 */
   text-rendering: optimizeLegibility;
 }
 
@@ -207,7 +194,7 @@
 .summary-card--reinvent .summary-card__subtitle {
   color: #64748b !important; /* 使用和精选卡片一样的底色，强制生效 */
   opacity: 0.85; /* 保持一致的透明度 */
-  font-weight: var(--font-weight-normal); /* Reinvent使用正常字重保持对比 */
+  font-weight: 400; /* Reinvent使用正常字重保持对比 */
 }
 
 /* Hover时的样式 - 来自主项目 */
@@ -228,9 +215,10 @@
 
 /* 元数据区域 - Element（统一使用metadata） */
 .summary-card__metadata {
-  font-size: var(--font-size-card-metadata); /* 使用全局变量 */
-  font-weight: var(--font-weight-medium); /* 增强字重 */
-  letter-spacing: var(--letter-spacing-wide); /* 科技感字符间距 */
+  font-family: var(--summary-card-font-tech); /* 使用Exo 2字体增强科技感 */
+  font-size: var(--summary-card-metadata-size); /* 使用组件变量 */
+  font-weight: 600; /* 技术专用字重 */
+  letter-spacing: 0.05em; /* 技术元素拉开 - Exo 2专用 */
   opacity: 0.85;
   transition: all 0.2s ease-in-out;
   border-top: 1px solid rgba(100, 116, 139, 0.2);
@@ -289,10 +277,11 @@
 
 /* 元数据标签 - Element */
 .summary-card__badge {
-  font-size: var(--font-size-card-badge); /* 使用全局变量 */
+  font-family: var(--summary-card-font-tech); /* 使用Exo 2字体增强科技感 */
+  font-size: var(--summary-card-badge-size); /* 使用组件变量 */
   padding: 3px 8px; /* 稍微增加内边距 */
-  font-weight: var(--font-weight-bold); /* 使用粗体 */
-  letter-spacing: var(--letter-spacing-wider); /* 增强科技感 */
+  font-weight: 600; /* 技术专用字重 */
+  letter-spacing: 0.06em; /* 强科技感 */
   text-transform: uppercase;
   border-radius: 6px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
@@ -300,7 +289,6 @@
   background: linear-gradient(135deg, rgba(8, 145, 178, 0.9), rgba(29, 78, 216, 0.9));
   border: 1px solid rgba(6, 182, 212, 0.3);
   color: white;
-  font-family: inherit;
   text-rendering: optimizeSpeed; /* 优化小字体渲染 */
   font-variant-numeric: tabular-nums; /* 等宽数字 */
   transition: all 0.2s ease; /* 添加过渡效果 */
@@ -320,14 +308,14 @@
   color: white;
   padding: 3px 8px; /* 与普通badge一致 */
   border-radius: 6px;
-  font-size: var(--font-size-card-badge); /* 使用全局变量 */
-  font-weight: var(--font-weight-bold); /* 使用粗体 */
+  font-family: var(--summary-card-font-tech); /* 使用Exo 2字体增强科技感 */
+  font-size: var(--summary-card-badge-size); /* 使用组件变量 */
+  font-weight: 600; /* 技术专用字重 */
   text-transform: uppercase;
   white-space: nowrap;
-  letter-spacing: var(--letter-spacing-wider); /* 增强科技感 */
+  letter-spacing: 0.06em; /* 强科技感 */
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(4px);
-  font-family: inherit;
   text-rendering: optimizeSpeed;
   font-variant-numeric: tabular-nums;
   transition: all 0.2s ease;
@@ -372,8 +360,8 @@
   .summary-card__title {
     font-size: 1rem;              /* 16px - 进一步缩小 */
     line-height: 1.25;
-    font-weight: var(--font-weight-bold);
-    letter-spacing: var(--letter-spacing-tight);
+    font-weight: 700;
+    letter-spacing: -0.025em;
     -webkit-line-clamp: 2;        /* 移动端只显示2行 */
     line-clamp: 2;
   }
@@ -381,8 +369,8 @@
   .summary-card__subtitle {
     font-size: 0.75rem;           /* 12px - 进一步缩小 */
     line-height: 1.25;
-    font-weight: var(--font-weight-normal);
-    letter-spacing: var(--letter-spacing-normal);
+    font-weight: 400;
+    letter-spacing: 0;
   }
 
   .summary-card__subtitle-area {
@@ -392,8 +380,8 @@
   
   .summary-card__metadata {
     font-size: 0.625rem;          /* 10px - 进一步缩小 */
-    font-weight: var(--font-weight-medium);
-    letter-spacing: var(--letter-spacing-normal);
+    font-weight: 500;
+    letter-spacing: 0;
     min-height: 1rem;             /* 减少最小高度 */
     padding-top: 0.375rem;        /* 减少padding */
   }
@@ -401,8 +389,8 @@
   .summary-card__badge,
   .summary-card__badge--level {
     font-size: 0.5rem;            /* 8px - 进一步缩小 */
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: var(--letter-spacing-normal); /* 减少字符间距避免太密集 */
+    font-weight: 600;
+    letter-spacing: 0; /* 减少字符间距避免太密集 */
     padding: 1px 4px;             /* 减少padding */
   }
 }

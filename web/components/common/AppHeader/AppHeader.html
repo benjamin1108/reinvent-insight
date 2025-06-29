@@ -21,13 +21,13 @@
             variant="secondary" 
             :class="{ 'active': currentView === 'create' }"
             @click="handleViewChange('create')">
-            创建深度解读
+            新解读
           </tech-button>
           <tech-button 
             variant="secondary" 
             :class="{ 'active': currentView === 'library' }"
             @click="handleViewChange('library')">
-            浏览笔记库
+            笔记库
           </tech-button>
         </div>
       </div>
@@ -56,14 +56,14 @@
         full-width
         :class="{ 'active': currentView === 'create' }"
         @click="handleViewChange('create')">
-        创建深度解读
+        新解读
       </tech-button>
       <tech-button 
         variant="secondary" 
         full-width
         :class="{ 'active': currentView === 'library' }"
         @click="handleViewChange('library')">
-        浏览笔记库
+        笔记库
       </tech-button>
     </div>
     

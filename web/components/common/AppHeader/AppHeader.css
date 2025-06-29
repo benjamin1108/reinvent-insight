@@ -51,31 +51,63 @@
 }
 
 .app-header__brand:hover {
-  transform: scale(1.02);
+  transform: scale(1.03); /* 稍微增强hover效果 */
+}
+
+.app-header__brand:hover svg {
+  filter: drop-shadow(0 0 12px rgba(34, 211, 238, 0.6));
+  transform: rotate(2deg); /* 微妙的旋转效果 */
+}
+
+.app-header__brand:hover h1 {
+  text-shadow: 0 0 25px rgba(34, 211, 238, 0.5);
 }
 
 .app-header__brand svg {
-  width: 1.75rem;
-  height: 1.75rem;
-  color: #06b6d4;
+  width: 2rem; /* 从 1.75rem 增大到 2rem，与文字大小匹配 */
+  height: 2rem;
+  color: #22d3ee;
+  /* 添加微妙的发光效果 */
+  filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.4));
+  transition: all 0.3s ease;
 }
 
 .app-header__brand h1 {
-  font-size: 1.25rem; /* text-xl */
-  font-weight: 700; /* font-bold */
-  background: linear-gradient(to right, #06b6d4, #3b82f6); /* from-cyan-400 to-blue-500 */
+  /* 科技感大气Logo字体设计 */
+  font-family: 'Outfit', 'PingFang SC', 'SF Pro Display', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  font-size: 1.875rem; /* 从 1.25rem 增大到 1.875rem (30px) */
+  font-weight: 800; /* 增强字重，更大气 */
+  letter-spacing: -0.02em; /* 收紧字符间距，增强现代感 */
+  line-height: 1.1; /* 紧凑行高 */
+  
+  /* 高级渐变效果 - 三色渐变更有层次 */
+  background: linear-gradient(135deg, 
+    #22d3ee 0%,     /* 青色起点 */
+    #3b82f6 50%,    /* 蓝色中间 */
+    #8b5cf6 100%    /* 紫色终点 */
+  );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  
   margin: 0;
+  
+  /* 高级字体特性 */
+  font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+  text-rendering: optimizeLegibility;
+  
+  /* 添加微妙阴影效果 */
+  text-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
 }
 
 .app-header__brand h1 span {
-  /* 使用确保span的颜色覆盖渐变色 */
-  color: #a855f7 ; /* text-purple-400 */
-  background: none ;
-  -webkit-background-clip: unset ;
-  background-clip: unset ;
+  /* "Insight"部分的强调样式 */
+  background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%); /* 紫色到粉色渐变 */
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 900; /* 更强的字重突出"Insight" */
+  text-shadow: 0 0 15px rgba(168, 85, 247, 0.4); /* 紫色光晕 */
 }
 
 /* 导航和布局相关的组件特定样式保留 */
@@ -303,6 +335,11 @@
     height: 100%; /* 确保占据全高 */
   }
   
+  /* 确保桌面端阅读模式logo字体与正常模式一致 */
+  .app-header--reading .app-header__brand h1 {
+    font-size: 1.875rem; /* 与桌面端正常模式保持一致，避免跳动 */
+  }
+  
   /* 左侧区域在桌面端自适应宽度 */
   .app-header__left {
     width: auto;
@@ -349,12 +386,12 @@
   }
   
   .app-header__brand h1 {
-    font-size: 1.25rem;           /* 调大品牌标题保持视觉平衡 */
+    font-size: 1.625rem;          /* 从1.25rem增大到1.625rem，移动端也要大气 */
   }
   
   .app-header__brand svg {
-    width: 1.5rem;                /* 调大图标保持平衡 */
-    height: 1.5rem;
+    width: 1.75rem;               /* 调大图标保持与文字的平衡 */
+    height: 1.75rem;
   }
   
   /* 移动端导航改为水平布局 */
@@ -386,7 +423,7 @@
   }
   
   .app-header--reading .app-header__brand h1 {
-    font-size: 1.125rem;          /* 阅读模式适当调大 */
+    font-size: 1.625rem;          /* 与移动端正常模式保持一致，避免跳动 */
   }
 }
 
@@ -397,12 +434,12 @@
   }
   
   .app-header__brand h1 {
-    font-size: 1.125rem;          /* 保持相对较大的品牌标题 */
+    font-size: 1.375rem;          /* 保持相对较大的品牌标题 */
   }
   
   .app-header__brand svg {
-    width: 1.375rem;              /* 保持相对较大的图标 */
-    height: 1.375rem;
+    width: 1.5rem;                /* 保持相对较大的图标 */
+    height: 1.5rem;
   }
   
   .app-header--reading .app-header__container {
@@ -410,7 +447,7 @@
   }
   
   .app-header--reading .app-header__brand h1 {
-    font-size: 1rem;              /* 阅读模式保持合适大小 */
+    font-size: 1.375rem;          /* 与极小屏正常模式保持一致，避免跳动 */
   }
   
   .app-header__mobile-nav {
@@ -432,8 +469,21 @@
 /* 高对比度模式支持 */
 @media (prefers-contrast: high) {
   .app-header__brand h1 {
+    font-family: 'Outfit', 'PingFang SC', 'SF Pro Display', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
     background: none;
     color: #ffffff;
+    text-shadow: none; /* 去除阴影效果 */
+    font-weight: 800; /* 保持字重 */
+  }
+  
+  .app-header__brand h1 span {
+    background: none;
+    color: #ffffff;
+    text-shadow: none;
+  }
+  
+  .app-header__brand svg {
+    filter: none; /* 去除发光效果 */
   }
   
   /* TechButton组件自身支持高对比度模式 */
