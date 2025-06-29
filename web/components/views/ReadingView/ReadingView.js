@@ -52,8 +52,8 @@ export default {
     
     // 当前版本
     currentVersion: {
-      type: String,
-      default: '1'
+      type: Number,
+      default: 1
     },
     
     // 初始TOC显示状态

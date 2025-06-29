@@ -554,9 +554,34 @@ const app = createApp({
       readingHash.value = docHash;
       documentVersions.value = versions;
       
-      currentVersion.value = versions.length > 0 ? versions[0].version : 1;
+      // 恢复用户之前选择的版本，如果没有则使用第一个版本
+      let savedVersion = null;
+      if (docHash) {
+        try {
+          const savedVersionStr = localStorage.getItem(`document_version_${docHash}`);
+          if (savedVersionStr) {
+            const parsedVersion = Number(savedVersionStr);
+            // 验证是有效数字且不是NaN
+            if (!isNaN(parsedVersion) && isFinite(parsedVersion) && parsedVersion >= 0) {
+              savedVersion = parsedVersion;
+            }
+          }
+        } catch (error) {
+          console.warn('localStorage版本数据损坏，已清理:', error);
+          // 清理损坏的数据
+          localStorage.removeItem(`document_version_${docHash}`);
+        }
+      }
       
-            const updateContent = () => {
+      // 设置当前版本：优先使用保存的版本，确保版本在可用列表中
+      const defaultVersion = versions.length > 0 ? versions[0].version : 1;
+      if (savedVersion !== null && versions.some(v => v.version === savedVersion)) {
+        currentVersion.value = savedVersion;
+      } else {
+        currentVersion.value = defaultVersion;
+      }
+      
+      const updateContent = () => {
         if (content) {
           // 确保marked.js使用正确的配置
           if (typeof marked !== 'undefined' && marked.setOptions) {
@@ -580,11 +605,30 @@ const app = createApp({
       } else {
         ensureMarkedReady(updateContent);
       }
+      
+      // 如果从localStorage恢复的版本与默认版本不同，立即切换到保存的版本
+      if (savedVersion !== null && 
+          versions.some(v => v.version === savedVersion) && 
+          savedVersion !== defaultVersion) {
+        // 异步切换到保存的版本，不阻塞当前渲染
+        nextTick(() => {
+          switchVersion(savedVersion);
+        });
+      }
     };
 
     // 版本切换
     const switchVersion = async (version) => {
       const versionNumber = Number(version); // 确保是数字
+      
+      // 检查目标版本是否有效
+      const isValidVersion = documentVersions.value.some(v => v.version === versionNumber);
+      if (!isValidVersion) {
+        console.error('目标版本无效:', versionNumber, '可用版本:', documentVersions.value.map(v => v.version));
+        showToast('无效的版本号', 'danger');
+        return;
+      }
+      
       currentVersion.value = versionNumber;
       
       if (readingHash.value) {
@@ -605,6 +649,16 @@ const app = createApp({
         } catch (error) {
           console.error('切换版本失败:', error);
           showToast('切换版本失败', 'danger');
+          
+          // 如果版本切换失败，可能是localStorage中的版本数据有误，清理并回退到默认版本
+          if (readingHash.value) {
+            localStorage.removeItem(`document_version_${readingHash.value}`);
+            const defaultVersion = documentVersions.value.length > 0 ? documentVersions.value[0].version : 1;
+            if (versionNumber !== defaultVersion) {
+              console.warn('版本切换失败，回退到默认版本:', defaultVersion);
+              currentVersion.value = defaultVersion;
+            }
+          }
         }
       }
     };
@@ -699,6 +753,19 @@ const app = createApp({
     // 测试Toast
     const testToast = () => {
       showToast('这是一个测试消息', 'success');
+    };
+    
+    // 清理版本相关localStorage数据
+    const clearVersionStorage = () => {
+      try {
+        const keys = Object.keys(localStorage);
+        const versionKeys = keys.filter(key => key.startsWith('document_version_'));
+        versionKeys.forEach(key => localStorage.removeItem(key));
+        showToast(`已清理 ${versionKeys.length} 个版本记录`, 'success');
+      } catch (error) {
+        console.error('清理版本数据失败:', error);
+        showToast('清理版本数据失败', 'danger');
+      }
     };
 
     // 筛选器相关方法
@@ -893,6 +960,7 @@ const app = createApp({
       handleArticleClick,
       testToast,
       showToast,
+      clearVersionStorage,
       toggleLevelDropdown,
       toggleYearDropdown,
       selectLevel,

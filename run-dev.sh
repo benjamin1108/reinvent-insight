@@ -169,7 +169,8 @@ start_dev_server() {
             --host "$HOST" \
             --port "$PORT" \
             --reload \
-            --reload-dir src
+            --reload-dir src \
+            --reload-dir web
     else
         # 不使用 reload
         ENVIRONMENT=development ENV=dev exec python -m uvicorn reinvent_insight.api:app \

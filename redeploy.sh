@@ -372,7 +372,7 @@ deploy_new_version() {
     
     # 确保所有文件和目录的权限正确
     print_info "修复文件权限..."
-    chown -R "$USER:$USER" "$DEPLOY_DIR"
+    sudo chown -R "$USER:$USER" "$DEPLOY_DIR"
     chmod -R u+rwX,g+rX,o+rX "$DEPLOY_DIR"
     
     print_success "部署完成"
@@ -409,9 +409,9 @@ restore_data() {
         
         # 修复恢复数据的权限
         print_info "修复恢复数据的权限..."
-        chown -R "$USER:$USER" "$DEPLOY_DIR/reinvent_insight-0.1.0/downloads/"
+        sudo chown -R "$USER:$USER" "$DEPLOY_DIR/reinvent_insight-0.1.0/downloads/"
         if [ -f "$DEPLOY_DIR/reinvent_insight-0.1.0/.env" ]; then
-            chown "$USER:$USER" "$DEPLOY_DIR/reinvent_insight-0.1.0/.env"
+            sudo chown "$USER:$USER" "$DEPLOY_DIR/reinvent_insight-0.1.0/.env"
         fi
     else
         if [ "$FRESH_INSTALL" = true ]; then
@@ -653,7 +653,7 @@ main() {
         # 检查是否有 root 权限的文件
         if find "$DEPLOY_DIR" -user root 2>/dev/null | head -1 | grep -q .; then
             print_warning "发现 root 权限文件，正在修复..."
-            chown -R "$USER:$USER" "$DEPLOY_DIR"
+            sudo chown -R "$USER:$USER" "$DEPLOY_DIR"
             print_success "权限修复完成"
         else
             print_success "权限检查通过"
@@ -727,7 +727,7 @@ fix_permissions_only() {
         
         if [[ "$confirm" =~ ^[Yy]$ ]]; then
             print_info "正在修复权限..."
-            chown -R "$USER:$USER" "$DEPLOY_DIR"
+            sudo chown -R "$USER:$USER" "$DEPLOY_DIR"
             chmod -R u+rwX,g+rX,o+rX "$DEPLOY_DIR"
             print_success "权限修复完成"
             

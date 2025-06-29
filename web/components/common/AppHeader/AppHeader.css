@@ -31,9 +31,9 @@
   align-items: center; /* 垂直居中 */
 }
 
-/* 阅读模式的padding和高度调整 */
+/* 阅读模式的padding调整 - 保持与普通模式相同的高度 */
 .app-header--reading {
-  --app-header-height: 70px;
+  --app-header-height: 80px;
   height: var(--app-header-height);
 }
 

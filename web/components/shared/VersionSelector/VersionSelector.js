@@ -74,6 +74,7 @@ export default {
     // 选择版本
     const selectVersion = (version) => {
       if (props.disabled) return;
+      
       const versionNumber = Number(version); // 确保是数字
       if (versionNumber !== internalVersion.value) {
         internalVersion.value = versionNumber;
