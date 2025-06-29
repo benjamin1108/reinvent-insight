@@ -14,6 +14,18 @@ export default {
       default: ''
     },
     
+    // 文档标题（中文）
+    documentTitle: {
+      type: String,
+      default: ''
+    },
+
+    // 文档标题（英文）
+    documentTitleEn: {
+      type: String,
+      default: ''
+    },
+    
     // 加载状态
     loading: {
       type: Boolean,
@@ -98,7 +110,7 @@ export default {
     const tocSidebar = ref(null);
     
     // 状态管理
-    const showToc = ref(props.initialShowToc);
+    const isTocVisible = computed(() => props.initialShowToc);
     const tocWidth = ref(props.initialTocWidth);
     const isDragging = ref(false);
     const dragStartX = ref(0);
@@ -118,24 +130,39 @@ export default {
       const sections = [];
       const stack = [];
       
-      headings.forEach(heading => {
+      headings.forEach((heading, index) => {
         const level = parseInt(heading.tagName.charAt(1));
-        const id = heading.id || heading.textContent.trim().toLowerCase().replace(/\s+/g, '-');
-        const text = heading.textContent.trim();
+        let id = heading.id;
         
-        // 确保标题有ID
-        if (!heading.id) {
-          heading.id = id;
+        const originalText = heading.textContent.trim();
+        
+        // 如果没有ID，生成一个
+        if (!id) {
+          id = originalText
+            .toLowerCase()
+            .replace(/[^\w\u4e00-\u9fff\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/^-+|-+$/g, '');
+          
+          // 如果生成的ID为空或以数字开头，添加前缀
+          if (!id || /^\d/.test(id)) {
+            id = `section-${id || index}`;
+          }
+          
+          // 确保ID以字母开头（CSS选择器要求）
+          if (/^\d/.test(id)) {
+            id = `section-${id}`;
+          }
         }
         
         const section = {
           id,
-          text,
+          text: originalText,
           level,
           children: []
         };
         
-        // 构建层级结构
+        // 处理层级关系
         while (stack.length > 0 && stack[stack.length - 1].level >= level) {
           stack.pop();
         }
@@ -154,7 +181,9 @@ export default {
     
     // 生成目录HTML
     const generateTocHtml = (sections) => {
-      if (!sections || sections.length === 0) return '';
+      if (!sections || sections.length === 0) {
+        return '';
+      }
       
       const renderSection = (section) => {
         const hasChildren = section.children && section.children.length > 0;
@@ -173,7 +202,7 @@ export default {
         return html;
       };
       
-      let html = '<ul>';
+      let html = '<ul class="toc-list">';
       sections.forEach(section => {
         html += renderSection(section);
       });
@@ -182,25 +211,36 @@ export default {
       return html;
     };
     
+    // 直接使用后端清理过的内容
+    const cleanContent = computed(() => {
+      // 后端已经清理了元数据，直接返回
+      return props.content || '';
+    });
+
     // 计算属性
     const hasMultipleVersions = computed(() => {
       return props.versions && props.versions.length > 1;
     });
-    
+
     const tocHtml = computed(() => {
-      if (!props.content) return '';
-      parsedSections.value = parseContent(props.content);
-      return generateTocHtml(parsedSections.value);
+      if (!cleanContent.value) {
+        return '';
+      }
+      
+      parsedSections.value = parseContent(cleanContent.value);
+      const html = generateTocHtml(parsedSections.value);
+      
+      return html;
     });
     
     // TOC相关方法
     const toggleToc = () => {
-      showToc.value = !showToc.value;
-      emit('toc-toggle', showToc.value);
+      emit('toc-toggle');
     };
     
     const handleTocClick = (event) => {
       const target = event.target;
+      
       if (target.tagName === 'A') {
         event.preventDefault();
         
@@ -214,22 +254,183 @@ export default {
     
     // 滚动到指定章节
     const scrollToSection = (sectionId) => {
-      const element = document.getElementById(sectionId);
-      if (!element) return;
-      
-      const container = document.querySelector('.reading-view__content');
-      if (!container) return;
-      
-      const elementTop = element.getBoundingClientRect().top;
-      const scrollTop = container.scrollTop;
-      const targetScrollTop = scrollTop + elementTop - props.scrollOffset;
-      
-      container.scrollTo({
-        top: targetScrollTop,
-        behavior: 'smooth'
+      // 使用nextTick确保DOM已更新
+      nextTick(() => {
+        // 尝试找到真正的滚动容器
+        const possibleContainers = [
+          document.querySelector('.reading-view__content'),
+          document.querySelector('.reading-view'),
+          document.documentElement,
+          document.body,
+          window
+        ].filter(Boolean);
+        
+        // 优先使用内容容器查找元素
+        const container = document.querySelector('.reading-view__content');
+        
+        if (!container) {
+          return;
+        }
+        
+        // 列出所有可用的标题ID用于调试
+        const allHeadings = container.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        
+        // 在文章正文中查找目标元素
+        let element;
+        try {
+          if (typeof CSS !== 'undefined' && CSS.escape) {
+            element = container.querySelector(`#${CSS.escape(sectionId)}`);
+          } else {
+            element = container.querySelector(`[id="${sectionId}"]`);
+          }
+        } catch (e) {
+          element = document.getElementById(sectionId);
+        }
+        
+        // 如果直接查找失败，进行智能匹配
+        if (!element) {
+          // 尝试多种ID格式匹配
+          const idVariations = [
+            sectionId,  // 原始ID
+            `section-${sectionId}`,  // 添加section-前缀
+            sectionId.replace(/^section-/, ''),  // 移除section-前缀
+            sectionId.replace(/^\d+[-.]?\s*/, ''),  // 移除数字前缀
+            `section-${sectionId.replace(/^\d+[-.]?\s*/, '')}`,  // section- + 无数字前缀
+          ];
+          
+          // 逐个尝试ID变化形式
+          for (const idVariation of idVariations) {
+            try {
+              if (typeof CSS !== 'undefined' && CSS.escape) {
+                element = container.querySelector(`#${CSS.escape(idVariation)}`);
+              } else {
+                element = container.querySelector(`[id="${idVariation}"]`);
+              }
+              
+              if (element) {
+                break;
+              }
+            } catch (e) {
+              // 忽略CSS.escape错误，继续尝试
+            }
+          }
+          
+          // 如果ID变化还是找不到，尝试文本内容匹配
+          if (!element) {
+            // 从原始sectionId提取核心关键词
+            const keywords = sectionId
+              .replace(/^(section-)?(\d+[-.]?\s*)?/, '')  // 移除前缀和数字
+              .split(/[-_\s]+/)  // 按分隔符拆分
+              .filter(word => word.length > 1);  // 过滤短词
+            
+            // 在标题中查找包含关键词的元素
+            for (const heading of allHeadings) {
+              const headingText = heading.textContent.trim().toLowerCase();
+              const headingId = heading.id.toLowerCase();
+              const targetLower = sectionId.toLowerCase();
+              
+              // 多种匹配策略
+              const matchStrategies = [
+                // 1. 精确ID匹配
+                headingId === targetLower,
+                // 2. ID包含匹配
+                headingId.includes(targetLower) || targetLower.includes(headingId),
+                // 3. 关键词匹配（所有关键词都要匹配）
+                keywords.length > 0 && keywords.every(keyword => 
+                  headingText.includes(keyword.toLowerCase()) || headingId.includes(keyword.toLowerCase())
+                ),
+                // 4. 部分关键词匹配（至少2个关键词匹配）
+                keywords.length > 1 && keywords.filter(keyword => 
+                  headingText.includes(keyword.toLowerCase()) || headingId.includes(keyword.toLowerCase())
+                ).length >= Math.min(2, keywords.length),
+                // 5. 数字序号匹配
+                /^\d+/.test(sectionId) && headingText.includes(sectionId.match(/^\d+/)[0])
+              ];
+              
+              for (let i = 0; i < matchStrategies.length; i++) {
+                if (matchStrategies[i]) {
+                  element = heading;
+                  break;
+                }
+              }
+              
+              if (element) break;
+            }
+          }
+        }
+        
+        if (!element) {
+          return;
+        }
+        
+        // 检测哪个容器是真正的滚动容器
+        let scrollContainer = null;
+        
+        for (const testContainer of possibleContainers) {
+          if (testContainer === window) {
+            // window总是可以滚动
+            scrollContainer = window;
+            break;
+          } else {
+            const style = window.getComputedStyle(testContainer);
+            const hasScroll = style.overflow === 'auto' || 
+                            style.overflow === 'scroll' || 
+                            style.overflowY === 'auto' || 
+                            style.overflowY === 'scroll' ||
+                            testContainer.scrollHeight > testContainer.clientHeight;
+            
+            if (hasScroll) {
+              scrollContainer = testContainer;
+              break;
+            }
+          }
+        }
+        
+        if (!scrollContainer) {
+          scrollContainer = window; // 回退到window
+        }
+        
+        // 执行滚动
+        if (scrollContainer === window) {
+          // 使用window滚动
+          const elementRect = element.getBoundingClientRect();
+          const targetTop = window.pageYOffset + elementRect.top - (props.scrollOffset || 80);
+          
+          window.scrollTo({
+            top: Math.max(0, targetTop),
+            behavior: 'smooth'
+          });
+        } else {
+          // 使用容器滚动
+          const containerRect = scrollContainer.getBoundingClientRect();
+          const elementRect = element.getBoundingClientRect();
+          const currentScrollTop = scrollContainer.scrollTop;
+          const elementOffsetTop = elementRect.top - containerRect.top + currentScrollTop;
+          const targetScrollTop = Math.max(0, elementOffsetTop - (props.scrollOffset || 80));
+          
+          scrollContainer.scrollTo({
+            top: targetScrollTop,
+            behavior: 'smooth'
+          });
+        }
+        
+        // 更新激活状态
+        activeSection.value = sectionId;
+        
+        // 更新URL hash
+        if (window.history.replaceState) {
+          window.history.replaceState(null, null, `#${sectionId}`);
+        }
+        
+        // 额外的备用方案：直接使用scrollIntoView
+        setTimeout(() => {
+          element.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start',
+            inline: 'nearest'
+          });
+        }, 100);
       });
-      
-      activeSection.value = sectionId;
     };
     
     // 拖动相关方法
@@ -271,6 +472,30 @@ export default {
     
     // 文章相关方法
     const handleArticleClick = (event) => {
+      // 处理文档内的锚点链接
+      const target = event.target;
+      if (target.tagName === 'A' && target.getAttribute('href')) {
+        const href = target.getAttribute('href');
+        
+        // 如果是锚点链接（以#开头）
+        if (href.startsWith('#')) {
+          event.preventDefault();
+          let sectionId = href.substring(1);
+          
+          // URL解码处理（文档内的链接可能被编码）
+          try {
+            sectionId = decodeURIComponent(sectionId);
+          } catch (e) {
+            // 使用原始ID
+          }
+          
+          if (sectionId) {
+            scrollToSection(sectionId);
+            return;
+          }
+        }
+      }
+      
       emit('article-click', event);
     };
     
@@ -282,16 +507,14 @@ export default {
     // 响应式处理
     const handleResize = () => {
       // 在移动设备上自动隐藏TOC
-      if (window.innerWidth <= 768) {
-        showToc.value = false;
-      } else if (window.innerWidth > 768 && !showToc.value && props.initialShowToc) {
-        showToc.value = true;
+      if (window.innerWidth <= 768 && isTocVisible.value) {
+        emit('toc-toggle');
       }
     };
     
     // 滚动监听：高亮当前章节
     const handleScroll = () => {
-      if (!props.content) return;
+      if (!cleanContent.value) return;
       
       const container = document.querySelector('.reading-view__content');
       if (!container) return;
@@ -333,18 +556,63 @@ export default {
       }
       
       // ESC 键隐藏TOC（仅在移动设备上）
-      if (event.key === 'Escape' && window.innerWidth <= 768) {
-        showToc.value = false;
-        emit('toc-toggle', false);
+      if (event.key === 'Escape' && window.innerWidth <= 768 && isTocVisible.value) {
+        emit('toc-toggle');
       }
     };
     
     // 监听内容变化
-    watch(() => props.content, () => {
-      if (props.content) {
-        parsedSections.value = parseContent(props.content);
+    watch(() => cleanContent.value, () => {
+      if (cleanContent.value) {
+        // 使用nextTick确保DOM更新后再解析
+        nextTick(() => {
+          parsedSections.value = parseContent(cleanContent.value);
+          // 确保实际DOM中的标题也有ID
+          ensureHeadingIds();
+        });
       }
     });
+    
+    // 确保实际DOM中的标题有ID
+    const ensureHeadingIds = () => {
+      const container = document.querySelector('.reading-view__content');
+      if (!container) {
+        return;
+      }
+      
+      const headings = container.querySelectorAll('h1, h2, h3, h4, h5, h6');
+      
+      headings.forEach((heading, index) => {
+        if (!heading.id) {
+          const text = heading.textContent.trim();
+          let id = text
+            .toLowerCase()
+            .replace(/[^\w\u4e00-\u9fff\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/^-+|-+$/g, '');
+          
+          // 如果生成的ID为空或以数字开头，添加前缀
+          if (!id || /^\d/.test(id)) {
+            id = `section-${id || index}`;
+          }
+          
+          // 确保ID以字母开头（CSS选择器要求）
+          if (/^\d/.test(id)) {
+            id = `section-${id}`;
+          }
+          
+          // 确保ID唯一
+          let finalId = id;
+          let counter = 1;
+          while (document.getElementById(finalId)) {
+            finalId = `${id}-${counter}`;
+            counter++;
+          }
+          
+          heading.id = finalId;
+        }
+      });
+    };
     
     // 监听活动章节变化，触发目录更新
     watch(activeSection, () => {
@@ -372,8 +640,11 @@ export default {
       handleResize();
       
       // 初始化时解析内容
-      if (props.content) {
-        parsedSections.value = parseContent(props.content);
+      if (cleanContent.value) {
+        nextTick(() => {
+          parsedSections.value = parseContent(cleanContent.value);
+          ensureHeadingIds();
+        });
       }
     });
     
@@ -408,7 +679,7 @@ export default {
     };
     
     const resetLayout = () => {
-      showToc.value = props.initialShowToc;
+      emit('toc-toggle');
       tocWidth.value = props.initialTocWidth;
     };
     
@@ -417,7 +688,7 @@ export default {
       tocSidebar,
       
       // 响应式状态
-      showToc,
+      isTocVisible,
       tocWidth,
       isDragging,
       activeSection,
@@ -425,6 +696,7 @@ export default {
       // 计算属性
       hasMultipleVersions,
       tocHtml,
+      cleanContent,
       
       // 方法
       toggleToc,

@@ -15,7 +15,6 @@ const ensureMarkedReady = (callback) => {
 // 配置 marked 和 highlight.js
 ensureMarkedReady((markedInstance) => {
   markedInstance.setOptions({
-    gfm: true,
     highlight: function (code, lang) {
       if (lang && hljs.getLanguage(lang)) {
         try {
@@ -28,8 +27,6 @@ ensureMarkedReady((markedInstance) => {
     gfm: true
   });
 });
-
-
 
 // 创建Vue应用实例
 const app = createApp({
@@ -85,9 +82,9 @@ const app = createApp({
     
     // TOC 相关状态
     const showToc = ref(
-      localStorage.getItem('showToc') === 'false' 
-        ? false
-        : true // 默认显示
+      localStorage.getItem('showToc') !== null 
+        ? localStorage.getItem('showToc') === 'true' 
+        : window.innerWidth >= 768
     );
     const tocWidth = ref(
       localStorage.getItem('tocWidth') !== null 
@@ -104,9 +101,6 @@ const app = createApp({
     const currentVideoTitle = ref('');
     const isVideoResizing = ref(false);
     const isVideoDragging = ref(false);
-    
-    // 新增：主内容区域的引用
-    const mainContent = ref(null);
     
     // 环境信息状态
     const environmentInfo = ref({
@@ -290,14 +284,12 @@ const app = createApp({
       history.pushState(null, '', '/');
       currentView.value = 'library';
       clearReadingState();
-      closeVideoPlayer();
     };
 
     const goBackToLibrary = () => {
       history.pushState(null, '', '/');
       currentView.value = 'library';
       clearReadingState();
-      closeVideoPlayer();
     };
 
     const clearReadingState = () => {
@@ -316,6 +308,7 @@ const app = createApp({
     };
 
     const handleSummaryClick = (data) => {
+      console.log('📋 handleSummaryClick接收到数据:', data);
       if (data && data.hash) {
         loadSummaryByHash(data.hash);
       } else {
@@ -326,7 +319,7 @@ const app = createApp({
     // TOC 相关方法
     const toggleToc = () => {
       showToc.value = !showToc.value;
-      localStorage.setItem('showToc', showToc.value);
+      localStorage.setItem('showToc', showToc.value.toString());
     };
 
     const handleTocResize = (width) => {
@@ -490,12 +483,15 @@ const app = createApp({
     };
 
     const loadSummaryByHash = async (docHash, pushState = true) => {
+      console.log('🔍 loadSummaryByHash调用，docHash:', docHash);
       documentLoading.value = true;
       readingError.value = '';
       
       try {
         // 使用正确的API端点
         const res = await axios.get(`/api/public/doc/${docHash}`);
+        console.log('🔍 API响应类型:', typeof res.data);
+        console.log('🔍 API响应前100字符:', String(res.data).substring(0, 100));
         
         // 检查是否返回了HTML而不是JSON
         if (typeof res.data === 'string' && res.data.includes('<!DOCTYPE html>')) {
@@ -527,42 +523,32 @@ const app = createApp({
     };
 
     const viewSummary = (title, title_cn, title_en, content, filename, videoUrl = '', docHash, versions = []) => {
+      console.log('📖 viewSummary被调用，调用栈:', new Error().stack);
       currentView.value = 'read';
-      
-      // 使用 nextTick 确保在DOM更新后执行滚动，彻底解决视图切换时的滚动位置残留问题
-      nextTick(() => {
-        if (mainContent.value) {
-          mainContent.value.scrollTo(0, 0);
-        } else {
-          window.scrollTo(0, 0); // Fallback
-        }
-      });
-      
       documentTitle.value = title_cn || title;
       documentTitleEn.value = title_en || '';
       readingFilename.value = filename;
       readingVideoUrl.value = videoUrl;
       readingHash.value = docHash;
       documentVersions.value = versions;
+      currentVersion.value = versions.length > 0 ? String(versions[0].version) : '1';
       
-      currentVersion.value = versions.length > 0 ? versions[0].version : 1;
+      console.log('📖 viewSummary调用参数:', {
+        title,
+        title_cn,
+        title_en,
+        content: content ? content.substring(0, 100) + '...' : 'empty',
+        contentLength: content ? content.length : 0,
+        filename,
+        videoUrl,
+        docHash,
+        versions,
+        currentVersion: currentVersion.value
+      });
       
-            const updateContent = () => {
+      const updateContent = () => {
         if (content) {
-          // 确保marked.js使用正确的配置
-          if (typeof marked !== 'undefined' && marked.setOptions) {
-            marked.setOptions({
-              breaks: true,      // 支持硬换行
-              gfm: true,        // GitHub风格的markdown
-              pedantic: false,  // 不严格遵循原始markdown规范
-              sanitize: false,  // 不移除HTML标签
-              smartLists: true, // 智能列表处理
-              smartypants: false
-            });
-          }
-          
-          const renderedHtml = marked.parse(content);
-          readingContent.value = renderedHtml;
+          readingContent.value = marked.parse(content);
         }
       };
       
@@ -575,24 +561,13 @@ const app = createApp({
 
     // 版本切换
     const switchVersion = async (version) => {
-      const versionNumber = Number(version); // 确保是数字
-      currentVersion.value = versionNumber;
+      currentVersion.value = version;
       
       if (readingHash.value) {
-        // 将用户选择的版本保存到 localStorage
-        localStorage.setItem(`document_version_${readingHash.value}`, versionNumber);
-        
         try {
-          const res = await axios.get(`/api/public/doc/${readingHash.value}/${versionNumber}`);
+          const res = await axios.get(`/d/${readingHash.value}?version=${version}`);
           const data = res.data;
-          
-          // 更新阅读视图的内容和标题
           readingContent.value = marked.parse(data.content);
-          documentTitle.value = data.title_cn || data.title;
-          documentTitleEn.value = data.title_en || '';
-          
-          // 注意：我们不需要更新 versions 列表，因为它在文章加载时已固定
-          
         } catch (error) {
           console.error('切换版本失败:', error);
           showToast('切换版本失败', 'danger');
@@ -602,24 +577,17 @@ const app = createApp({
 
     // 视频播放器相关方法
     const extractYoutubeVideoId = (url) => {
-      if (!url) {
-        return null;
-      }
+      if (!url) return null;
       
       const regexes = [
-        /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/,
-        /^https?:\/\/(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})$/,
-        /^https?:\/\/(?:www\.)?youtu\.be\/([a-zA-Z0-9_-]{11})$/,
-        /^https?:\/\/(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]{11})$/
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+        /youtube\.com\/watch\?.*v=([^&\n?#]+)/
       ];
       
       for (const regex of regexes) {
         const match = url.match(regex);
-        if (match && match[1]) {
-          return match[1]; 
+        if (match) return match[1];
       }
-      }
-      
       return null;
     };
 
@@ -658,8 +626,8 @@ const app = createApp({
       
       pdfDownloading.value = true;
       try {
-        const encodedFilename = encodeURIComponent(readingFilename.value);
-        const response = await axios.get(`/api/public/summaries/${encodedFilename}/pdf`, {
+        const response = await axios.get('/download-pdf', {
+          params: { filename: readingFilename.value },
           responseType: 'blob'
         });
         
@@ -781,12 +749,22 @@ const app = createApp({
       // 加载笔记库（已登录用户或访客都需要）
       if (currentView.value === 'library') {
         await loadSummaries();
+        
+        // 输出调试信息到console
+        console.log('📊 应用状态调试信息:');
+        console.log(`   📚 文章总数: ${summaries.value.length}`);
+        console.log(`   🎯 当前视图: ${currentView.value}`);
+        console.log(`   🔐 认证状态: ${isAuthenticated.value}`);
+        console.log(`   ⏳ 加载状态: ${libraryLoading.value} (false表示加载完成)`);
+        console.log(`   🎭 显示HeroSection: ${showHeroSection.value}`);
+        console.log(`   📱 showLogin状态: ${showLogin.value}`);
       }
       
       // 加载环境信息
       try {
         const res = await axios.get('/api/env');
         environmentInfo.value = { ...res.data, loaded: true };
+        console.log('🌍 环境信息:', res.data);
       } catch (error) {
         console.error('获取环境信息失败:', error);
         environmentInfo.value.loaded = true;
@@ -794,12 +772,6 @@ const app = createApp({
       
       // 添加点击外部关闭下拉菜单的监听器
       document.addEventListener('click', handleClickOutside);
-    });
-
-    watch(currentView, (newView, oldView) => {
-      if (newView === 'library' && oldView === 'read') {
-        loadSummaries();
-      }
     });
 
     onUnmounted(() => {
@@ -846,7 +818,6 @@ const app = createApp({
       isVideoResizing,
       isVideoDragging,
       environmentInfo,
-      mainContent,
       
       // 筛选器状态
       selectedLevel,
@@ -956,11 +927,12 @@ componentLoader.registerComponents(app, components).then((results) => {
     // 再给一个短暂延迟确保Vue渲染完成
     setTimeout(() => {
       showApp();
-      console.log('✅ 应用已启动');
+      console.log('✅ 新版主应用已启动，使用组件化架构');
       
       // 输出加载的组件信息
       const successful = results.filter(r => r.success);
       const failed = results.filter(r => !r.success);
+      console.log(`📦 成功加载 ${successful.length} 个组件:`, successful.map(r => r.name));
       if (failed.length > 0) {
         console.warn(`⚠️ ${failed.length} 个组件加载失败:`, failed.map(r => r.name));
       }

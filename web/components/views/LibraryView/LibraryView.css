@@ -7,9 +7,12 @@
 @import url('/css/base/effects.css');
 @import url('/css/base/content.css');
 
+/* 引入依赖组件样式 */
+@import url('/components/common/SummaryCard/SummaryCard.css');
+
 /* 主容器样式 */
 .library-view {
-  max-width: 96rem;
+  max-width: 80rem;
   margin: 0 auto;
   padding: 1.5rem;
   animation: library-view-fadeIn 0.5s ease-in-out;

@@ -18,14 +18,15 @@
   </div>
 
   <!-- 主要内容 -->
-  <div v-else class="reading-view__layout">
+  <div v-else class="reading-view__layout" :style="{ '--toc-width': tocWidth + 'px' }">
     
     <!-- 目录 -->
-    <div v-if="showToc" class="reading-view__toc">
-      <!-- TOC 侧边栏 -->
-      <div class="reading-view__toc-sidebar" 
+    <div v-if="isTocVisible" class="reading-view__toc">
+      <!-- 新增：TOC包装器，用于对齐和间距 -->
+      <div class="reading-view__toc-wrapper" 
            :style="{ width: tocWidth + 'px' }"
            ref="tocSidebar">
+        <div class="reading-view__toc-sidebar">
         <div class="reading-view__toc-content">
           <!-- 目录标题 -->
           <h3 class="reading-view__toc-title">{{ tocTitle }}</h3>
@@ -39,6 +40,7 @@
           <!-- 空目录提示 -->
           <div v-else class="reading-view__toc-empty">
             {{ tocEmptyText }}
+            </div>
           </div>
         </div>
       </div>
@@ -50,24 +52,33 @@
     </div>
 
     <!-- 文章内容区域 -->
-    <div class="reading-view__content" :class="{ 'reading-view__content--no-toc': !showToc }">
+    <div class="reading-view__content" :class="{ 'reading-view__content--no-toc': !isTocVisible }">
       <div class="reading-view__article-wrapper">
         <div 
-          v-if="content" 
+          v-if="cleanContent" 
           @click="handleArticleClick"
           class="reading-view__article">
           
-          <!-- 版本选择器 -->
+          <!-- 版本选择器（移至滚动容器外部） -->
           <div v-if="hasMultipleVersions" class="reading-view__version-selector">
             <version-selector
               :versions="versions"
               :current-version="currentVersion"
-              @version-change="handleVersionChange">
+              @change="handleVersionChange">
             </version-selector>
+          </div>
+          
+          <!-- 可滚动的内容容器 -->
+          <div class="reading-view__scroll-content">
+            <!-- 文章头部，包含标题和分割线 -->
+            <div v-if="documentTitleEn || documentTitle" class="reading-view__article-header">
+              <h1 v-if="documentTitleEn" class="reading-view__title-en">{{ documentTitleEn }}</h1>
+              <h2 v-if="documentTitle" class="reading-view__title-cn">{{ documentTitle }}</h2>
           </div>
 
           <!-- 文章正文 -->
-          <div v-html="content" class="reading-view__body prose-tech"></div>
+          <div v-html="cleanContent" class="reading-view__body prose-tech"></div>
+          </div>
         </div>
       </div>
     </div>

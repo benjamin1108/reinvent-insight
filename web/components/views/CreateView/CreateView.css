@@ -117,6 +117,23 @@
   margin-bottom: 1rem;
 }
 
+/* 进度条样式覆盖 - 增加高度和改善文本显示 */
+.create-view__progress-wrapper .progress-bar__container {
+  height: 24px !important; /* 增加高度 */
+}
+
+.create-view__progress-wrapper .progress-bar__text--inside {
+  font-size: 0.875rem !important; /* 增大字体 */
+  font-weight: 600 !important;
+  color: #ffffff !important;
+}
+
+.create-view__progress-wrapper .progress-bar__text--outside {
+  font-size: 0.875rem !important; /* 增大字体 */
+  font-weight: 500 !important;
+  margin-bottom: 0.75rem !important;
+}
+
 .create-view__progress-title {
   font-size: 1.25rem;
   font-weight: 600;

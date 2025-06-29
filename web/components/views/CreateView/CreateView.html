@@ -36,13 +36,17 @@
   <!-- Progress & Logs -->
   <div v-if="loading || logs.length"
     class="create-view__progress-section">
-    <!-- 进度条组件将在这里使用 -->
+    <!-- 进度条组件 -->
     <div v-if="showProgressBar" class="create-view__progress-wrapper">
       <progress-bar 
         :percent="progressPercent" 
         :show-text="true"
+        text-position="outside"
         :striped="true"
-        :animated="loading">
+        :animated="loading"
+        height="24px"
+        color="gradient"
+        rounded="md">
       </progress-bar>
     </div>
     
@@ -81,7 +85,7 @@
           全屏阅读
         </tech-button>
       </div>
-      <div v-html="rendered" class="create-view__result-content prose-tech"></div>
+      <div v-html="cleanRendered" class="create-view__result-content prose-tech"></div>
     </div>
   </div>
 </div> 

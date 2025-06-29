@@ -7,9 +7,9 @@
   position: relative;
   color: white;
   text-align: center;
-  padding: 5rem 1.5rem;
+  padding: 3rem 1.5rem;        /* 从5rem减少到3rem */
   overflow: hidden;
-  min-height: 60vh;
+  min-height: 40vh;            /* 从60vh减少到40vh */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -101,7 +101,7 @@
 /* 响应式设计 */
 @media (min-width: 768px) {
   .hero-section {
-    padding: 8rem 1.5rem;
+    padding: 4rem 1.5rem;        /* 从8rem减少到4rem */
   }
   
   .hero-section__title {
@@ -126,8 +126,8 @@
 /* 移动端优化 */
 @media (max-width: 768px) {
   .hero-section {
-    padding: 4rem 1rem;
-    min-height: 50vh;
+    padding: 2rem 1rem;          /* 从4rem减少到2rem */
+    min-height: 35vh;            /* 从50vh减少到35vh */
   }
   
   .hero-section__title {

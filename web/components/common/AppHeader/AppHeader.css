@@ -14,6 +14,10 @@
   position: sticky;
   top: 0;
   z-index: 40;
+  
+  /* 定义header高度变量供其他组件使用 */
+  --app-header-height: 80px;
+  height: var(--app-header-height);
 }
 
 /* 内容容器样式 */
@@ -24,7 +28,12 @@
   padding: 1rem; /* 标准padding */
 }
 
-/* 阅读模式的padding调整 */
+/* 阅读模式的padding和高度调整 */
+.app-header--reading {
+  --app-header-height: 70px;
+  height: var(--app-header-height);
+}
+
 .app-header--reading .app-header__container {
   padding: 0.75rem 1rem;
 }
@@ -137,10 +146,7 @@
   flex: 1;
 }
 
-/* 阅读模式特有样式 */
-.app-header--reading {
-  padding: 0.75rem 0;
-}
+/* 阅读模式特有样式已在上方定义 */
 
 /* 阅读控制区域的TechButton样式由组件本身处理 */
 

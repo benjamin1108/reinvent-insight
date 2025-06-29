@@ -2,7 +2,7 @@
  * VersionSelector 组件
  * 文档版本选择器
  */
-const VersionSelector = {
+export default {
   props: {
     // 所有可用的版本列表
     versions: {
@@ -19,7 +19,7 @@ const VersionSelector = {
     
     // 当前选中的版本
     currentVersion: {
-      type: [String, Number],
+      type: Number, // 强制要求为数字
       required: true
     },
     
@@ -55,11 +55,13 @@ const VersionSelector = {
     // 规范化版本列表，确保统一格式
     const normalizedVersions = computed(() => {
       return props.versions.map(v => {
-        if (typeof v === 'string') {
-          // 如果是字符串，转换为对象格式
-          return { version: v };
-        }
-        return v;
+        let versionObj = (typeof v === 'string') ? { version: v } : { ...v };
+        
+        // 确保版本是数字
+        const numVersion = Number(versionObj.version);
+        versionObj.version = isNaN(numVersion) ? 0 : numVersion; // 如果转换失败，默认为0
+
+        return versionObj;
       });
     });
     
@@ -72,9 +74,10 @@ const VersionSelector = {
     // 选择版本
     const selectVersion = (version) => {
       if (props.disabled) return;
-      if (version !== internalVersion.value) {
-        internalVersion.value = version;
-        emit('change', version);
+      const versionNumber = Number(version); // 确保是数字
+      if (versionNumber !== internalVersion.value) {
+        internalVersion.value = versionNumber;
+        emit('change', versionNumber);
       }
       isOpen.value = false;
     };
@@ -106,5 +109,3 @@ const VersionSelector = {
     };
   }
 };
-
-export default VersionSelector;

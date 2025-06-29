@@ -4,11 +4,6 @@
  */
 export default {
   props: {
-    // 是否显示模态框
-    visible: {
-      type: Boolean,
-      required: true
-    },
     // 模态框标题
     title: {
       type: String,
@@ -47,7 +42,7 @@ export default {
     }
   },
   
-  emits: ['update:visible', 'submit', 'close'],
+  emits: ['submit', 'close'],
   
   setup(props, { emit }) {
     const { ref, computed, watch } = Vue;
@@ -206,7 +201,6 @@ export default {
       alert.value = { type: '', message: '' };
       isSubmitting.value = false;
       
-      emit('update:visible', false);
       emit('close');
     };
     
@@ -217,24 +211,22 @@ export default {
       }
     };
     
-    // 监听visible变化，重置状态
-    watch(() => props.visible, (newVal) => {
-      if (!newVal) {
-        form.value = { username: '', email: '', password: '' };
-        errors.value = { username: '', email: '', password: '' };
-        alert.value = { type: '', message: '' };
-        isSubmitting.value = false;
-      }
+    // 组件挂载时重置状态
+    Vue.onMounted(() => {
+      form.value = { username: '', email: '', password: '' };
+      errors.value = { username: '', email: '', password: '' };
+      alert.value = { type: '', message: '' };
+      isSubmitting.value = false;
     });
     
     // ESC键关闭模态框
     const handleEscKey = (event) => {
-      if (event.key === 'Escape' && props.visible) {
+      if (event.key === 'Escape') {
         close();
       }
     };
     
-    // 生命周期钩子
+    // 生命周期钩子 - 添加ESC键监听
     Vue.onMounted(() => {
       document.addEventListener('keydown', handleEscKey);
     });

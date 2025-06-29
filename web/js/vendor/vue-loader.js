@@ -36,7 +36,6 @@
       
       script.onload = () => {
         clearTimeout(timer);
-        console.log(`✅ Vue.js loaded from: ${url}`);
         resolve();
       };
       
@@ -56,12 +55,10 @@
   async function loadVue() {
     // 如果Vue已经存在，直接返回
     if (window.Vue) {
-      console.log('✅ Vue.js already loaded');
       return;
     }
     
     // 显示加载状态
-    console.log('🚀 Loading Vue.js...');
     
     // 尝试CDN
     for (let i = 0; i < CDN_URLS.length; i++) {
@@ -75,10 +72,8 @@
     
     // 所有CDN都失败，尝试本地文件
     try {
-      console.log('🔄 All CDNs failed, trying local file...');
       await loadScript(LOCAL_URL);
     } catch (error) {
-      console.error('❌ Failed to load Vue.js from all sources:', error);
       
       // 显示错误信息给用户
       const errorDiv = document.createElement('div');

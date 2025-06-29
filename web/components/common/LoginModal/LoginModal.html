@@ -1,5 +1,5 @@
 <transition name="fade">
-  <div v-if="visible" class="login-modal" @click="handleBackdropClick">
+  <div class="login-modal" @click="handleBackdropClick">
     <div class="login-modal__content tech-gradient glow-effect">
       <button @click="close" class="login-modal__close" title="关闭">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -75,7 +75,7 @@
         </div>
 
         <!-- 提交按钮 -->
-        <button type="submit" class="tech-btn tech-btn-primary" :disabled="isSubmitting || loading">
+        <button type="submit" class="tech-button tech-button--primary" :disabled="isSubmitting || loading">
           <span>{{ isSubmitting || loading ? '登录中...' : submitText }}</span>
         </button>
       </form>

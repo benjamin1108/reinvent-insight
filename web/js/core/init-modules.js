@@ -43,7 +43,6 @@ export async function initModules() {
       waitForGlobal('useToast')
     ]);
     
-    console.log('所有核心模块已加载完成');
     return true;
   } catch (error) {
     console.error('模块初始化失败:', error);

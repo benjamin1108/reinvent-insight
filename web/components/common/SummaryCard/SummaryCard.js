@@ -48,6 +48,8 @@ export default {
     }
   },
   
+  emits: ['click'],
+  
   setup(props, { emit }) {
     const { computed } = Vue;
     

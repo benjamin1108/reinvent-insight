@@ -5,13 +5,12 @@
     customClass, 
     { 
       'version-selector--active': isOpen, 
-      'version-selector--disabled': disabled,
-      'version-selector--article': customClass === 'version-selector-article'
+      'version-selector--disabled': disabled
     }
   ]"
 >
   <div @click="toggleDropdown" class="version-selector__trigger">
-    <span>{{ currentVersion.startsWith('v') ? currentVersion : 'v' + currentVersion }}</span>
+    <span>v{{ currentVersion }}</span>
   </div>
   <transition name="version-selector__dropdown">
     <div v-if="isOpen" class="version-selector__dropdown">
@@ -22,7 +21,7 @@
         class="version-selector__item"
         :class="{ 'version-selector__item--current': item.version === currentVersion }"
       >
-        {{ item.version.startsWith('v') ? item.version : 'v' + item.version }}
+        v{{ item.version }}
       </div>
     </div>
   </transition>

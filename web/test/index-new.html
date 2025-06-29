@@ -108,46 +108,22 @@
     </div>
 
     <!-- 应用头部 -->
-    <!-- 统一的应用头部 -->
-    <app-header
-      :mode="currentView === 'read' ? 'reading' : 'normal'"
-      :is-authenticated="isAuthenticated"
-      :is-share-view="isShareView"
-      :current-view="currentView"
-      :show-toc="showToc"
-      :reading-video-url="readingVideoUrl"
-      :pdf-downloading="pdfDownloading"
-      @home-click="goHome"
-      @view-change="handleViewChange"
-      @login-show="handleLoginShow"
-      @logout="logout"
-      @back-to-library="goBackToLibrary"
-      @open-video="openVideoPlayer"
-      @download-pdf="downloadPDF"
-      @toggle-toc="toggleToc"
-    >
-    </app-header>
+         <app-header v-if="currentView !== 'read' && !isShareView" mode="normal" :current-view="currentView"
+       :is-authenticated="isAuthenticated" :is-share-view="isShareView" :show-test-toast="false" @home-click="goHome"
+       @view-change="handleViewChange" @login-show="handleLoginShow" @logout="logout">
+      </app-header>
 
-    <!-- 浮动视频播放器 -->
-    <video-player
-      :visible="showVideoPlayer"
-      @update:visible="showVideoPlayer = $event"
-      :video-id="currentVideoId"
-      :video-title="currentVideoTitle"
-      :minimized="videoPlayerMinimized"
-      :position="videoPlayerPosition"
-      :size="videoPlayerSize"
-      :is-resizing="isVideoResizing"
-      :is-dragging="isVideoDragging"
-      @close="closeVideoPlayer"
-      @toggle-minimize="toggleVideoPlayerMinimize"
-      @position-change="handleVideoPositionChange"
-      @size-change="handleVideoSizeChange">
-    </video-player>
+    <!-- 阅读视图专用头部 -->
+    <app-header v-if="currentView === 'read'" mode="reading" :current-view="currentView"
+      :is-authenticated="isAuthenticated" :is-share-view="isShareView" :reading-video-url="readingVideoUrl"
+      :pdf-downloading="pdfDownloading" :show-toc="showToc" @home-click="goHome" @view-change="handleViewChange"
+      @back-to-library="goBackToLibrary" @open-video="openVideoPlayer" @download-pdf="downloadPDF"
+      @toggle-toc="toggleToc">
+    </app-header>
 
     <!-- 主内容区域 -->
     <main class="app__content flex-1"
-      :class="{'overflow-auto': currentView !== 'read', 'overflow-y-hidden': currentView === 'read'}" ref="mainContent">
+      :class="{'overflow-auto': currentView !== 'read', 'overflow-y-hidden': currentView === 'read'}">
 
       <!-- 首页展示区域 -->
       <hero-section v-if="showHeroSection" :is-authenticated="isAuthenticated" @login-click="handleLoginShow">
@@ -170,8 +146,6 @@
       <!-- 阅读视图 -->
       <reading-view v-if="currentView === 'read'" 
         :content="readingContent" 
-        :document-title="documentTitle"
-        :document-title-en="documentTitleEn"
         :loading="documentLoading"
         :error="readingError" 
         :versions="documentVersions" 
@@ -185,6 +159,14 @@
       </reading-view>
 
     </main>
+
+    <!-- 浮动视频播放器 -->
+    <video-player v-if="showVideoPlayer" :video-id="currentVideoId" :video-title="currentVideoTitle"
+      :minimized="videoPlayerMinimized" :position="videoPlayerPosition" :size="videoPlayerSize"
+      :is-resizing="isVideoResizing" :is-dragging="isVideoDragging" @close="closeVideoPlayer"
+      @toggle-minimize="toggleVideoPlayerMinimize" @position-change="handleVideoPositionChange"
+      @size-change="handleVideoSizeChange">
+    </video-player>
 
     <!-- 登录弹窗 -->
     <login-modal v-if="showLogin" 
@@ -201,7 +183,7 @@
   </div>
 
   <!-- 主应用逻辑 -->
-  <script src="/js/app.js" defer></script>
+  <script src="/test/app-new.js" defer></script>
 </body>
 
 </html>

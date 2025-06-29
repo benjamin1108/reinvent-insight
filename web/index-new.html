@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>reinvent Insight - 深度分析笔记</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+  
+  <!-- Vue 3 和依赖库 -->
+  <script src="/js/vendor/vue.global.prod.min.js"></script>
+  <script src="/js/vendor/axios.min.js"></script>
+  <script src="/js/vendor/marked.min.js"></script>
+  <script src="/js/vendor/highlight.min.js"></script>
+  <link rel="stylesheet" href="/css/highlight-github-dark.min.css">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- 基础样式系统 -->
+  <link rel="stylesheet" href="/css/base/typography.css">
+  <link rel="stylesheet" href="/css/base/effects.css">
+  <link rel="stylesheet" href="/css/base/content.css">
+  <link rel="stylesheet" href="/css/style.css">
+  
+  <!-- 组件系统核心 -->
+  <script src="/js/core/event-bus.js"></script>
+  <script src="/js/core/component-loader.js"></script>
+  <script src="/js/composables/useToast.js" type="module"></script>
+</head>
+
+<body class="h-full" :class="{ 'dev-environment': environmentInfo.loaded && environmentInfo.is_development }">
+  <div id="app" class="app h-full flex flex-col bg-gray-900 text-gray-200">
+    
+    <!-- 环境标识 -->
+    <div v-if="environmentInfo.loaded && environmentInfo.is_development" 
+         class="dev-env-indicator"
+         title="当前运行在开发环境">
+      <svg class="inline-block w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+      </svg>
+      开发环境
+    </div>
+
+    <!-- 应用头部 -->
+    <app-header 
+      v-if="currentView !== 'read' && !isShareView"
+      :current-view="currentView"
+      :is-authenticated="isAuthenticated"
+      :is-share-view="isShareView"
+      @view-change="handleViewChange"
+      @login-click="showLogin = true"
+      @logout="logout"
+      @test-toast="testToast">
+    </app-header>
+
+    <!-- 阅读视图专用头部 -->
+    <app-header 
+      v-if="currentView === 'read'"
+      :current-view="currentView"
+      :is-authenticated="isAuthenticated"
+      :is-share-view="isShareView"
+      :reading-mode="true"
+      :reading-video-url="readingVideoUrl"
+      :pdf-downloading="pdfDownloading"
+      :show-toc="showToc"
+      @view-change="handleViewChange"
+      @back-to-library="goBackToLibrary"
+      @open-video="openVideoPlayer"
+      @download-pdf="downloadPDF"
+      @toggle-toc="toggleToc">
+    </app-header>
+
+    <!-- 主内容区域 -->
+    <main class="app__content flex-1" 
+          :class="{'overflow-auto': currentView !== 'read', 'overflow-y-hidden': currentView === 'read'}">
+      
+      <!-- 首页展示区域 -->
+      <hero-section 
+        v-if="showHeroSection"
+        @login-click="showLogin = true">
+      </hero-section>
+
+      <!-- 创建分析视图 -->
+      <create-view 
+        v-if="currentView === 'create' && isAuthenticated && !isShareView"
+        :url="url"
+        :loading="loading"
+        :progress-percent="progressPercent"
+        :logs="logs"
+        :finalized-logs="finalizedLogs"
+        :summary="summary"
+        :title="title"
+        :rendered="rendered"
+        @update:url="url = $event"
+        @start-analysis="startSummarize"
+        @view-summary="viewSummary">
+      </create-view>
+
+      <!-- 笔记库视图 -->
+      <library-view 
+        v-if="currentView === 'library' && !isShareView"
+        :summaries="summaries"
+        :loading="libraryLoading"
+        :is-guest="!isAuthenticated"
+        @summary-click="loadSummaryByHash">
+      </library-view>
+
+      <!-- 阅读视图 -->
+      <reading-view 
+        v-if="currentView === 'read'"
+        :content="readingContent"
+        :loading="documentLoading"
+        :error="readingError"
+        :versions="documentVersions"
+        :current-version="currentVersion"
+        :initial-show-toc="showToc"
+        :initial-toc-width="tocWidth"
+        @toc-toggle="toggleToc"
+        @toc-resize="handleTocResize"
+        @article-click="handleArticleClick"
+        @version-change="switchVersion">
+      </reading-view>
+
+    </main>
+
+    <!-- 浮动视频播放器 -->
+    <video-player 
+      v-if="showVideoPlayer"
+      :video-id="currentVideoId"
+      :video-title="currentVideoTitle"
+      :minimized="videoPlayerMinimized"
+      :position="videoPlayerPosition"
+      :size="videoPlayerSize"
+      :is-resizing="isVideoResizing"
+      :is-dragging="isVideoDragging"
+      @close="closeVideoPlayer"
+      @toggle-minimize="toggleVideoPlayerMinimize"
+      @position-change="handleVideoPositionChange"
+      @size-change="handleVideoSizeChange">
+    </video-player>
+
+    <!-- 登录弹窗 -->
+    <login-modal 
+      v-if="showLogin"
+      :username="loginUsername"
+      :password="loginPassword"
+      @update:username="loginUsername = $event"
+      @update:password="loginPassword = $event"
+      @login="login"
+      @close="showLogin = false">
+    </login-modal>
+
+    <!-- Toast消息容器 -->
+    <toast-container></toast-container>
+
+  </div>
+
+  <!-- 主应用逻辑 -->
+  <script src="/js/app-new.js" defer></script>
+</body>
+</html> 

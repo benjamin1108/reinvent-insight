@@ -87,6 +87,12 @@ export default {
       return props.loading || props.progressPercent > 0;
     });
     
+    // 直接使用后端清理过的内容
+    const cleanRendered = computed(() => {
+      // 后端已经清理了元数据，直接返回
+      return props.rendered || '';
+    });
+    
     // 处理开始分析
     const handleStartAnalysis = () => {
       if (!props.loading && props.url && isValidUrl.value) {
@@ -99,7 +105,7 @@ export default {
       emit('view-summary', {
         title: props.title,
         summary: props.summary,
-        rendered: props.rendered
+        rendered: cleanRendered.value
       });
     };
     
@@ -107,6 +113,7 @@ export default {
       url,
       isValidUrl,
       showProgressBar,
+      cleanRendered,
       handleStartAnalysis,
       handleViewSummary
     };

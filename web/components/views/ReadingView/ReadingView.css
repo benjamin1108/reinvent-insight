@@ -2,10 +2,12 @@
 
 /* 主容器 */
 .reading-view {
-  height: 100%;
+  height: 100vh;
   width: 100%;
   background-color: transparent;
   color: #e5e7eb;
+  position: relative;
+  overflow: hidden;
 }
 
 /* 渐入动画 */
@@ -72,48 +74,49 @@
 
 /* 主要布局 */
 .reading-view__layout {
-  display: flex;
-  height: 100%;
+  height: calc(100vh - var(--app-header-height, 80px)); /* 减去header高度 */
   width: 100%;
-  position: relative;
+  position: relative; /* 作为定位上下文 */
+  overflow: hidden; /* 防止整体滚动 */
+  /* margin-top: var(--app-header-height, 80px); /* 这个是多余的，因为AppHeader的sticky定位已经推开了空间 */
 }
 
-/* TOC 容器 */
+/* TOC 容器 - 相对于layout容器定位 */
 .reading-view__toc {
   display: flex;
-  position: relative;
-  height: 100%;
+  position: absolute; /* 改为absolute定位 */
+  left: 0;
+  top: 0; /* 相对于layout容器顶部 */
+  height: 100%; /* 使用layout容器的高度 */
   flex-shrink: 0;
+  z-index: 30; /* 低于AppHeader的z-index: 40 */
 }
 
 /* 文章容器 */
 .reading-view__content {
-  flex: 1;
-  min-width: 0;
-  height: 100%;
-  overflow-y: auto;
+  width: 100%;
+  height: 100%; /* 使用layout容器的高度 */
   background: transparent;
+  transition: margin-left 0.3s ease; /* 平滑过渡 */
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
+/* 移除 .reading-view__content 的滚动条样式 */
 .reading-view__content::-webkit-scrollbar {
-  width: 8px;
+  display: none;
 }
 
-.reading-view__content::-webkit-scrollbar-track {
-  background: rgba(55, 65, 81, 0.2);
-}
-
-.reading-view__content::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.4);
-  border-radius: 4px;
-}
-
-.reading-view__content::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.6);
+/* 有TOC时的左边距 */
+.reading-view__content:not(.reading-view__content--no-toc) {
+  margin-left: var(--toc-width, 280px);
+  width: calc(100% - var(--toc-width, 280px));
 }
 
 /* 无TOC时居中样式 */
 .reading-view__content--no-toc {
+  position: relative; /* 重置为相对定位，以便使用 margin: auto */
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -121,7 +124,14 @@
 /* 文章包装器 */
 .reading-view__article-wrapper {
   max-width: none;
-  padding: 2rem 1rem;
+  padding-top: 1rem;
+  padding-right: 1rem;
+  padding-bottom: 0.1rem;
+  padding-left: 1rem;
+  height: 100%; /* 填充父容器高度 */
+  box-sizing: border-box;
+  display: flex; /* 使用flex让子元素填充 */
+  flex-direction: column;
 }
 
 /* 文章内容 */
@@ -129,20 +139,24 @@
   background: linear-gradient(135deg, rgba(17, 24, 39, 0.95), rgba(31, 41, 55, 0.9));
   border: 1px solid #374151;
   border-radius: 0.75rem;
-  padding: 2.5rem;
   box-shadow: 
     0 25px 50px -12px rgba(0, 0, 0, 0.25),
     0 0 20px rgba(6, 182, 212, 0.1);
   backdrop-filter: blur(8px);
   position: relative;
+  flex: 1; /* 填充父容器可用空间 */
+  min-height: 0; /* flex布局中允许内容收缩的关键 */
+  display: flex; /* 内部也使用flex布局 */
+  flex-direction: column;
 }
 
 /* 版本选择器容器 */
 .reading-view__version-selector {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
+  position: absolute; /* 改为绝对定位 */
+  top: 1.5rem;      /* 与卡片内边距协调 */
+  right: 1.5rem;    /* 与卡片内边距协调 */
   z-index: 10;
+  /* flex-shrink: 0; 不再需要 */
 }
 
 /* 文章主体 */
@@ -153,13 +167,47 @@
   max-width: none;
 }
 
+/* 移除body的滚动条样式 */
+.reading-view__body::-webkit-scrollbar {
+  display: none;
+}
+
+/* 新增：可滚动内容容器的样式 */
+.reading-view__scroll-content {
+  flex: 1; /* 填充剩余空间 */
+  min-height: 0; /* flex布局关键 */
+  overflow-y: auto; /* 主体内容滚动 */
+  padding: 2.5rem; /* 将内边距移到这里 */
+}
+
+/* 新增：为scroll-content添加滚动条样式 */
+.reading-view__scroll-content::-webkit-scrollbar {
+  width: 8px;
+}
+.reading-view__scroll-content::-webkit-scrollbar-track {
+  background: rgba(55, 65, 81, 0.2);
+}
+.reading-view__scroll-content::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.4);
+  border-radius: 4px;
+}
+.reading-view__scroll-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.6);
+}
+
 /* prose-tech样式现在由全局content.css提供 */
 
 /* 响应式设计 */
 @media (max-width: 768px) {
   /* 移动端隐藏 TOC */
   .reading-view__toc {
-    display: none ;
+    display: none !important;
+  }
+  
+  /* 移动端强制无TOC状态 */
+  .reading-view__content {
+    margin-left: 0 !important;
+    width: 100% !important;
   }
   
   .reading-view__article-wrapper {
@@ -171,11 +219,7 @@
     border-radius: 0.5rem;
   }
   
-  .reading-view__version-selector {
-    position: static;
-    margin-bottom: 1rem;
-    text-align: right;
-  }
+  /* .reading-view__version-selector 的样式已在上方全局定义，此处不再需要 */
   
   /* prose-tech响应式样式由全局content.css提供 */
 }
@@ -234,37 +278,74 @@
   box-sizing: border-box;
 }
 
-/* 清除默认样式 */
-.reading-view h1,
-.reading-view h2,
-.reading-view h3,
-.reading-view h4,
-.reading-view h5,
-.reading-view h6 {
+/* 清除默认样式 - 限制作用范围，不影响文章内容 */
+.reading-view__toc h1,
+.reading-view__toc h2,
+.reading-view__toc h3,
+.reading-view__toc h4,
+.reading-view__toc h5,
+.reading-view__toc h6,
+.reading-view__error h1,
+.reading-view__error h2,
+.reading-view__error h3,
+.reading-view__error h4,
+.reading-view__error h5,
+.reading-view__error h6,
+.reading-view__loading h1,
+.reading-view__loading h2,
+.reading-view__loading h3,
+.reading-view__loading h4,
+.reading-view__loading h5,
+.reading-view__loading h6 {
   margin: 0;
   font-weight: inherit;
 }
 
-.reading-view p {
+/* 限制p标签重置的作用范围 */
+.reading-view__toc p,
+.reading-view__error p,
+.reading-view__loading p {
   margin: 0;
 }
 
-.reading-view ul,
-.reading-view ol {
+/* 限制列表重置的作用范围 */
+.reading-view__toc ul,
+.reading-view__toc ol,
+.reading-view__error ul,
+.reading-view__error ol,
+.reading-view__loading ul,
+.reading-view__loading ol {
   margin: 0;
   padding: 0;
 }
 
+/* 新增：TOC 包装器样式 */
+.reading-view__toc-wrapper {
+  padding-top: 1rem;
+  padding-right: 0;
+  padding-bottom: 0.1rem;
+  padding-left: 1rem;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex; /* 使用Flexbox来控制内部元素 */
+  flex-direction: column; /* 垂直排列 */
+}
+
 /* TOC 侧边栏 */
 .reading-view__toc-sidebar {
+  flex: 1; /* 占据所有可用空间（在padding内部）*/
+  min-height: 0; /* 在flex容器中防止内容溢出 */
   flex-shrink: 0;
-  height: 100%;
+  /* height: 100%; */ /* 在flex:1模式下不再需要 */
+  /* width: 100%; */ /* 在flex:1模式下不再需要 */
   overflow-y: auto;
   overflow-x: hidden;
-  background: rgba(17, 24, 39, 0.4);
-  border-right: 1px solid rgba(55, 65, 81, 0.3);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(17, 24, 39, 0.95);
+  border: 1px solid rgba(55, 65, 81, 0.5); /* 使用border代替之前的border-right */
+  border-radius: 0.75rem; /* 与文章容器圆角一致 */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
 }
 
 /* TOC 内容区域 */
@@ -292,48 +373,87 @@
 /* TOC 列表容器 */
 .reading-view__toc-list {
   color: #9ca3af;
+  line-height: 1.5;
 }
 
 /* 嵌套列表重置 */
 .reading-view__toc-list ul,
 .reading-view__toc-list ol {
   list-style: none;
-  padding-left: 1.25rem;
-  margin: 0;
+  padding-left: 0;
+  margin: 0.5rem 0;
 }
 
 .reading-view__toc-list li {
   margin: 0;
   padding: 0;
+  position: relative;
 }
 
 .reading-view__toc-list a {
   display: block;
-  padding: 0.5rem 0.75rem;
+  padding: 0.625rem 1rem;
   color: inherit;
   text-decoration: none;
-  border-radius: 0.375rem;
-  transition: all 0.2s ease;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
   font-size: 0.875rem;
+  border-left: 3px solid transparent;
+  margin: 0.25rem 0;
+  cursor: pointer;
 }
 
 .reading-view__toc-list a:hover {
-  background: rgba(55, 65, 81, 0.3);
+  background: rgba(34, 211, 238, 0.1);
   color: #22d3ee;
+  border-left-color: #22d3ee;
+  transform: translateX(2px);
 }
 
 /* 激活状态的链接 */
 .reading-view__toc-list a.active {
-  background: rgba(34, 211, 238, 0.15);
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.2), rgba(59, 130, 246, 0.1));
   color: #22d3ee;
-  font-weight: 500;
+  font-weight: 600;
+  border-left-color: #22d3ee;
+  box-shadow: 0 2px 8px rgba(34, 211, 238, 0.2);
 }
 
-/* 嵌套列表的缩进 */
-.reading-view__toc-list ul ul {
-  padding-left: 1rem;
-  margin-top: 0.25rem;
-  margin-bottom: 0.25rem;
+/* 不同层级的样式 */
+.reading-view__toc-list li li a {
+  padding-left: 2rem;
+  font-size: 0.8125rem;
+  color: #9ca3af;
+}
+
+.reading-view__toc-list li li li a {
+  padding-left: 3rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+/* 层级指示器 */
+.reading-view__toc-sidebar .reading-view__toc-list li li::before {
+  content: '';
+  position: absolute;
+  left: 1.25rem;
+  top: 1rem;
+  width: 4px;
+  height: 4px;
+  background: #6b7280;
+  border-radius: 50%;
+}
+
+.reading-view__toc-sidebar .reading-view__toc-list li li li::before {
+  left: 2.25rem;
+  width: 3px;
+  height: 3px;
+  background: #4b5563;
+}
+
+/* 覆盖全局 content.css 中可能泄露的列表样式 */
+.reading-view__article .prose-tech ol > li::before {
+  content: none; /* 移除全局样式添加的自定义数字 */
 }
 
 /* 空状态 */
@@ -441,4 +561,261 @@
   .reading-view__toc-dragbar {
     display: none; /* 移动设备上不显示拖动条 */
   }
+}
+
+/* ======================================================================== */
+/* == 全新的、基于pdf_style.css的、作用域严格限定的阅读视图文章样式 == */
+/* ======================================================================== */
+
+/* -- 基础排版 -- */
+.reading-view .prose-tech {
+  font-family: "Noto Serif SC", serif;
+  font-size: 16px;
+  line-height: 1.8;
+  color: #e5e7eb; /* 适应深色背景的文字颜色 */
+  padding-right: 2rem; /* 为版本选择器留出空间 */
+  padding-left: 2rem; /* 为版本选择器留出空间 */
+}
+
+.reading-view .prose-tech p {
+  margin-bottom: 1.25em;
+  orphans: 2;
+  widows: 2;
+}
+
+/* -- 标题微调 (仅限reading-view特有的修饰) -- */
+.reading-view .prose-tech h1,
+.reading-view .prose-tech h2,
+.reading-view .prose-tech h3,
+.reading-view .prose-tech h4,
+.reading-view .prose-tech h5,
+.reading-view .prose-tech h6 {
+  /* 移除默认的下划线，保持与基础样式的兼容性 */
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* -- 阅读视图特有的标题修饰符 -- */
+/* 移除基础样式中的装饰元素，采用更简洁的阅读体验 */
+.reading-view .prose-tech h2::before,
+.reading-view .prose-tech h3::before {
+  content: none;
+}
+
+/* h2采用更简洁的下划线，替代基础样式的渐变装饰 */
+.reading-view .prose-tech h2 {
+  border-bottom: 1px solid #374151;
+  padding-bottom: 0.5rem;
+}
+
+/* h3移除左边距装饰，采用纯文本样式 */
+.reading-view .prose-tech h3 {
+  padding-left: 0;
+}
+
+/* h4样式继承自基础样式，无需重复定义 */
+
+/* -- 列表 -- */
+.reading-view .prose-tech ul,
+.reading-view .prose-tech ol {
+  margin: 1.25rem 0;
+  padding-left: 2em; /* 标准缩进 */
+}
+
+/* 移除自定义的列表符号 */
+.reading-view .prose-tech ul > li::before,
+.reading-view .prose-tech ol > li::before {
+  content: none;
+}
+
+.reading-view .prose-tech ul {
+  list-style-type: disc; /* 使用默认圆点 */
+}
+
+.reading-view .prose-tech ol {
+  list-style-type: decimal; /* 使用默认数字 */
+}
+
+.reading-view .prose-tech li {
+  margin-bottom: 0.5em;
+  padding-left: 0;
+}
+
+.reading-view .prose-tech ul ul,
+.reading-view .prose-tech ol ol,
+.reading-view .prose-tech ul ol,
+.reading-view .prose-tech ol ul {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.reading-view .prose-tech ul ul {
+  list-style-type: circle;
+}
+
+/* -- 引用 -- */
+.reading-view .prose-tech blockquote {
+  border-left: 3px solid #06b6d4;
+  background: rgba(6, 182, 212, 0.05);
+  color: #d1d5db; /* 引用内文字颜色稍浅 */
+  padding: 1rem 1.5rem;
+  margin: 1.5rem 0;
+  border-radius: 0.25rem;
+  font-style: normal;
+}
+
+.reading-view .prose-tech blockquote p {
+  margin-bottom: 1em;
+}
+
+.reading-view .prose-tech blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* 移除引用的伪元素 */
+.reading-view .prose-tech blockquote::before {
+  content: none;
+}
+
+/* -- 链接 -- */
+.reading-view .prose-tech a {
+  color: #06b6d4;
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(6, 182, 212, 0.5);
+  transition: all 0.2s ease-in-out;
+}
+
+.reading-view .prose-tech a:hover {
+  color: #22d3ee;
+  background-color: rgba(6, 182, 212, 0.1);
+  border-bottom-color: #22d3ee;
+}
+
+/* -- 代码 -- */
+.reading-view .prose-tech code {
+  color: #06b6d4;
+  background-color: rgba(6, 182, 212, 0.1);
+  font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  border: none;
+}
+
+.reading-view .prose-tech pre {
+  background: #0f172a; /* 深蓝灰色背景 */
+  border: 1px solid #334155;
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+}
+
+/* 移除pre的伪元素 */
+.reading-view .prose-tech pre::before {
+  content: none;
+}
+
+.reading-view .prose-tech pre code {
+  background: none;
+  color: #e2e8f0;
+  padding: 0;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+
+/* -- 分割线 -- */
+.reading-view .prose-tech hr {
+  border: none;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #06b6d4, transparent);
+  margin: 2rem 0;
+  opacity: 0.6;
+}
+
+/* -- 表格 -- */
+.reading-view .prose-tech table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 1.5rem 0;
+  border: 1px solid #334155;
+  border-radius: 0.5rem;
+}
+
+.reading-view .prose-tech th {
+  padding: 0.75rem 1rem;
+  background-color: rgba(51, 65, 85, 0.5);
+  font-weight: 600;
+  text-align: left;
+  border-bottom: 1px solid #334155;
+}
+
+.reading-view .prose-tech td {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #334155;
+}
+
+/* -- 新增：文章标题样式 -- */
+.reading-view__article-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #334155;
+  padding-right: 2rem; /* 与文章正文对齐 */
+  padding-left: 2rem;  /* 与文章正文对齐 */
+}
+
+.reading-view__article .reading-view__title-en {
+  font-family: 'PingFang SC', 'Helvetica Neue', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  margin: 2rem 0 1rem 0;
+  background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 50%, #9333ea 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.reading-view__title-cn {
+  font-family: var(--font-primary, "PingFang SC", "Microsoft YaHei", sans-serif);
+  font-size: 1.75rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #e68a2e, #f59e0b, #facc15);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  line-height: 1.4;
+}
+
+/* 移除HR，因为header已经有下边框作为分割线 */
+.reading-view__title-divider {
+  display: none;
 } 
+
+
+/* -- 新增：文章标题样式 -- */
+.reading-view__article-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #334155;
+}
+
+.reading-view__title-en {
+  /* font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; */
+  font-size: 2.25rem;
+  font-weight: 1000;
+  color: #e68a2e;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+}
+
+.reading-view__title-cn {
+  /* font-family: "Noto Serif SC", serif; */
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #556987;
+  line-height: 1.4;
+}
