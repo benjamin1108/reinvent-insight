@@ -129,6 +129,9 @@
   hyphens: auto;
   font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1; /* 启用字符调整、连字和上下文替换 */
   text-rendering: optimizeLegibility; /* 优化文本渲染 */
+  /* 统一字体渲染优化 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   /* 多行文本截断 */
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -144,6 +147,10 @@
   background-clip: text;
   color: transparent;
   font-weight: 700; /* 使用bold保持一致性，避免过度突出 */
+  /* 优化渐变文字的字体渲染 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 /* Hover时的渐变效果 - 来自主项目 */
@@ -152,6 +159,10 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  /* 优化渐变文字的字体渲染 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   /* 移除字重和间距变化，避免文字跳动 */
 }
 
@@ -162,6 +173,10 @@
   background-clip: text;
   color: transparent;
   text-shadow: 0 0 20px rgba(255, 255, 255, 0.3); /* 添加微妙发光效果 */
+  /* 优化渐变文字的字体渲染 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 /* 删除Tailwind工具类，样式已内联到相应的BEM类中 */
@@ -194,7 +209,7 @@
 .summary-card--reinvent .summary-card__subtitle {
   color: #64748b !important; /* 使用和精选卡片一样的底色，强制生效 */
   opacity: 0.85; /* 保持一致的透明度 */
-  font-weight: 400; /* Reinvent使用正常字重保持对比 */
+  font-weight: 500; /* 与精选卡片保持一致的字重 */
 }
 
 /* Hover时的样式 - 来自主项目 */
@@ -366,10 +381,15 @@
     line-clamp: 2;
   }
 
+  /* 确保 reinvent 卡片在移动端也保持 700 字重 */
+  .summary-card--reinvent .summary-card__title {
+    font-weight: 700;
+  }
+
   .summary-card__subtitle {
     font-size: 0.75rem;           /* 12px - 进一步缩小 */
     line-height: 1.25;
-    font-weight: 400;
+    font-weight: 500;             /* 保持与桌面端一致的字重 */
     letter-spacing: 0;
   }
 
@@ -409,6 +429,11 @@
   .summary-card__title {
     font-size: 0.875rem;          /* 14px - 极小屏幕进一步缩小 */
     line-height: 1.2;
+  }
+
+  /* 确保 reinvent 卡片在极小屏幕也保持 700 字重 */
+  .summary-card--reinvent .summary-card__title {
+    font-weight: 700;
   }
 
   .summary-card__subtitle {

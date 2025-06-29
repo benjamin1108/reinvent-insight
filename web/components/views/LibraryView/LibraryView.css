@@ -33,25 +33,25 @@
 }
 
 .library-view__title {
-  font-family: 'Outfit', 'Inter', sans-serif;  /* 使用科技感字体 */
+  font-family: 'Outfit', 'Inter', sans-serif;  /* 与精选卡片标题保持一致 */
   font-size: 1.875rem;
-  font-weight: 800;  /* 增强字重 */
+  font-weight: 700;  /* 与精选卡片标题保持一致 */
   background: linear-gradient(135deg, #22d3ee 0%, #3b82f6 50%, #8b5cf6 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   margin-bottom: 0.5rem;
-  letter-spacing: -0.02em;  /* 收紧字符间距 */
+  letter-spacing: -0.02em;  /* 与精选卡片标题保持一致 */
   line-height: 1.2;
   font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
   text-rendering: optimizeLegibility;
 }
 
 .library-view__subtitle {
-  font-family: 'Inter', 'PingFang SC', 'SF Pro SC', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif;  /* 中英文混合字体栈 */
+  font-family: 'Inter', 'Source Han Sans SC', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;  /* 与精选卡片副标题保持一致 */
   color: #9ca3af;
-  font-weight: 500;
-  letter-spacing: 0.025em;  /* 轻微拉开字符间距 */
+  font-weight: 500;  /* 与精选卡片副标题保持一致 */
+  letter-spacing: 0;  /* 与精选卡片副标题保持一致 */
 }
 
 /* 加载状态样式 */
@@ -122,7 +122,7 @@
 
 /* 区域标题文字 - 中英文字体优化 */
 .library-view__section-title {
-  font-family: 'Outfit', 'PingFang SC', 'SF Pro SC', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif;  /* 中英文混合字体栈 */
+  font-family: 'Outfit', 'Inter', sans-serif;  /* 与精选卡片标题保持一致 */
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: -0.01em;  /* 收紧字符间距，增强现代感 */
@@ -137,8 +137,8 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  font-weight: 800;  /* 增强字重，更突出 */
-  letter-spacing: -0.015em;  /* 稍微收紧字符间距 */
+  font-weight: 700;  /* 与精选卡片标题保持一致 */
+  letter-spacing: -0.02em;  /* 与精选卡片标题保持一致 */
 }
 
 /* 其他区域标题 */
@@ -147,20 +147,20 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  font-weight: 800;  /* 增强字重，更突出 */
-  letter-spacing: -0.015em;  /* 稍微收紧字符间距 */
+  font-weight: 700;  /* 与精选卡片标题保持一致 */
+  letter-spacing: -0.02em;  /* 与精选卡片标题保持一致 */
 }
 
 /* 文章计数样式 - 科技感字体优化 */
 .library-view__article-count {
-  font-family: 'Exo 2', 'PingFang SC', 'SF Pro SC', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif;  /* 中英文混合字体栈 */
+  font-family: 'Exo 2', 'Inter', sans-serif;  /* 与精选卡片元数据保持一致 */
   background: rgba(34, 211, 238, 0.1);
   color: #22d3ee;
   padding: 0.25rem 0.75rem;
   border-radius: 9999px;
   font-size: 0.875rem;
-  font-weight: 600;  /* 增强字重 */
-  letter-spacing: 0.05em;  /* 技术感字符间距 */
+  font-weight: 600;  /* 与精选卡片元数据保持一致 */
+  letter-spacing: 0.05em;  /* 与精选卡片元数据保持一致 */
   font-variant-numeric: tabular-nums;  /* 等宽数字 */
   text-rendering: optimizeSpeed;
 }
@@ -401,7 +401,7 @@
 .library-view h5,
 .library-view h6 {
   margin: 0;
-  font-weight: inherit;
+  /* 移除 font-weight: inherit，让组件自己控制字重 */
 }
 
 .library-view p {
