@@ -1,16 +1,16 @@
-/* ReadingView组件样式 - 完全独立，不依赖全局样式 */
+/* 
+ * ReadingView 组件样式 - 完全重写
+ * 参考pdf_style.css的简洁markdown渲染方式，保持现代化字体
+ */
 
-/* 主容器 */
 .reading-view {
   height: 100vh;
-  width: 100%;
-  background-color: transparent;
+  background: #111827;
   color: #e5e7eb;
-  position: relative;
   overflow: hidden;
+  position: relative;
 }
 
-/* 渐入动画 */
 .reading-view--fade-in {
   animation: fadeIn 0.5s ease-in-out;
 }
@@ -26,24 +26,24 @@
   }
 }
 
-/* 错误状态样式 */
+/* 错误状态 */
 .reading-view__error {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: #ef4444;
-  font-size: 1.125rem;
-  text-align: center;
   padding: 2rem;
+  text-align: center;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 0.75rem;
+  margin: 2rem;
+  font-size: 1.125rem;
 }
 
-/* 加载状态样式 */
+/* 加载状态 */
 .reading-view__loading {
+  height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
 }
 
 .reading-view__loading-content {
@@ -51,656 +51,288 @@
 }
 
 .reading-view__loading-spinner {
-  width: 2rem;
-  height: 2rem;
-  color: #22d3ee;
-  margin: 0 auto 1rem auto;
+  width: 40px;
+  height: 40px;
+  border: 3px solid #374151;
+  border-top: 3px solid #22d3ee;
+  border-radius: 50%;
   animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
 }
 
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .reading-view__loading-text {
+  font-size: 16px;
+  font-weight: 500;
   color: #9ca3af;
-  font-size: 1rem;
 }
 
-/* 主要布局 */
+/* 主布局 */
 .reading-view__layout {
-  height: calc(100vh - var(--app-header-height, 80px)); /* 减去header高度 */
-  width: 100%;
-  position: relative; /* 作为定位上下文 */
-  overflow: hidden; /* 防止整体滚动 */
-  /* margin-top: var(--app-header-height, 80px); /* 这个是多余的，因为AppHeader的sticky定位已经推开了空间 */
-}
-
-/* TOC 容器 - 相对于layout容器定位 */
-.reading-view__toc {
+  height: 100vh;
   display: flex;
-  position: absolute; /* 改为absolute定位 */
-  left: 0;
-  top: 0; /* 相对于layout容器顶部 */
-  height: 100%; /* 使用layout容器的高度 */
-  flex-shrink: 0;
-  z-index: 30; /* 低于AppHeader的z-index: 40 */
+  background: #111827;
+  overflow: hidden;
 }
 
-/* 文章容器 */
+/* TOC侧边栏 */
+.reading-view__toc {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95));
+  backdrop-filter: blur(10px);
+  border-right: 1px solid #374151;
+  overflow: hidden;
+  position: relative;
+  z-index: 10;
+}
+
+/* 主内容区域 */
 .reading-view__content {
-  width: 100%;
-  height: 100%; /* 使用layout容器的高度 */
-  background: transparent;
-  transition: margin-left 0.3s ease; /* 平滑过渡 */
-  position: absolute;
-  top: 0;
-  left: 0;
+  flex: 1;
+  overflow-y: auto;
+  background: #111827;
+  position: relative;
+  transition: all 0.3s ease;
 }
 
-/* 移除 .reading-view__content 的滚动条样式 */
 .reading-view__content::-webkit-scrollbar {
-  display: none;
+  width: 8px;
 }
 
-/* 有TOC时的左边距 */
 .reading-view__content:not(.reading-view__content--no-toc) {
-  margin-left: var(--toc-width, 280px);
-  width: calc(100% - var(--toc-width, 280px));
+  margin-left: 0;
+  width: calc(100% - var(--toc-width, 300px));
+  position: absolute;
+  left: var(--toc-width, 300px);
+  height: 100%;
 }
 
-/* 无TOC时居中样式 */
 .reading-view__content--no-toc {
-  position: relative; /* 重置为相对定位，以便使用 margin: auto */
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  margin-left: 0;
+  position: relative;
 }
 
 /* 文章包装器 */
 .reading-view__article-wrapper {
-  max-width: none;
-  padding-top: 1rem;
-  padding-right: 1rem;
-  padding-bottom: 0.1rem;
-  padding-left: 1rem;
-  height: 100%; /* 填充父容器高度 */
-  box-sizing: border-box;
-  display: flex; /* 使用flex让子元素填充 */
+  min-height: 100vh;
+  display: flex;
   flex-direction: column;
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-/* 文章内容 */
+/* 文章容器 */
 .reading-view__article {
-  background: linear-gradient(135deg, rgba(17, 24, 39, 0.95), rgba(31, 41, 55, 0.9));
+  flex: 1;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.6), rgba(30, 41, 59, 0.4), rgba(15, 23, 42, 0.6));
   border: 1px solid #374151;
-  border-radius: 0.75rem;
-  box-shadow: 
-    0 25px 50px -12px rgba(0, 0, 0, 0.25),
-    0 0 20px rgba(6, 182, 212, 0.1);
-  backdrop-filter: blur(8px);
+  border-radius: 1rem;
+  padding: 3rem;
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.1), 0 0 40px rgba(6, 182, 212, 0.05);
+  backdrop-filter: blur(10px);
   position: relative;
-  flex: 1; /* 填充父容器可用空间 */
-  min-height: 0; /* flex布局中允许内容收缩的关键 */
-  display: flex; /* 内部也使用flex布局 */
-  flex-direction: column;
 }
 
-/* 版本选择器容器 */
 .reading-view__version-selector {
-  position: absolute; /* 改为绝对定位 */
-  top: 1.5rem;      /* 与卡片内边距协调 */
-  right: 1.5rem;    /* 与卡片内边距协调 */
-  z-index: 10;
-  /* flex-shrink: 0; 不再需要 */
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 20;
 }
 
-/* 文章主体 */
 .reading-view__body {
-  margin-top: 0;
-  color: #e5e7eb;
-  line-height: 1.75;
-  max-width: none;
+  overflow: visible;
 }
 
-/* 移除body的滚动条样式 */
 .reading-view__body::-webkit-scrollbar {
-  display: none;
+  width: 0;
+  height: 0;
 }
 
-/* 新增：可滚动内容容器的样式 */
 .reading-view__scroll-content {
-  flex: 1; /* 填充剩余空间 */
-  min-height: 0; /* flex布局关键 */
-  overflow-y: auto; /* 主体内容滚动 */
-  padding: 2.5rem; /* 将内边距移到这里 */
+  padding: 0;
 }
 
-/* 新增：为scroll-content添加滚动条样式 */
 .reading-view__scroll-content::-webkit-scrollbar {
   width: 8px;
 }
+
 .reading-view__scroll-content::-webkit-scrollbar-track {
-  background: rgba(55, 65, 81, 0.2);
+  background: rgba(55, 65, 81, 0.3);
 }
+
 .reading-view__scroll-content::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.4);
+  background: rgba(34, 211, 238, 0.3);
   border-radius: 4px;
 }
+
 .reading-view__scroll-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.6);
-}
-
-/* prose-tech样式现在由全局content.css提供 */
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  /* 移动端隐藏 TOC */
-  .reading-view__toc {
-    display: none !important;
-  }
-  
-  /* 移动端强制无TOC状态 */
-  .reading-view__content {
-    margin-left: 0 !important;
-    width: 100% !important;
-  }
-  
-  .reading-view__article-wrapper {
-    padding: 1rem 0.5rem;
-  }
-  
-  .reading-view__article {
-    padding: 1.5rem;
-    border-radius: 0.5rem;
-  }
-  
-  /* .reading-view__version-selector 的样式已在上方全局定义，此处不再需要 */
-  
-  /* prose-tech响应式样式由全局content.css提供 */
-}
-
-/* 极小屏幕优化 */
-@media (max-width: 480px) {
-  .reading-view__article {
-    padding: 1rem;
-  }
-  
-  /* prose-tech极小屏幕样式由全局content.css提供 */
-}
-
-/* 高对比度模式支持 */
-@media (prefers-contrast: high) {
-  /* prose-tech高对比度样式由全局content.css提供 */
-  
-  .reading-view__loading-spinner {
-    color: #ffffff;
-  }
-}
-
-/* 减少动画模式支持 */
-@media (prefers-reduced-motion: reduce) {
-  .reading-view--fade-in,
-  .reading-view__loading-spinner {
-    animation: none;
-  }
-}
-
-/* 打印样式 */
-@media print {
-  .reading-view__toc,
-  .reading-view__version-selector {
-    display: none ;
-  }
-  
-  .reading-view__content {
-    overflow: visible ;
-  }
-  
-  .reading-view__article {
-    background: white ;
-    border: none ;
-    box-shadow: none ;
-    padding: 0 ;
-  }
-  
-  /* prose-tech打印样式由全局content.css提供 */
-}
-
-/* 确保与其他组件的兼容性 */
-.reading-view *,
-.reading-view *::before,
-.reading-view *::after {
-  box-sizing: border-box;
-}
-
-/* 清除默认样式 - 限制作用范围，不影响文章内容 */
-.reading-view__toc h1,
-.reading-view__toc h2,
-.reading-view__toc h3,
-.reading-view__toc h4,
-.reading-view__toc h5,
-.reading-view__toc h6,
-.reading-view__error h1,
-.reading-view__error h2,
-.reading-view__error h3,
-.reading-view__error h4,
-.reading-view__error h5,
-.reading-view__error h6,
-.reading-view__loading h1,
-.reading-view__loading h2,
-.reading-view__loading h3,
-.reading-view__loading h4,
-.reading-view__loading h5,
-.reading-view__loading h6 {
-  margin: 0;
-  font-weight: inherit;
-}
-
-/* 限制p标签重置的作用范围 */
-.reading-view__toc p,
-.reading-view__error p,
-.reading-view__loading p {
-  margin: 0;
-}
-
-/* 限制列表重置的作用范围 */
-.reading-view__toc ul,
-.reading-view__toc ol,
-.reading-view__error ul,
-.reading-view__error ol,
-.reading-view__loading ul,
-.reading-view__loading ol {
-  margin: 0;
-  padding: 0;
-}
-
-/* 新增：TOC 包装器样式 */
-.reading-view__toc-wrapper {
-  padding-top: 1rem;
-  padding-right: 0;
-  padding-bottom: 0.1rem;
-  padding-left: 1rem;
-  height: 100%;
-  box-sizing: border-box;
-  display: flex; /* 使用Flexbox来控制内部元素 */
-  flex-direction: column; /* 垂直排列 */
-}
-
-/* TOC 侧边栏 */
-.reading-view__toc-sidebar {
-  flex: 1; /* 占据所有可用空间（在padding内部）*/
-  min-height: 0; /* 在flex容器中防止内容溢出 */
-  flex-shrink: 0;
-  /* height: 100%; */ /* 在flex:1模式下不再需要 */
-  /* width: 100%; */ /* 在flex:1模式下不再需要 */
-  overflow-y: auto;
-  overflow-x: hidden;
-  background: rgba(17, 24, 39, 0.95);
-  border: 1px solid rgba(55, 65, 81, 0.5); /* 使用border代替之前的border-right */
-  border-radius: 0.75rem; /* 与文章容器圆角一致 */
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
-}
-
-/* TOC 内容区域 */
-.reading-view__toc-content {
-  padding: 1.5rem;
-  height: 100%;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(107, 114, 128, 0.5) transparent;
-  -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
-  position: relative;
-  z-index: 1;
-}
-
-/* TOC 标题 */
-.reading-view__toc-title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #e5e7eb;
-  margin-bottom: 1.5rem;
-  line-height: 1.5;
-}
-
-/* TOC 列表容器 */
-.reading-view__toc-list {
-  color: #9ca3af;
-  line-height: 1.5;
-}
-
-/* 嵌套列表重置 */
-.reading-view__toc-list ul,
-.reading-view__toc-list ol {
-  list-style: none;
-  padding-left: 0;
-  margin: 0.5rem 0;
-}
-
-.reading-view__toc-list li {
-  margin: 0;
-  padding: 0;
-  position: relative;
-}
-
-.reading-view__toc-list a {
-  display: block;
-  padding: 0.625rem 1rem;
-  color: inherit;
-  text-decoration: none;
-  border-radius: 0.5rem;
-  transition: all 0.3s ease;
-  font-size: 0.875rem;
-  border-left: 3px solid transparent;
-  margin: 0.25rem 0;
-  cursor: pointer;
-}
-
-.reading-view__toc-list a:hover {
-  background: rgba(34, 211, 238, 0.1);
-  color: #22d3ee;
-  border-left-color: #22d3ee;
-  transform: translateX(2px);
-}
-
-/* 激活状态的链接 */
-.reading-view__toc-list a.active {
-  background: linear-gradient(135deg, rgba(34, 211, 238, 0.2), rgba(59, 130, 246, 0.1));
-  color: #22d3ee;
-  font-weight: 600;
-  border-left-color: #22d3ee;
-  box-shadow: 0 2px 8px rgba(34, 211, 238, 0.2);
-}
-
-/* 不同层级的样式 */
-.reading-view__toc-list li li a {
-  padding-left: 2rem;
-  font-size: 0.8125rem;
-  color: #9ca3af;
-}
-
-.reading-view__toc-list li li li a {
-  padding-left: 3rem;
-  font-size: 0.75rem;
-  color: #6b7280;
-}
-
-/* 层级指示器 */
-.reading-view__toc-sidebar .reading-view__toc-list li li::before {
-  content: '';
-  position: absolute;
-  left: 1.25rem;
-  top: 1rem;
-  width: 4px;
-  height: 4px;
-  background: #6b7280;
-  border-radius: 50%;
-}
-
-.reading-view__toc-sidebar .reading-view__toc-list li li li::before {
-  left: 2.25rem;
-  width: 3px;
-  height: 3px;
-  background: #4b5563;
-}
-
-/* 覆盖全局 content.css 中可能泄露的列表样式 */
-.reading-view__article .prose-tech ol > li::before {
-  content: none; /* 移除全局样式添加的自定义数字 */
-}
-
-/* 空状态 */
-.reading-view__toc-empty {
-  text-align: center;
-  color: #6b7280;
-  padding: 2rem 1rem;
-  font-size: 0.875rem;
-}
-
-/* 拖动条 */
-.reading-view__toc-dragbar {
-  width: 4px;
-  background: transparent;
-  cursor: col-resize;
-  position: relative;
-  flex-shrink: 0;
-  transition: background 0.2s ease;
-}
-
-.reading-view__toc-dragbar::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: -2px;
-  right: -2px;
-  background: transparent;
-}
-
-/* 拖动条悬停效果 */
-.reading-view__toc-dragbar:hover {
-  background: rgba(34, 211, 238, 0.3);
-}
-
-/* 拖动中状态 */
-.reading-view--dragging .reading-view__toc-dragbar {
   background: rgba(34, 211, 238, 0.5);
 }
 
-/* 拖动时禁用选择 */
-.reading-view--dragging {
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-}
+/* =============================================== */
+/* == 简洁的Markdown渲染样式 (参考pdf_style.css) == */
+/* =============================================== */
 
-.reading-view--dragging * {
-  cursor: col-resize !important;
-}
-
-/* 自定义滚动条 - Webkit */
-.reading-view__toc-sidebar::-webkit-scrollbar,
-.reading-view__toc-content::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.reading-view__toc-sidebar::-webkit-scrollbar-track,
-.reading-view__toc-content::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 3px;
-}
-
-.reading-view__toc-sidebar::-webkit-scrollbar-thumb,
-.reading-view__toc-content::-webkit-scrollbar-thumb {
-  background: rgba(107, 114, 128, 0.5);
-  border-radius: 3px;
-}
-
-.reading-view__toc-sidebar::-webkit-scrollbar-thumb:hover,
-.reading-view__toc-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(107, 114, 128, 0.7);
-}
-
-/* TOC 响应式设计 */
-@media (max-width: 1024px) {
-  .reading-view__toc-sidebar,
-  .reading-view__toc-content {
-    /* 在平板设备上自动隐藏滚动条 */
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  
-  .reading-view__toc-sidebar {
-    min-width: 200px;
-    max-width: 80vw;
-  }
-  
-  .reading-view__toc-content {
-    padding: 1rem;
-  }
-  
-  .reading-view__toc-title {
-    font-size: 1rem;
-    margin-bottom: 1rem;
-  }
-  
-  .reading-view__toc-list a {
-    padding: 0.375rem 0.5rem;
-    font-size: 0.8125rem;
-  }
-  
-  .reading-view__toc-dragbar {
-    display: none; /* 移动设备上不显示拖动条 */
-  }
-}
-
-/* ======================================================================== */
-/* == 全新的、基于pdf_style.css的、作用域严格限定的阅读视图文章样式 == */
-/* ======================================================================== */
-
-/* -- 基础排版 -- */
 .reading-view .prose-tech {
-  font-family: "Noto Serif SC", serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-size: 16px;
-  line-height: 1.8;
-  color: #e5e7eb; /* 适应深色背景的文字颜色 */
-  padding-right: 2rem; /* 为版本选择器留出空间 */
-  padding-left: 2rem; /* 为版本选择器留出空间 */
+  line-height: 1.6;
+  color: rgba(229, 231, 235, 0.85); /* 对应pdf中的rgba(0,0,0,.85) */
+  text-align: justify;
+  padding: 0;
 }
 
-.reading-view .prose-tech p {
-  margin-bottom: 1.25em;
-  orphans: 2;
-  widows: 2;
-}
-
-/* -- 标题微调 (仅限reading-view特有的修饰) -- */
+/* 标题样式 - 简洁版本 */
 .reading-view .prose-tech h1,
 .reading-view .prose-tech h2,
 .reading-view .prose-tech h3,
 .reading-view .prose-tech h4,
 .reading-view .prose-tech h5,
 .reading-view .prose-tech h6 {
-  /* 移除默认的下划线，保持与基础样式的兼容性 */
-  border-bottom: none;
-  padding-bottom: 0;
+  margin-top: 24px;
+  margin-bottom: 15px;
+  color: #f3f4f6;
+  font-weight: 700;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
-/* -- 阅读视图特有的标题修饰符 -- */
-/* 移除基础样式中的装饰元素，采用更简洁的阅读体验 */
-.reading-view .prose-tech h2::before,
-.reading-view .prose-tech h3::before {
-  content: none;
+.reading-view .prose-tech h1 {
+  font-size: 24px;
+  color: #22d3ee; /* 主题色 */
 }
 
-/* h2采用更简洁的下划线，替代基础样式的渐变装饰 */
 .reading-view .prose-tech h2 {
-  border-bottom: 1px solid #374151;
-  padding-bottom: 0.5rem;
+  font-size: 22px;
 }
 
-/* h3移除左边距装饰，采用纯文本样式 */
 .reading-view .prose-tech h3 {
-  padding-left: 0;
+  font-size: 20px;
 }
 
-/* h4样式继承自基础样式，无需重复定义 */
+.reading-view .prose-tech h4 {
+  font-size: 18px;
+}
 
-/* -- 列表 -- */
+.reading-view .prose-tech h5,
+.reading-view .prose-tech h6 {
+  font-size: 16px;
+}
+
+/* 段落样式 */
+.reading-view .prose-tech p {
+  margin: 0;
+  padding: 8px 0;
+  line-height: 26px;
+  color: rgba(229, 231, 235, 0.85);
+}
+
+/* 列表样式 - 使用标准样式，参考pdf_style.css */
 .reading-view .prose-tech ul,
 .reading-view .prose-tech ol {
-  margin: 1.25rem 0;
-  padding-left: 2em; /* 标准缩进 */
+  margin: 8px 0;
+  padding-left: 30px; /* 给数字和符号留出空间 */
+  color: rgba(229, 231, 235, 0.85);
 }
 
-/* 移除自定义的列表符号 */
-.reading-view .prose-tech ul > li::before,
-.reading-view .prose-tech ol > li::before {
-  content: none;
-}
-
-.reading-view .prose-tech ul {
-  list-style-type: disc; /* 使用默认圆点 */
-}
-
+/* 有序列表 */
 .reading-view .prose-tech ol {
-  list-style-type: decimal; /* 使用默认数字 */
+  list-style-type: decimal;
+  list-style-position: outside;
+  padding-left: 35px;
 }
 
-.reading-view .prose-tech li {
-  margin-bottom: 0.5em;
-  padding-left: 0;
+.reading-view .prose-tech ol > li {
+  margin-bottom: 5px;
+  padding-left: 5px;
+  line-height: 26px;
 }
 
-.reading-view .prose-tech ul ul,
-.reading-view .prose-tech ol ol,
-.reading-view .prose-tech ul ol,
-.reading-view .prose-tech ol ul {
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
+/* 无序列表 */
+.reading-view .prose-tech ul {
+  list-style-type: disc;
+  list-style-position: outside;
 }
 
+.reading-view .prose-tech ul > li {
+  list-style-type: disc;
+  margin-bottom: 5px;
+  line-height: 26px;
+}
+
+/* 二级无序列表 */
 .reading-view .prose-tech ul ul {
+  list-style-type: square;
+  margin-top: 5px;
+}
+
+/* 三级及以下使用圆圈 */
+.reading-view .prose-tech ul ul ul {
   list-style-type: circle;
 }
 
-/* -- 引用 -- */
+.reading-view .prose-tech li {
+  line-height: 26px;
+}
+
+/* 引用块 */
 .reading-view .prose-tech blockquote {
-  border-left: 3px solid #06b6d4;
-  background: rgba(6, 182, 212, 0.05);
-  color: #d1d5db; /* 引用内文字颜色稍浅 */
-  padding: 1rem 1.5rem;
-  margin: 1.5rem 0;
-  border-radius: 0.25rem;
-  font-style: normal;
+  display: block;
+  font-size: 0.9em;
+  border-left: 3px solid #22d3ee; /* 主题色 */
+  background: rgba(34, 211, 238, 0.05); /* 主题色的浅色背景 */
+  color: #9ca3af; /* 深灰色文本 */
+  padding: 10px 20px;
+  margin: 20px 0;
 }
 
 .reading-view .prose-tech blockquote p {
-  margin-bottom: 1em;
+  margin: 0;
+  padding: 0;
+  line-height: 26px;
 }
 
-.reading-view .prose-tech blockquote p:last-child {
-  margin-bottom: 0;
-}
-
-/* 移除引用的伪元素 */
-.reading-view .prose-tech blockquote::before {
-  content: none;
-}
-
-/* -- 链接 -- */
+/* 链接 */
 .reading-view .prose-tech a {
-  color: #06b6d4;
-  font-weight: 600;
+  color: #22d3ee; /* 主题色 */
+  border-bottom: 1px solid #22d3ee;
   text-decoration: none;
-  border-bottom: 1px solid rgba(6, 182, 212, 0.5);
-  transition: all 0.2s ease-in-out;
+  font-weight: 700;
 }
 
 .reading-view .prose-tech a:hover {
-  color: #22d3ee;
-  background-color: rgba(6, 182, 212, 0.1);
-  border-bottom-color: #22d3ee;
+  text-decoration: none;
+  color: #06b6d4;
+  border-bottom-color: #06b6d4;
 }
 
-/* -- 代码 -- */
+/* 分割线 */
+.reading-view .prose-tech hr {
+  height: 1px;
+  margin: 15px 0;
+  border: none;
+  border-top: 1px solid #374151;
+}
+
+/* 代码 */
 .reading-view .prose-tech code {
-  color: #06b6d4;
-  background-color: rgba(6, 182, 212, 0.1);
-  font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  font-family: "SF Mono", "JetBrains Mono", "Fira Code", "Consolas", "SFMono-Regular", Menlo, monospace;
+}
+
+.reading-view .prose-tech p code,
+.reading-view .prose-tech li code {
+  font-size: 14px;
   padding: 2px 4px;
   border-radius: 4px;
-  font-size: 0.9em;
-  border: none;
+  margin: 0 2px;
+  color: #22d3ee; /* 主题色 */
+  background-color: rgba(34, 211, 238, 0.1); /* 主题色的浅色背景 */
+  font-family: "SF Mono", "JetBrains Mono", "Fira Code", "Consolas", "SFMono-Regular", Menlo, monospace;
 }
 
 .reading-view .prose-tech pre {
@@ -712,29 +344,22 @@
   margin: 1.5rem 0;
 }
 
-/* 移除pre的伪元素 */
-.reading-view .prose-tech pre::before {
-  content: none;
-}
-
 .reading-view .prose-tech pre code {
   background: none;
   color: #e2e8f0;
   padding: 0;
   font-size: 0.9em;
   line-height: 1.6;
+  font-family: "SF Mono", "JetBrains Mono", "Fira Code", "Consolas", "SFMono-Regular", Menlo, monospace;
 }
 
-/* -- 分割线 -- */
-.reading-view .prose-tech hr {
-  border: none;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #06b6d4, transparent);
-  margin: 2rem 0;
-  opacity: 0.6;
+/* 强调文本 */
+.reading-view .prose-tech strong {
+  font-weight: 700;
+  color: #f3f4f6; /* 稍微突出的白色 */
 }
 
-/* -- 表格 -- */
+/* 表格 */
 .reading-view .prose-tech table {
   width: 100%;
   border-collapse: separate;
@@ -742,6 +367,7 @@
   margin: 1.5rem 0;
   border: 1px solid #334155;
   border-radius: 0.5rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 .reading-view .prose-tech th {
@@ -750,72 +376,411 @@
   font-weight: 600;
   text-align: left;
   border-bottom: 1px solid #334155;
+  color: #22d3ee;
 }
 
 .reading-view .prose-tech td {
   padding: 0.75rem 1rem;
   border-top: 1px solid #334155;
+  color: rgba(229, 231, 235, 0.85);
 }
 
-/* -- 新增：文章标题样式 -- */
+/* 文章标题头部 */
 .reading-view__article-header {
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
   padding-bottom: 1.5rem;
-  border-bottom: 1px solid #334155;
-  padding-right: 2rem; /* 与文章正文对齐 */
-  padding-left: 2rem;  /* 与文章正文对齐 */
-}
-
-.reading-view__article .reading-view__title-en {
-  font-family: 'PingFang SC', 'Helvetica Neue', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-  font-size: 2.5rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.3;
-  margin: 2rem 0 1rem 0;
-  background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 50%, #9333ea 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.reading-view__title-cn {
-  font-family: var(--font-primary, "PingFang SC", "Microsoft YaHei", sans-serif);
-  font-size: 1.75rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #e68a2e, #f59e0b, #facc15);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  line-height: 1.4;
-}
-
-/* 移除HR，因为header已经有下边框作为分割线 */
-.reading-view__title-divider {
-  display: none;
-} 
-
-
-/* -- 新增：文章标题样式 -- */
-.reading-view__article-header {
-  margin-bottom: 1.5rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid #334155;
+  border-bottom: 1px solid #374151;
 }
 
 .reading-view__title-en {
-  /* font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; */
-  font-size: 2.25rem;
-  font-weight: 1000;
-  color: #e68a2e;
+  font-size: 2.5rem;
+  font-weight: 800;
   line-height: 1.2;
-  margin-bottom: 0.5rem;
+  margin: 0 0 0.75rem 0;
+  background: linear-gradient(135deg, #22d3ee, #3b82f6, #8b5cf6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Pro Display", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  letter-spacing: -0.025em;
 }
 
 .reading-view__title-cn {
-  /* font-family: "Noto Serif SC", serif; */
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #556987;
+  font-size: 1.75rem;
+  font-weight: 600;
   line-height: 1.4;
+  color: #f3f4f6;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Pro Display", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.reading-view__title-divider {
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(to right, #22d3ee, #3b82f6);
+  margin: 1rem 0;
+  border-radius: 2px;
+}
+
+/* TOC样式 */
+.reading-view__toc-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.reading-view__toc-sidebar {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+  background: transparent;
+}
+
+.reading-view__toc-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.reading-view__toc-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #22d3ee;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #374151;
+}
+
+.reading-view__toc-list {
+  flex: 1;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.reading-view__toc-list ul,
+.reading-view__toc-list ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.reading-view__toc-list li {
+  margin: 0;
+  padding: 0;
+}
+
+.reading-view__toc-list a {
+  display: block;
+  padding: 0.5rem 0;
+  color: #9ca3af;
+  text-decoration: none;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  border-left: 2px solid transparent;
+  padding-left: 0.75rem;
+}
+
+.reading-view__toc-list a:hover {
+  color: #22d3ee;
+  background: rgba(34, 211, 238, 0.05);
+  border-left-color: #22d3ee;
+}
+
+.reading-view__toc-list a.active {
+  color: #22d3ee;
+  background: rgba(34, 211, 238, 0.1);
+  border-left-color: #22d3ee;
+  font-weight: 500;
+}
+
+.reading-view__toc-list li li a {
+  padding-left: 1.5rem;
+  font-size: 0.8125rem;
+}
+
+.reading-view__toc-list li li li a {
+  padding-left: 2.25rem;
+  font-size: 0.75rem;
+}
+
+.reading-view__toc-empty {
+  color: #6b7280;
+  font-style: italic;
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.reading-view__toc-dragbar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+}
+
+.reading-view__toc-dragbar::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 40px;
+  background: #374151;
+  border-radius: 1px;
+}
+
+.reading-view__toc-dragbar:hover {
+  background: rgba(34, 211, 238, 0.1);
+}
+
+.reading-view--dragging .reading-view__toc-dragbar {
+  background: rgba(34, 211, 238, 0.2);
+}
+
+.reading-view--dragging {
+  cursor: col-resize;
+  user-select: none;
+}
+
+.reading-view--dragging * {
+  cursor: col-resize;
+  user-select: none;
+}
+
+/* 滚动条样式 */
+.reading-view__toc-sidebar::-webkit-scrollbar,
+.reading-view__content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.reading-view__toc-sidebar::-webkit-scrollbar-track,
+.reading-view__content::-webkit-scrollbar-track {
+  background: rgba(55, 65, 81, 0.2);
+}
+
+.reading-view__toc-sidebar::-webkit-scrollbar-thumb,
+.reading-view__content::-webkit-scrollbar-thumb {
+  background: rgba(34, 211, 238, 0.3);
+  border-radius: 3px;
+}
+
+.reading-view__toc-sidebar::-webkit-scrollbar-thumb:hover,
+.reading-view__content::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 211, 238, 0.5);
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .reading-view__layout {
+    flex-direction: column;
+    height: 100vh;
+  }
+  
+  .reading-view__toc {
+    display: none;
+  }
+  
+  .reading-view__content {
+    width: 100%;
+    position: relative;
+    left: 0;
+    margin-left: 0;
+  }
+  
+  .reading-view__content--no-toc {
+    max-width: none;
+    margin: 0;
+    position: relative;
+  }
+  
+  .reading-view__article-wrapper {
+    padding: 1rem;
+  }
+  
+  .reading-view__article {
+    padding: 0;
+    background: none;
+    border: none;
+    box-shadow: none;
+  }
+  
+  .reading-view__article-header {
+    padding: 0 0.1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .reading-view__title-en {
+    font-size: 1.5rem;
+    margin: 0 0 0.5rem 0;
+  }
+  
+  .reading-view__title-cn {
+    font-size: 1.125rem;
+    margin: 0 0 0.75rem 0;
+  }
+  
+  /* 移动端样式 */
+  .reading-view .prose-tech {
+    font-size: 14px;
+    line-height: 1.7;
+    padding: 0 0.1rem;
+  }
+  
+  .reading-view .prose-tech h1 { font-size: 22px; margin: 1rem 0; }
+  .reading-view .prose-tech h2 { font-size: 20px; margin: 1.5rem 0 0.75rem 0; }
+  .reading-view .prose-tech h3 { font-size: 18px; margin: 1.25rem 0 0.5rem 0; }
+  .reading-view .prose-tech h4 { font-size: 16px; margin: 1rem 0 0.5rem 0; }
+  .reading-view .prose-tech h5,
+  .reading-view .prose-tech h6 { font-size: 14px; margin: 1rem 0 0.5rem 0; }
+  
+  .reading-view .prose-tech p { font-size: 14px; line-height: 1.7; padding: 6px 0; }
+  .reading-view .prose-tech ul,
+  .reading-view .prose-tech ol { margin: 6px 0; padding-left: 24px; }
+  .reading-view .prose-tech li { font-size: 14px; line-height: 1.6; margin-bottom: 4px; }
+  
+  .reading-view .prose-tech code { font-size: 12px; }
+  .reading-view .prose-tech pre { padding: 0.75rem; margin: 1rem 0; }
+  .reading-view .prose-tech pre code { font-size: 12px; }
+  
+  .reading-view .prose-tech table { font-size: 12px; }
+  .reading-view .prose-tech th,
+  .reading-view .prose-tech td { padding: 0.5rem; font-size: 12px; }
+  
+  .reading-view .prose-tech blockquote { margin: 1rem 0; padding: 8px 16px; font-size: 13px; }
+  .reading-view .prose-tech blockquote p { font-size: 13px; padding: 4px 0; }
+  
+  .reading-view .prose-tech hr { margin: 12px 0; }
+}
+
+/* 极小屏幕优化 */
+@media (max-width: 480px) {
+  .reading-view__article-wrapper {
+    padding: 0.75rem;
+  }
+  
+  .reading-view__article-header {
+    padding: 0 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .reading-view__title-en {
+    font-size: 1.25rem;
+    margin: 0 0 0.375rem 0;
+  }
+  
+  .reading-view__title-cn {
+    font-size: 1rem;
+    margin: 0 0 0.5rem 0;
+  }
+  
+  .reading-view .prose-tech {
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 0 0.75rem;
+  }
+  
+  .reading-view .prose-tech h1 { font-size: 20px; }
+  .reading-view .prose-tech h2 { font-size: 18px; }
+  .reading-view .prose-tech h3 { font-size: 16px; }
+  .reading-view .prose-tech h4 { font-size: 15px; }
+  .reading-view .prose-tech h5,
+  .reading-view .prose-tech h6 { font-size: 13px; }
+  
+  .reading-view .prose-tech p { font-size: 13px; padding: 5px 0; }
+  .reading-view .prose-tech ul,
+  .reading-view .prose-tech ol { margin: 5px 0; padding-left: 20px; }
+  .reading-view .prose-tech li { font-size: 13px; line-height: 1.5; margin-bottom: 3px; }
+  
+  .reading-view .prose-tech code { font-size: 11px; }
+  .reading-view .prose-tech pre { padding: 0.5rem; margin: 0.75rem 0; }
+  .reading-view .prose-tech pre code { font-size: 11px; }
+  
+  .reading-view .prose-tech table { font-size: 11px; }
+  .reading-view .prose-tech th,
+  .reading-view .prose-tech td { padding: 0.375rem; font-size: 11px; }
+  
+  .reading-view .prose-tech blockquote { margin: 0.75rem 0; padding: 6px 12px; font-size: 12px; }
+  .reading-view .prose-tech blockquote p { font-size: 12px; padding: 3px 0; }
+  
+  .reading-view .prose-tech hr { margin: 10px 0; }
+}
+
+/* 高对比度和无障碍支持 */
+@media (prefers-contrast: high) {
+  .reading-view .prose-tech h1 {
+    background: none;
+    color: #ffffff;
+  }
+  
+  .reading-view .prose-tech h2,
+  .reading-view .prose-tech h3,
+  .reading-view .prose-tech h4,
+  .reading-view .prose-tech h5,
+  .reading-view .prose-tech h6 {
+    color: #ffffff;
+  }
+  
+  .reading-view .prose-tech code {
+    background: #000000;
+    color: #ffffff;
+  }
+  
+  .reading-view__loading-spinner {
+    color: #ffffff;
+  }
+}
+
+/* 减少动画模式 */
+@media (prefers-reduced-motion: reduce) {
+  .reading-view--fade-in,
+  .reading-view__loading-spinner {
+    animation: none;
+  }
+}
+
+/* 打印样式 */
+@media print {
+  .reading-view__toc,
+  .reading-view__version-selector {
+    display: none;
+  }
+  
+  .reading-view__content {
+    overflow: visible;
+  }
+  
+  .reading-view__article {
+    background: white;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+  }
+  
+  .reading-view .prose-tech,
+  .reading-view .prose-tech h1,
+  .reading-view .prose-tech h2,
+  .reading-view .prose-tech h3,
+  .reading-view .prose-tech h4,
+  .reading-view .prose-tech h5,
+  .reading-view .prose-tech h6,
+  .reading-view .prose-tech p,
+  .reading-view .prose-tech li {
+    color: black;
+    background: none;
+  }
+}
+
+/* 确保与其他组件的兼容性 */
+.reading-view *,
+.reading-view *::before,
+.reading-view *::after {
+  box-sizing: border-box;
 }

@@ -15,12 +15,19 @@ html, body {
   overflow: hidden; /* 防止整体页面滚动 */
 }
 
-/* 移动端基础优化 */
+/* 移动端强制防止横向滚动 */
 @media (max-width: 768px) {
   html, body {
     overflow-x: hidden !important; /* 强制隐藏横向滚动 */
     width: 100% !important;
     box-sizing: border-box;
+  }
+}
+
+/* 移动端全局优化 */
+@media (max-width: 768px) {
+  html, body {
+    font-size: 12px; /* 统一缩小移动端基础字体 */
   }
   
   /* 笔记库视图移动端边距优化 */
@@ -30,6 +37,10 @@ html, body {
 }
 
 @media (max-width: 480px) {
+  html, body {
+    font-size: 11px; /* 极小屏幕进一步缩小字体 */
+  }
+  
   .max-w-3xl.mx-auto.p-6 {
     padding: 0.75rem !important; /* 极小屏幕保持适度padding */
   }

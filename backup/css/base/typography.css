@@ -24,7 +24,7 @@
   
   /* 卡片专用字体大小 */
   --font-size-card-title: 1.25rem;      /* 20px */
-  --font-size-card-subtitle: 0.9375rem; /* 15px */
+  --font-size-card-subtitle: 0.875rem;  /* 14px - 缩小一号 */
   --font-size-card-metadata: 0.75rem;   /* 12px */
   --font-size-card-badge: 0.625rem;     /* 10px */
   

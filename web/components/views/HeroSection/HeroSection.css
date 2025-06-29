@@ -126,23 +126,41 @@
 /* 移动端优化 */
 @media (max-width: 768px) {
   .hero-section {
-    padding: 2rem 1rem;          /* 从4rem减少到2rem */
-    min-height: 35vh;            /* 从50vh减少到35vh */
+    padding: 1rem 0.5rem;        /* 大幅减少padding */
+    min-height: 25vh;            /* 进一步减少高度 */
   }
   
   .hero-section__title {
-    font-size: 2.5rem;
-    margin-bottom: 1.5rem;
+    font-size: 1.75rem;          /* 大幅缩小标题 */
+    margin-bottom: 0.75rem;      /* 减少边距 */
   }
   
   .hero-section__subtitle {
-    font-size: 1.125rem;
-    margin-bottom: 2.5rem;
+    font-size: 0.875rem;         /* 大幅缩小副标题 */
+    margin-bottom: 1.5rem;       /* 减少边距 */
   }
   
   /* 移动端标题换行 */
   .hero-section__title-part--block {
     display: block;
+  }
+}
+
+/* 极小屏幕进一步优化 */
+@media (max-width: 480px) {
+  .hero-section {
+    padding: 0.75rem 0.25rem;    /* 极致精简padding */
+    min-height: 20vh;            /* 进一步减少高度 */
+  }
+  
+  .hero-section__title {
+    font-size: 1.5rem;           /* 进一步缩小标题 */
+    margin-bottom: 0.5rem;
+  }
+  
+  .hero-section__subtitle {
+    font-size: 0.75rem;          /* 进一步缩小副标题 */
+    margin-bottom: 1rem;
   }
 }
 

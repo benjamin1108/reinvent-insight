@@ -239,14 +239,23 @@ const app = createApp({
       }
     };
 
-    const logout = () => {
+    const logout = async () => {
       localStorage.removeItem('authToken');
       delete axios.defaults.headers.common['Authorization'];
       isAuthenticated.value = false;
       currentView.value = 'library';
-      summaries.value = [];
       showLogin.value = true;
       showToast('会话已过期，请重新登录', 'warning');
+      
+      // 重新加载访客模式下的公开文章列表
+      try {
+        await loadSummaries();
+        console.log('🔄 退出登录后重新加载公开文章列表成功');
+      } catch (error) {
+        console.error('❌ 退出登录后重新加载文章列表失败:', error);
+        // 如果加载失败，至少保持数组为空而不是显示错误数据
+        summaries.value = [];
+      }
     };
 
     const checkAuth = () => {

@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 import os
 import sys
+import uvicorn
 from typing import Set, Optional, Dict, List
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -179,13 +180,6 @@ def verify_token(authorization: str = None):
     if token not in session_tokens:
         raise HTTPException(status_code=401, detail="令牌无效，请重新登录")
     return True
-
-async def summary_task_worker(url: str, task_id: str):
-    """
-    异步启动器：将同步的工作函数抛到后台线程执行。
-    """
-    loop = asyncio.get_running_loop()
-    await asyncio.to_thread(summary_task_worker_sync, loop, url, task_id)
 
 # --- API 端点 ---
 class SummarizeRequest(BaseModel):
@@ -751,7 +745,6 @@ else:
 
 def serve(host: str = "0.0.0.0", port: int = 8001, reload: bool = False):
     """使用 uvicorn 启动 Web 服务器。"""
-    import uvicorn
     uvicorn.run(
         "reinvent_insight.api:app",
         host=host,

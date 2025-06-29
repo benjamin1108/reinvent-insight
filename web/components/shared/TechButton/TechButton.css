@@ -22,6 +22,29 @@
   white-space: nowrap;
 }
 
+/* 移动端基础覆盖 - 确保优先级 */
+@media (max-width: 1024px) {
+  .tech-button {
+    padding: 0.25rem 0.5rem !important;
+    min-width: auto !important;
+    width: auto !important;
+    vertical-align: middle !important; /* 改为middle对齐确保居中 */
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important; /* 强制清除margin */
+  }
+  
+  /* 特别针对AppHeader中的danger按钮对齐 */
+  .app-header .tech-button--danger {
+    align-self: center !important;
+    vertical-align: middle !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    margin: 0 !important;
+  }
+}
+
 .tech-button::before {
   content: '';
   position: absolute;
@@ -333,62 +356,94 @@ svg.tech-button__spinner--spinning {
 /* 移动端优化 */
 @media (max-width: 768px) {
   .tech-button {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.8rem;
-    min-width: 70px;
-    height: 36px;
+    padding: 0.1875rem 0.1875rem !important; /* 极致精简padding，让文字决定宽度 */
+    font-size: 0.75rem;            /* 缩小字体 */
+    min-width: auto !important;    /* 强制移除最小宽度限制 */
+    width: auto !important;        /* 强制让宽度自适应 */
+    height: auto;                  /* 让高度自适应 */
+    line-height: 1.5;              /* 设置行高控制垂直空间 */
   }
   
   .tech-button--sm {
-    padding: 0.3rem 0.6rem;
-    font-size: 0.75rem;
-    min-width: 50px;
-    height: 28px;
+    padding: 0.25rem 0.375rem;     /* 减少padding */
+    font-size: 0.7rem;
+    min-width: auto;               /* 移除最小宽度限制 */
+    height: 26px;                  /* 减少高度 */
   }
   
   .tech-button--lg {
-    padding: 0.6rem 1.2rem;
-    font-size: 0.9rem;
-    min-width: 90px;
-    height: 44px;
+    padding: 0.5rem 0.75rem;       /* 减少padding */
+    font-size: 0.8rem;             /* 缩小字体 */
+    min-width: auto;               /* 移除最小宽度限制 */
+    height: 36px;                  /* 减少高度 */
   }
   
   .tech-button--icon {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
-    padding: 0.4rem;
+    width: 32px;                   /* 减少图标按钮尺寸 */
+    height: 32px;
+    min-width: 32px;
+    padding: 0.375rem;
   }
   
   .tech-button--icon.tech-button--sm {
-    width: 28px;
-    height: 28px;
-    min-width: 28px;
-    padding: 0.3rem;
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    padding: 0.25rem;
   }
   
   .tech-button--icon.tech-button--lg {
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    padding: 0.6rem;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    padding: 0.5rem;
   }
 }
 
 /* 极小屏幕优化 */
 @media (max-width: 480px) {
   .tech-button {
-    padding: 0.375rem 0.75rem;
-    font-size: 0.75rem;
-    min-width: 60px;
-    height: 32px;
+    padding: 0.125rem 0.125rem !important; /* 极致精简padding，文字贴合边缘 */
+    font-size: 0.6875rem;          /* 进一步缩小字体 */
+    min-width: auto !important;    /* 强制移除最小宽度限制 */
+    width: auto !important;        /* 强制让宽度自适应 */
+    height: auto;                  /* 让高度自适应 */
+    line-height: 1.4;              /* 稍微紧凑的行高 */
   }
   
   .tech-button--sm {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.7rem;
-    min-width: 40px;
-    height: 24px;
+    padding: 0.1875rem 0.25rem;    /* 极小padding */
+    font-size: 0.625rem;           /* 极小字体 */
+    min-width: auto;               /* 移除最小宽度限制 */
+    height: 22px;                  /* 极小高度 */
+  }
+  
+  .tech-button--lg {
+    padding: 0.375rem 0.5rem;      /* 减少lg按钮padding */
+    font-size: 0.75rem;            /* 缩小lg按钮字体 */
+    min-width: auto;               /* 移除最小宽度限制 */
+    height: 32px;                  /* 减少lg按钮高度 */
+  }
+  
+  .tech-button--icon {
+    width: 28px;                   /* 进一步减少图标按钮尺寸 */
+    height: 28px;
+    min-width: 28px;
+    padding: 0.25rem;
+  }
+  
+  .tech-button--icon.tech-button--sm {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    padding: 0.1875rem;
+  }
+  
+  .tech-button--icon.tech-button--lg {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    padding: 0.375rem;
   }
 }
 
