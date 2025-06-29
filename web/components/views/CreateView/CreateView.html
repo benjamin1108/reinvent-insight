@@ -40,8 +40,7 @@
     <div v-if="showProgressBar" class="create-view__progress-wrapper">
       <progress-bar 
         :percent="progressPercent" 
-        :show-text="true"
-        text-position="outside"
+        :show-text="false"
         :striped="true"
         :animated="loading"
         height="24px"
@@ -80,7 +79,7 @@
           {{ title }}
         </h2>
         <tech-button 
-          variant="warning"
+          variant="primary"
           @click="handleViewSummary">
           全屏阅读
         </tech-button>
