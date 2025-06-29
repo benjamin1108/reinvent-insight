@@ -47,12 +47,10 @@
 
 ## 样式架构总结
 
-### 三层样式体系
+### 样式体系
 ```
 /web/css/base/
-├── typography.css    # 字体系统
-├── effects.css       # 视觉效果（tech-gradient, glow-effect等）
-└── content.css       # 内容样式（prose-tech等）
+└── effects.css       # 视觉效果（tech-gradient, glow-effect等）
 
 /web/components/*/
 └── *.css            # 组件特定样式（只定义布局和特有样式）

@@ -3,9 +3,7 @@
 /* LibraryView组件样式 - 继承全局字体设置 */
 
 /* 引入基础样式 */
-@import url('/css/base/typography.css');
 @import url('/css/base/effects.css');
-@import url('/css/base/content.css');
 
 /* 引入依赖组件样式 */
 @import url('/components/common/SummaryCard/SummaryCard.css');

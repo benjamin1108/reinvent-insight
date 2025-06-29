@@ -95,8 +95,7 @@ web/
 │   ├── main.css (主样式入口)
 │   ├── base/
 │   │   ├── reset.css
-│   │   ├── variables.css
-│   │   └── typography.css
+│   │   └── variables.css
 │   ├── utilities/
 │   │   ├── animations.css
 │   │   ├── buttons.css
@@ -488,8 +487,7 @@ web/
 │   ├── main.css (主样式入口)
 │   ├── base/
 │   │   ├── reset.css
-│   │   ├── variables.css
-│   │   └── typography.css
+│   │   └── variables.css
 │   ├── utilities/
 │   │   ├── animations.css
 │   │   ├── buttons.css

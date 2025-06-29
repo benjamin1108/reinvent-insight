@@ -10,7 +10,7 @@
 
 基础样式提供了全局可复用的样式定义，所有组件都可以直接使用这些样式类。
 
-#### **typography.css** - 字体系统
+
 - **作用**：定义全局字体栈和字体变量
 - **主要内容**：
   ```css
@@ -31,7 +31,7 @@
   - `.is-dragging-toc` - 拖拽状态
 - **使用方式**：在组件HTML中直接添加类名
 
-#### **content.css** - 内容展示
+
 - **作用**：定义文章内容的展示样式
 - **主要样式类**：
   - `.prose-tech` - 科技风格的文章内容样式
@@ -124,9 +124,7 @@ ComponentLoader 在加载组件时会自动：
 基础样式需要在主页面中手动引入：
 ```html
 <!-- 在 index.html 或测试页面中 -->
-<link rel="stylesheet" href="/css/base/typography.css">
 <link rel="stylesheet" href="/css/base/effects.css">
-<link rel="stylesheet" href="/css/base/content.css">
 ```
 
 ## 最佳实践

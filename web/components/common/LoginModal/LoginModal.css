@@ -4,7 +4,7 @@
  * - 遵循BEM命名规范 (Block__Element--Modifier)
  * - 使用全局基础样式类（tech-gradient, glow-effect）来自 /css/base/effects.css
  * - 组件只定义自身特有的样式
- * - 继承全局字体设置来自 /css/base/typography.css
+ * - 继承全局字体设置
  */
 
 /* 组件内部盒模型重置 */

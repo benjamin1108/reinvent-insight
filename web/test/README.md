@@ -166,7 +166,7 @@
 
 所有测试页面遵循以下CSS规范：
 - 不引入旧的全局样式文件（如 `/css/style.css`）
-- 只引入必要的基础样式（typography.css, effects.css, content.css）
+- 只引入必要的基础样式（effects.css）
 - 测试页面专用样式使用内联 `<style>` 标签
 - 组件样式由 ComponentLoader 自动加载
 
