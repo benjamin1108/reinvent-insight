@@ -310,22 +310,9 @@
 }
 
 .reading-view .prose-tech ul > li {
-  position: relative;
   margin-bottom: 5px;
   line-height: 26px;
-  padding-left: 1.25rem; /* 为小蓝点留出空间 */
-}
-
-.reading-view .prose-tech ul > li::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.65rem; /* 调整垂直位置对齐文字 */
-  width: 6px;
-  height: 6px;
-  background: linear-gradient(45deg, #22d3ee, #3b82f6);
-  border-radius: 50%;
-  transform: translateY(-50%);
+  /* 移除了小蓝点样式和相关的padding */
 }
 
 /* 二级无序列表 */
@@ -717,7 +704,6 @@
   .reading-view .prose-tech ul,
   .reading-view .prose-tech ol { margin: 6px 0; padding-left: 24px; }
   .reading-view .prose-tech li { font-size: 14px; line-height: 1.6; margin-bottom: 4px; }
-  .reading-view .prose-tech ul > li::before { top: 0.5rem; } /* 移动端调整小蓝点位置 */
   
   .reading-view .prose-tech code { font-size: 12px; }
   .reading-view .prose-tech pre { padding: 0.75rem; margin: 1rem 0; }
@@ -772,7 +758,6 @@
   .reading-view .prose-tech ul,
   .reading-view .prose-tech ol { margin: 5px 0; padding-left: 20px; }
   .reading-view .prose-tech li { font-size: 13px; line-height: 1.5; margin-bottom: 3px; }
-  .reading-view .prose-tech ul > li::before { top: 0.45rem; } /* 极小屏调整小蓝点位置 */
   
   .reading-view .prose-tech code { font-size: 11px; }
   .reading-view .prose-tech pre { padding: 0.5rem; margin: 0.75rem 0; }
@@ -807,10 +792,6 @@
     background: #ffffff; /* 高对比度下使用纯白色 */
   }
   
-  .reading-view .prose-tech ul > li::before {
-    background: #ffffff; /* 高对比度下使用纯白色 */
-  }
-  
   .reading-view .prose-tech code {
     background: #000000;
     color: #ffffff;
@@ -826,6 +807,15 @@
   .reading-view--fade-in,
   .reading-view__loading-spinner {
     animation: none;
+  }
+  
+  /* 禁用列表标识符的动画 */
+  .reading-view .prose-tech ul > li::before {
+    transition: none;
+  }
+  
+  .reading-view .prose-tech ul > li:hover::before {
+    transform: translateY(-50%) rotate(45deg);
   }
 }
 

@@ -1,19 +1,22 @@
-import asyncio
-import logging
 import os
 import re
+import yaml
+import asyncio
 import shutil
-from typing import List, Dict, Tuple, Optional
 from pathlib import Path
+from typing import List, Optional, Tuple
+from dataclasses import dataclass
 from datetime import datetime
 
+from loguru import logger
+
+from . import config
+from . import prompts
 from .summarizer import get_summarizer
 from .task_manager import manager as task_manager
-from . import prompts
-from . import config
 from .downloader import VideoMetadata, sanitize_filename
 
-logger = logging.getLogger(__name__)
+logger = logger.bind(name=__name__)
 
 # 定义一个任务根目录
 TASKS_ROOT_DIR = "./downloads/tasks"
@@ -118,12 +121,12 @@ class DeepSummaryWorkflow:
                 raise Exception("生成收尾内容失败")
             
             # 步骤 4: 组装最终报告
-            final_report = await self._assemble_final_report(title, introduction, toc_md, conclusion_content, len(chapters), self.metadata)
+            final_report, final_filename, doc_hash = await self._assemble_final_report(title, introduction, toc_md, conclusion_content, len(chapters), self.metadata)
             if not final_report:
                 raise Exception("组装最终报告失败")
 
             await self._log("分析完成！", progress=100)
-            await task_manager.send_result(title, final_report, self.task_id)
+            await task_manager.send_result(title, final_report, self.task_id, final_filename, doc_hash)
 
         except Exception as e:
             error_message = f"工作流遇到严重错误: {e}"
@@ -292,7 +295,7 @@ class DeepSummaryWorkflow:
                 await asyncio.sleep(2)
         return None
 
-    async def _assemble_final_report(self, title: str, introduction: str, toc_md: str, conclusion_md: str, chapter_count: int, metadata: VideoMetadata) -> Optional[str]:
+    async def _assemble_final_report(self, title: str, introduction: str, toc_md: str, conclusion_md: str, chapter_count: int, metadata: VideoMetadata) -> Tuple[Optional[str], Optional[str], Optional[str]]:
         """步骤4：在本地组装所有部分以生成最终的Markdown文件"""
         await self._log("步骤 4/4: 正在整理最终报告...")
         try:
@@ -368,7 +371,8 @@ class DeepSummaryWorkflow:
             config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True) # 确保目录存在
             shutil.move(temp_report_path, final_path)
 
-            # 更新hash映射（如果API模块已导入）
+            # 更新hash映射（如果API模块已导入）并获取hash
+            doc_hash = None
             try:
                 from .api import generate_doc_hash, hash_to_filename, filename_to_hash
                 doc_hash = generate_doc_hash(final_filename)
@@ -381,10 +385,10 @@ class DeepSummaryWorkflow:
             await self._log(f"报告整理完成")
             # 更新任务状态，包含最终文件路径
             task_manager.set_task_result(self.task_id, str(final_path))
-            return final_report
+            return final_report, final_filename, doc_hash
         except Exception as e:
             logger.error(f"任务 {self.task_id} - 组装最终报告时出错: {e}", exc_info=True)
-            return None
+            return None, None, None
 
     async def _log(self, message: str, progress: int = None, error: bool = False):
         """向 TaskManager 发送日志和进度更新"""
@@ -428,7 +432,9 @@ def _perform_assembly(title: str, introduction: str, toc_md: str, conclusion_md:
                 metadata_dict['version'] = version
                 
             # allow_unicode=True 保证中文字符正确显示
-            metadata_yaml = f"---\n{yaml.dump(metadata_dict, allow_unicode=True, sort_keys=False)}---\n\n"
+            # 使用 rstrip() 去掉 yaml.dump() 自动添加的末尾换行符
+            yaml_content = yaml.dump(metadata_dict, allow_unicode=True, sort_keys=False).rstrip()
+            metadata_yaml = f"---\n{yaml_content}\n---\n\n"
         except ImportError:
             logger.warning("PyYAML 未安装，无法生成 YAML front matter。请运行 'pip install pyyaml'。")
             metadata_yaml = ""

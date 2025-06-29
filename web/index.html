@@ -154,8 +154,8 @@
 
       <!-- 创建分析视图 -->
       <create-view v-if="currentView === 'create' && isAuthenticated && !isShareView" :url="url" :loading="loading"
-        :progress-percent="progressPercent" :logs="logs" :finalized-logs="finalizedLogs" :summary="summary"
-        :title="title" :rendered="rendered" @update:url="url = $event" @start-analysis="startSummarize"
+        :progress-percent="progressPercent" :logs="logs" :finalized-logs="finalizedLogs"
+        :title="title" :created-doc-hash="createdDocHash" @update:url="url = $event" @start-analysis="startSummarize"
         @view-summary="viewSummary">
       </create-view>
 

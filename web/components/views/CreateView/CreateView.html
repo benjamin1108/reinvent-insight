@@ -36,18 +36,6 @@
   <!-- Progress & Logs -->
   <div v-if="loading || logs.length"
     class="create-view__progress-section">
-    <!-- 进度条组件 -->
-    <div v-if="showProgressBar" class="create-view__progress-wrapper">
-      <progress-bar 
-        :percent="progressPercent" 
-        :show-text="false"
-        :striped="true"
-        :animated="loading"
-        height="24px"
-        color="gradient"
-        rounded="md">
-      </progress-bar>
-    </div>
     
     <h3 class="create-view__progress-title">
       <svg class="create-view__progress-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -72,19 +60,26 @@
   </div>
 
   <!-- Result -->
-  <div v-if="summary" class="create-view__result-section">
-    <div class="create-view__result-card">
-      <div class="create-view__result-header">
-        <h2 class="create-view__result-title">
-          {{ title }}
-        </h2>
-        <tech-button 
-          variant="primary"
-          @click="handleViewSummary">
-          全屏阅读
-        </tech-button>
-      </div>
-      <div v-html="cleanRendered" class="create-view__result-content prose-tech"></div>
+  <div v-if="title && !loading" class="create-view__result-card">
+    <!-- 成功图标 -->
+    <div class="create-view__success-icon">
+      <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    </div>
+    
+    <div class="create-view__result-content">
+      <p class="create-view__result-label">分析完成</p>
+      <h2 class="create-view__result-title">{{ title }}</h2>
+      <p class="create-view__result-hint">文档已准备就绪，点击下方按钮查看完整内容</p>
+      
+      <tech-button 
+        variant="primary" 
+        size="lg"
+        @click="handleViewSummary"
+        class="create-view__full-screen-btn">
+        点击阅读
+      </tech-button>
     </div>
   </div>
 </div> 

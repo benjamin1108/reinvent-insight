@@ -3,8 +3,18 @@ import logging
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 from fastapi import WebSocket
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+# 导入内容清理函数
+try:
+    from .api import clean_content_metadata
+except ImportError:
+    # 如果导入失败，提供一个简单的备用函数
+    def clean_content_metadata(content: str, title: str = '') -> str:
+        logger.warning("无法导入 clean_content_metadata，使用备用清理函数")
+        return content
 
 @dataclass
 class TaskState:
@@ -56,20 +66,32 @@ class TaskManager:
                 except Exception as e:
                     logger.warning(f"向客户端 {task_id} 发送日志消息失败 (可能已断开): {e}")
 
-    async def send_result(self, title: str, summary: str, task_id: str):
+    async def send_result(self, title: str, summary: str, task_id: str, filename: str = None, doc_hash: str = None):
         if task_id in self.tasks:
             task_state = self.tasks[task_id]
             task_state.status = "completed"
             task_state.result_title = title
             task_state.result_summary = summary
+            
+            # 清理内容，移除 metadata 和重复标题
+            cleaned_summary = clean_content_metadata(summary, title)
+            
             ws = task_state.websocket
             if ws:
                 try:
-                    await ws.send_json({
+                    result_data = {
                         "type": "result",
                         "title": title,
-                        "summary": summary
-                    })
+                        "summary": cleaned_summary  # 发送清理后的内容
+                    }
+                    
+                    # 如果有文件名和 hash，添加到结果中
+                    if filename:
+                        result_data["filename"] = filename
+                    if doc_hash:
+                        result_data["hash"] = doc_hash
+                        
+                    await ws.send_json(result_data)
                 except Exception as e:
                     logger.warning(f"向客户端 {task_id} 发送最终结果失败 (可能已断开): {e}")
 
@@ -93,7 +115,20 @@ class TaskManager:
                 await self.update_progress(task_id, task_state.progress)
 
                 if task_state.status == "completed":
-                    await self.send_result(task_state.result_title, task_state.result_summary, task_id)
+                    # 获取文件名和 hash（如果有的话）
+                    filename = None
+                    doc_hash = None
+                    if task_state.result_path:
+                        # 从文件路径提取文件名
+                        filename = Path(task_state.result_path).name
+                        # 尝试获取 hash
+                        try:
+                            from .api import filename_to_hash
+                            doc_hash = filename_to_hash.get(filename)
+                        except (ImportError, KeyError):
+                            pass
+                    
+                    await self.send_result(task_state.result_title, task_state.result_summary, task_id, filename, doc_hash)
                 elif task_state.status == "error":
                     await self.set_task_error(task_id, task_state.logs[-1] if task_state.logs else "未知错误")
             except Exception as e:

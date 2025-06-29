@@ -38,12 +38,12 @@ const app = createApp({
     
     // 创建分析相关状态
     const url = ref('');
-    const summary = ref('');
     const title = ref('');
-    const rendered = ref('');
     const logs = ref([]);
     const loading = ref(false);
     const progressPercent = ref(0);
+    const createdFilename = ref('');
+    const createdDocHash = ref('');
 
     // 笔记库状态
     const summaries = ref([]);
@@ -363,9 +363,9 @@ const app = createApp({
 
         // 重置状态
         logs.value = [];
-        summary.value = '';
         title.value = '';
-        rendered.value = '';
+        createdFilename.value = '';
+        createdDocHash.value = '';
         loading.value = true;
         progressPercent.value = 0;
 
@@ -403,8 +403,15 @@ const app = createApp({
         
         if (data.type === 'result') {
           title.value = data.title;
-          summary.value = data.summary;
-          rendered.value = marked.parse(data.summary);
+          
+          // 保存文件名和 hash（如果有的话）
+          if (data.filename) {
+            createdFilename.value = data.filename;
+          }
+          if (data.hash) {
+            createdDocHash.value = data.hash;
+          }
+          
           loading.value = false;
           progressPercent.value = 100;
           clearActiveTask();
@@ -535,7 +542,29 @@ const app = createApp({
       }
     };
 
-    const viewSummary = (title, title_cn, title_en, content, filename, videoUrl = '', docHash, versions = []) => {
+    const viewSummary = (dataOrTitle, title_cn, title_en, content, filename, videoUrl = '', docHash, versions = []) => {
+      // 处理来自 CreateView 的对象参数
+      if (typeof dataOrTitle === 'object' && dataOrTitle !== null) {
+        const data = dataOrTitle;
+        
+        // 如果有 hash，直接使用 hash 导航
+        if (data.hash) {
+          loadSummaryByHash(data.hash);
+          return;
+        }
+        
+        // 如果只有标题，显示提示信息
+        if (data.title) {
+          showToast('文档正在后台处理，请稍等片刻后在笔记库中查看', 'info');
+          currentView.value = 'library';
+          return;
+        }
+        
+        return; // 提前返回，不执行后续代码
+      }
+      
+      // 处理传统的多参数调用（来自 LibraryView）
+      const title = dataOrTitle;
       currentView.value = 'read';
       
       // 使用 nextTick 确保在DOM更新后执行滚动，彻底解决视图切换时的滚动位置残留问题
@@ -888,12 +917,12 @@ const app = createApp({
     return {
       // 状态
       url,
-      summary,
       title,
-      rendered,
       logs,
       loading,
       progressPercent,
+      createdFilename,
+      createdDocHash,
       summaries,
       libraryLoading,
       isShareView,

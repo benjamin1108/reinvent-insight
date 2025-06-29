@@ -106,8 +106,9 @@ def clean_content_metadata(content: str, title: str = '') -> str:
     # 使用yaml库安全地解析和移除YAML Front Matter
     if content.startswith('---'):
         try:
-            # 使用正则表达式匹配完整的YAML front matter块
-            match = re.match(r'^---\s*\n(.*?)\n---\s*\n', content, re.DOTALL)
+            # 使用更宽松的正则表达式匹配完整的YAML front matter块
+            # 允许结束标记前有空行
+            match = re.match(r'^---\s*\n(.*?)\n\s*---\s*\n', content, re.DOTALL)
             if match:
                 # 验证YAML是否有效
                 yaml_content = match.group(1)
@@ -117,17 +118,32 @@ def clean_content_metadata(content: str, title: str = '') -> str:
                 cleaned_content = content[match.end():]
                 logger.debug(f"成功移除YAML front matter，剩余内容长度: {len(cleaned_content)}")
             else:
-                logger.warning("检测到---开头但未找到完整的YAML front matter格式")
+                # 尝试另一种格式：没有结束标记的情况（用户展示的错误格式）
+                # 这种情况下，假设从第一个标题行开始是正文
+                lines = content.split('\n')
+                for i, line in enumerate(lines[1:], 1):  # 跳过第一行的 ---
+                    # 如果遇到 Markdown 标题（# 开头）或者空行后的非 YAML 格式内容
+                    if line.strip().startswith('#') or (i > 1 and not line.strip() and i + 1 < len(lines) and not ':' in lines[i + 1]):
+                        cleaned_content = '\n'.join(lines[i:])
+                        logger.debug(f"检测到不完整的YAML front matter，从第{i}行开始提取内容")
+                        break
+                else:
+                    logger.warning("检测到---开头但无法确定YAML front matter的结束位置")
         except yaml.YAMLError as e:
             logger.warning(f"YAML front matter解析失败，保留原始内容: {e}")
         except Exception as e:
             logger.error(f"处理YAML front matter时发生错误: {e}")
     
+    # 清理开头的空行
+    cleaned_content = cleaned_content.lstrip()
+    
     # 可选：如果标题存在，去除可能重复的H1标题
-    if title:
+    if title and cleaned_content:
+        # 处理可能的标题变体（考虑空格、标点等）
         escaped_title = re.escape(title)
-        markdown_title_pattern = rf'^#+\s*{escaped_title}\s*$'
-        cleaned_content = re.sub(markdown_title_pattern, '', cleaned_content, flags=re.MULTILINE | re.IGNORECASE).lstrip()
+        # 匹配 # 标题 或 ## 标题 等，允许标题后有标点符号
+        markdown_title_pattern = rf'^#+\s*{escaped_title}\s*[!！.。:：]?\s*$'
+        cleaned_content = re.sub(markdown_title_pattern, '', cleaned_content, count=1, flags=re.MULTILINE | re.IGNORECASE).lstrip()
     
     return cleaned_content
 
