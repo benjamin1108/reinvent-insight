@@ -368,7 +368,7 @@ deploy_new_version() {
     pip install .
     
     # 创建必要的目录
-    mkdir -p downloads/subtitles downloads/summaries downloads/pdfs
+    mkdir -p downloads/subtitles downloads/summaries downloads/pdfs downloads/tasks
     
     # 确保所有文件和目录的权限正确
     print_info "修复文件权限..."
@@ -380,12 +380,14 @@ deploy_new_version() {
 
 # 恢复数据
 restore_data() {
+    # 先处理备份数据
     if [ -n "$LATEST_BACKUP" ] && [ -d "$LATEST_BACKUP" ]; then
         print_info "从备份恢复数据: $LATEST_BACKUP"
         
-        # 恢复 downloads 目录
+        # 恢复 downloads 目录（整个目录，包括 subtitles、summaries、pdfs 等）
         if [ -d "$LATEST_BACKUP/downloads" ] && [ "$(ls -A "$LATEST_BACKUP/downloads" 2>/dev/null)" ]; then
             print_info "恢复 downloads 目录..."
+            # 直接复制整个目录结构
             cp -r "$LATEST_BACKUP/downloads"/* "$DEPLOY_DIR/reinvent_insight-0.1.0/downloads/" 2>/dev/null || true
             # 统计恢复的文件数量
             FILE_COUNT=$(find "$LATEST_BACKUP/downloads" -type f 2>/dev/null | wc -l)
@@ -415,11 +417,60 @@ restore_data() {
         fi
     else
         if [ "$FRESH_INSTALL" = true ]; then
-            print_info "全新安装，没有数据需要恢复"
+            print_info "全新安装，没有历史数据需要恢复"
         else
             print_warning "未找到可用的备份目录"
         fi
     fi
+    
+    # 备份恢复完成后，进行开发环境文章的增量复制
+    print_info "检查开发环境文章..."
+    DEV_SUMMARIES_DIR="$HOME/reinvent-insight/downloads/summaries"
+    PROD_SUMMARIES_DIR="$DEPLOY_DIR/reinvent_insight-0.1.0/downloads/summaries"
+    
+    if [ -d "$DEV_SUMMARIES_DIR" ] && [ "$(ls -A "$DEV_SUMMARIES_DIR" 2>/dev/null)" ]; then
+        DEV_FILE_COUNT=$(find "$DEV_SUMMARIES_DIR" -name "*.md" -type f 2>/dev/null | wc -l)
+        
+        # 检查生产环境现有文章数量（包括从备份恢复的）
+        EXISTING_PROD_COUNT=0
+        if [ -d "$PROD_SUMMARIES_DIR" ]; then
+            EXISTING_PROD_COUNT=$(find "$PROD_SUMMARIES_DIR" -name "*.md" -type f 2>/dev/null | wc -l)
+        fi
+        
+        print_info "开发环境: $DEV_FILE_COUNT 篇文章"
+        print_info "生产环境现有: $EXISTING_PROD_COUNT 篇文章（备份恢复后）"
+        
+        if [ "$DEV_FILE_COUNT" -le "$EXISTING_PROD_COUNT" ]; then
+            print_info "开发环境文章数量不多于生产环境，跳过复制"
+        else
+            print_info "开发环境文章更多，执行增量复制..."
+            
+            # 增量复制：只复制生产环境没有的文件
+            COPIED_COUNT=0
+            for dev_file in "$DEV_SUMMARIES_DIR"/*.md; do
+                if [ -f "$dev_file" ]; then
+                    filename=$(basename "$dev_file")
+                    if [ ! -f "$PROD_SUMMARIES_DIR/$filename" ]; then
+                        cp "$dev_file" "$PROD_SUMMARIES_DIR/"
+                        COPIED_COUNT=$((COPIED_COUNT + 1))
+                        print_info "新增: $filename"
+                    fi
+                fi
+            done
+            
+            if [ "$COPIED_COUNT" -gt 0 ]; then
+                print_success "增量复制完成，新增 $COPIED_COUNT 篇文章"
+            else
+                print_info "没有新文章需要复制"
+            fi
+        fi
+    else
+        print_info "开发环境没有文章"
+    fi
+    
+    # 最后统计总文章数
+    TOTAL_SUMMARIES=$(find "$DEPLOY_DIR/reinvent_insight-0.1.0/downloads/summaries" -name "*.md" -type f 2>/dev/null | wc -l)
+    print_success "部署环境总共有 $TOTAL_SUMMARIES 篇文章"
 }
 
 # 创建或更新 systemd 服务
