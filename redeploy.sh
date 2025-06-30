@@ -469,29 +469,41 @@ restore_data() {
         print_info "开发环境: $DEV_FILE_COUNT 篇文章"
         print_info "生产环境现有: $EXISTING_PROD_COUNT 篇文章（备份恢复后）"
         
-        if [ "$DEV_FILE_COUNT" -le "$EXISTING_PROD_COUNT" ]; then
-            print_info "开发环境文章数量不多于生产环境，跳过复制"
-        else
-            print_info "开发环境文章更多，执行增量复制..."
-            
-            # 增量复制：只复制生产环境没有的文件
-            COPIED_COUNT=0
-            for dev_file in "$DEV_SUMMARIES_DIR"/*.md; do
-                if [ -f "$dev_file" ]; then
-                    filename=$(basename "$dev_file")
-                    if [ ! -f "$PROD_SUMMARIES_DIR/$filename" ]; then
-                        cp "$dev_file" "$PROD_SUMMARIES_DIR/"
-                        COPIED_COUNT=$((COPIED_COUNT + 1))
-                        print_info "新增: $filename"
-                    fi
+        print_info "执行增量同步检查..."
+        
+        # 增量复制：检查开发环境中是否有生产环境没有的文章
+        COPIED_COUNT=0
+        NEW_FILES=()
+        
+        for dev_file in "$DEV_SUMMARIES_DIR"/*.md; do
+            if [ -f "$dev_file" ]; then
+                filename=$(basename "$dev_file")
+                if [ ! -f "$PROD_SUMMARIES_DIR/$filename" ]; then
+                    cp "$dev_file" "$PROD_SUMMARIES_DIR/"
+                    COPIED_COUNT=$((COPIED_COUNT + 1))
+                    NEW_FILES+=("$filename")
+                    print_info "新增: $filename"
                 fi
-            done
-            
-            if [ "$COPIED_COUNT" -gt 0 ]; then
-                print_success "增量复制完成，新增 $COPIED_COUNT 篇文章"
-            else
-                print_info "没有新文章需要复制"
             fi
+        done
+        
+        if [ "$COPIED_COUNT" -gt 0 ]; then
+            print_success "增量同步完成，新增 $COPIED_COUNT 篇文章"
+            # 显示部分新增文章名称（避免输出过长）
+            if [ "$COPIED_COUNT" -le 5 ]; then
+                for file in "${NEW_FILES[@]}"; do
+                    print_info "  - $file"
+                done
+            else
+                for i in {0..4}; do
+                    if [ -n "${NEW_FILES[$i]}" ]; then
+                        print_info "  - ${NEW_FILES[$i]}"
+                    fi
+                done
+                print_info "  ... 以及其他 $((COPIED_COUNT - 5)) 篇文章"
+            fi
+        else
+            print_info "没有新文章需要同步，开发环境和生产环境文章已保持一致"
         fi
     else
         print_info "开发环境没有文章"

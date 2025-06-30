@@ -520,6 +520,20 @@ const app = createApp({
         
         const data = res.data;
         
+        // 检查是否需要重定向到新的统一hash
+        if (data.redirect && data.new_hash) {
+          showToast(data.message || '文档链接已更新', 'info');
+          
+          // 递归调用新的hash，但不推送历史状态（避免重复）
+          await loadSummaryByHash(data.new_hash, false);
+          
+          // 更新URL到新的hash
+          if (pushState) {
+            history.replaceState(null, '', `/d/${data.new_hash}`);
+          }
+          return;
+        }
+        
         viewSummary(
           data.title_cn || data.title,
           data.title_cn,
@@ -527,7 +541,7 @@ const app = createApp({
           data.content,
           data.filename,
           data.video_url || '',
-          docHash,
+          data.redirect ? data.new_hash : docHash,  // 使用重定向后的新hash
           data.versions || []
         );
         

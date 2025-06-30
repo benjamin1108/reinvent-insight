@@ -34,24 +34,80 @@ app = FastAPI(title="Reinvent Insight API", description="YouTube 字幕深度摘
 session_tokens: Set[str] = set()
 
 # --- 短链接映射 ---
-# 存储 hash -> filename 的映射
+# 存储 hash -> 默认文件名 的映射（通常是最新版本）
 hash_to_filename: Dict[str, str] = {}
+# 存储 hash -> 所有版本文件列表 的映射
+hash_to_versions: Dict[str, List[str]] = {}
 filename_to_hash: Dict[str, str] = {}
 
-def generate_doc_hash(filename: str) -> str:
-    """为文档生成一个短的唯一hash"""
-    # 使用MD5生成hash，取前8位
-    return hashlib.md5(filename.encode()).hexdigest()[:8]
+def parse_metadata_from_md(md_content: str) -> dict:
+    """从 Markdown 文件内容中解析 YAML front matter。"""
+    try:
+        # 使用正则表达式匹配 front matter
+        match = re.match(r'^---\s*\n(.*?)\n---\s*\n', md_content, re.DOTALL)
+        if match:
+            front_matter_str = match.group(1)
+            metadata = yaml.safe_load(front_matter_str)
+            if isinstance(metadata, dict):
+                return metadata
+    except (yaml.YAMLError, IndexError) as e:
+        logger.warning(f"解析 YAML front matter 失败: {e}")
+    return {}
+
+def generate_doc_hash(video_url: str) -> Optional[str]:
+    """
+    为文档生成一个短的、基于视频URL的唯一hash。
+    如果 video_url 不存在，则返回 None。
+    """
+    if not video_url:
+        return None
+    return hashlib.md5(video_url.encode()).hexdigest()[:8]
 
 def init_hash_mappings():
-    """初始化已有文档的hash映射"""
-    if config.OUTPUT_DIR.exists():
-        for md_file in config.OUTPUT_DIR.glob("*.md"):
-            filename = md_file.name
-            doc_hash = generate_doc_hash(filename)
-            hash_to_filename[doc_hash] = filename
-            filename_to_hash[filename] = doc_hash
+    """初始化所有文档的基于 video_url 的统一hash映射。"""
+    hash_to_filename.clear()
+    hash_to_versions.clear()
+    filename_to_hash.clear()
+
+    if not config.OUTPUT_DIR.exists():
+        return
+
+    video_url_to_files = {}
+    
+    # 第一遍：基于video_url对所有文件进行分组
+    for md_file in config.OUTPUT_DIR.glob("*.md"):
+        try:
+            content = md_file.read_text(encoding="utf-8")
+            metadata = parse_metadata_from_md(content)
+            video_url = metadata.get("video_url")
             
+            if video_url:
+                if video_url not in video_url_to_files:
+                    video_url_to_files[video_url] = []
+                video_url_to_files[video_url].append({
+                    'filename': md_file.name,
+                    'version': metadata.get('version', 0)
+                })
+        except Exception as e:
+            logger.error(f"解析文件 {md_file.name} 时出错，已跳过: {e}")
+    
+    # 第二遍：为每个分组生成和注册唯一的统一hash
+    for video_url, files in video_url_to_files.items():
+        doc_hash = generate_doc_hash(video_url)
+        if not doc_hash:
+            continue
+
+        files.sort(key=lambda x: x['version'], reverse=True)
+        latest_file = files[0]['filename']
+        
+        # 注册核心映射
+        hash_to_filename[doc_hash] = latest_file
+        hash_to_versions[doc_hash] = [f['filename'] for f in files]
+        for file_info in files:
+            filename_to_hash[file_info['filename']] = doc_hash
+
+    logger.info(f"--- [重构] 统一Hash映射初始化完成，共处理 {len(hash_to_filename)} 个独立视频。 ---")
+
 # 启动时初始化映射
 init_hash_mappings()
 
@@ -146,20 +202,6 @@ def clean_content_metadata(content: str, title: str = '') -> str:
         cleaned_content = re.sub(markdown_title_pattern, '', cleaned_content, count=1, flags=re.MULTILINE | re.IGNORECASE).lstrip()
     
     return cleaned_content
-
-def parse_metadata_from_md(md_content: str) -> dict:
-    """从 Markdown 文件内容中解析 YAML front matter。"""
-    try:
-        # 使用正则表达式匹配 front matter
-        match = re.match(r'^---\s*\n(.*?)\n---\s*\n', md_content, re.DOTALL)
-        if match:
-            front_matter_str = match.group(1)
-            metadata = yaml.safe_load(front_matter_str)
-            if isinstance(metadata, dict):
-                return metadata
-    except (yaml.YAMLError, IndexError) as e:
-        logger.warning(f"解析 YAML front matter 失败: {e}")
-    return {}
 
 def count_chinese_words(text: str) -> int:
     """
@@ -290,7 +332,7 @@ async def list_public_summaries():
     """获取所有已生成的摘要文件列表供公开展示，无需认证。"""
     try:
         summaries = []
-        video_url_map = {}  # 用于按video_url分组
+        video_url_map = {}
         
         if config.OUTPUT_DIR.exists():
             for md_file in config.OUTPUT_DIR.glob("*.md"):
@@ -298,13 +340,9 @@ async def list_public_summaries():
                     content = md_file.read_text(encoding="utf-8")
                     metadata = parse_metadata_from_md(content)
                     
-                    # 处理新旧两种格式
-                    # 新格式：有title_cn和title_en
-                    # 旧格式：只有title
                     title_cn = metadata.get("title_cn")
-                    title_en = metadata.get("title_en", metadata.get("title", ""))  # 兼容旧格式
+                    title_en = metadata.get("title_en", metadata.get("title", ""))
                     
-                    # 如果metadata中没有title_cn，从H1获取
                     if not title_cn:
                          for line in content.splitlines():
                             stripped = line.strip()
@@ -312,15 +350,12 @@ async def list_public_summaries():
                                 title_cn = stripped[2:].strip()
                                 break
                     
-                    # 如果还是没有，使用英文标题或文件名
                     if not title_cn:
                         title_cn = title_en if title_en else md_file.stem
                     
-                    # 确保hash映射是最新的
-                    if md_file.name not in filename_to_hash:
-                        doc_hash = generate_doc_hash(md_file.name)
-                        hash_to_filename[doc_hash] = md_file.name
-                        filename_to_hash[md_file.name] = doc_hash
+                    doc_hash = filename_to_hash.get(md_file.name)
+                    if not doc_hash:
+                        continue
                     
                     pure_text = extract_text_from_markdown(content)
                     word_count = count_chinese_words(pure_text)
@@ -329,44 +364,34 @@ async def list_public_summaries():
                     summary_data = {
                         "filename": md_file.name,
                         "title_cn": title_cn,
-                        "title_en": title_en,  # 添加英文标题
+                        "title_en": title_en,
                         "size": stat.st_size,
                         "word_count": word_count,
                         "created_at": stat.st_ctime,
                         "modified_at": stat.st_mtime,
-                        # 从 metadata 中添加新字段
                         "upload_date": metadata.get("upload_date", "1970-01-01"),
                         "video_url": metadata.get("video_url", ""),
                         "is_reinvent": metadata.get("is_reinvent", False),
                         "course_code": metadata.get("course_code"),
                         "level": metadata.get("level"),
-                        "hash": filename_to_hash.get(md_file.name, generate_doc_hash(md_file.name)),  # 添加hash
-                        "version": metadata.get("version", 0)  # 添加版本号
+                        "hash": doc_hash,
+                        "version": metadata.get("version", 0)
                     }
                     
-                    # 按video_url分组，只保留最新版本
                     video_url = metadata.get("video_url", "")
                     if video_url:
-                        # 有video_url的文件，按URL分组
                         if video_url not in video_url_map:
                             video_url_map[video_url] = summary_data
                         else:
-                            # 比较版本号，保留较新的版本
                             existing_version = video_url_map[video_url].get("version", 0)
                             new_version = summary_data.get("version", 0)
                             if new_version > existing_version:
                                 video_url_map[video_url] = summary_data
-                    else:
-                        # 没有video_url的文件直接加入列表
-                        summaries.append(summary_data)
                         
                 except Exception as e:
                     logger.warning(f"处理文件 {md_file.name} 时出错: {e}")
         
-        # 将分组后的最新版本加入到最终列表
         summaries.extend(video_url_map.values())
-
-        # 按上传日期排序，最新的在最前
         summaries.sort(key=lambda x: x.get("upload_date", "1970-01-01"), reverse=True)
         return {"summaries": summaries}
     except Exception as e:
@@ -436,13 +461,11 @@ async def get_public_summary(filename: str):
 
 @app.get("/api/public/doc/{doc_hash}")
 async def get_public_summary_by_hash(doc_hash: str):
-    """通过hash获取指定摘要文件的公开内容，无需认证。"""
-    # 查找对应的文件名
+    """通过统一hash获取指定摘要文件的公开内容。"""
     filename = hash_to_filename.get(doc_hash)
     if not filename:
         raise HTTPException(status_code=404, detail="文档未找到")
     
-    # 复用现有的获取文档逻辑
     return await get_public_summary(filename)
 
 @app.get("/api/public/doc/{doc_hash}/{version}")

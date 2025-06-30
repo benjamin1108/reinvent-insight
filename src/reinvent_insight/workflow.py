@@ -374,9 +374,26 @@ class DeepSummaryWorkflow:
             # 更新hash映射（如果API模块已导入）并获取hash
             doc_hash = None
             try:
-                from .api import generate_doc_hash, hash_to_filename, filename_to_hash
-                doc_hash = generate_doc_hash(final_filename)
-                hash_to_filename[doc_hash] = final_filename
+                from .api import generate_doc_hash, hash_to_filename, filename_to_hash, hash_to_versions
+                # 使用video_url生成hash，确保同一视频的所有版本共享hash
+                doc_hash = generate_doc_hash(final_filename, metadata.video_url)
+                
+                # 检查是否已存在该hash的映射
+                if doc_hash in hash_to_filename:
+                    # 已存在，添加到版本列表
+                    if doc_hash not in hash_to_versions:
+                        hash_to_versions[doc_hash] = [hash_to_filename[doc_hash]]
+                    if final_filename not in hash_to_versions[doc_hash]:
+                        hash_to_versions[doc_hash].append(final_filename)
+                    
+                    # 如果新文件版本更高，更新默认文件
+                    if new_version > 0:  # 只有明确的版本文件才考虑替换默认
+                        hash_to_filename[doc_hash] = final_filename
+                else:
+                    # 首次创建
+                    hash_to_filename[doc_hash] = final_filename
+                    hash_to_versions[doc_hash] = [final_filename]
+                
                 filename_to_hash[final_filename] = doc_hash
                 logger.info(f"文档 {final_filename} 的hash已生成: {doc_hash}")
             except ImportError:
