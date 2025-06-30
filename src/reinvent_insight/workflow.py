@@ -374,9 +374,10 @@ class DeepSummaryWorkflow:
             # 更新hash映射（如果API模块已导入）并获取hash
             doc_hash = None
             try:
-                from .api import generate_doc_hash, hash_to_filename, filename_to_hash, hash_to_versions
+                from .api import hash_to_filename, filename_to_hash, hash_to_versions
+                from .utils import generate_doc_hash
                 # 使用video_url生成hash，确保同一视频的所有版本共享hash
-                doc_hash = generate_doc_hash(final_filename, metadata.video_url)
+                doc_hash = generate_doc_hash(metadata.video_url)
                 
                 # 检查是否已存在该hash的映射
                 if doc_hash in hash_to_filename:

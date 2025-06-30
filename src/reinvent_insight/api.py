@@ -24,6 +24,7 @@ from .logger import setup_logger
 from . import config
 from .task_manager import manager # 导入共享的任务管理器
 from .worker import summary_task_worker_async # 导入新的异步工作流
+from .utils import generate_doc_hash  # 从 utils 导入
 
 setup_logger(config.LOG_LEVEL)
 logger = logging.getLogger(__name__)
@@ -53,15 +54,6 @@ def parse_metadata_from_md(md_content: str) -> dict:
     except (yaml.YAMLError, IndexError) as e:
         logger.warning(f"解析 YAML front matter 失败: {e}")
     return {}
-
-def generate_doc_hash(video_url: str) -> Optional[str]:
-    """
-    为文档生成一个短的、基于视频URL的唯一hash。
-    如果 video_url 不存在，则返回 None。
-    """
-    if not video_url:
-        return None
-    return hashlib.md5(video_url.encode()).hexdigest()[:8]
 
 def init_hash_mappings():
     """初始化所有文档的基于 video_url 的统一hash映射。"""
