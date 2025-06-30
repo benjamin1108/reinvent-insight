@@ -63,7 +63,7 @@
           <div v-if="hasMultipleVersions" class="reading-view__version-selector">
             <version-selector
               :versions="versions"
-              :current-version="currentVersion"
+              :current-version="Number(currentVersion)"
               @change="handleVersionChange">
             </version-selector>
           </div>

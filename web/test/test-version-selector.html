@@ -363,10 +363,10 @@
         </div>
         
         <div class="version-list">
-          <div v-for="(version, index) in customVersions" :key="version" class="version-item">
+          <div v-for="(version, index) in customVersions" :key="version.version" class="version-item">
             <div class="version-info">
-              <div class="version-name">{{ version }}</div>
-              <div class="version-date">{{ versionDates[version] || '未知日期' }}</div>
+              <div class="version-name">{{ version.title }} (v{{ version.version }})</div>
+              <div class="version-date">{{ versionDates[version.version] || '未知日期' }}</div>
             </div>
             <span v-if="index === 0" class="version-badge badge-latest">最新</span>
             <button v-else @click="removeVersion(index)" class="test-button secondary" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;">
@@ -546,18 +546,28 @@
     
     const app = createApp({
       setup() {
-        // 默认版本列表
-        const defaultVersions = ['v2.1.0', 'v2.0.0', 'v1.9.0', 'v1.8.0', 'v1.7.0'];
-        const currentVersion1 = ref('v2.1.0');
+        // 默认版本列表 - 统一为数字版本号
+        const defaultVersions = [
+          { version: 5, title: '版本 5', filename: 'doc_v5.md' },
+          { version: 4, title: '版本 4', filename: 'doc_v4.md' },
+          { version: 3, title: '版本 3', filename: 'doc_v3.md' },
+          { version: 2, title: '版本 2', filename: 'doc_v2.md' },
+          { version: 1, title: '版本 1', filename: 'doc_v1.md' }
+        ];
+        const currentVersion1 = ref(5);
         
         // 自定义版本列表
-        const customVersions = ref(['v2.1.0', 'v2.0.0', 'v1.9.0']);
+        const customVersions = ref([
+          { version: 5, title: '版本 5' },
+          { version: 4, title: '版本 4' },
+          { version: 3, title: '版本 3' }
+        ]);
         const versionDates = ref({
-          'v2.1.0': '2024-01-15',
-          'v2.0.0': '2023-12-01',
-          'v1.9.0': '2023-10-15'
+          5: '2024-01-15',
+          4: '2023-12-01',
+          3: '2023-10-15'
         });
-        const currentVersion2 = ref('v2.1.0');
+        const currentVersion2 = ref(5);
         const newVersionName = ref('');
         const newVersionDate = ref('');
         
@@ -565,17 +575,31 @@
         const isDisabled = ref(false);
         const emptyList = ref(false);
         const stateTestVersions = computed(() => 
-          emptyList.value ? [] : ['v2.1.0', 'v2.0.0', 'v1.9.0']
+          emptyList.value ? [] : [
+            { version: 5, title: '版本 5' },
+            { version: 4, title: '版本 4' },
+            { version: 3, title: '版本 3' }
+          ]
         );
-        const currentVersion3 = ref('v2.1.0');
+        const currentVersion3 = ref(5);
         
         // 性能测试
-        const manyVersions = ref(['v2.1.0', 'v2.0.0', 'v1.9.0']);
-        const currentVersion4 = ref('v2.1.0');
+        const manyVersions = ref([
+          { version: 5, title: '版本 5' },
+          { version: 4, title: '版本 4' },
+          { version: 3, title: '版本 3' }
+        ]);
+        const currentVersion4 = ref(5);
         
         // 文章容器测试
-        const articleVersions = ref(['v2.1.0', 'v2.0.0', 'v1.9.0', 'v1.8.0', 'v1.7.0']);
-        const currentArticleVersion = ref('v2.1.0');
+        const articleVersions = ref([
+          { version: 5, title: '版本 5' },
+          { version: 4, title: '版本 4' },
+          { version: 3, title: '版本 3' },
+          { version: 2, title: '版本 2' },
+          { version: 1, title: '版本 1' }
+        ]);
+        const currentArticleVersion = ref(5);
         
         // 事件日志
         const eventLog = ref([]);
@@ -621,18 +645,28 @@
             return;
           }
           
-          if (customVersions.value.includes(newVersionName.value)) {
-            alert('该版本已存在');
+          // 生成新的版本号（最大版本号+1）
+          const maxVersion = Math.max(...customVersions.value.map(v => v.version), 0);
+          const newVersionNumber = maxVersion + 1;
+          
+          if (customVersions.value.some(v => v.title === newVersionName.value)) {
+            alert('该版本名称已存在');
             return;
           }
           
-          customVersions.value.unshift(newVersionName.value);
+          const newVersion = {
+            version: newVersionNumber,
+            title: newVersionName.value,
+            filename: `doc_v${newVersionNumber}.md`
+          };
+          
+          customVersions.value.unshift(newVersion);
           if (newVersionDate.value) {
-            versionDates.value[newVersionName.value] = newVersionDate.value;
+            versionDates.value[newVersionNumber] = newVersionDate.value;
           }
           
-          addLog(`添加新版本：${newVersionName.value}`);
-          currentVersion2.value = newVersionName.value;
+          addLog(`添加新版本：${newVersionName.value} (版本号: ${newVersionNumber})`);
+          currentVersion2.value = newVersionNumber;
           newVersionName.value = '';
           newVersionDate.value = '';
         };
@@ -640,13 +674,13 @@
         const removeVersion = (index) => {
           const removed = customVersions.value[index];
           customVersions.value.splice(index, 1);
-          delete versionDates.value[removed];
+          delete versionDates.value[removed.version];
           
-          if (currentVersion2.value === removed) {
-            currentVersion2.value = customVersions.value[0] || '';
+          if (currentVersion2.value === removed.version) {
+            currentVersion2.value = customVersions.value.length > 0 ? customVersions.value[0].version : 1;
           }
           
-          addLog(`删除版本：${removed}`);
+          addLog(`删除版本：${removed.title} (版本号: ${removed.version})`);
         };
         
         // 状态控制
@@ -664,16 +698,24 @@
         const generateManyVersions = (count) => {
           const versions = [];
           for (let i = count; i > 0; i--) {
-            versions.push(`v${Math.floor(i / 100)}.${Math.floor((i % 100) / 10)}.${i % 10}`);
+            versions.push({
+              version: i,
+              title: `版本 ${i}`,
+              filename: `doc_v${i}.md`
+            });
           }
           manyVersions.value = versions;
-          currentVersion4.value = versions[0];
+          currentVersion4.value = versions[0].version;
           addLog(`生成了 ${count} 个版本`);
         };
         
         const resetManyVersions = () => {
-          manyVersions.value = ['v2.1.0', 'v2.0.0', 'v1.9.0'];
-          currentVersion4.value = 'v2.1.0';
+          manyVersions.value = [
+            { version: 5, title: '版本 5' },
+            { version: 4, title: '版本 4' },
+            { version: 3, title: '版本 3' }
+          ];
+          currentVersion4.value = 5;
           addLog('性能测试版本列表已重置');
         };
         

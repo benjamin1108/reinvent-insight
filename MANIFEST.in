@@ -1,1 +1,2 @@
-graft web 
+graft web
+prune web/test 

@@ -53,7 +53,10 @@ export default {
     // 当前版本
     currentVersion: {
       type: Number,
-      default: 1
+      default: 1,
+      validator: (value) => {
+        return typeof value === 'number' && !isNaN(value) && isFinite(value);
+      }
     },
     
     // 初始TOC显示状态

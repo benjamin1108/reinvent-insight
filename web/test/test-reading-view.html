@@ -366,7 +366,7 @@
         const contentType = ref('rich');
         const tocType = ref('full');
         const versionType = ref('multiple');
-        const currentVersion = ref('2');
+        const currentVersion = ref(2); // 统一为数字类型
         const showToc = ref(true);
         const tocWidth = ref(320);
         const showDebugInfo = ref(true);
@@ -743,11 +743,11 @@ async function getCachedData(key) {
         
         // 版本数据
         const versionData = {
-          single: [{ version: '1', title: '版本 1' }],
+          single: [{ version: 1, title: '版本 1' }],
           multiple: [
-            { version: '1', title: '版本 1' },
-            { version: '2', title: '版本 2' },
-            { version: '3', title: '版本 3' }
+            { version: 1, title: '版本 1' },
+            { version: 2, title: '版本 2' },
+            { version: 3, title: '版本 3' }
           ]
         };
         
@@ -833,7 +833,7 @@ async function getCachedData(key) {
         watch(versionType, () => {
           const newVersions = versionData[versionType.value] || [];
           if (newVersions.length > 0 && !newVersions.find(v => v.version === currentVersion.value)) {
-            currentVersion.value = newVersions[0].version;
+            currentVersion.value = Number(newVersions[0].version);
           }
         });
         

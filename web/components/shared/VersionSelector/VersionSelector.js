@@ -9,10 +9,10 @@ export default {
       type: Array,
       required: true,
       validator: (value) => {
-        // 支持字符串数组或对象数组
+        // 只支持包含version字段的对象数组，version必须是数字
         return value.every(v => 
-          typeof v === 'string' || 
-          (typeof v === 'object' && v !== null && 'version' in v)
+          typeof v === 'object' && v !== null && 'version' in v && 
+          (typeof v.version === 'number' || !isNaN(Number(v.version)))
         );
       }
     },
@@ -55,13 +55,18 @@ export default {
     // 规范化版本列表，确保统一格式
     const normalizedVersions = computed(() => {
       return props.versions.map(v => {
-        let versionObj = (typeof v === 'string') ? { version: v } : { ...v };
-        
-        // 确保版本是数字
-        const numVersion = Number(versionObj.version);
-        versionObj.version = isNaN(numVersion) ? 0 : numVersion; // 如果转换失败，默认为0
-
-        return versionObj;
+        // 统一处理为数字类型，不再支持字符串格式
+        if (typeof v === 'object' && v !== null && 'version' in v) {
+          const numVersion = Number(v.version);
+          if (isNaN(numVersion) || !isFinite(numVersion)) {
+            console.error('版本号必须是有效数字:', v.version);
+            return { ...v, version: 0 };
+          }
+          return { ...v, version: numVersion };
+        } else {
+          console.error('版本数据格式错误，必须是包含version字段的对象:', v);
+          return { version: 0, title: '无效版本' };
+        }
       });
     });
     

@@ -62,7 +62,7 @@ const app = createApp({
     
     // 版本管理状态
     const documentVersions = ref([]);
-    const currentVersion = ref('1');
+    const currentVersion = ref(1); // 统一为数字类型
     const documentLoading = ref(false);
 
     // 视图控制
@@ -602,16 +602,30 @@ const app = createApp({
         }
       }
       
-      // 设置当前版本：优先使用保存的版本，确保版本在可用列表中
-      const defaultVersion = versions.length > 0 ? versions[0].version : 1;
-      if (savedVersion !== null && versions.some(v => v.version === savedVersion)) {
-        currentVersion.value = savedVersion;
-      } else {
-        currentVersion.value = defaultVersion;
+      // 统一版本号为数字类型，确保版本列表中所有版本都是数字
+      const normalizedVersions = versions.map(v => ({
+        ...v,
+        version: Number(v.version)
+      }));
+      documentVersions.value = normalizedVersions;
+      
+      // 确定要显示的版本：优先localStorage保存的版本，其次是最新版本（版本号最大）
+      const defaultVersion = normalizedVersions.length > 0 ? 
+        Math.max(...normalizedVersions.map(v => v.version)) : 1; // 使用最新版本作为默认
+      
+      let targetVersion = defaultVersion;
+      if (savedVersion !== null && normalizedVersions.some(v => v.version === savedVersion)) {
+        targetVersion = savedVersion;
       }
       
-      const updateContent = () => {
-        if (content) {
+      // 设置版本选择器状态
+      currentVersion.value = targetVersion;
+      
+      // 根据目标版本决定是否需要加载不同的内容
+      const needVersionSwitch = targetVersion !== defaultVersion;
+      
+      const updateContent = (contentToRender = content) => {
+        if (contentToRender) {
           // 确保marked.js使用正确的配置
           if (typeof marked !== 'undefined' && marked.setOptions) {
             marked.setOptions({
@@ -624,25 +638,37 @@ const app = createApp({
             });
           }
           
-          const renderedHtml = marked.parse(content);
+          const renderedHtml = marked.parse(contentToRender);
           readingContent.value = renderedHtml;
         }
       };
       
-      if (typeof marked !== 'undefined') {
-        updateContent();
-      } else {
-        ensureMarkedReady(updateContent);
-      }
-      
-      // 如果从localStorage恢复的版本与默认版本不同，立即切换到保存的版本
-      if (savedVersion !== null && 
-          versions.some(v => v.version === savedVersion) && 
-          savedVersion !== defaultVersion) {
-        // 异步切换到保存的版本，不阻塞当前渲染
-        nextTick(() => {
-          switchVersion(savedVersion);
+      if (needVersionSwitch) {
+        // 需要切换版本：先显示加载状态，然后加载目标版本内容
+        documentLoading.value = true;
+        nextTick(async () => {
+          try {
+            await switchVersion(targetVersion);
+          } catch (error) {
+            console.error('切换到保存的版本失败，使用默认内容:', error);
+            // 切换失败，使用当前内容并重置版本选择器
+            currentVersion.value = defaultVersion;
+            if (typeof marked !== 'undefined') {
+              updateContent();
+            } else {
+              ensureMarkedReady(() => updateContent());
+            }
+          } finally {
+            documentLoading.value = false;
+          }
         });
+      } else {
+        // 不需要切换版本：直接显示当前内容
+        if (typeof marked !== 'undefined') {
+          updateContent();
+        } else {
+          ensureMarkedReady(() => updateContent());
+        }
       }
     };
 
@@ -655,40 +681,64 @@ const app = createApp({
       if (!isValidVersion) {
         console.error('目标版本无效:', versionNumber, '可用版本:', documentVersions.value.map(v => v.version));
         showToast('无效的版本号', 'danger');
-        return;
+        throw new Error(`无效的版本号: ${versionNumber}`);
       }
       
+      // 保存当前版本，用于错误回退
+      const previousVersion = currentVersion.value;
+      
+      // 先更新版本选择器状态
       currentVersion.value = versionNumber;
       
       if (readingHash.value) {
-        // 将用户选择的版本保存到 localStorage
-        localStorage.setItem(`document_version_${readingHash.value}`, versionNumber);
-        
         try {
+          // 发送API请求获取指定版本的内容
           const res = await axios.get(`/api/public/doc/${readingHash.value}/${versionNumber}`);
           const data = res.data;
+          
+          // 确保marked.js配置正确
+          if (typeof marked !== 'undefined' && marked.setOptions) {
+            marked.setOptions({
+              breaks: true,
+              gfm: true,
+              pedantic: false,
+              sanitize: false,
+              smartLists: true,
+              smartypants: false
+            });
+          }
           
           // 更新阅读视图的内容和标题
           readingContent.value = marked.parse(data.content);
           documentTitle.value = data.title_cn || data.title;
           documentTitleEn.value = data.title_en || '';
           
-          // 注意：我们不需要更新 versions 列表，因为它在文章加载时已固定
+          // 将用户选择的版本保存到 localStorage（成功后才保存）
+          localStorage.setItem(`document_version_${readingHash.value}`, versionNumber);
+          
+          console.log(`版本切换成功: ${previousVersion} → ${versionNumber}`);
           
         } catch (error) {
           console.error('切换版本失败:', error);
-          showToast('切换版本失败', 'danger');
           
-          // 如果版本切换失败，可能是localStorage中的版本数据有误，清理并回退到默认版本
+          // 回退版本选择器状态
+          currentVersion.value = previousVersion;
+          
+          // 清理可能损坏的localStorage数据
           if (readingHash.value) {
             localStorage.removeItem(`document_version_${readingHash.value}`);
-            const defaultVersion = documentVersions.value.length > 0 ? documentVersions.value[0].version : 1;
-            if (versionNumber !== defaultVersion) {
-              console.warn('版本切换失败，回退到默认版本:', defaultVersion);
-              currentVersion.value = defaultVersion;
-            }
           }
+          
+          // 显示错误提示
+          showToast(`切换到版本 ${versionNumber} 失败`, 'danger');
+          
+          // 重新抛出错误，让调用方处理
+          throw error;
         }
+      } else {
+        console.warn('没有文档hash，无法切换版本');
+        currentVersion.value = previousVersion;
+        throw new Error('没有文档hash，无法切换版本');
       }
     };
 
