@@ -518,7 +518,7 @@
 .app-header h5,
 .app-header h6 {
   margin: 0;
-  font-weight: inherit;
+  /* 移除 font-weight: inherit，让组件自己控制字重 */
 }
 
 .app-header p {
