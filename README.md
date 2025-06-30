@@ -12,7 +12,7 @@
 
 将长篇技术演讲转化为结构化的深度笔记，让知识获取效率提升 10 倍
 
-[功能特性](#-功能特性) • [快速开始](#-快速开始) • [架构设计](#-架构设计) • [API文档](#-api-文档) • [部署指南](#-部署指南) • [更多文档](./docs/)
+[功能特性](#-功能特性) • [快速开始](#-快速开始) • [架构设计](#-架构设计) • [API文档](#-api-文档) • [部署指南](#-部署指南) • [开发指南](#-开发指南)
 
 </div>
 
@@ -60,6 +60,12 @@
 - **实时进度推送**：WebSocket 双向通信，毫秒级状态更新
 - **错误恢复机制**：智能重试、断点续传、优雅降级
 - **可扩展设计**：模块化架构，易于添加新的 AI 模型和功能
+
+### 💎 前端体验与架构
+- **模块化组件系统**: 采用自定义的、免构建的Vue 3组件化方案，实现了UI的快速开发与维护。
+- **丰富的组件库**: 包含`TechButton`、`Toast`、`ProgressBar`等一系列可复用、可定制主题的共享组件。
+- **动态异步加载**: 组件的HTML, CSS, JS被异步加载，显著提升了首屏性能。
+- **响应式设计**: 完美适配桌面、平板和移动设备，确保在所有终端上都有一致的优质体验。
 
 ## 🏗 系统架构
 
@@ -109,6 +115,44 @@ graph TB
     C --> E
     E --> H
     F --> H
+```
+
+### 前端架构
+项目前端采用了一种创新的 **"免构建" Vue 3 架构**，旨在简化开发流程并最大化性能。
+
+- **核心加载器**: `component-loader.js` 是架构的核心，它负责动态、异步地获取和渲染组件。当需要一个组件时，它会并行请求该组件的 `.html`, `.css`, 和 `.js` 文件。
+- **组件化**: 所有UI元素都被拆分为独立的组件（位于 `web/components/`），每个组件都封装了自己的视图(HTML)、样式(CSS)和逻辑(JS)。这种方式使得组件高度内聚和可复用。
+- **全局通信**: 使用 `event-bus.js` 实现了一个轻量级的全局事件总线，用于处理跨组件之间的通信，解耦了组件间的直接依赖。
+- **原生技术栈**: 该架构不依赖于Node.js、Webpack或Vite等重型工具链，直接使用浏览器原生支持的ES模块、Fetch API等技术，回归了Web开发的本质。
+
+```mermaid
+graph TD
+    subgraph "浏览器"
+        A[index.html] --> B(app.js)
+        B --> C{init-modules.js}
+        C --> D(ComponentLoader)
+        C --> E(EventBus)
+    end
+
+    subgraph "组件加载流程"
+        D -- "请求 'AppHeader'" --> F{加载组件资源}
+        F --> G[AppHeader.html]
+        F --> H[AppHeader.css]
+        F --> I[AppHeader.js]
+    end
+    
+    subgraph "动态注入"
+       G -- "HTML" --> J[DOM]
+       H -- "CSS" --> K["<style> tag"]
+       I -- "JS (ES Module)" --> L[Vue Component]
+    end
+
+    E -.-> L
+    
+    subgraph "全局暴露"
+       D --> M[window.ComponentLoader]
+       E --> N[window.eventBus]
+    end
 ```
 
 ### 核心工作流
@@ -183,7 +227,6 @@ sequenceDiagram
 | Vue.js | 3.0+ | 前端框架 |
 | Axios | latest | HTTP 客户端 |
 | WebSocket | - | 实时通信 |
-| Tailwind CSS | 3.0+ | 样式框架 |
 | marked.js | latest | Markdown 渲染 |
 | highlight.js | 11.9.0 | 代码高亮 |
 
@@ -223,8 +266,18 @@ uv pip install -e .             # 安装项目和所有依赖
 ### 3. 配置设置
 
 ```bash
-# 1. 复制配置模板
+# 1. 创建配置文件
+# 如果项目中有 .env.example：
 cp .env.example .env
+
+# 如果没有 .env.example，手动创建：
+cat > .env << EOF
+GEMINI_API_KEY=your-gemini-api-key-here
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=your-secure-password
+LOG_LEVEL=INFO
+PREFERRED_MODEL=Gemini
+EOF
 
 # 2. 编辑配置文件
 nano .env                       # 或使用你喜欢的编辑器
@@ -250,12 +303,13 @@ PREFERRED_MODEL="Gemini"                     # 默认AI模型
 
 ```bash
 # 方式1：CLI 交互模式
-youtube-summarizer
+reinvent-insight
 
-# 方式2：Web 界面（推荐）
-python -m src.reinvent_insight.main web
+# 方式2：Web 界面（推荐） - 开发环境
+./run-dev.sh  # 默认运行在 http://localhost:8002
 
-# 然后访问：http://localhost:8001
+# 或者手动启动（生产环境）
+python -m src.reinvent_insight.main web  # 默认运行在 http://localhost:8001
 ```
 
 ## 📘 使用指南
@@ -264,7 +318,7 @@ python -m src.reinvent_insight.main web
 
 #### 1. 交互式模式
 ```bash
-youtube-summarizer
+reinvent-insight
 ```
 - 通过友好的菜单选择操作
 - 支持中文提示和彩色输出
@@ -272,21 +326,23 @@ youtube-summarizer
 #### 2. 命令行参数模式
 ```bash
 # 分析单个视频
-youtube-summarizer --url "https://www.youtube.com/watch?v=xxxxx"
+reinvent-insight --url "https://www.youtube.com/watch?v=xxxxx"
 
 # 批量处理
-youtube-summarizer --file video_list.txt --concurrency 3
+reinvent-insight --file video_list.txt --concurrency 3
 
 # 启动 Web 服务
-youtube-summarizer web --host 0.0.0.0 --port 8001 --reload
+reinvent-insight web --host 0.0.0.0 --port 8001 --reload
 
 # 重新组装报告
-youtube-summarizer reassemble <task_id>
+reinvent-insight reassemble <task_id>
 ```
 
 ### Web 界面使用
 
-1. **访问主页**: http://localhost:8001
+1. **访问主页**: 
+   - 开发环境: http://localhost:8002 (使用 `./run-dev.sh`)
+   - 生产环境: http://localhost:8001 (使用 `reinvent-insight web`)
 2. **登录系统**: 使用配置的用户名密码
 3. **创建分析**:
    - 点击"创建深度解读"
@@ -312,7 +368,7 @@ https://www.youtube.com/watch?v=video3
 
 执行批量处理：
 ```bash
-youtube-summarizer --file urls.txt --concurrency 5
+reinvent-insight --file urls.txt --concurrency 5
 ```
 
 ## 📚 API 文档
@@ -342,7 +398,22 @@ Response:
 }
 ```
 
-#### 2. 创建摘要任务
+#### 2. 获取环境信息
+```http
+GET /api/env
+
+Response:
+{
+  "environment": "development",
+  "project_root": "/home/user/reinvent-insight",
+  "host": "localhost",
+  "port": "8001",
+  "version": "0.1.0",
+  "is_development": true
+}
+```
+
+#### 3. 创建摘要任务
 ```http
 POST /summarize
 Authorization: Bearer <token>
@@ -356,14 +427,15 @@ Content-Type: application/json
 Response:
 {
   "task_id": "uuid-string",
-  "message": "任务已创建",
+  "message": "任务已创建，请连接 WebSocket。",
   "status": "created"
 }
 ```
 
-#### 3. WebSocket 连接
+#### 4. WebSocket 连接
 ```javascript
-const ws = new WebSocket(`ws://localhost:8001/ws/${taskId}`);
+const ws = new WebSocket(`ws://localhost:8002/ws/${taskId}`);  // 开发环境
+// const ws = new WebSocket(`ws://localhost:8001/ws/${taskId}`);  // 生产环境
 
 // 接收的消息类型
 {
@@ -389,7 +461,7 @@ const ws = new WebSocket(`ws://localhost:8001/ws/${taskId}`);
 }
 ```
 
-#### 4. 获取摘要列表
+#### 5. 获取摘要列表
 ```http
 GET /api/public/summaries
 
@@ -397,44 +469,75 @@ Response:
 {
   "summaries": [
     {
-      "filename": "video_title.md",
-      "title_cn": "中文标题",
-      "title_en": "English Title",
-      "size": 125000,
-      "word_count": 15000,
-      "created_at": 1234567890,
-      "upload_date": "2024-01-01",
-      "video_url": "https://...",
+      "filename": "AWS reInvent 2024 - Dive into the depths of routing on AWS (NET318).md",
+      "title_cn": "深入解析AWS路由：原理、实践与新功能 (NET318)",
+      "title_en": "AWS re:Invent 2024 - Dive into the depths of routing on AWS (NET318)",
+      "size": 132048,
+      "word_count": 16502,
+      "created_at": 1721286000,
+      "modified_at": 1721286500,
+      "upload_date": "2024-07-18",
+      "video_url": "https://www.youtube.com/watch?v=example",
       "is_reinvent": true,
-      "course_code": "NET402",
-      "level": "400",
-      "hash": "a1b2c3d4"
+      "course_code": "NET318",
+      "level": "300",
+      "hash": "d4e5f6a1",
+      "version": 1
     }
   ]
 }
 ```
 
-#### 5. 获取摘要内容
+#### 6. 获取摘要内容
 ```http
 GET /api/public/summaries/{filename}
 GET /api/public/doc/{hash}  // 短链接方式
+GET /api/public/doc/{hash}/{version}  // 指定版本
 
 Response:
 {
-  "filename": "video_title.md",
-  "title_cn": "中文标题",
-  "title_en": "English Title", 
+  "filename": "AWS reInvent 2024 - Dive into the depths of routing on AWS (NET318).md",
+  "title": "深入解析AWS路由：原理、实践与新功能 (NET318)",  // 向后兼容
+  "title_cn": "深入解析AWS路由：原理、实践与新功能 (NET318)",
+  "title_en": "AWS re:Invent 2024 - Dive into the depths of routing on AWS (NET318)",
   "content": "完整的Markdown内容",
   "video_url": "https://...",
-  "versions": [...]  // 版本列表
+  "versions": [
+    {
+        "filename": "AWS reInvent 2024 - Dive into the depths of routing on AWS (NET318)_v1.md",
+        "version": 1,
+        "created_at": 1721286000
+    },
+    {
+        "filename": "AWS reInvent 2024 - Dive into the depths of routing on AWS (NET318).md",
+        "version": 0,
+        "created_at": 1721280000
+    }
+  ]
 }
 ```
 
-#### 6. 下载 PDF
+#### 7. 下载 PDF
 ```http
 GET /api/public/summaries/{filename}/pdf
 
 Response: PDF文件流
+```
+
+#### 8. 获取摘要列表（需认证）
+```http
+GET /summaries
+Authorization: Bearer <token>
+
+Response: 同 /api/public/summaries
+```
+
+#### 9. 获取摘要内容（需认证）
+```http
+GET /summaries/{filename}
+Authorization: Bearer <token>
+
+Response: 同 /api/public/summaries/{filename}
 ```
 
 ## 🔧 开发指南
@@ -442,34 +545,39 @@ Response: PDF文件流
 ### 项目结构
 ```
 reinvent-insight/
-├── src/reinvent_insight/      # 核心代码
-│   ├── __init__.py             # 包初始化
-│   ├── config.py               # 配置管理
-│   ├── logger.py               # 日志系统
-│   ├── main.py                 # CLI入口
-│   ├── api.py                  # FastAPI服务
+├── src/reinvent_insight/      # 核心后端代码 (Python)
+│   ├── api.py                  # FastAPI 服务与接口
+│   ├── config.py               # 应用配置管理
 │   ├── downloader.py           # 字幕下载
+│   ├── __init__.py             # 包初始化
+│   ├── logger.py               # 日志系统
+│   ├── main.py                 # CLI 入口与主程序
+│   ├── markdown_processor.py   # Markdown处理
+│   ├── pdf_generator.py        # PDF生成
+│   ├── prompts.py              # 提示词模板
 │   ├── summarizer.py           # AI摘要器
-│   ├── workflow.py             # 工作流引擎
 │   ├── task_manager.py         # 任务管理
 │   ├── worker.py               # 异步工作器
-│   └── prompts.py              # 提示词模板
-├── web/                        # 前端代码
-│   ├── index.html              # 主页面
-│   ├── css/                    # 样式文件
-│   └── js/                     # JavaScript
-├── prompt/                     # AI提示词
-│   └── youtbe-deep-summary.txt # 基础提示词
-├── tools/                      # 辅助工具
-│   ├── generate_pdfs.py        # PDF生成
-│   └── update_metadata.py      # 元数据更新
-├── downloads/                  # 数据存储
-│   ├── subtitles/              # 字幕文件
-│   ├── summaries/              # 摘要文件
-│   └── tasks/                  # 任务缓存
-├── test/                       # 测试代码
-├── pyproject.toml              # 项目配置
-├── uv.lock                     # 依赖锁定
+│   └── workflow.py             # 核心AI工作流引擎
+│   └── tools/                  # 辅助工具脚本
+│       ├── __init__.py         # 包初始化
+│       ├── generate_pdfs.py    # PDF生成脚本
+│       ├── update_level.py     # 级别更新脚本
+│       └── update_metadata.py  # 元数据更新脚本
+├── web/                        # 核心前端代码 (Vanilla JS + Vue 3)
+│   ├── index.html              # 应用主入口HTML
+│   ├── components/             # 可复用的UI组件
+│   │   ├── common/             # 页面级通用组件 (AppHeader, Toast)
+│   │   ├── shared/             # 跨项目通用组件 (TechButton, ProgressBar)
+│   │   └── views/              # 应用视图级组件 (CreateView, LibraryView)
+│   ├── css/                    # 全局样式
+│   ├── js/                     # JavaScript 核心逻辑
+│   │   ├── core/               # 核心模块 (ComponentLoader, EventBus)
+│   │   └── vendor/             # 第三方库 (Vue, Axios)
+│   └── test/                   # 组件独立测试页面
+├── prompt/                     # AI 提示词模板
+├── downloads/                  # 数据存储 (字幕, 摘要, 任务缓存)
+├── pyproject.toml              # 项目配置与依赖 (uv)
 └── .env                        # 环境变量
 ```
 
@@ -507,7 +615,7 @@ NEWMODEL_API_KEY = os.getenv("NEWMODEL_API_KEY")
 
 1. **启用调试日志**:
 ```bash
-LOG_LEVEL=DEBUG youtube-summarizer
+LOG_LEVEL=DEBUG reinvent-insight
 ```
 
 2. **查看任务详情**:
@@ -582,19 +690,6 @@ user=your_user
 2. **缓存策略**: 利用 `downloads/tasks/` 目录缓存中间结果
 3. **进程管理**: 使用 systemd 或 supervisor 管理服务进程
 4. **并发控制**: 合理设置批量处理的并发数
-
-## 📚 更多文档
-
-项目的详细文档都整理在 [docs](./docs/) 目录中：
-
-- **开发相关**
-  - [开发环境运行指南](./docs/RUN_DEV.md) - 本地开发环境搭建与运行
-  - [环境标识功能](./docs/ENV_INDICATOR.md) - 开发/生产环境视觉区分
-  
-- **部署相关**
-  - [部署脚本详解](./docs/DEPLOY_SCRIPTS.md) - 自动化部署脚本使用说明
-
-
 
 ## 📄 许可证
 
