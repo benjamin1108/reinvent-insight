@@ -25,11 +25,26 @@ from . import config
 from .task_manager import manager # 导入共享的任务管理器
 from .worker import summary_task_worker_async # 导入新的异步工作流
 from .utils import generate_doc_hash  # 从 utils 导入
+from .file_watcher import start_watching # 导入文件监控
 
 setup_logger(config.LOG_LEVEL)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Reinvent Insight API", description="YouTube 字幕深度摘要后端服务", version="0.1.0")
+
+@app.on_event("startup")
+async def startup_event():
+    """
+    应用启动时执行的事件。
+    1. 初始化哈希映射缓存。
+    2. 启动文件系统监控。
+    """
+    logger.info("应用启动，开始初始化...")
+    # 1. 初始化缓存
+    init_hash_mappings()
+    
+    # 2. 启动文件监控，并传入刷新缓存的回调函数
+    start_watching(config.OUTPUT_DIR, init_hash_mappings)
 
 # --- 简易认证实现 ---
 session_tokens: Set[str] = set()
@@ -657,6 +672,39 @@ async def get_summary(filename: str, authorization: str = Header(None)):
     except Exception as e:
         logger.error(f"读取摘要文件失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="读取摘要文件失败")
+
+@app.get("/api/admin/tasks/{task_id}/result")
+def get_task_result_content(task_id: str, authorization: str = Header(None)):
+    """获取指定任务的完整结果内容（管理员）"""
+    verify_token(authorization)
+    task = manager.get_task_state(task_id)
+    if not task or task.status != "completed" or not task.result_path:
+        raise HTTPException(status_code=404, detail="任务未完成或结果不可用")
+
+    file_path = Path(task.result_path)
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="结果文件未找到")
+
+    return FileResponse(file_path, media_type="text/markdown", filename=file_path.name)
+
+@app.post("/api/admin/refresh-cache", status_code=200)
+def refresh_cache(authorization: str = Header(None)):
+    """
+    手动触发服务器端文档缓存的刷新。
+    这将重新扫描摘要目录并重建哈希映射。
+    """
+    verify_token(authorization)
+    try:
+        logger.info("管理员手动触发缓存刷新...")
+        init_hash_mappings()
+        logger.info("服务器端缓存已成功刷新。")
+        return {"message": "服务器端缓存已成功刷新。"}
+    except Exception as e:
+        logger.error(f"手动刷新缓存时发生错误: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"刷新缓存时发生内部错误: {e}")
+
+class DeleteSummaryRequest(BaseModel):
+    filename: str
 
 # --- Frontend Serving ---
 web_dir = config.PROJECT_ROOT / "web"

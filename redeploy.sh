@@ -165,19 +165,8 @@ build_package() {
     print_info "使用 Python: $($PYTHON_BIN --version)"
     print_info "构建工具已就绪"
     
-    # 检查并显示 MANIFEST.in 配置
-    if [ -f "MANIFEST.in" ]; then
-        if grep -q "prune web/test" MANIFEST.in; then
-            print_info "✓ 已配置排除 web/test 目录（生产环境优化）"
-        else
-            print_warning "未配置排除 web/test 目录，将包含测试文件"
-        fi
-    else
-        print_warning "未找到 MANIFEST.in 文件"
-    fi
-    
     # 构建
-    print_info "开始构建包（排除测试文件）..."
+    print_info "开始构建包（将根据 pyproject.toml 配置打包）..."
     $PYTHON_BIN -m build
     
     if [ $? -eq 0 ]; then
@@ -211,6 +200,10 @@ show_deployment_plan() {
                     echo "  - .env: 示例配置（跳过备份）"
                 fi
             fi
+            # 检查 .cookies 文件
+            if [ -f "$DEPLOY_DIR/reinvent_insight-0.1.0/.cookies" ]; then
+                echo "  - .cookies: 存在（将备份）"
+            fi
             # 检查 downloads 目录
             if [ -d "$DEPLOY_DIR/reinvent_insight-0.1.0/downloads" ]; then
                 FILE_COUNT=$(find "$DEPLOY_DIR/reinvent_insight-0.1.0/downloads" -type f 2>/dev/null | wc -l)
@@ -242,13 +235,8 @@ show_deployment_plan() {
     echo "• 服务主机: $HOST"
     
     # 显示构建配置信息
-    if [ -f "MANIFEST.in" ]; then
-        if grep -q "prune web/test" MANIFEST.in; then
-            echo "• 构建配置: 排除 test 目录 ✓"
-        else
-            echo "• 构建配置: 包含 test 目录 ⚠️"
-        fi
-    fi
+    print_info "构建配置将遵循 pyproject.toml"
+    
     echo "======================================"
     
     if [ "$DRY_RUN" = true ]; then
@@ -302,6 +290,12 @@ check_and_handle_backup() {
             else
                 print_warning "现有 .env 是示例文件，跳过备份"
             fi
+        fi
+        
+        # 备份 .cookies 文件
+        if [ -f "$DEPLOY_DIR/reinvent_insight-0.1.0/.cookies" ]; then
+            cp "$DEPLOY_DIR/reinvent_insight-0.1.0/.cookies" "$BACKUP_DIR/"
+            print_info "已备份 .cookies 文件"
         fi
         
         # 检查备份目录是否有内容
@@ -398,9 +392,9 @@ deploy_new_version() {
     
     # 验证 test 目录是否被正确排除
     if [ ! -d "web/test" ]; then
-        print_success "✓ test 目录已被正确排除"
+        print_success "✓ test 目录已被正确排除（根据 pyproject.toml）"
     else
-        print_warning "⚠️ test 目录仍然存在，请检查 MANIFEST.in 配置"
+        print_warning "⚠️ test 目录仍然存在，请检查 pyproject.toml 配置"
         print_info "test 目录内容: $(ls -la web/test | wc -l) 个文件"
     fi
     
@@ -438,11 +432,22 @@ restore_data() {
             print_info "备份中没有 .env 文件"
         fi
         
+        # 恢复 .cookies 文件
+        if [ -f "$LATEST_BACKUP/.cookies" ]; then
+            cp "$LATEST_BACKUP/.cookies" "$DEPLOY_DIR/reinvent_insight-0.1.0/"
+            print_success "已恢复 .cookies 文件"
+        else
+            print_info "备份中没有 .cookies 文件"
+        fi
+        
         # 修复恢复数据的权限
         print_info "修复恢复数据的权限..."
         sudo chown -R "$USER:$USER" "$DEPLOY_DIR/reinvent_insight-0.1.0/downloads/"
         if [ -f "$DEPLOY_DIR/reinvent_insight-0.1.0/.env" ]; then
             sudo chown "$USER:$USER" "$DEPLOY_DIR/reinvent_insight-0.1.0/.env"
+        fi
+        if [ -f "$DEPLOY_DIR/reinvent_insight-0.1.0/.cookies" ]; then
+            sudo chown "$USER:$USER" "$DEPLOY_DIR/reinvent_insight-0.1.0/.cookies"
         fi
     else
         if [ "$FRESH_INSTALL" = true ]; then

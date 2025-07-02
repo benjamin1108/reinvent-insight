@@ -1,3 +1,0 @@
-graft web
-graft prompt
-prune web/test 

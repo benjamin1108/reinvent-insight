@@ -249,18 +249,14 @@ sequenceDiagram
 git clone https://github.com/benjamin1108/reinvent-insight.git
 cd reinvent-insight
 
-# 2. 安装 uv 包管理器（推荐）
-curl -LsSf https://astral.sh/uv/install.sh | sh   # macOS/Linux
-# 或
-pip install uv                                     # 使用 pip
-
-# 3. 创建虚拟环境
-uv venv                         # 创建 .venv
+# 2. 创建并激活Python虚拟环境
+python3 -m venv .venv           # 创建 .venv 目录
 source .venv/bin/activate       # 激活虚拟环境 (Linux/macOS)
-# .venv\Scripts\activate        # Windows
+# .\.venv\Scripts\activate      # Windows
 
-# 4. 安装依赖
-uv pip install -e .             # 安装项目和所有依赖
+# 3. 安装项目依赖
+pip install --upgrade pip       # 升级pip
+pip install -e .                # 安装项目和所有依赖（-e 表示可编辑模式，适合开发）
 ```
 
 ### 3. 配置设置

@@ -114,7 +114,6 @@ venv.bak/
 .vscode/
 
 # uv
-.uv/
 .cookies
 tasks/
 *.pdf
