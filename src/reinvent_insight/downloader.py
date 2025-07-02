@@ -89,8 +89,16 @@ class SubtitleDownloader:
         try:
             logger.info(f"正在为链接获取元数据: {self.url}")
             command = [
-                'yt-dlp', '--dump-json', '--no-playlist', self.url
+                'yt-dlp', '--dump-json', '--no-playlist'
             ]
+            
+            # 新增：在获取元数据时也使用cookies
+            if config.COOKIES_FILE and config.COOKIES_FILE.exists():
+                logger.info(f"元数据获取使用 Cookies 文件: {config.COOKIES_FILE}")
+                command.extend(['--cookies', str(config.COOKIES_FILE)])
+            
+            command.append(self.url)
+
             result = subprocess.run(
                 command,
                 capture_output=True, text=True, check=True, encoding='utf-8'
