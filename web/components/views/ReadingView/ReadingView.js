@@ -615,6 +615,28 @@ export default {
           heading.id = finalId;
         }
       });
+      
+      // 调用标记函数隐藏正文目录数字
+      markInBodyToc();
+    };
+    
+    // helper to mark in-body directory ordered list (正文章节目录)，用于隐藏数字
+    const markInBodyToc = () => {
+      const bodyEl = document.querySelector('.reading-view__body');
+      if (!bodyEl) return;
+      const headings = bodyEl.querySelectorAll('h1, h2, h3, h4, h5, h6');
+      headings.forEach(h => {
+        const text = h.textContent.trim();
+        if (/目录/.test(text)) {
+          let el = h.nextElementSibling;
+          while (el && el.nodeType !== 1) {
+            el = el.nextSibling;
+          }
+          if (el && el.tagName === 'OL') {
+            el.setAttribute('data-inbody-toc', 'true');
+          }
+        }
+      });
     };
     
     // 监听活动章节变化，触发目录更新

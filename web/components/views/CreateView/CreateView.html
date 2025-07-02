@@ -34,7 +34,7 @@
   </div>
 
   <!-- Progress & Logs -->
-  <div v-if="loading || logs.length"
+  <div v-if="(loading || logs.length) && !title"
     class="create-view__progress-section">
     
     <h3 class="create-view__progress-title">

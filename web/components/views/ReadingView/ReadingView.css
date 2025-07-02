@@ -121,8 +121,8 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  padding: 2rem;
-  max-width: 1200px;
+  padding: 1.5rem;
+  max-width: 1400px; /* 增加最大宽度，让文章更饱满 */
   margin: 0 auto;
 }
 
@@ -132,7 +132,7 @@
   background: linear-gradient(135deg, rgba(15, 23, 42, 0.6), rgba(30, 41, 59, 0.4), rgba(15, 23, 42, 0.6));
   border: 1px solid #374151;
   border-radius: 1rem;
-  padding: 3rem;
+  padding: 2.5rem; /* 减少内边距，让内容更饱满 */
   box-shadow: 0 0 20px rgba(6, 182, 212, 0.1), 0 0 40px rgba(6, 182, 212, 0.05);
   backdrop-filter: blur(10px);
   position: relative;
@@ -243,7 +243,11 @@
 .reading-view .prose-tech h3 {
   font-size: 20px;
   font-weight: 600;
-  color: #22d3ee; /* 突出三级标题 */
+  /* 使用英文大标题的渐变色 */
+  background: linear-gradient(135deg, #22d3ee, #3b82f6, #8b5cf6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
   position: relative;
   padding-left: 1rem; /* 为小蓝竖杠留出空间 */
 }
@@ -262,14 +266,19 @@
 .reading-view .prose-tech h4 {
   font-size: 18px;
   font-weight: 600;
-  color: #f3f4f6;
+  /* 与H3保持一致，使用英文大标题的渐变色 */
+  background: linear-gradient(135deg, #22d3ee, #3b82f6, #8b5cf6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .reading-view .prose-tech h5,
 .reading-view .prose-tech h6 {
   font-size: 16px;
   font-weight: 600;
-  color: #d1d5db;
+  /* 使用渐变的深色调 */
+  color: #8b5cf6;
 }
 
 /* 段落样式 - 优化阅读体验 */
@@ -410,7 +419,9 @@
 /* 强调文本 */
 .reading-view .prose-tech strong {
   font-weight: 700;
-  color: #f3f4f6; /* 稍微突出的白色 */
+  /* 使用主题色突出显示，增加视觉层次 */
+  color: #22d3ee;
+  text-shadow: 0 0 8px rgba(34, 211, 238, 0.3); /* 添加轻微光晕效果 */
 }
 
 /* 表格 */
@@ -558,13 +569,20 @@
   font-weight: 500;
 }
 
+/* 优化TOC缩进策略 - 减少递增幅度，避免过度缩进 */
 .reading-view__toc-list li li a {
-  padding-left: 1.5rem;
+  padding-left: 1.25rem; /* 从1.5rem减少到1.25rem */
   font-size: 0.8125rem;
 }
 
 .reading-view__toc-list li li li a {
-  padding-left: 2.25rem;
+  padding-left: 1.5rem; /* 从2.25rem减少到1.5rem，限制最大缩进 */
+  font-size: 0.75rem;
+}
+
+/* 四级及以上不再增加缩进，保持可读性 */
+.reading-view__toc-list li li li li a {
+  padding-left: 1.5rem; /* 与三级保持相同 */
   font-size: 0.75rem;
 }
 
@@ -858,4 +876,30 @@
 .reading-view *::before,
 .reading-view *::after {
   box-sizing: border-box;
+}
+
+/*  额外：确保 TOC 中不显示任何列表默认序号或圆点  */
+.reading-view__toc-list .toc-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.reading-view__toc-list .toc-list li {
+  list-style: none;
+}
+.reading-view__toc-list .toc-list li::marker {
+  content: '';
+}
+
+/* 隐藏正文中目录（OL）数字 */
+.reading-view .prose-tech ol[data-inbody-toc] {
+  list-style: none;
+  padding-left: 0;
+  margin-left: 0;
+}
+.reading-view .prose-tech ol[data-inbody-toc] li {
+  list-style: none;
+}
+.reading-view .prose-tech ol[data-inbody-toc] li::marker {
+  content: '';
 }
