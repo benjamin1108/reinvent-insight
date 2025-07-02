@@ -385,6 +385,8 @@
   border: 1px solid rgba(34, 211, 238, 0.2); /* 添加边框 */
   font-family: "JetBrains Mono", "SF Mono", "Fira Code", "Consolas", "SFMono-Regular", Menlo, monospace;
   font-weight: 500; /* 稍微增加代码字重 */
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 .reading-view .prose-tech pre {
