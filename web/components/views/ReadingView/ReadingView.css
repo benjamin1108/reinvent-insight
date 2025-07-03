@@ -87,6 +87,13 @@
   overflow: hidden;
   position: relative;
   z-index: 10;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* TOC智能隐藏状态 */
+.reading-view__toc.toc-hidden {
+  transform: translateX(-100%);
+  opacity: 0;
 }
 
 /* 主内容区域 */
@@ -902,4 +909,331 @@
 }
 .reading-view .prose-tech ol[data-inbody-toc] li::marker {
   content: '';
+}
+
+/* =============================================== */
+/* == Quick-Insight 模式切换样式 (Phase 3) == */
+/* =============================================== */
+
+/* 控制区域 */
+.reading-view__controls {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 20;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+/* 洞察模式切换器 */
+.reading-view__insight-switcher {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.5rem;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(55, 65, 81, 0.5);
+  border-radius: 0.75rem;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* 模式切换按钮 */
+.insight-mode-btn {
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-family: 'Inter', 'PingFang SC', sans-serif;
+}
+
+.insight-mode-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.3s ease, height 0.3s ease;
+}
+
+.insight-mode-btn:hover::before {
+  width: 100%;
+  height: 100%;
+}
+
+/* Deep-Insight 按钮样式 */
+.insight-mode-btn--deep.tech-btn--primary {
+  background: linear-gradient(135deg, #2563EB, #1E40AF);
+  color: #E0E0E0;
+  border: 1px solid rgba(37, 99, 235, 0.5);
+}
+
+.insight-mode-btn--deep.tech-btn--secondary {
+  background: rgba(37, 99, 235, 0.15);
+  color: #93C5FD;
+  border: 1px solid rgba(37, 99, 235, 0.3);
+}
+
+/* Quick-Insight 按钮样式 */
+.insight-mode-btn--quick.tech-btn--primary {
+  background: linear-gradient(135deg, #06B6D4, #0891B2);
+  color: #E0E0E0;
+  border: 1px solid rgba(6, 182, 212, 0.5);
+}
+
+.insight-mode-btn--quick.tech-btn--secondary {
+  background: rgba(6, 182, 212, 0.15);
+  color: #67E8F9;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+/* Quick-Insight 加载状态 */
+.reading-view__quick-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 2rem;
+}
+
+.quick-insight-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #06B6D4;
+  text-align: center;
+}
+
+.quick-insight-loading .loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(6, 182, 212, 0.3);
+  border-top: 3px solid #06B6D4;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+.quick-insight-loading .loading-text {
+  font-size: 0.9rem;
+  color: #B0B0B0;
+  font-family: 'Inter', 'PingFang SC', sans-serif;
+  font-weight: 500;
+}
+
+/* Quick-Insight 错误状态 */
+.reading-view__quick-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  padding: 2rem;
+}
+
+.quick-insight-error {
+  text-align: center;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 0.75rem;
+  padding: 2rem;
+  max-width: 400px;
+}
+
+.quick-insight-error p {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* Quick-Insight 内容样式 */
+.reading-view__quick-content {
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible; /* 允许内容溢出以便滚动 */
+}
+
+.reading-view__quick-body {
+  /* Quick-Insight 模式使用AI生成的HTML，不需要额外样式 */
+  /* AI生成的HTML已包含完整的内联样式 */
+  font-family: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+/* Quick-Insight 内容保护性样式 - 最小化干预 */
+.reading-view__quick-body {
+  /* 基础容器样式 */
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+}
+
+/* 只隐藏可能造成问题的悬浮元素 */
+.reading-view__quick-body header.site-header,
+.reading-view__quick-body .site-header {
+  display: none !important;
+}
+
+/* 确保主要内容区域可见 */
+.reading-view__quick-body main,
+.reading-view__quick-body .main-content,
+.reading-view__quick-body .content,
+.reading-view__quick-body article {
+  /* 让AI生成的样式生效，不强制覆盖 */
+  display: block;
+}
+
+/* 模式切换动画 */
+.insight-content-enter-active,
+.insight-content-leave-active {
+  transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.insight-content-enter-from {
+  opacity: 0;
+  transform: translateY(20px) scale(0.98);
+}
+
+.insight-content-leave-to {
+  opacity: 0;
+  transform: translateY(-20px) scale(0.98);
+}
+
+.insight-content-enter-to,
+.insight-content-leave-from {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .reading-view__controls {
+    position: fixed;
+    bottom: 2rem;
+    right: 1rem;
+    left: 1rem;
+    top: auto;
+    flex-direction: column;
+    gap: 0.5rem;
+    z-index: 1000;
+  }
+  
+  .reading-view__insight-switcher {
+    order: 1;
+    width: 100%;
+    justify-content: center;
+    padding: 0.75rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  }
+  
+  .reading-view__version-selector {
+    order: 2;
+    position: static;
+    width: 100%;
+  }
+  
+  .insight-mode-btn {
+    flex: 1;
+    font-size: 0.875rem;
+    padding: 0.75rem 1rem;
+  }
+  
+  .insight-mode-btn .emoji {
+    display: none; /* 移动端隐藏emoji */
+  }
+}
+
+@media (max-width: 480px) {
+  .reading-view__controls {
+    bottom: 1rem;
+    right: 0.5rem;
+    left: 0.5rem;
+  }
+  
+  .reading-view__insight-switcher {
+    padding: 0.5rem;
+  }
+  
+  .insight-mode-btn {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    min-height: 44px; /* iOS推荐的最小触摸目标 */
+  }
+}
+
+/* 触摸优化 */
+.insight-mode-btn {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.insight-mode-btn:active {
+  transform: scale(0.95);
+}
+
+/* 高对比度支持 */
+@media (prefers-contrast: high) {
+  .insight-mode-btn--deep.tech-btn--primary {
+    background: #2563EB;
+    color: #FFFFFF;
+    border: 2px solid #1E40AF;
+  }
+  
+  .insight-mode-btn--quick.tech-btn--primary {
+    background: #06B6D4;
+    color: #FFFFFF;
+    border: 2px solid #0891B2;
+  }
+  
+  .reading-view__insight-switcher {
+    border: 2px solid #374151;
+    background: rgba(15, 23, 42, 0.95);
+  }
+}
+
+/* 减少动画运动 */
+@media (prefers-reduced-motion: reduce) {
+  .insight-mode-btn,
+  .insight-content-enter-active,
+  .insight-content-leave-active,
+  .insight-mode-btn::before {
+    transition: none;
+    animation: none;
+  }
+}
+
+.reading-view__quick-iframe {
+  width: 100%;
+  height: 100vh; /* 设置默认高度为视口高度 */
+  min-height: 800px; /* 最小高度保证 */
+  border: none;
+  background: transparent;
+  overflow: auto; /* 确保iframe可以滚动 */
+  /* 优化移动端滚动 */
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* 移动端iframe优化 */
+@media (max-width: 768px) {
+  .reading-view__quick-iframe {
+    height: calc(100vh - 120px); /* 为移动端控制器留出空间 */
+    min-height: 600px;
+  }
+}
+
+@media (max-width: 480px) {
+  .reading-view__quick-iframe {
+    height: calc(100vh - 100px);
+    min-height: 500px;
+  }
 }

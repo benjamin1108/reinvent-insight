@@ -508,6 +508,211 @@ async def get_public_summary_by_hash_and_version(doc_hash: str, version: int):
     # 复用现有的获取文档逻辑
     return await get_public_summary(target_version_info["filename"])
 
+# --- Quick-Insight API端点 (Phase 2) ---
+
+class QuickInsightResponse(BaseModel):
+    """Quick-Insight检查响应模型"""
+    has_insight: bool
+    generated_at: Optional[str] = None
+    insight_url: Optional[str] = None
+    metadata: Optional[Dict] = None
+
+def check_quick_insight_file(article_id: str) -> Optional[Dict]:
+    """检查Quick-Insight文件是否存在，返回文件信息"""
+    try:
+        # 通过article_id(hash)查找对应的文件名
+        filename = hash_to_filename.get(article_id)
+        if not filename:
+            return None
+        
+        # 获取基础文件名（不含.md扩展名）
+        base_filename = filename.rsplit('.', 1)[0] if '.' in filename else filename
+        
+        # 检查insights目录中是否存在HTML文件
+        insights_dir = config.PROJECT_ROOT / "downloads" / "insights"
+        html_file = insights_dir / f"{base_filename}.html"
+        json_file = insights_dir / f"{base_filename}.json"
+        
+        if not html_file.exists():
+            return None
+        
+        # 读取元数据
+        metadata = {}
+        if json_file.exists():
+            try:
+                import json
+                with open(json_file, 'r', encoding='utf-8') as f:
+                    metadata = json.load(f)
+            except Exception as e:
+                logger.warning(f"读取Quick-Insight元数据失败: {e}")
+        
+        # 获取文件统计信息
+        stat = html_file.stat()
+        
+        return {
+            "has_insight": True,
+            "generated_at": metadata.get("generated_at") or stat.st_mtime,
+            "insight_url": f"/downloads/insights/{base_filename}.html",
+            "metadata": {
+                "file_size": stat.st_size,
+                "word_count": metadata.get("word_count", 0),
+                "generation_time": metadata.get("generation_time", 0),
+                "ai_model": metadata.get("ai_model", "unknown"),
+                "template_used": metadata.get("template_used", "unknown"),
+                "html_file": str(html_file),
+                "json_file": str(json_file) if json_file.exists() else None
+            }
+        }
+    except Exception as e:
+        logger.error(f"检查Quick-Insight文件时发生错误: {e}")
+        return None
+
+@app.get("/api/articles/{article_id}/insight", response_model=QuickInsightResponse)
+async def get_article_insight_status(article_id: str):
+    """
+    检查指定文章是否有Quick-Insight版本
+    
+    Args:
+        article_id: 文章的统一hash ID
+        
+    Returns:
+        QuickInsightResponse: 包含Quick-Insight状态的响应
+    """
+    try:
+        # 验证article_id格式
+        if not article_id or len(article_id.strip()) < 8:
+            raise HTTPException(status_code=400, detail="无效的文章ID：ID长度必须至少8个字符")
+        
+        # 清理article_id
+        article_id = article_id.strip()
+        
+        # 检查Quick-Insight文件
+        insight_info = check_quick_insight_file(article_id)
+        
+        if insight_info:
+            return QuickInsightResponse(**insight_info)
+        else:
+            return QuickInsightResponse(has_insight=False)
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"检查文章{article_id}的Quick-Insight状态失败: {e}")
+        raise HTTPException(status_code=500, detail="检查Quick-Insight状态时发生内部错误")
+
+@app.get("/api/articles/{article_id}/insight/content")
+async def get_article_insight_content(article_id: str):
+    """
+    获取指定文章的Quick-Insight HTML内容
+    
+    Args:
+        article_id: 文章的统一hash ID
+        
+    Returns:
+        HTML内容或错误信息
+    """
+    try:
+        # 验证article_id格式
+        if not article_id or len(article_id.strip()) < 8:
+            raise HTTPException(status_code=400, detail="无效的文章ID：ID长度必须至少8个字符")
+        
+        # 清理article_id
+        article_id = article_id.strip()
+        
+        # 检查Quick-Insight文件
+        insight_info = check_quick_insight_file(article_id)
+        
+        if not insight_info or not insight_info.get("has_insight"):
+            raise HTTPException(status_code=404, detail="该文章没有Quick-Insight版本")
+        
+        # 读取HTML内容
+        html_file_path = Path(insight_info["metadata"]["html_file"])
+        if not html_file_path.exists():
+            raise HTTPException(status_code=404, detail="Quick-Insight文件不存在")
+        
+        # 读取并返回HTML内容
+        html_content = html_file_path.read_text(encoding="utf-8")
+        
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse(content=html_content)
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取文章{article_id}的Quick-Insight内容失败: {e}")
+        raise HTTPException(status_code=500, detail="获取Quick-Insight内容时发生内部错误")
+
+@app.get("/api/insights/list")
+async def list_quick_insights():
+    """
+    列出所有可用的Quick-Insight文件
+    
+    Returns:
+        包含所有Quick-Insight文件信息的列表
+    """
+    try:
+        insights_dir = config.PROJECT_ROOT / "downloads" / "insights"
+        if not insights_dir.exists():
+            return {"insights": []}
+        
+        insights = []
+        
+        # 扫描所有HTML文件
+        for html_file in insights_dir.glob("*.html"):
+            try:
+                base_filename = html_file.stem
+                json_file = insights_dir / f"{base_filename}.json"
+                
+                # 通过文件名查找对应的article_id
+                md_filename = f"{base_filename}.md"
+                article_id = filename_to_hash.get(md_filename)
+                
+                if not article_id:
+                    continue
+                
+                # 读取元数据
+                metadata = {}
+                if json_file.exists():
+                    try:
+                        import json
+                        with open(json_file, 'r', encoding='utf-8') as f:
+                            metadata = json.load(f)
+                    except Exception as e:
+                        logger.warning(f"读取{json_file}元数据失败: {e}")
+                
+                # 获取文件统计信息
+                stat = html_file.stat()
+                
+                insight_info = {
+                    "article_id": article_id,
+                    "filename": base_filename,
+                    "generated_at": metadata.get("generated_at") or stat.st_mtime,
+                    "file_size": stat.st_size,
+                    "word_count": metadata.get("word_count", 0),
+                    "generation_time": metadata.get("generation_time", 0),
+                    "ai_model": metadata.get("ai_model", "unknown"),
+                    "template_used": metadata.get("template_used", "unknown"),
+                    "article_title": metadata.get("article_title", base_filename),
+                    "insight_url": f"/downloads/insights/{base_filename}.html"
+                }
+                
+                insights.append(insight_info)
+            
+            except Exception as e:
+                logger.warning(f"处理Quick-Insight文件{html_file}时发生错误: {e}")
+        
+        # 按生成时间排序
+        insights.sort(key=lambda x: x["generated_at"], reverse=True)
+        
+        return {
+            "insights": insights,
+            "total_count": len(insights)
+        }
+    
+    except Exception as e:
+        logger.error(f"列出Quick-Insight文件时发生错误: {e}")
+        raise HTTPException(status_code=500, detail="列出Quick-Insight文件时发生内部错误")
+
 @app.get("/api/public/summaries/{filename}/pdf")
 async def get_summary_pdf(filename: str, response: Response):
     """生成并下载指定摘要的PDF文件，无需认证。"""

@@ -172,6 +172,7 @@
         :content="readingContent" 
         :document-title="documentTitle"
         :document-title-en="documentTitleEn"
+        :document-hash="readingHash"
         :loading="documentLoading"
         :error="readingError" 
         :versions="documentVersions" 
@@ -181,7 +182,9 @@
         @toc-toggle="toggleToc" 
         @toc-resize="handleTocResize"
         @article-click="handleArticleClick" 
-        @version-change="switchVersion">
+        @version-change="switchVersion"
+        @insight-mode-change="handleInsightModeChange"
+        @quick-insight-load="handleQuickInsightLoad">
       </reading-view>
 
     </main>

@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quick-Insight 功能测试</title>
+  
+  <!-- 字体 -->
+  <link rel="preconnect" href="https://fonts.loli.net" crossorigin>
+  <link href="https://fonts.loli.net/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Vue 3 和依赖 -->
+  <script src="/js/vendor/vue.global.prod.min.js"></script>
+  <script src="/js/vendor/axios.min.js"></script>
+  <script src="/js/vendor/marked.min.js"></script>
+  
+  <!-- 样式 -->
+  <link rel="stylesheet" href="/css/base/effects.css">
+  <link rel="stylesheet" href="/css/app.css">
+  
+  <!-- 组件核心 -->
+  <script src="/js/core/event-bus.js"></script>
+  <script src="/js/core/component-loader.js"></script>
+  <script src="/js/composables/useToast.js" type="module"></script>
+  
+  <style>
+    body {
+      background: #111827;
+      color: #e5e7eb;
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+    
+    .test-container {
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .test-header {
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+    
+    .test-header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #22d3ee, #3b82f6);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 1rem;
+    }
+    
+    .test-controls {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      justify-content: center;
+    }
+    
+    .test-btn {
+      padding: 0.75rem 1.5rem;
+      background: linear-gradient(135deg, #22d3ee, #3b82f6);
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .test-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(34, 211, 238, 0.3);
+    }
+    
+    .test-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .test-info {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid #374151;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    .test-info h3 {
+      color: #22d3ee;
+      margin-bottom: 1rem;
+      font-size: 1.25rem;
+    }
+    
+    .test-info p {
+      line-height: 1.6;
+      margin-bottom: 0.5rem;
+    }
+    
+    .reading-container {
+      height: 80vh;
+      border: 1px solid #374151;
+      border-radius: 0.75rem;
+      overflow: auto;
+      background: #111827;
+    }
+    
+    /* 滚动条样式 */
+    .reading-container::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .reading-container::-webkit-scrollbar-track {
+      background: rgba(55, 65, 81, 0.3);
+      border-radius: 4px;
+    }
+    
+    .reading-container::-webkit-scrollbar-thumb {
+      background: linear-gradient(135deg, #22d3ee, #3b82f6);
+      border-radius: 4px;
+    }
+    
+    .reading-container::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(135deg, #0891b2, #2563eb);
+    }
+    
+    .status-info {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      justify-content: center;
+    }
+    
+    .status-badge {
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    
+    .status-badge.available {
+      background: rgba(34, 197, 94, 0.2);
+      color: #22c55e;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    
+    .status-badge.unavailable {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    
+    .status-badge.loading {
+      background: rgba(34, 211, 238, 0.2);
+      color: #22d3ee;
+      border: 1px solid rgba(34, 211, 238, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <div id="app" v-cloak>
+    <div class="test-container">
+      <div class="test-header">
+        <h1>🚀 Quick-Insight 功能测试</h1>
+        <p>测试Deep-Insight vs Quick-Insight模式切换功能</p>
+      </div>
+      
+      <div class="test-info">
+        <h3>📖 测试说明</h3>
+        <p>• 本页面用于测试Quick-Insight功能的前端UI和API集成</p>
+        <p>• 使用两个测试文章Hash：Yuval Noah Harari文章和AWS reInvent文章</p>
+        <p>• 测试模式切换、加载状态、错误处理等功能</p>
+        <p>• 验证移动端响应式设计和用户体验</p>
+      </div>
+      
+      <div class="test-controls">
+        <button class="test-btn" @click="loadHarariArticle" :disabled="loading">
+          加载 Harari 文章
+        </button>
+        <button class="test-btn" @click="loadReInventArticle" :disabled="loading">
+          加载 reInvent 文章
+        </button>
+        <button class="test-btn" @click="loadEmptyArticle" :disabled="loading">
+          加载空文章（测试无Quick-Insight）
+        </button>
+      </div>
+      
+      <div class="status-info">
+        <div class="status-badge" :class="getStatusClass()">
+          {{ getStatusText() }}
+        </div>
+        <div v-if="currentHash" class="status-badge available">
+          Hash: {{ currentHash }}
+        </div>
+      </div>
+      
+      <div class="reading-container">
+        <reading-view
+          :content="content"
+          :document-title="documentTitle"
+          :document-title-en="documentTitleEn"
+          :document-hash="currentHash"
+          :loading="loading"
+          :error="error"
+          :versions="versions"
+          :current-version="1"
+          :initial-show-toc="true"
+          :initial-toc-width="300"
+          @insight-mode-change="handleInsightModeChange"
+          @quick-insight-load="handleQuickInsightLoad"
+        />
+      </div>
+    </div>
+    
+    <!-- Toast容器 -->
+    <toast-container></toast-container>
+  </div>
+
+  <script>
+    const { createApp, ref, onMounted } = Vue;
+    
+    // 测试数据
+    const testArticles = {
+      harari: {
+        hash: '7b774e79',
+        title: '《人类简史》核心洞察',
+        titleEn: 'Sapiens: A Brief History of Humankind - Core Insights',
+        content: `# 人类简史核心洞察
+
+## 认知革命
+
+大约7万年前，人类经历了认知革命，这是人类历史上最重要的转折点之一。
+
+### 语言的力量
+
+人类发展出了独特的语言能力，不仅能够交流具体事物，更重要的是能够谈论抽象概念。
+
+### 虚构故事的重要性
+
+人类能够相信并传播虚构的故事，这些故事成为了大规模合作的基础。
+
+## 农业革命
+
+大约1.2万年前，人类开始驯化植物和动物，这标志着农业革命的开始。
+
+### 从狩猎采集到农业社会
+
+- 人类开始定居生活
+- 人口大幅增长
+- 社会变得更加复杂
+
+### 农业革命的代价
+
+虽然农业革命带来了文明，但也让人类的生活变得更加艰难。
+
+## 科学革命
+
+大约500年前，科学革命开始改变人类对世界的认知。
+
+### 知识革命
+
+人类开始承认自己的无知，这反而成为了获得新知识的动力。
+
+### 技术进步
+
+科学革命带来了前所未有的技术进步，改变了人类的生活方式。
+
+## 未来展望
+
+人类正站在新的历史转折点上，面临着前所未有的挑战和机遇。
+
+### 人工智能时代
+
+人工智能的发展可能会重新定义人类的价值和意义。
+
+### 生物技术革命
+
+基因工程和生物技术可能会让人类获得"神"一般的能力。
+
+---
+
+*本文档用于测试Quick-Insight功能的Deep-Insight模式显示效果。*`
+      },
+      reinvent: {
+        hash: '3e97e996',
+        title: 'AWS re:Invent 2024 核心发布',
+        titleEn: 'AWS re:Invent 2024 Key Announcements',
+        content: `# AWS re:Invent 2024 核心发布
+
+## 主要产品发布
+
+### 生成式AI服务
+
+AWS在re:Invent 2024上发布了多项生成式AI服务更新。
+
+#### Amazon Bedrock增强
+
+- 新增多种基础模型支持
+- 改进的微调功能
+- 更好的成本控制
+
+#### Amazon CodeWhisperer升级
+
+- 支持更多编程语言
+- 改进的代码补全功能
+- 增强的安全性检查
+
+### 数据库创新
+
+#### Amazon RDS新功能
+
+- 支持新的数据库引擎版本
+- 改进的性能监控
+- 增强的备份和恢复
+
+#### Amazon DynamoDB更新
+
+- 新的索引类型
+- 改进的查询性能
+- 更好的成本优化
+
+### 计算服务进展
+
+#### Amazon EC2新实例类型
+
+- 针对AI/ML工作负载优化
+- 更好的性能价格比
+- 增强的网络功能
+
+#### AWS Lambda改进
+
+- 更长的执行时间限制
+- 改进的冷启动性能
+- 新的运行时支持
+
+## 重要主题演讲
+
+### 首席执行官主题演讲
+
+重点讨论了AI在企业数字化转型中的作用。
+
+### 技术领导者分享
+
+多位技术领导者分享了云计算和AI的最新趋势。
+
+## 客户案例
+
+### 金融服务行业
+
+多家金融机构分享了使用AWS服务实现业务转型的经验。
+
+### 制造业案例
+
+制造业客户展示了如何使用AWS IoT和AI服务优化生产流程。
+
+---
+
+*本文档用于测试Quick-Insight功能在技术内容上的表现。*`
+      },
+      empty: {
+        hash: '',
+        title: '测试文章（无Quick-Insight）',
+        titleEn: 'Test Article (No Quick-Insight)',
+        content: `# 测试文章
+
+这是一个用于测试的文章，没有对应的Quick-Insight版本。
+
+## 目的
+
+用于测试当文章没有Quick-Insight版本时的UI行为。
+
+## 预期行为
+
+- 不应该显示模式切换器
+- 只能使用Deep-Insight模式
+- 不应该有相关的API调用
+
+## 测试要点
+
+1. 检查是否正确隐藏了模式切换器
+2. 验证错误处理是否正常
+3. 确保用户体验良好
+
+---
+
+*这是一个测试文档，用于验证Quick-Insight功能的边界情况处理。*`
+      }
+    };
+    
+    const app = createApp({
+      setup() {
+        // 状态管理
+        const content = ref('');
+        const documentTitle = ref('');
+        const documentTitleEn = ref('');
+        const currentHash = ref('');
+        const loading = ref(false);
+        const error = ref('');
+        const versions = ref([]);
+        
+        // 方法
+        const loadHarariArticle = () => {
+          const article = testArticles.harari;
+          loadArticle(article);
+        };
+        
+        const loadReInventArticle = () => {
+          const article = testArticles.reinvent;
+          loadArticle(article);
+        };
+        
+        const loadEmptyArticle = () => {
+          const article = testArticles.empty;
+          loadArticle(article);
+        };
+        
+        const loadArticle = (article) => {
+          loading.value = true;
+          error.value = '';
+          
+          // 模拟加载延迟
+          setTimeout(() => {
+            try {
+              content.value = marked.parse(article.content);
+              documentTitle.value = article.title;
+              documentTitleEn.value = article.titleEn;
+              currentHash.value = article.hash;
+              versions.value = [{ version: 1, date: '2024-01-01' }];
+              
+              showToast(`加载成功: ${article.title}`, 'success');
+            } catch (err) {
+              error.value = '加载文章失败';
+              showToast('加载文章失败', 'error');
+            } finally {
+              loading.value = false;
+            }
+          }, 500);
+        };
+        
+        const getStatusClass = () => {
+          if (loading.value) return 'loading';
+          if (currentHash.value) return 'available';
+          return 'unavailable';
+        };
+        
+        const getStatusText = () => {
+          if (loading.value) return '加载中...';
+          if (currentHash.value) return 'Quick-Insight 可用';
+          return '无Quick-Insight';
+        };
+        
+        const handleInsightModeChange = (event) => {
+          const { mode, hasQuickInsight } = event;
+          console.log('模式切换:', mode, '有Quick-Insight:', hasQuickInsight);
+          showToast(`切换到 ${mode === 'quick' ? 'Quick-Insight' : 'Deep-Insight'} 模式`, 'info');
+        };
+        
+        const handleQuickInsightLoad = (event) => {
+          const { content } = event;
+          console.log('Quick-Insight内容加载完成，长度:', content.length);
+          showToast('Quick-Insight内容加载完成', 'success');
+        };
+        
+        const showToast = (message, type = 'info') => {
+          if (window.eventBus) {
+            window.eventBus.emit('show-toast', {
+              type,
+              message,
+              duration: 3000
+            });
+          }
+        };
+        
+        // 初始化
+        onMounted(() => {
+          console.log('Quick-Insight 测试页面已加载');
+          showToast('Quick-Insight 测试页面已加载', 'info');
+        });
+        
+        return {
+          content,
+          documentTitle,
+          documentTitleEn,
+          currentHash,
+          loading,
+          error,
+          versions,
+          loadHarariArticle,
+          loadReInventArticle,
+          loadEmptyArticle,
+          getStatusClass,
+          getStatusText,
+          handleInsightModeChange,
+          handleQuickInsightLoad
+        };
+      }
+    });
+    
+    // 加载组件
+    const componentLoader = window.ComponentLoader;
+    
+    const components = [
+      ['reading-view', '/components/views/ReadingView', 'ReadingView'],
+      ['toast-container', '/components/common/ToastContainer', 'ToastContainer']
+    ];
+    
+    componentLoader.registerComponents(app, components).then(() => {
+      app.mount('#app');
+      console.log('✅ 测试应用已启动');
+    }).catch(error => {
+      console.error('❌ 组件加载失败:', error);
+    });
+  </script>
+</body>
+</html> 

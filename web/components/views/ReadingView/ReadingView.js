@@ -4,7 +4,8 @@
  */
 export default {
   dependencies: [
-    ['version-selector', '/components/shared/VersionSelector', 'VersionSelector']
+    ['version-selector', '/components/shared/VersionSelector', 'VersionSelector'],
+    ['tech-button', '/components/shared/TechButton', 'TechButton']
   ],
   
   props: {
@@ -22,6 +23,12 @@ export default {
 
     // 文档标题（英文）
     documentTitleEn: {
+      type: String,
+      default: ''
+    },
+    
+    // 文档Hash ID（用于Quick-Insight API）
+    documentHash: {
       type: String,
       default: ''
     },
@@ -103,7 +110,9 @@ export default {
     'article-click',
     'version-change',
     'toc-toggle',
-    'toc-resize'
+    'toc-resize',
+    'insight-mode-change',
+    'quick-insight-load'
   ],
   
   setup(props, { emit }) {
@@ -113,7 +122,7 @@ export default {
     const tocSidebar = ref(null);
     
     // 状态管理
-    const isTocVisible = computed(() => props.initialShowToc);
+    const userTocPreference = ref(props.initialShowToc); // 用户的TOC偏好设置
     const tocWidth = ref(props.initialTocWidth);
     const isDragging = ref(false);
     const dragStartX = ref(0);
@@ -121,6 +130,258 @@ export default {
     const parsedSections = ref([]);
     const activeSection = ref('');
     let scrollTimer = null;
+    
+    // 智能TOC显示逻辑：Quick-Insight模式下强制隐藏，Deep-Insight模式下根据用户偏好
+    const isTocVisible = computed(() => {
+      // Quick-Insight模式下强制隐藏TOC，因为AI生成的HTML有自己的导航布局
+      if (currentInsightMode.value === 'quick') {
+        return false;
+      }
+      // Deep-Insight模式下根据用户偏好显示
+      return userTocPreference.value;
+    });
+    
+    // Quick-Insight 相关状态
+    const currentInsightMode = ref('deep'); // 'deep' | 'quick'
+    const hasQuickInsight = ref(false);
+    const quickInsightContent = ref('');
+    const quickIframeSrcdoc = ref(''); // iframe srcdoc 内容
+    const quickInsightLoading = ref(false);
+    const quickInsightError = ref('');
+    const insightMetadata = ref(null);
+    
+    // Quick-Insight API 调用方法
+    const checkQuickInsightAvailability = async () => {
+      if (!props.documentHash) {
+        hasQuickInsight.value = false;
+        return Promise.resolve(null);
+      }
+      
+      try {
+        const response = await axios.get(`/api/articles/${props.documentHash}/insight`);
+        const data = response.data;
+        
+        hasQuickInsight.value = data.has_insight;
+        if (data.has_insight) {
+          insightMetadata.value = data.metadata;
+          // 首次使用引导
+          showQuickInsightTip();
+        }
+        
+        return data;
+      } catch (error) {
+        console.error('检查Quick-Insight失败:', error);
+        hasQuickInsight.value = false;
+        return null;
+      }
+    };
+    
+        const cleanQuickInsightHtml = (htmlContent) => {
+      if (!htmlContent) return '';
+      
+      let cleanedContent = htmlContent;
+      
+      // 简单清理：移除markdown代码块标记和基本的问题结构
+      cleanedContent = cleanedContent.replace(/^```html\s*$/gm, '');
+      cleanedContent = cleanedContent.replace(/^```\s*$/gm, '');
+      
+      // 移除可能形成悬浮黑条的header结构
+      cleanedContent = cleanedContent.replace(/<header[^>]*class="[^"]*site-header[^"]*"[^>]*>[\s\S]*?<\/header>/gi, '');
+      cleanedContent = cleanedContent.replace(/<header[^>]*>[\s\S]*?Reinvent Insight[\s\S]*?<\/header>/gi, '');
+      
+      // 移除title中的Reinvent Insight
+      cleanedContent = cleanedContent.replace(/<title>([^<]*?)\s*\|\s*Reinvent Insight<\/title>/gi, '<title>$1</title>');
+      cleanedContent = cleanedContent.replace(/<title>Reinvent Insight\s*\|\s*([^<]*?)<\/title>/gi, '<title>$1</title>');
+      
+      // 提取可在Vue中渲染的内容
+      if (cleanedContent.includes('<!DOCTYPE html>')) {
+        // 提取head中的style标签
+        const headMatch = cleanedContent.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
+        const bodyMatch = cleanedContent.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+        
+        let styles = '';
+        let bodyContent = '';
+        
+        if (headMatch) {
+          // 提取所有style标签和link标签
+          const styleMatches = headMatch[1].match(/<style[^>]*>[\s\S]*?<\/style>/gi) || [];
+          const linkMatches = headMatch[1].match(/<link[^>]*>/gi) || [];
+          styles = [...styleMatches, ...linkMatches].join('\n');
+        }
+        
+        if (bodyMatch) {
+          bodyContent = bodyMatch[1];
+        }
+        
+        // 组合成可在Vue中渲染的HTML片段
+        cleanedContent = `${styles}\n${bodyContent}`;
+      }
+      
+      cleanedContent = cleanedContent.trim();
+      
+      return cleanedContent;
+    };
+    
+    const loadQuickInsightContent = async (forceReload = false) => {
+      if (!props.documentHash || (quickInsightContent.value && !forceReload)) {
+        return; // 已经加载过了
+      }
+      
+      quickInsightLoading.value = true;
+      quickInsightError.value = '';
+      
+      try {
+        const response = await axios.get(`/api/articles/${props.documentHash}/insight/content`);
+        const cleanedContent = cleanQuickInsightHtml(response.data);
+        
+        // 验证清理后的内容是否为空
+        if (!cleanedContent || cleanedContent.trim().length === 0) {
+          throw new Error('Quick-Insight内容为空');
+        }
+        
+        // 验证清理后的内容是否是有效的HTML
+        if (!cleanedContent.includes('<') || !cleanedContent.includes('>')) {
+          throw new Error('Quick-Insight内容不是有效的HTML');
+        }
+        
+        quickInsightContent.value = cleanedContent;
+        quickIframeSrcdoc.value = cleanedContent; // 设置 iframe srcdoc
+        emit('quick-insight-load', { content: cleanedContent });
+        
+        console.log('Quick-Insight内容加载成功，长度:', cleanedContent.length);
+        console.log('清理后内容预览:', cleanedContent.substring(0, 500));
+        
+        // 检查清理效果
+        const hasDoctype = cleanedContent.includes('<!DOCTYPE html>');
+        const hasStyle = cleanedContent.includes('<style>');
+        const hasHeader = cleanedContent.includes('<header');
+        const hasReinvent = cleanedContent.includes('Reinvent Insight');
+        
+        console.log('清理效果检查:');
+        console.log('- 包含DOCTYPE:', hasDoctype);
+        console.log('- 包含样式:', hasStyle);
+        console.log('- 包含header:', hasHeader);
+        console.log('- 包含Reinvent Insight:', hasReinvent);
+        
+        if (!hasDoctype && !hasStyle) {
+          console.error('❌ 清理过度：缺少HTML结构和样式');
+        } else if (hasDoctype && hasStyle && !hasHeader) {
+          console.log('✅ 清理成功：保留样式，移除header');
+        }
+      } catch (error) {
+        console.error('加载Quick-Insight内容失败:', error);
+        quickInsightError.value = '加载Quick-Insight内容失败';
+        quickIframeSrcdoc.value = '';
+        
+        // 如果是当前模式，自动切换回Deep-Insight模式
+        if (currentInsightMode.value === 'quick') {
+          currentInsightMode.value = 'deep';
+          if (window.eventBus) {
+            window.eventBus.emit('show-toast', {
+              type: 'warning',
+              message: 'Quick-Insight加载失败，已切换到Deep-Insight模式'
+            });
+          }
+        } else {
+          // 显示错误提示
+          if (window.eventBus) {
+            window.eventBus.emit('show-toast', {
+              type: 'error',
+              message: '加载Quick-Insight内容失败，请稍后重试'
+            });
+          }
+        }
+      } finally {
+        quickInsightLoading.value = false;
+      }
+    };
+    
+    const switchInsightMode = async (mode) => {
+      if (mode === currentInsightMode.value) return;
+      
+      if (mode === 'quick' && !hasQuickInsight.value) {
+        // 显示提示：Quick-Insight不可用
+        if (window.eventBus) {
+          window.eventBus.emit('show-toast', {
+            type: 'warning',
+            message: '该文章暂无Quick-Insight版本'
+          });
+        }
+        return;
+      }
+      
+      // 如果切换到Quick-Insight模式，强制重新加载内容（使用最新的清理逻辑）
+      if (mode === 'quick') {
+        await loadQuickInsightContent(true); // 强制重新加载
+        if (quickInsightError.value) {
+          return; // 加载失败，不切换模式
+        }
+      }
+      
+      currentInsightMode.value = mode;
+      emit('insight-mode-change', { mode, hasQuickInsight: hasQuickInsight.value });
+      
+      // 保存用户偏好（文档特定 + 全局）
+      localStorage.setItem('preferred-insight-mode', mode);
+      if (props.documentHash) {
+        localStorage.setItem(`insight-mode-${props.documentHash}`, mode);
+      }
+      
+      // 切换模式后重新解析内容和重置状态
+      await nextTick();
+      
+      // 重新解析内容（Deep-Insight模式需要重新解析TOC）
+      if (cleanContent.value) {
+        parsedSections.value = parseContent(cleanContent.value);
+        ensureHeadingIds();
+      }
+      
+      // 平滑滚动到顶部
+      const container = document.querySelector('.reading-view__content');
+      if (container) {
+        container.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      
+      // 如果切换回Deep-Insight模式，确保TOC状态正确
+      if (mode === 'deep') {
+        // 重新初始化TOC状态
+        const savedTocPreference = localStorage.getItem('showToc');
+        if (savedTocPreference !== null) {
+          userTocPreference.value = savedTocPreference === 'true';
+        }
+      }
+    };
+    
+    const showQuickInsightTip = () => {
+      if (hasQuickInsight.value && !localStorage.getItem('quick-insight-tip-shown')) {
+        if (window.eventBus) {
+          window.eventBus.emit('show-toast', {
+            type: 'info',
+            message: '🎉 发现新功能！点击 Quick-Insight 体验AI视觉化阅读',
+            duration: 5000
+          });
+        }
+        localStorage.setItem('quick-insight-tip-shown', 'true');
+      }
+    };
+    
+    const loadUserPreference = () => {
+      // 优先使用当前文档的特定偏好
+      if (props.documentHash) {
+        const docPreference = localStorage.getItem(`insight-mode-${props.documentHash}`);
+        if (docPreference && (docPreference === 'deep' || docPreference === 'quick')) {
+          return docPreference;
+        }
+      }
+      
+      // 回退到全局偏好
+      const globalPreference = localStorage.getItem('preferred-insight-mode');
+      if (globalPreference && (globalPreference === 'deep' || globalPreference === 'quick')) {
+        return globalPreference;
+      }
+      
+      return 'deep'; // 默认模式
+    };
     
     // 解析内容HTML生成目录结构
     const parseContent = (html) => {
@@ -214,9 +475,12 @@ export default {
       return html;
     };
     
-    // 直接使用后端清理过的内容
+    // 根据当前模式返回对应的内容
     const cleanContent = computed(() => {
-      // 后端已经清理了元数据，直接返回
+      if (currentInsightMode.value === 'quick' && quickInsightContent.value) {
+        return quickInsightContent.value;
+      }
+      // Deep-Insight模式：使用后端清理过的markdown内容
       return props.content || '';
     });
 
@@ -238,7 +502,30 @@ export default {
     
     // TOC相关方法
     const toggleToc = () => {
+      // Quick-Insight模式下不允许切换TOC，显示提示
+      if (currentInsightMode.value === 'quick') {
+        if (window.eventBus) {
+          window.eventBus.emit('show-toast', {
+            type: 'info',
+            message: 'Quick-Insight模式下TOC已智能隐藏',
+            duration: 2000
+          });
+        }
+        return;
+      }
+      
+      // Deep-Insight模式下切换用户偏好并保存
+      userTocPreference.value = !userTocPreference.value;
+      localStorage.setItem('showToc', userTocPreference.value.toString());
       emit('toc-toggle');
+      
+      // 确保在Deep-Insight模式下TOC状态正确更新
+      nextTick(() => {
+        if (cleanContent.value) {
+          parsedSections.value = parseContent(cleanContent.value);
+          ensureHeadingIds();
+        }
+      });
     };
     
     const handleTocClick = (event) => {
@@ -576,6 +863,39 @@ export default {
       }
     });
     
+    // 监听文档Hash变化，重新检查Quick-Insight可用性和用户偏好
+    watch(() => props.documentHash, (newHash) => {
+      if (newHash) {
+        // 重置状态
+        hasQuickInsight.value = false;
+        quickInsightContent.value = '';
+        quickInsightError.value = '';
+        
+        // 加载新文档的用户偏好
+        const preferredMode = loadUserPreference();
+        currentInsightMode.value = preferredMode;
+        
+        // 检查新文档的Quick-Insight可用性
+        checkQuickInsightAvailability().then(() => {
+          if (preferredMode === 'quick' && hasQuickInsight.value) {
+            loadQuickInsightContent(true); // 强制重新加载
+          } else if (preferredMode === 'quick' && !hasQuickInsight.value) {
+            currentInsightMode.value = 'deep';
+          }
+        });
+      }
+    });
+    
+    // 监听洞察模式变化，重新解析内容
+    watch(currentInsightMode, () => {
+      nextTick(() => {
+        if (cleanContent.value) {
+          parsedSections.value = parseContent(cleanContent.value);
+          ensureHeadingIds();
+        }
+      });
+    });
+    
     // 确保实际DOM中的标题有ID
     const ensureHeadingIds = () => {
       const container = document.querySelector('.reading-view__content');
@@ -664,6 +984,31 @@ export default {
       // 初始响应式检查
       handleResize();
       
+      // 初始化用户TOC偏好（从localStorage加载）
+      const savedTocPreference = localStorage.getItem('showToc');
+      if (savedTocPreference !== null) {
+        userTocPreference.value = savedTocPreference === 'true';
+      }
+      
+      // Quick-Insight 初始化
+      if (props.documentHash) {
+        // 先加载用户偏好，再检查可用性
+        const preferredMode = loadUserPreference();
+        currentInsightMode.value = preferredMode; // 立即设置模式，避免闪切
+        
+        // 异步检查Quick-Insight可用性
+        checkQuickInsightAvailability().then(() => {
+          // API检查完成后，根据可用性调整模式
+          if (preferredMode === 'quick' && hasQuickInsight.value) {
+            // 如果偏好是quick且可用，预加载内容
+            loadQuickInsightContent(true); // 强制重新加载
+          } else if (preferredMode === 'quick' && !hasQuickInsight.value) {
+            // 如果偏好是quick但不可用，回退到deep模式
+            currentInsightMode.value = 'deep';
+          }
+        });
+      }
+      
       // 初始化时解析内容
       if (cleanContent.value) {
         nextTick(() => {
@@ -708,15 +1053,58 @@ export default {
       tocWidth.value = props.initialTocWidth;
     };
     
+    const adjustIframeHeight = (event) => {
+      const iframe = event.target;
+      try {
+        // 尝试访问iframe内容获取实际高度
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        if (doc && doc.body) {
+          const contentHeight = Math.max(
+            doc.body.scrollHeight,
+            doc.body.offsetHeight,
+            doc.documentElement.clientHeight,
+            doc.documentElement.scrollHeight,
+            doc.documentElement.offsetHeight
+          );
+          
+          // 设置iframe高度，确保有足够的空间
+          iframe.style.height = Math.max(contentHeight + 50, 800) + 'px';
+          console.log('✅ iframe高度已调整为:', iframe.style.height);
+        }
+      } catch (e) {
+        // 沙盒限制下无法访问，使用默认高度策略
+        console.log('⚠️ 无法访问iframe内容，使用默认高度策略');
+        
+        // 根据视口高度设置一个合理的默认高度
+        const viewportHeight = window.innerHeight;
+        const defaultHeight = Math.max(viewportHeight * 0.9, 800);
+        iframe.style.height = defaultHeight + 'px';
+        
+        // 确保iframe可以正常滚动
+        iframe.style.overflow = 'auto';
+        iframe.scrolling = 'yes';
+      }
+    };
+    
     return {
       // 引用
       tocSidebar,
       
       // 响应式状态
       isTocVisible,
+      userTocPreference,
       tocWidth,
       isDragging,
       activeSection,
+      
+      // Quick-Insight 状态
+      currentInsightMode,
+      hasQuickInsight,
+      quickInsightContent,
+      quickIframeSrcdoc,
+      quickInsightLoading,
+      quickInsightError,
+      insightMetadata,
       
       // 计算属性
       hasMultipleVersions,
@@ -732,6 +1120,13 @@ export default {
       resetLayout,
       startDrag,
       scrollToSection,
+      
+      // Quick-Insight 方法
+      switchInsightMode,
+      checkQuickInsightAvailability,
+      loadQuickInsightContent,
+      cleanQuickInsightHtml,
+      adjustIframeHeight,
       
       // props
       tocTitle: props.tocTitle,

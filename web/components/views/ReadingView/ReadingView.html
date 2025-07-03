@@ -59,25 +59,92 @@
           @click="handleArticleClick"
           class="reading-view__article">
           
-          <!-- 版本选择器（移至滚动容器外部） -->
-          <div v-if="hasMultipleVersions" class="reading-view__version-selector">
-            <version-selector
-              :versions="versions"
-              :current-version="Number(currentVersion)"
-              @change="handleVersionChange">
-            </version-selector>
+          <!-- 版本选择器和模式切换器（移至滚动容器外部） -->
+          <div class="reading-view__controls">
+            <!-- 洞察模式切换器 -->
+            <div v-if="hasQuickInsight" class="reading-view__insight-switcher">
+              <tech-button 
+                :variant="currentInsightMode === 'deep' ? 'primary' : 'secondary'"
+                size="sm"
+                @click="switchInsightMode('deep')"
+                class="insight-mode-btn insight-mode-btn--deep">
+                📚 Deep-Insight
+              </tech-button>
+              
+              <tech-button 
+                :variant="currentInsightMode === 'quick' ? 'primary' : 'secondary'"
+                size="sm"
+                :loading="quickInsightLoading"
+                @click="switchInsightMode('quick')"
+                class="insight-mode-btn insight-mode-btn--quick">
+                ⚡ Quick-Insight
+              </tech-button>
+            </div>
+            
+            <!-- 版本选择器 -->
+            <div v-if="hasMultipleVersions" class="reading-view__version-selector">
+              <version-selector
+                :versions="versions"
+                :current-version="Number(currentVersion)"
+                @change="handleVersionChange">
+              </version-selector>
+            </div>
           </div>
           
           <!-- 可滚动的内容容器 -->
           <div class="reading-view__scroll-content">
-            <!-- 文章头部，包含标题和分割线 -->
-            <div v-if="documentTitleEn || documentTitle" class="reading-view__article-header">
-              <h1 v-if="documentTitleEn" class="reading-view__title-en">{{ documentTitleEn }}</h1>
-              <h2 v-if="documentTitle" class="reading-view__title-cn">{{ documentTitle }}</h2>
-          </div>
+            <!-- Quick-Insight 加载状态 -->
+            <div v-if="quickInsightLoading" class="reading-view__quick-loading">
+              <div class="quick-insight-loading">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">正在加载Quick-Insight...</div>
+              </div>
+            </div>
+            
+            <!-- Quick-Insight 错误状态 -->
+            <div v-else-if="quickInsightError && currentInsightMode === 'quick'" class="reading-view__quick-error">
+              <div class="quick-insight-error">
+                <p>{{ quickInsightError }}</p>
+                <tech-button variant="secondary" size="sm" @click="switchInsightMode('deep')">
+                  返回Deep-Insight模式
+                </tech-button>
+              </div>
+            </div>
+            
+            <!-- 正常内容 -->
+            <div v-else>
+              <!-- Deep-Insight模式：显示传统的标题和markdown渲染 -->
+              <div v-if="currentInsightMode === 'deep'">
+                <!-- 文章头部，包含标题和分割线 -->
+                <div v-if="documentTitleEn || documentTitle" class="reading-view__article-header">
+                  <h1 v-if="documentTitleEn" class="reading-view__title-en">{{ documentTitleEn }}</h1>
+                  <h2 v-if="documentTitle" class="reading-view__title-cn">{{ documentTitle }}</h2>
+                </div>
 
-          <!-- 文章正文 -->
-          <div v-html="cleanContent" class="reading-view__body prose-tech"></div>
+                <!-- 文章正文 -->
+                <div v-html="cleanContent" class="reading-view__body prose-tech"></div>
+              </div>
+              
+              <!-- Quick-Insight模式：使用 iframe 沙盒渲染AI 生成的 HTML (避免样式冲突) -->
+              <div v-else-if="currentInsightMode === 'quick'" class="reading-view__quick-content">
+                <!-- 当内容准备好时渲染 iframe，否则继续展示加载动画 -->
+                <iframe
+                  v-if="quickIframeSrcdoc"
+                  class="reading-view__quick-iframe"
+                  :srcdoc="quickIframeSrcdoc"
+                  sandbox="allow-same-origin allow-scripts"
+                  scrolling="yes"
+                  frameborder="0"
+                  @load="adjustIframeHeight"></iframe>
+                <!-- 兼容极端情况下的兜底 -->
+                <div v-else class="reading-view__quick-loading">
+                  <div class="quick-insight-loading">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">正在加载Quick-Insight...</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

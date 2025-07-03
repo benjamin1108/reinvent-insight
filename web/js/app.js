@@ -338,7 +338,7 @@ const app = createApp({
     // TOC 相关方法
     const toggleToc = () => {
       showToc.value = !showToc.value;
-      localStorage.setItem('showToc', showToc.value);
+      localStorage.setItem('showToc', showToc.value.toString());
     };
 
     const handleTocResize = (width) => {
@@ -854,6 +854,26 @@ const app = createApp({
       showToast('这是一个测试消息', 'success');
     };
     
+    // Quick-Insight 相关事件处理
+    const handleInsightModeChange = (event) => {
+      const { mode, hasQuickInsight } = event;
+      console.log(`洞察模式切换: ${mode}, 是否有Quick-Insight: ${hasQuickInsight}`);
+      
+      // 可以在这里添加额外的逻辑，比如分析数据统计
+      if (mode === 'quick') {
+        // 记录用户使用Quick-Insight的统计
+        console.log('用户切换到Quick-Insight模式');
+      }
+    };
+    
+    const handleQuickInsightLoad = (event) => {
+      const { content } = event;
+      console.log('Quick-Insight内容加载完成，内容长度:', content.length);
+      
+      // 可以在这里添加成功提示
+      showToast('Quick-Insight加载成功', 'success');
+    };
+    
     // 清理版本相关localStorage数据
     const clearVersionStorage = () => {
       try {
@@ -1065,7 +1085,9 @@ const app = createApp({
       selectLevel,
       selectYear,
       formatWordCount,
-      isValidYoutubeUrl
+      isValidYoutubeUrl,
+      handleInsightModeChange,
+      handleQuickInsightLoad
     };
   }
 });
