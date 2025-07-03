@@ -30,15 +30,5 @@ dependencies = [
 [tool.setuptools.packages.find]
 where = ["src"]
 
-[tool.setuptools.package-data]
-reinvent_insight = [
-    "py.typed",
-    "../web/**/*",
-    "../prompt/**/*"
-]
-
-[tool.setuptools.exclude-package-data]
-reinvent_insight = ["../web/test/**/*"]
-
 [project.scripts]
 reinvent-insight = "reinvent_insight.main:cli"

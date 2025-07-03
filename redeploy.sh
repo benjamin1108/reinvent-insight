@@ -165,8 +165,19 @@ build_package() {
     print_info "使用 Python: $($PYTHON_BIN --version)"
     print_info "构建工具已就绪"
     
+    # 检查并显示 MANIFEST.in 配置
+    if [ -f "MANIFEST.in" ]; then
+        if grep -q "prune web/test" MANIFEST.in; then
+            print_info "✓ 已配置排除 web/test 目录（生产环境优化）"
+        else
+            print_warning "未配置排除 web/test 目录，将包含测试文件"
+        fi
+    else
+        print_warning "未找到 MANIFEST.in 文件"
+    fi
+    
     # 构建
-    print_info "开始构建包（将根据 pyproject.toml 配置打包）..."
+    print_info "开始构建包（排除测试文件）..."
     $PYTHON_BIN -m build
     
     if [ $? -eq 0 ]; then
@@ -235,7 +246,13 @@ show_deployment_plan() {
     echo "• 服务主机: $HOST"
     
     # 显示构建配置信息
-    print_info "构建配置将遵循 pyproject.toml"
+    if [ -f "MANIFEST.in" ]; then
+        if grep -q "prune web/test" MANIFEST.in; then
+            echo "• 构建配置: 排除 test 目录 ✓"
+        else
+            echo "• 构建配置: 包含 test 目录 ⚠️"
+        fi
+    fi
     
     echo "======================================"
     
@@ -392,9 +409,9 @@ deploy_new_version() {
     
     # 验证 test 目录是否被正确排除
     if [ ! -d "web/test" ]; then
-        print_success "✓ test 目录已被正确排除（根据 pyproject.toml）"
+        print_success "✓ test 目录已被正确排除"
     else
-        print_warning "⚠️ test 目录仍然存在，请检查 pyproject.toml 配置"
+        print_warning "⚠️ test 目录仍然存在，请检查 MANIFEST.in 配置"
         print_info "test 目录内容: $(ls -la web/test | wc -l) 个文件"
     fi
     
