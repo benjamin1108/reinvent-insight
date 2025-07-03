@@ -246,6 +246,22 @@ export default {
       isSubmitting.value = false;
     };
     
+    // 监听全局登录错误事件
+    let unsubscribeLoginError;
+    Vue.onMounted(() => {
+      if (window.eventBus && window.eventBus.on) {
+        unsubscribeLoginError = window.eventBus.on('login-error', (msg) => {
+          setError(msg || '登录失败');
+        });
+      }
+    });
+    
+    Vue.onUnmounted(() => {
+      if (unsubscribeLoginError) {
+        unsubscribeLoginError();
+      }
+    });
+    
     return {
       form,
       errors,

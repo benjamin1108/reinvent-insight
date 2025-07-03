@@ -235,6 +235,9 @@ const app = createApp({
         await loadSummaries();
       } catch (error) {
         console.error('登录失败:', error);
+        if (window.eventBus && window.eventBus.emit) {
+          window.eventBus.emit('login-error', error.response?.data?.detail || '登录失败');
+        }
         showToast(error.response?.data?.detail || '登录失败', 'danger');
       }
     };
@@ -387,7 +390,10 @@ const app = createApp({
     };
     
     const connectWebSocket = (taskId) => {
-      const wsUrl = `ws://${window.location.host}/ws/${taskId}`;
+      const wsScheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrlObj = new URL(`/ws/${taskId}`, window.location.origin);
+      wsUrlObj.protocol = wsScheme;
+      const wsUrl = wsUrlObj.href;
       const ws = new WebSocket(wsUrl);
       const displayedLogs = new Set(logs.value);
 
