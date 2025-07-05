@@ -46,13 +46,11 @@
 
 /* Re:Invent 卡片特殊样式 - 修饰符 */
 .summary-card--reinvent {
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(55, 65, 81, 0.8) 50%, rgba(30, 41, 59, 0.9) 100%);
   border: 1px solid rgba(251, 146, 60, 0.3);
 }
 
 .summary-card--reinvent:hover {
   border-color: rgba(249, 115, 22, 0.6);
-  box-shadow: 0 0 30px rgba(249, 115, 22, 0.15), 0 0 60px rgba(249, 115, 22, 0.08);
 }
 
 /* 其他精选卡片样式 - 修饰符 */
@@ -80,22 +78,15 @@
 .summary-card--reinvent .summary-card__category-glow {
   background: linear-gradient(45deg, #f97316, #ea580c, #dc2626, #f97316);
   background-size: 300% 300%;
-  animation: gradient-shift 3s ease infinite;
 }
 
 .summary-card--other .summary-card__category-glow {
   background: linear-gradient(45deg, #06b6d4, #3b82f6, #8b5cf6, #06b6d4);
   background-size: 300% 300%;
-  animation: gradient-shift 3s ease infinite;
 }
 
 .summary-card:hover .summary-card__category-glow {
   opacity: 0.3;
-}
-
-@keyframes gradient-shift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
 }
 
 /* 内容区域 - Element */
@@ -142,15 +133,7 @@
 
 /* Reinvent卡片的标题颜色 - 橙色系 */
 .summary-card--reinvent .summary-card__title {
-  background: linear-gradient(135deg, #fb923c 0%, #ea580c 50%, #dc2626 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  font-weight: 700; /* 使用bold保持一致性，避免过度突出 */
-  /* 优化渐变文字的字体渲染 */
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
+  color: #fb923c;
 }
 
 /* Hover时的渐变效果 - 来自主项目 */
@@ -166,20 +149,17 @@
   /* 移除字重和间距变化，避免文字跳动 */
 }
 
-/* Reinvent卡片hover时的渐变效果 - 橙色系 */
+/* Reinvent卡片hover时的渐变效果 - 保持一致 */
 .summary-card--reinvent:hover .summary-card__title {
-  background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%);
+  background: linear-gradient(135deg, #22d3ee 0%, #3b82f6 35%, #8b5cf6 70%, #ec4899 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  text-shadow: 0 0 20px rgba(255, 255, 255, 0.3); /* 添加微妙发光效果 */
   /* 优化渐变文字的字体渲染 */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
-
-/* 删除Tailwind工具类，样式已内联到相应的BEM类中 */
 
 /* 英文副标题区域 - Element */
 .summary-card__subtitle-area {
@@ -225,8 +205,6 @@
   opacity: 0.95;
   /* 移除字重变化，避免文字跳动 */
 }
-
-/* 删除Tailwind颜色工具类 */
 
 /* 元数据区域 - Element（统一使用metadata） */
 .summary-card__metadata {
@@ -350,8 +328,6 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   transform: translateY(-1px); /* 统一hover效果 */
 }
-
-/* 删除所有全局工具类 - 样式已整合到BEM类中 */
 
 /* 响应式设计 */
 @media (max-width: 768px) {
