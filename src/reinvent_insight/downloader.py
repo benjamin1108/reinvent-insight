@@ -3,6 +3,7 @@ import re
 from pathlib import Path
 import subprocess
 import json
+import time
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -84,19 +85,36 @@ class SubtitleDownloader:
         self.url = url
         self.metadata: Optional[VideoMetadata] = None
 
+    def _get_base_command(self) -> list[str]:
+        """获取基础的 yt-dlp 命令参数，包含反爬虫选项。"""
+        command = [
+            'yt-dlp',
+            '--no-playlist',
+            '--user-agent', config.YT_DLP_USER_AGENT,
+            '--socket-timeout', str(config.DOWNLOAD_TIMEOUT),
+            '--retries', str(config.DOWNLOAD_RETRY_COUNT),
+            '--fragment-retries', str(config.DOWNLOAD_RETRY_COUNT),
+            '--extractor-retries', str(config.DOWNLOAD_RETRY_COUNT),
+            '--sleep-interval', '1',
+            '--max-sleep-interval', '3',
+            '--sleep-subtitles', '1',
+        ]
+        
+        # 添加 cookies 文件
+        if config.COOKIES_FILE and config.COOKIES_FILE.exists():
+            command.extend(['--cookies', str(config.COOKIES_FILE)])
+            logger.info(f"使用 Cookies 文件: {config.COOKIES_FILE}")
+        else:
+            logger.warning(f"Cookies 文件不存在: {config.COOKIES_FILE}")
+        
+        return command
+
     def _fetch_metadata(self) -> bool:
         """使用 yt-dlp --dump-json 获取并解析所有元数据。"""
         try:
             logger.info(f"正在为链接获取元数据: {self.url}")
-            command = [
-                'yt-dlp', '--dump-json', '--no-playlist'
-            ]
-            
-            # 新增：在获取元数据时也使用cookies
-            if config.COOKIES_FILE and config.COOKIES_FILE.exists():
-                logger.info(f"元数据获取使用 Cookies 文件: {config.COOKIES_FILE}")
-                command.extend(['--cookies', str(config.COOKIES_FILE)])
-            
+            command = self._get_base_command()
+            command.extend(['--dump-json'])
             command.append(self.url)
 
             result = subprocess.run(
@@ -123,6 +141,62 @@ class SubtitleDownloader:
             logger.error(f"解析 yt-dlp 输出的 JSON 失败: {e}")
             return False
 
+    def _download_subtitles_with_retry(self, subtitle_langs: list[str]) -> bool:
+        """使用重试机制下载字幕。"""
+        for lang in subtitle_langs:
+            for attempt in range(config.DOWNLOAD_RETRY_COUNT + 1):
+                try:
+                    logger.info(f"尝试下载 {lang} 字幕 (第 {attempt + 1} 次)...")
+                    
+                    command = self._get_base_command()
+                    command.extend([
+                        '--write-sub',
+                        '--write-auto-sub',
+                        '--sub-lang', lang,
+                        '--sub-format', 'vtt',
+                        '--skip-download',
+                        '-o', str(config.SUBTITLE_DIR / f"{self.metadata.sanitized_title}.%(ext)s"),
+                    ])
+                    command.append(self.url)
+
+                    result = subprocess.run(
+                        command,
+                        capture_output=True, text=True, check=True, encoding='utf-8'
+                    )
+                    
+                    # 检查是否成功下载了字幕文件
+                    expected_vtt_path = config.SUBTITLE_DIR / f"{self.metadata.sanitized_title}.{lang}.vtt"
+                    if expected_vtt_path.exists():
+                        logger.info(f"成功下载 {lang} 字幕: {expected_vtt_path.name}")
+                        return True
+                    
+                except subprocess.CalledProcessError as e:
+                    error_msg = e.stderr.strip() if e.stderr else str(e)
+                    
+                    if "403" in error_msg or "Forbidden" in error_msg:
+                        logger.warning(f"遇到 403 错误，等待后重试...")
+                        if attempt < config.DOWNLOAD_RETRY_COUNT:
+                            time.sleep(5 * (attempt + 1))  # 递增等待时间
+                            continue
+                    
+                    if "no subtitles available" in error_msg.lower():
+                        logger.info(f"视频没有可用的 {lang} 字幕")
+                        break
+                    
+                    logger.warning(f"下载 {lang} 字幕失败 (第 {attempt + 1} 次): {error_msg}")
+                    if attempt < config.DOWNLOAD_RETRY_COUNT:
+                        time.sleep(3 * (attempt + 1))
+                        continue
+                    
+                except FileNotFoundError:
+                    logger.error("错误: 'yt-dlp' 命令未找到。请确保它已安装并位于系统的 PATH 中。")
+                    return False
+                
+                # 如果所有重试都失败了，尝试下一种语言
+                break
+        
+        return False
+
     def download(self) -> tuple[str | None, VideoMetadata | None]:
         """下载字幕并返回清理后的文本内容和完整的元数据对象。"""
         if not self._fetch_metadata() or not self.metadata:
@@ -130,50 +204,25 @@ class SubtitleDownloader:
 
         expected_vtt_path = config.SUBTITLE_DIR / f"{self.metadata.sanitized_title}.en.vtt"
 
+        # 检查是否已经存在字幕文件
         if expected_vtt_path.exists():
             logger.info(f"字幕文件已存在，直接使用: {expected_vtt_path.name}")
             subtitle_text = self.clean_vtt(expected_vtt_path.read_text(encoding="utf-8"))
             return subtitle_text, self.metadata
 
-        logger.info(f"尝试下载英文 ('en') 字幕（优先人工，后备自动）...")
-        try:
-            # 增加 cookies 参数
-            command = [
-                'yt-dlp',
-                '--write-sub',
-                '--write-auto-sub',
-                '--sub-lang', 'en',
-                '--sub-format', 'vtt',
-                '--skip-download',
-                '--no-playlist',
-                '-o', str(config.SUBTITLE_DIR / f"{self.metadata.sanitized_title}.%(ext)s"),
-            ]
-            if config.COOKIES_FILE and config.COOKIES_FILE.exists():
-                logger.info(f"使用 Cookies 文件: {config.COOKIES_FILE}")
-                command.extend(['--cookies', str(config.COOKIES_FILE)])
-            
-            command.append(self.url)
-
-            subprocess.run(
-                command,
-                capture_output=True, text=True, check=True, encoding='utf-8'
-            )
-
-            if expected_vtt_path.exists():
-                logger.info(f"成功下载字幕: {expected_vtt_path.name}")
-                subtitle_text = self.clean_vtt(expected_vtt_path.read_text(encoding="utf-8"))
-                
-                return subtitle_text, self.metadata
-
-        except subprocess.CalledProcessError as e:
-            if "no subtitles available" not in e.stderr.lower():
-                logger.warning(f"下载英文字幕失败: {e.stderr.strip()}")
-            else:
-                logger.info("视频没有可用的英文字幕。")
-        except FileNotFoundError:
-            logger.error("错误: 'yt-dlp' 命令未找到。请确保它已安装并位于系统的 PATH 中。")
-
-        logger.error(f"所有类型的英文字幕都下载失败: {self.url}")
+        # 尝试下载字幕，按优先级排序
+        subtitle_languages = ['en', 'en-US', 'en-GB']
+        
+        if self._download_subtitles_with_retry(subtitle_languages):
+            # 找到下载的字幕文件
+            for lang in subtitle_languages:
+                vtt_path = config.SUBTITLE_DIR / f"{self.metadata.sanitized_title}.{lang}.vtt"
+                if vtt_path.exists():
+                    logger.info(f"使用 {lang} 字幕文件: {vtt_path.name}")
+                    subtitle_text = self.clean_vtt(vtt_path.read_text(encoding="utf-8"))
+                    return subtitle_text, self.metadata
+        
+        logger.error(f"所有尝试都失败，无法下载字幕: {self.url}")
         return None, None
 
     @staticmethod

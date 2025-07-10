@@ -66,8 +66,18 @@ ADMIN_PASSWORD = os.getenv("PASSWORD") or os.getenv("ADMIN_PASSWORD") or "passwo
 OUTPUT_DIR = PROJECT_ROOT / "downloads" / "summaries"
 # 定义字幕下载目录
 SUBTITLE_DIR = PROJECT_ROOT / "downloads" / "subtitles"
-# 定义 Cookies 文件路径 (即使文件不存在也没关系，程序会检查)
-COOKIES_FILE = PROJECT_ROOT / "cookies.txt"
+# 定义 Cookies 文件路径 - 修复为正确的 .cookies 文件
+COOKIES_FILE = PROJECT_ROOT / ".cookies"
+
+# --- 下载配置 ---
+# yt-dlp 用户代理，模拟真实浏览器
+YT_DLP_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
+# 下载重试次数
+DOWNLOAD_RETRY_COUNT = 3
+
+# 下载超时时间（秒）
+DOWNLOAD_TIMEOUT = 60
 
 # --- 并发控制 ---
 # 在并行生成章节时，每个API调用之间的延迟（秒）
