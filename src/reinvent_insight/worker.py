@@ -1,16 +1,23 @@
 import asyncio
 import logging
 import uuid
+from typing import Optional, Dict
 from . import config, downloader
 from .workflow import run_deep_summary_workflow
+from .adaptive_workflow import run_adaptive_deep_summary_workflow
 from .task_manager import manager  # Import the shared manager instance
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-async def summary_task_worker_async(url: str, task_id: str):
+async def summary_task_worker_async(url: str, task_id: str, length_config: Optional[Dict] = None):
     """
     异步工作函数，负责下载并启动多步骤摘要工作流。
+    
+    Args:
+        url: 视频URL
+        task_id: 任务ID
+        length_config: 长度配置选项，如果提供则使用自适应工作流
     """
     # 1. 下载字幕 (这是一个阻塞操作，在异步函数中通过 to_thread 运行以避免阻塞事件循环)
     try:
@@ -43,13 +50,28 @@ async def summary_task_worker_async(url: str, task_id: str):
     # 将标题和字幕拼接，为大模型提供更完整的上下文
     content_for_summary = f"视频标题: {video_title}\n\n{subtitle_text}"
 
-    # 2. 运行新的多步骤摘要工作流
-    # 这个工作流内部会处理所有的日志、进度和结果发送
-    await run_deep_summary_workflow(
-        task_id=task_id,
-        model_name=config.PREFERRED_MODEL,
-        transcript=content_for_summary,
-        video_metadata=metadata
-    )
-
-    logger.info(f"任务 {task_id} 的工作流已在后台完成。") 
+    # 2. 根据配置选择工作流类型
+    if length_config and length_config.get('enable_adaptive', True):
+        # 使用自适应工作流
+        await manager.send_message("启用自适应长度生成模式", task_id)
+        # 设置任务的自适应状态
+        manager.set_adaptive_enabled(task_id, True)
+        await run_adaptive_deep_summary_workflow(
+            task_id=task_id,
+            model_name=config.PREFERRED_MODEL,
+            transcript=content_for_summary,
+            video_metadata=metadata
+        )
+        logger.info(f"任务 {task_id} 的自适应工作流已在后台完成。")
+    else:
+        # 使用标准工作流
+        await manager.send_message("使用标准长度生成模式", task_id)
+        # 设置任务的自适应状态为禁用
+        manager.set_adaptive_enabled(task_id, False)
+        await run_deep_summary_workflow(
+            task_id=task_id,
+            model_name=config.PREFERRED_MODEL,
+            transcript=content_for_summary,
+            video_metadata=metadata
+        )
+        logger.info(f"任务 {task_id} 的标准工作流已在后台完成。") 

@@ -247,14 +247,32 @@ def verify_token(authorization: str = None):
     return True
 
 # --- API 端点 ---
+class LengthConfigRequest(BaseModel):
+    """长度配置请求模型"""
+    enable_adaptive: bool = True
+    target_length: Optional[int] = None
+    min_length: Optional[int] = None
+    max_length: Optional[int] = None
+    chapter_count: Optional[int] = None
+    detail_level: Optional[str] = None  # "简洁", "适度", "深度"
+
 class SummarizeRequest(BaseModel):
     url: HttpUrl
     task_id: Optional[str] = None
+    length_config: Optional[LengthConfigRequest] = None
 
 class SummarizeResponse(BaseModel):
     task_id: str
     message: str
-    status: str # "created", "reconnected"
+    status: str
+    adaptive_enabled: bool = False
+
+class AdaptiveStatusResponse(BaseModel):
+    """自适应状态响应模型"""
+    adaptive_enabled: bool
+    video_analysis: Optional[Dict] = None
+    length_target: Optional[Dict] = None
+    length_statistics: Optional[Dict] = None # "created", "reconnected"
 
 def discover_versions(video_url: str) -> List[Dict[str, any]]:
     """发现指定视频URL的所有版本"""
@@ -290,20 +308,84 @@ def discover_versions(video_url: str) -> List[Dict[str, any]]:
 async def summarize_endpoint(req: SummarizeRequest, authorization: str = Header(None)):
     """
     接收 URL，创建或重新连接到后台任务。
+    支持自适应长度配置。
     """
     verify_token(authorization)
     
     if req.task_id and manager.get_task_state(req.task_id):
         task_id = req.task_id
         logger.info(f"客户端正在尝试重新连接到任务: {task_id}")
-        return SummarizeResponse(task_id=task_id, message="任务恢复中，请连接 WebSocket。", status="reconnected")
+        # 获取任务的自适应状态
+        task_state = manager.get_task_state(task_id)
+        adaptive_enabled = task_state.adaptive_enabled if task_state else False
+        return SummarizeResponse(
+            task_id=task_id, 
+            message="任务恢复中，请连接 WebSocket。", 
+            status="reconnected",
+            adaptive_enabled=adaptive_enabled
+        )
 
     task_id = str(uuid.uuid4())
-    # 直接创建并运行新的异步 worker
-    task = asyncio.create_task(summary_task_worker_async(str(req.url), task_id))
+    
+    # 处理长度配置 - 默认启用自适应功能
+    if req.length_config:
+        length_config = req.length_config.dict()
+        adaptive_enabled = length_config.get('enable_adaptive', True)
+        logger.info(f"任务 {task_id} 使用自适应配置: {length_config}")
+    else:
+        # 默认启用自适应功能
+        length_config = {"enable_adaptive": True}
+        adaptive_enabled = True
+        logger.info(f"任务 {task_id} 使用默认自适应配置")
+    
+    # 创建并运行新的异步 worker，传递长度配置
+    task = asyncio.create_task(summary_task_worker_async(str(req.url), task_id, length_config))
     manager.create_task(task_id, task)
     
-    return SummarizeResponse(task_id=task_id, message="任务已创建，请连接 WebSocket。", status="created")
+    return SummarizeResponse(
+        task_id=task_id, 
+        message="任务已创建，请连接 WebSocket。", 
+        status="created",
+        adaptive_enabled=adaptive_enabled
+    )
+
+@app.get("/api/tasks/{task_id}/adaptive-status", response_model=AdaptiveStatusResponse)
+async def get_adaptive_status(task_id: str, authorization: str = Header(None)):
+    """获取任务的自适应状态信息"""
+    verify_token(authorization)
+    
+    adaptive_info = manager.get_task_adaptive_info(task_id)
+    if not adaptive_info:
+        raise HTTPException(status_code=404, detail="任务未找到")
+    
+    return AdaptiveStatusResponse(**adaptive_info)
+
+@app.get("/api/length-config/defaults")
+async def get_default_length_config(authorization: str = Header(None)):
+    """获取默认的长度配置选项"""
+    verify_token(authorization)
+    
+    try:
+        from .adaptive_length import LengthConfigManager
+        config_manager = LengthConfigManager()
+        config_data = config_manager.config
+        
+        return {
+            "base_ratios": config_data.base_ratios,
+            "density_multipliers": config_data.density_multipliers,
+            "chapter_ranges": config_data.chapter_ranges,
+            "min_article_length": config_data.min_article_length,
+            "max_article_length": config_data.max_article_length,
+            "length_tolerance": config_data.length_tolerance,
+            "detail_levels": [
+                {"value": "简洁", "description": "重点突出核心观点，保持内容精炼"},
+                {"value": "适度", "description": "平衡深度与可读性，包含关键论证和案例"},
+                {"value": "深度", "description": "全面展开论述和分析，提供深度洞察"}
+            ]
+        }
+    except Exception as e:
+        logger.error(f"获取默认长度配置失败: {e}")
+        raise HTTPException(status_code=500, detail="获取配置失败")
 
 @app.get("/api/env")
 async def get_environment_info():

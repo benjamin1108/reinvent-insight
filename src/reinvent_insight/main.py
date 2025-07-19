@@ -33,8 +33,10 @@ async def process_single_video(url: str, show_status: bool = True):
     model_name = config.PREFERRED_MODEL
     
     # 创建异步任务（与Web API保持一致）
+    # 默认启用自适应长度功能
     from .worker import summary_task_worker_async
-    task = asyncio.create_task(summary_task_worker_async(url, task_id))
+    default_length_config = {"enable_adaptive": True}
+    task = asyncio.create_task(summary_task_worker_async(url, task_id, default_length_config))
     task_manager.create_task(task_id, task)
     
     # 显示任务创建信息

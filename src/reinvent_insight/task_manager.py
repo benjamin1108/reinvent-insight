@@ -27,6 +27,11 @@ class TaskState:
     result_path: Optional[str] = None # 最终报告的文件路径
     websocket: Optional[WebSocket] = None
     task: Optional[asyncio.Task] = None
+    # 自适应长度相关字段
+    adaptive_enabled: bool = False
+    length_target: Optional[Dict] = None
+    length_statistics: Optional[Dict] = None
+    video_analysis: Optional[Dict] = None
 
 class TaskManager:
     """管理 WebSocket 连接和后台任务状态"""
@@ -190,6 +195,76 @@ class TaskManager:
                     })
                 except Exception as e:
                     logger.warning(f"向客户端 {task_id} 发送错误消息失败 (可能已断开): {e}")
+
+    # 自适应长度相关方法
+    def set_adaptive_enabled(self, task_id: str, enabled: bool = True):
+        """设置任务的自适应功能状态"""
+        if task_id in self.tasks:
+            self.tasks[task_id].adaptive_enabled = enabled
+            logger.info(f"任务 {task_id} 自适应功能{'启用' if enabled else '禁用'}")
+
+    def set_length_target(self, task_id: str, length_target: Dict):
+        """设置任务的长度目标"""
+        if task_id in self.tasks:
+            self.tasks[task_id].length_target = length_target
+            logger.info(f"任务 {task_id} 长度目标已设置: {length_target.get('target_length', 'N/A')}字")
+
+    def set_video_analysis(self, task_id: str, video_analysis: Dict):
+        """设置任务的视频分析结果"""
+        if task_id in self.tasks:
+            self.tasks[task_id].video_analysis = video_analysis
+            logger.info(f"任务 {task_id} 视频分析结果已设置")
+
+    def update_length_statistics(self, task_id: str, statistics: Dict):
+        """更新任务的长度统计信息"""
+        if task_id in self.tasks:
+            self.tasks[task_id].length_statistics = statistics
+            logger.debug(f"任务 {task_id} 长度统计已更新")
+
+    async def send_length_update(self, task_id: str, length_data: Dict):
+        """发送长度相关的实时更新"""
+        if task_id in self.tasks:
+            ws = self.tasks[task_id].websocket
+            if ws:
+                try:
+                    await ws.send_json({
+                        "type": "length_update",
+                        "data": length_data
+                    })
+                except Exception as e:
+                    logger.warning(f"向客户端 {task_id} 发送长度更新失败 (可能已断开): {e}")
+
+    async def send_adaptive_status(self, task_id: str):
+        """发送自适应工作流状态"""
+        if task_id in self.tasks:
+            task_state = self.tasks[task_id]
+            ws = task_state.websocket
+            if ws and task_state.adaptive_enabled:
+                try:
+                    adaptive_data = {
+                        "adaptive_enabled": task_state.adaptive_enabled,
+                        "length_target": task_state.length_target,
+                        "video_analysis": task_state.video_analysis,
+                        "length_statistics": task_state.length_statistics
+                    }
+                    await ws.send_json({
+                        "type": "adaptive_status",
+                        "data": adaptive_data
+                    })
+                except Exception as e:
+                    logger.warning(f"向客户端 {task_id} 发送自适应状态失败 (可能已断开): {e}")
+
+    def get_task_adaptive_info(self, task_id: str) -> Optional[Dict]:
+        """获取任务的自适应信息"""
+        if task_id in self.tasks:
+            task_state = self.tasks[task_id]
+            return {
+                "adaptive_enabled": task_state.adaptive_enabled,
+                "length_target": task_state.length_target,
+                "video_analysis": task_state.video_analysis,
+                "length_statistics": task_state.length_statistics
+            }
+        return None
 
 # 创建一个全局唯一的 TaskManager 实例
 manager = TaskManager() 

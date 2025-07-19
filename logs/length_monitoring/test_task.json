@@ -1,0 +1,42 @@
+{
+  "task_id": "test_task",
+  "length_target": {
+    "target_length": 20000,
+    "min_length": 16000,
+    "max_length": 24000,
+    "chapter_count": 15,
+    "avg_chapter_length": 1333
+  },
+  "current_status": {
+    "current_length": 2700,
+    "target_length": 20000,
+    "progress_ratio": 0.13333333333333333,
+    "deviation_ratio": 0.012753188297074268,
+    "adjustment_needed": false,
+    "adjustment_type": "maintain",
+    "chapter_index": 1,
+    "expected_length": 2666,
+    "remaining_chapters": 13,
+    "predicted_final_length": 20250,
+    "timestamp": "2025-07-19T09:28:21.732901"
+  },
+  "chapter_records": [
+    {
+      "chapter_index": 0,
+      "chapter_title": "第一章",
+      "content_length": 1300,
+      "target_length": 1333,
+      "deviation_ratio": -0.024756189047261814,
+      "timestamp": "2025-07-19T09:28:21.732683"
+    },
+    {
+      "chapter_index": 1,
+      "chapter_title": "第二章",
+      "content_length": 1400,
+      "target_length": 1333,
+      "deviation_ratio": 0.05026256564141035,
+      "timestamp": "2025-07-19T09:28:21.732893"
+    }
+  ],
+  "last_updated": "2025-07-19T09:28:21.732915"
+}

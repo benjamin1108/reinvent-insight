@@ -1,4 +1,4 @@
-# Reinvent Insight - YouTube视频深度分析平台
+# Reinvent Insight - AI驱动的YouTube视频深度分析平台
 
 <div align="center">
 
@@ -6,7 +6,6 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111.0+-green.svg)](https://fastapi.tiangolo.com/)
 [![Vue.js](https://img.shields.io/badge/Vue.js-3.0+-brightgreen.svg)](https://vuejs.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![GitHub](https://img.shields.io/badge/GitHub-benjamin1108%2Freinvent--insight-blue.svg)](https://github.com/benjamin1108/reinvent-insight)
 
 **🚀 基于 AI 的 YouTube 视频深度分析平台**
 

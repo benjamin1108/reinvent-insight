@@ -1,0 +1,98 @@
+{
+  "task_id": "1abb808d-dd96-4fb6-8ff2-eb196fbade2c",
+  "length_target": {
+    "target_length": 8000,
+    "min_length": 6400,
+    "max_length": 9600,
+    "chapter_count": 9,
+    "avg_chapter_length": 888
+  },
+  "current_status": {
+    "current_length": 16525,
+    "target_length": 8000,
+    "progress_ratio": 0.8888888888888888,
+    "deviation_ratio": 1.3238644353818028,
+    "adjustment_needed": true,
+    "adjustment_type": "compress",
+    "chapter_index": 7,
+    "expected_length": 7111,
+    "remaining_chapters": 1,
+    "predicted_final_length": 18590,
+    "timestamp": "2025-07-19T22:05:48.362802"
+  },
+  "chapter_records": [
+    {
+      "chapter_index": 5,
+      "chapter_title": "可见即可控：图谱表示法的调试与开发优势",
+      "content_length": 1963,
+      "target_length": 888,
+      "deviation_ratio": 1.2105855855855856,
+      "timestamp": "2025-07-19T22:05:42.172865"
+    },
+    {
+      "chapter_index": 6,
+      "chapter_title": "超越代码：GraphRAG 在可解释性与治理中的价值",
+      "content_length": 1292,
+      "target_length": 888,
+      "deviation_ratio": 0.45495495495495497,
+      "timestamp": "2025-07-19T22:05:42.183533"
+    },
+    {
+      "chapter_index": 3,
+      "chapter_title": "首要优势之精准：三倍于基线 RAG 的准确率",
+      "content_length": 1714,
+      "target_length": 888,
+      "deviation_ratio": 0.9301801801801802,
+      "timestamp": "2025-07-19T22:05:42.909903"
+    },
+    {
+      "chapter_index": 2,
+      "chapter_title": "工作流揭秘：GraphRAG 的核心检索模式",
+      "content_length": 2008,
+      "target_length": 888,
+      "deviation_ratio": 1.2612612612612613,
+      "timestamp": "2025-07-19T22:05:43.490582"
+    },
+    {
+      "chapter_index": 4,
+      "chapter_title": "开发体验的悖论：为何说 GraphRAG 更易于构建",
+      "content_length": 1837,
+      "target_length": 888,
+      "deviation_ratio": 1.0686936936936937,
+      "timestamp": "2025-07-19T22:05:45.673755"
+    },
+    {
+      "chapter_index": 1,
+      "chapter_title": "定义新范式：什么是 GraphRAG",
+      "content_length": 1963,
+      "target_length": 888,
+      "deviation_ratio": 1.2105855855855856,
+      "timestamp": "2025-07-19T22:05:46.092530"
+    },
+    {
+      "chapter_index": 8,
+      "chapter_title": "从无到有：自动化知识图谱构建的实践演示",
+      "content_length": 1746,
+      "target_length": 888,
+      "deviation_ratio": 0.9662162162162162,
+      "timestamp": "2025-07-19T22:05:47.590487"
+    },
+    {
+      "chapter_index": 0,
+      "chapter_title": "历史的回响：从 PageRank 到知识图谱的搜索进化论",
+      "content_length": 2086,
+      "target_length": 888,
+      "deviation_ratio": 1.3490990990990992,
+      "timestamp": "2025-07-19T22:05:47.996609"
+    },
+    {
+      "chapter_index": 7,
+      "chapter_title": "跨越鸿沟：从非结构化数据到知识图谱的挑战",
+      "content_length": 1916,
+      "target_length": 888,
+      "deviation_ratio": 1.1576576576576576,
+      "timestamp": "2025-07-19T22:05:48.362771"
+    }
+  ],
+  "last_updated": "2025-07-19T22:05:48.362857"
+}

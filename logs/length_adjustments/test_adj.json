@@ -1,0 +1,12 @@
+{
+  "task_id": "test_adj",
+  "length_target": {
+    "target_length": 20000,
+    "min_length": 16000,
+    "max_length": 24000,
+    "chapter_count": 15,
+    "avg_chapter_length": 1333
+  },
+  "adjustment_records": [],
+  "last_updated": "2025-07-19T09:28:21.738024"
+}
