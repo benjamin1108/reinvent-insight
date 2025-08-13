@@ -58,8 +58,16 @@ OUTPUT_DIR = DOWNLOAD_DIR / "summaries"
 OUTPUT_DIR.mkdir(exist_ok=True) # 确保输出目录存在
 
 # --- 认证配置 ---
-ADMIN_USERNAME = os.getenv("USERNAME") or os.getenv("ADMIN_USERNAME") or "admin"
-ADMIN_PASSWORD = os.getenv("PASSWORD") or os.getenv("ADMIN_PASSWORD") or "password"
+# 优先读取 .env 中的 ADMIN_USERNAME / ADMIN_PASSWORD，避免被系统级 USERNAME / PASSWORD 覆盖
+def _get_stripped_env(*keys, default: str = "") -> str:
+    for key in keys:
+        value = os.getenv(key)
+        if value is not None:
+            return value.strip()
+    return default
+
+ADMIN_USERNAME = _get_stripped_env("ADMIN_USERNAME", "USERNAME", default="admin")
+ADMIN_PASSWORD = _get_stripped_env("ADMIN_PASSWORD", "PASSWORD", default="password")
 
 # --- 基础路径 ---
 # 定义输出目录
