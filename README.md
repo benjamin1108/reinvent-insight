@@ -71,7 +71,7 @@
 
 ### 整体架构图
 
-```mermaid
+```
 graph TB
     subgraph "前端层"
         A[Vue.js SPA] --> B[WebSocket Client]
@@ -125,7 +125,7 @@ graph TB
 - **全局通信**: 使用 `event-bus.js` 实现了一个轻量级的全局事件总线，用于处理跨组件之间的通信，解耦了组件间的直接依赖。
 - **原生技术栈**: 该架构不依赖于Node.js、Webpack或Vite等重型工具链，直接使用浏览器原生支持的ES模块、Fetch API等技术，回归了Web开发的本质。
 
-```mermaid
+```
 graph TD
     subgraph "浏览器"
         A[index.html] --> B(app.js)
@@ -157,7 +157,7 @@ graph TD
 
 ### 核心工作流
 
-```mermaid
+```
 sequenceDiagram
     participant U as 用户
     participant W as Web界面
@@ -244,7 +244,7 @@ sequenceDiagram
 
 ### 2. 安装步骤
 
-```bash
+```
 # 1. 克隆项目
 git clone https://github.com/benjamin1108/reinvent-insight.git
 cd reinvent-insight
@@ -261,7 +261,7 @@ pip install -e .                # 安装项目和所有依赖（-e 表示可编�
 
 ### 3. 配置设置
 
-```bash
+```
 # 1. 创建配置文件
 # 如果项目中有 .env.example：
 cp .env.example .env
@@ -280,7 +280,7 @@ nano .env                       # 或使用你喜欢的编辑器
 ```
 
 **必需的配置项：**
-```bash
+```
 # AI API密钥（至少配置一个）
 GEMINI_API_KEY="your-gemini-api-key"         # Google Gemini (推荐)
 XAI_API_KEY="your-xai-api-key"               # XAI (可选)
@@ -297,7 +297,7 @@ PREFERRED_MODEL="Gemini"                     # 默认AI模型
 
 ### 4. 快速体验
 
-```bash
+```
 # 方式1：CLI 交互模式
 reinvent-insight
 
@@ -313,14 +313,14 @@ python -m src.reinvent_insight.main web  # 默认运行在 http://localhost:8001
 ### CLI 使用方式
 
 #### 1. 交互式模式
-```bash
+```
 reinvent-insight
 ```
 - 通过友好的菜单选择操作
 - 支持中文提示和彩色输出
 
 #### 2. 命令行参数模式
-```bash
+```
 # 分析单个视频
 reinvent-insight --url "https://www.youtube.com/watch?v=xxxxx"
 
@@ -632,7 +632,7 @@ curl -X POST http://localhost:8001/login \
 
 使用自动化部署脚本进行生产环境部署：
 
-```bash
+```
 # 使用部署脚本
 ./redeploy.sh
 
@@ -652,7 +652,7 @@ export LOG_LEVEL="WARNING"
 ```
 
 2. **使用 Nginx 反向代理**:
-```nginx
+```
 server {
     listen 80;
     server_name your-domain.com;
@@ -669,7 +669,7 @@ server {
 ```
 
 3. **使用 Supervisor 管理进程**:
-```ini
+```
 [program:reinvent_insight_web]
 command=/app/.venv/bin/python -m src.reinvent_insight.main web --host 0.0.0.0 --port 8001
 directory=/app/

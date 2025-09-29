@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "reinvent-insight"
 version = "0.1.0"
-description = "A tool to summarize YouTube video subtitles."
+description = "A powerful AI-driven platform for analyzing YouTube videos, web content, and PDF documents."
 authors = [{ name = "Your Name", email = "you@example.com" }]
 requires-python = ">=3.9"
 dependencies = [
@@ -25,6 +25,8 @@ dependencies = [
     "pydantic>=2.0.0",
     "zhon>=1.1.5",
     "watchdog>=4.0.0",
+    "python-multipart>=0.0.9",
+    "reportlab>=4.0.0",
 ]
 
 [tool.setuptools.packages.find]

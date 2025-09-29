@@ -92,19 +92,77 @@
   gap: 1rem;
 }
 
+/* 输入模式切换标签 */
+.create-view__input-tabs {
+  display: flex;
+  background: rgba(31, 41, 55, 0.3);
+  border-radius: 0.5rem;
+  padding: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.create-view__tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  border-radius: 0.375rem;
+  color: #9ca3af;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Inter', 'PingFang SC', 'SF Pro Text', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+.create-view__tab:hover {
+  color: #d1d5db;
+  background: rgba(75, 85, 99, 0.3);
+}
+
+.create-view__tab--active {
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+  color: white;
+  box-shadow: 0 2px 4px rgba(6, 182, 212, 0.3);
+}
+
+.create-view__tab-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* URL输入容器 */
 .create-view__input-wrapper {
   width: 100%;
 }
 
+.create-view__input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.create-view__input-icon {
+  position: absolute;
+  left: 0.75rem;
+  width: 1.125rem;
+  height: 1.125rem;
+  color: #9ca3af;
+  z-index: 10;
+}
+
 .create-view__input {
   width: 100%;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 2.75rem 0.75rem 2.5rem;
   background: rgba(31, 41, 55, 0.5);
   border: 1px solid #4b5563;
   border-radius: 0.5rem;
   color: white;
   transition: all 0.3s ease;
-  /* 输入框使用科技感字体 */
   font-family: 'Inter', 'PingFang SC', 'SF Pro Text', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   font-size: 0.875rem;
   font-weight: 400;
@@ -124,6 +182,160 @@
 .create-view__input:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.create-view__input-clear {
+  position: absolute;
+  right: 0.5rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  background: rgba(107, 114, 128, 0.5);
+  border: none;
+  border-radius: 50%;
+  color: #9ca3af;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.create-view__input-clear:hover {
+  background: rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+}
+
+.create-view__input-clear svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* 文件上传区域 */
+.create-view__file-wrapper {
+  width: 100%;
+}
+
+.create-view__file-dropzone {
+  border: 2px dashed #4b5563;
+  border-radius: 0.75rem;
+  padding: 2rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: rgba(31, 41, 55, 0.3);
+  position: relative;
+}
+
+.create-view__file-dropzone:hover {
+  border-color: #06b6d4;
+  background: rgba(6, 182, 212, 0.05);
+}
+
+.create-view__file-dropzone--dragover {
+  border-color: #06b6d4;
+  background: rgba(6, 182, 212, 0.1);
+  transform: scale(1.02);
+}
+
+.create-view__file-dropzone--selected {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.create-view__file-input {
+  display: none;
+}
+
+/* 文件未选择状态 */
+.create-view__file-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.create-view__file-icon {
+  width: 3rem;
+  height: 3rem;
+  color: #6b7280;
+  transition: color 0.3s ease;
+}
+
+.create-view__file-dropzone:hover .create-view__file-icon {
+  color: #06b6d4;
+}
+
+.create-view__file-text {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #d1d5db;
+  margin: 0;
+  font-family: 'Inter', 'PingFang SC', 'SF Pro Text', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+.create-view__file-hint {
+  font-size: 0.875rem;
+  color: #9ca3af;
+  margin: 0;
+  font-family: 'Inter', 'PingFang SC', 'SF Pro Text', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+/* 文件已选择状态 */
+.create-view__file-selected {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+}
+
+.create-view__file-icon--pdf {
+  color: #10b981;
+}
+
+.create-view__file-name {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #f3f4f6;
+  margin: 0;
+  text-align: center;
+  word-break: break-all;
+  font-family: 'Inter', 'PingFang SC', 'SF Pro Text', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+.create-view__file-size {
+  font-size: 0.875rem;
+  color: #9ca3af;
+  margin: 0;
+  font-family: 'Inter', 'PingFang SC', 'SF Pro Text', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+.create-view__file-remove {
+  position: absolute;
+  top: -0.5rem;
+  right: -0.5rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  background: rgba(239, 68, 68, 0.8);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.create-view__file-remove:hover {
+  background: rgba(239, 68, 68, 1);
+  transform: scale(1.1);
+}
+
+.create-view__file-remove svg {
+  width: 0.875rem;
+  height: 0.875rem;
 }
 
 /* 按钮样式现在由TechButton组件统一提供 */
@@ -398,6 +610,29 @@
     font-size: 1.25rem;           /* 缩小标题 */
   }
   
+  .create-view__input-tabs {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  
+  .create-view__tab {
+    padding: 0.625rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+  
+  .create-view__file-dropzone {
+    padding: 1.5rem 0.75rem;
+  }
+  
+  .create-view__file-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  
+  .create-view__file-text {
+    font-size: 0.9375rem;
+  }
+  
   .create-view__progress-section {
     padding: 0.75rem;             /* 减少进度区域padding */
     margin-bottom: 1rem;          /* 减少下边距 */
@@ -445,6 +680,33 @@
   
   .create-view__subtitle {
     font-size: 0.75rem;           /* 缩小副标题 */
+  }
+  
+  .create-view__tab {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  .create-view__tab-icon {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  
+  .create-view__file-dropzone {
+    padding: 1rem 0.5rem;
+  }
+  
+  .create-view__file-icon {
+    width: 2rem;
+    height: 2rem;
+  }
+  
+  .create-view__file-text {
+    font-size: 0.875rem;
+  }
+  
+  .create-view__file-hint {
+    font-size: 0.75rem;
   }
   
   .create-view__progress-section {

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Header, Request, Response
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Header, Request, Response, UploadFile, File
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, HttpUrl
 import logging
@@ -26,6 +26,7 @@ from .task_manager import manager # 导入共享的任务管理器
 from .worker import summary_task_worker_async # 导入新的异步工作流
 from .utils import generate_doc_hash  # 从 utils 导入
 from .file_watcher import start_watching # 导入文件监控
+from .pdf_processor import PDFProcessor  # 导入PDF处理器
 
 setup_logger(config.LOG_LEVEL)
 logger = logging.getLogger(__name__)
@@ -160,7 +161,7 @@ def extract_text_from_markdown(content: str) -> str:
     return content
 
 def clean_content_metadata(content: str, title: str = '') -> str:
-    """清理内容中的元数据，返回干净的markdown内容"""
+    """清理内容中的元数据，返回干净的文本内容"""
     if not content:
         return ''
     
@@ -821,6 +822,45 @@ if web_dir.is_dir():
             raise HTTPException(status_code=404, detail="Web application not found.")
 else:
     logger.warning(f"Frontend directory 'web' not found at {web_dir}, will only serve API.")
+
+# 在API类中添加新的请求模型
+class PDFAnalysisRequest(BaseModel):
+    title: Optional[str] = None
+
+# 在API路由中添加新的端点
+@app.post("/analyze-pdf")
+async def analyze_pdf_endpoint(
+    file: UploadFile = File(...),
+    title: Optional[str] = None,
+    authorization: str = Header(None)
+):
+    """
+    使用Gemini多模态能力分析PDF文件
+    """
+    verify_token(authorization)
+    
+    task_id = str(uuid.uuid4())
+    
+    try:
+        # 创建临时文件保存上传的PDF
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_file:
+            tmp_file.write(await file.read())
+            tmp_file_path = tmp_file.name
+        
+        # 创建异步任务处理PDF分析
+        from .pdf_worker import pdf_analysis_worker_async
+        
+        # 构造请求对象
+        req = PDFAnalysisRequest(title=title or file.filename)
+        
+        task = asyncio.create_task(pdf_analysis_worker_async(req, task_id, tmp_file_path))
+        manager.create_task(task_id, task)
+        
+        return SummarizeResponse(task_id=task_id, message="PDF分析任务已创建，请连接 WebSocket。", status="created")
+        
+    except Exception as e:
+        logger.error(f"处理上传PDF失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"处理上传PDF失败: {str(e)}")
 
 def serve(host: str = "0.0.0.0", port: int = 8001, reload: bool = False):
     """使用 uvicorn 启动 Web 服务器。"""

@@ -402,6 +402,14 @@ deploy_new_version() {
     # 创建必要的目录
     mkdir -p downloads/subtitles downloads/summaries downloads/pdfs downloads/tasks
     
+    # 验证PDF处理相关的Python模块是否正确安装
+    print_info "验证PDF处理模块..."
+    if $VENV_NAME/bin/python -c "from reinvent_insight.pdf_processor import PDFProcessor; print('PDF处理模块加载成功')" 2>/dev/null; then
+        print_success "PDF处理功能已正确安装"
+    else
+        print_warning "PDF处理模块加载失败，请检查依赖"
+    fi
+    
     # 确保所有文件和目录的权限正确
     print_info "修复文件权限..."
     sudo chown -R "$USER:$USER" "$DEPLOY_DIR"
@@ -586,17 +594,29 @@ start_service() {
 GEMINI_API_KEY=$GEMINI_API_KEY
 ADMIN_USERNAME=$ADMIN_USERNAME
 ADMIN_PASSWORD=$ADMIN_PASSWORD
+PREFERRED_MODEL=Gemini
+LOG_LEVEL=INFO
 EOF
             print_success ".env 文件已使用环境变量创建"
             # 如果使用了环境变量，直接继续启动服务
         else
             # 创建示例文件
             cat > "$DEPLOY_DIR/reinvent_insight-0.1.0/.env" << EOF
+# Gemini API 配置（PDF分析功能必需）
 GEMINI_API_KEY=your-gemini-api-key-here
+
+# 管理员账号配置
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=your-secure-password
+
+# AI 模型配置
+PREFERRED_MODEL=Gemini
+
+# 日志级别
+LOG_LEVEL=INFO
 EOF
             print_info "已创建示例 .env 文件"
+            print_warning "请注意：PDF分析功能需要配置 GEMINI_API_KEY"
             
             # 询问用户是否要编辑
             echo ""
@@ -639,6 +659,14 @@ EOF
                 print_info "sudo systemctl start $SERVICE_NAME"
                 return
             fi
+        fi
+    else
+        # 验证现有.env文件的配置
+        print_info "验证 .env 配置..."
+        if grep -q "your-gemini-api-key-here" "$DEPLOY_DIR/reinvent_insight-0.1.0/.env" 2>/dev/null; then
+            print_warning "GEMINI_API_KEY 仍为默认值，PDF分析功能不可用"
+        else
+            print_success "GEMINI_API_KEY 已配置，PDF分析功能可用"
         fi
     fi
     
@@ -701,6 +729,12 @@ show_deployment_info() {
     echo "部署目录: $DEPLOY_DIR/reinvent_insight-0.1.0"
     echo "服务地址: http://$HOST:$PORT"
     echo "服务名称: $SERVICE_NAME"
+    echo ""
+    echo "功能特性:"
+    echo "  • YouTube 链接分析"
+    echo "  • PDF 文件分析（需要 GEMINI_API_KEY）"
+    echo "  • 网页内容分析"
+    echo "  • Markdown 渲染和 PDF 导出"
     echo ""
     echo "常用命令:"
     echo "  查看状态: sudo systemctl status $SERVICE_NAME"

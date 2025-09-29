@@ -5,30 +5,112 @@
       <h2 class="create-view__title">
         reInvent Insights
       </h2>
-      <p class="create-view__subtitle">输入 YouTube 链接，获得深度解读</p>
+      <p class="create-view__subtitle">输入 YouTube 链接、网页链接或PDF链接，或上传PDF文件，获得深度解读</p>
     </div>
 
     <div class="create-view__input-section">
-      <div class="create-view__input-wrapper">
-        <input 
-          v-model="url" 
-          @keyup.enter="handleStartAnalysis" 
-          :disabled="loading" 
-          type="url"
-          placeholder="https://www.youtube.com/watch?v=..."
-          class="create-view__input" />
+      <!-- 输入模式切换标签 -->
+      <div class="create-view__input-tabs" v-if="!loading">
+        <button 
+          :class="['create-view__tab', { 'create-view__tab--active': inputMode === 'url' }]"
+          @click="switchInputMode('url')">
+          <svg class="create-view__tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+          </svg>
+          链接地址
+        </button>
+        <button 
+          :class="['create-view__tab', { 'create-view__tab--active': inputMode === 'file' }]"
+          @click="switchInputMode('file')">
+          <svg class="create-view__tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          PDF文件
+        </button>
       </div>
 
+      <!-- URL输入模式 -->
+      <div v-if="inputMode === 'url'" class="create-view__input-wrapper">
+        <div class="create-view__input-container">
+          <svg class="create-view__input-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+          </svg>
+          <input 
+            v-model="url" 
+            @keyup.enter="handleStartAnalysis" 
+            :disabled="loading" 
+            type="url"
+            placeholder="输入 YouTube 或网页链接..."
+            class="create-view__input" />
+          <button 
+            v-if="url && !loading"
+            @click="clearUrl"
+            class="create-view__input-clear">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- 文件上传模式 -->
+      <div v-if="inputMode === 'file'" class="create-view__file-wrapper">
+        <div 
+          :class="['create-view__file-dropzone', { 
+            'create-view__file-dropzone--dragover': isDragging,
+            'create-view__file-dropzone--selected': selectedFile
+          }]"
+          @drop="handleFileDrop"
+          @dragover.prevent="isDragging = true"
+          @dragleave="isDragging = false"
+          @click="triggerFileInput">
+          
+          <input 
+            ref="fileInput"
+            type="file" 
+            accept=".pdf"
+            @change="handleFileUpload"
+            class="create-view__file-input"
+            style="display: none;" />
+          
+          <!-- 文件未选择状态 -->
+          <div v-if="!selectedFile" class="create-view__file-empty">
+            <svg class="create-view__file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p class="create-view__file-text">点击选择或拖拽PDF文件</p>
+            <p class="create-view__file-hint">支持 PDF 格式，最大 50MB</p>
+          </div>
+          
+          <!-- 文件已选择状态 -->
+          <div v-if="selectedFile" class="create-view__file-selected">
+            <svg class="create-view__file-icon create-view__file-icon--pdf" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p class="create-view__file-name">{{ selectedFileName }}</p>
+            <p class="create-view__file-size">{{ formatFileSize(selectedFile.size) }}</p>
+            <button 
+              @click.stop="clearFile"
+              class="create-view__file-remove">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 统一的开始分析按钮 -->
       <tech-button 
         variant="primary" 
         size="lg"
         full-width
-        :disabled="!url || !isValidUrl"
+        :disabled="!canStartAnalysis"
         :loading="loading"
         loading-text="AI 分析中..."
         icon-before="M13 10V3L4 14h7v7l9-11h-7z"
         @click="handleStartAnalysis">
-        开始分析
+        {{ getAnalysisButtonText }}
       </tech-button>
     </div>
   </div>

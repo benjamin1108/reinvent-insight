@@ -360,9 +360,9 @@ const app = createApp({
       localStorage.removeItem('active_task_url');
     };
 
-    const startSummarize = async () => {
+    const startSummarize = async (analysisData) => {
       requireAuth(async () => {
-        if (loading.value || !url.value) return;
+        if (loading.value || (!analysisData.url && !analysisData.file)) return;
 
         // 重置状态
         logs.value = [];
@@ -373,11 +373,27 @@ const app = createApp({
         progressPercent.value = 0;
 
         try {
-          const res = await axios.post('/summarize', { url: url.value });
-          const taskId = res.data.task_id;
+          let res;
+          if (analysisData.file) {
+            // 处理PDF文件上传
+            const formData = new FormData();
+            formData.append('file', analysisData.file);
+            
+            res = await axios.post('/analyze-pdf', formData, {
+              headers: {
+                'Content-Type': 'multipart/form-data'
+              }
+            });
+          } else {
+            // 处理URL分析（保持原有逻辑）
+            res = await axios.post('/summarize', { url: analysisData.url });
+          }
           
+          const taskId = res.data.task_id;
           localStorage.setItem('active_task_id', taskId);
-          localStorage.setItem('active_task_url', url.value);
+          if (analysisData.url) {
+            localStorage.setItem('active_task_url', analysisData.url);
+          }
           
           connectWebSocket(taskId);
         } catch (error) {
