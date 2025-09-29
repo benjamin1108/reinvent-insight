@@ -84,6 +84,8 @@ export default {
     return {
       formattedWordCount,
       levelText,
+      contentTypeText,
+      contentTypeIcon,
       handleClick
     };
   }

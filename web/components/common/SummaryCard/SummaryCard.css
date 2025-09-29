@@ -256,6 +256,37 @@
 .summary-card__word-count {
   display: flex;
   align-items: center;
+  color: #64748b;
+  font-family: var(--summary-card-font-tech);
+  font-size: var(--summary-card-metadata-size);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+/* 内容类型显示 - Element */
+.summary-card__content-type {
+  display: flex;
+  align-items: center;
+  color: #64748b;
+  font-family: var(--summary-card-font-tech);
+  font-size: var(--summary-card-metadata-size);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  opacity: 0.8;
+  transition: all 0.3s ease;
+  margin-right: 0.75rem;
+}
+
+/* PDF文档的特殊样式 */
+.summary-card__content-type:has(span[text="PDF"]) {
+  color: #ef4444;
+}
+
+/* YouTube视频的样式 */
+.summary-card__content-type:has(span[text="YouTube"]) {
+  color: #10b981;
 }
 
 /* 文档图标样式 - Element */

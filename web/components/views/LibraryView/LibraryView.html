@@ -61,6 +61,8 @@
           :year="extractYear(summary)"
           :level="summary.level"
           :hash="summary.hash"
+          :content-type="summary.content_type"
+          :is-pdf="summary.is_pdf"
           @click="handleSummaryClick">
         </summary-card>
       </div>
@@ -89,6 +91,8 @@
           :word-count="summary.word_count || summary.size"
           :level="summary.level"
           :hash="summary.hash"
+          :content-type="summary.content_type"
+          :is-pdf="summary.is_pdf"
           @click="handleSummaryClick">
         </summary-card>
       </div>

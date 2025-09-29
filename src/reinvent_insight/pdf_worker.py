@@ -7,6 +7,7 @@ from .task_manager import manager
 from .pdf_processor import PDFProcessor
 from .api import PDFAnalysisRequest
 from .downloader import VideoMetadata
+from .utils import generate_pdf_identifier
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,20 @@ async def pdf_analysis_worker_async(req: PDFAnalysisRequest, task_id: str, file_
         await manager.send_message("PDF文件上传成功，正在分析内容...", task_id)
         
         # 生成大纲
-        outline_result = await processor.generate_outline(pdf_file_info, req.title)
+        await manager.send_message("正在分析PDF内容并生成大纲...", task_id)
+        
+        # 处理用户提供的标题：清理文件名后缀和无意义的字符
+        clean_title = None
+        if req.title:
+            clean_title = req.title.strip()
+            # 移除常见的文件后缀
+            if clean_title.lower().endswith('.pdf'):
+                clean_title = clean_title[:-4]
+            # 如果标题太短或只是数字/符号，则不使用
+            if len(clean_title) < 3 or clean_title.replace('_', '').replace('-', '').replace(' ', '').isdigit():
+                clean_title = None
+        
+        outline_result = await processor.generate_outline(pdf_file_info, clean_title)
         outline = outline_result["outline"]
         await manager.send_message("内容大纲生成完成，正在生成详细内容...", task_id)
         
@@ -53,11 +67,15 @@ async def pdf_analysis_worker_async(req: PDFAnalysisRequest, task_id: str, file_
         # 组装最终内容
         await manager.send_message("正在组装最终报告...", task_id)
         
+        # 为PDF生成唯一标识符
+        content_preview = outline.get("introduction", "")[:200]  # 使用引言作为内容预览
+        pdf_identifier = generate_pdf_identifier(outline["title"], content_preview)
+        
         # 构造视频元数据（复用现有结构）
         metadata = VideoMetadata(
             title=outline["title"],
             upload_date="19700101",
-            video_url="pdf_content"
+            video_url=pdf_identifier  # 使用唯一的PDF标识符
         )
         
         # 构造内容

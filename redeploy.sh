@@ -404,8 +404,24 @@ deploy_new_version() {
     
     # 验证PDF处理相关的Python模块是否正确安装
     print_info "验证PDF处理模块..."
-    if $VENV_NAME/bin/python -c "from reinvent_insight.pdf_processor import PDFProcessor; print('PDF处理模块加载成功')" 2>/dev/null; then
+    if $VENV_NAME/bin/python -c "from reinvent_insight.pdf_processor import PDFProcessor; print('✓ PDF处理模块加载成功')" 2>/dev/null; then
         print_success "PDF处理功能已正确安装"
+        # 验证依赖库
+        if $VENV_NAME/bin/python -c "import google.generativeai; print('✓ Google AI 客户端已安装')" 2>/dev/null; then
+            print_info "  ✓ Google Generative AI SDK 已安装"
+        else
+            print_warning "  Google Generative AI SDK 未安装，请检查依赖"
+        fi
+        if $VENV_NAME/bin/python -c "import reportlab; print('✓ ReportLab 已安装')" 2>/dev/null; then
+            print_info "  ✓ ReportLab PDF处理库已安装"
+        else
+            print_warning "  ReportLab PDF处理库未安装，请检查依赖"
+        fi
+        if $VENV_NAME/bin/python -c "import PyPDF2; print('✓ PyPDF2 已安装')" 2>/dev/null; then
+            print_info "  ✓ PyPDF2 PDF解析库已安装"
+        else
+            print_warning "  PyPDF2 PDF解析库未安装，请检查依赖"
+        fi
     else
         print_warning "PDF处理模块加载失败，请检查依赖"
     fi
@@ -732,9 +748,21 @@ show_deployment_info() {
     echo ""
     echo "功能特性:"
     echo "  • YouTube 链接分析"
-    echo "  • PDF 文件分析（需要 GEMINI_API_KEY）"
+    
+    # 检查PDF功能状态
+    if [ -f "$DEPLOY_DIR/reinvent_insight-0.1.0/.env" ]; then
+        if grep -q "your-gemini-api-key-here" "$DEPLOY_DIR/reinvent_insight-0.1.0/.env" 2>/dev/null; then
+            echo "  • PDF 文件分析（需要配置 GEMINI_API_KEY）"
+        else
+            echo "  • PDF 文件分析（✓ 已配置）"
+        fi
+    else
+        echo "  • PDF 文件分析（未配置）"
+    fi
+    
     echo "  • 网页内容分析"
     echo "  • Markdown 渲染和 PDF 导出"
+    echo "  • AI 智能标题生成（PDF文档）"
     echo ""
     echo "常用命令:"
     echo "  查看状态: sudo systemctl status $SERVICE_NAME"

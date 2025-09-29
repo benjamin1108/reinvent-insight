@@ -152,6 +152,9 @@ class PDFProcessor:
     
     def _build_outline_prompt(self, title: Optional[str] = None) -> str:
         """构建大纲生成的提示词"""
+        # 如果用户提供了标题，使用用户标题；否则让AI根据内容生成
+        title_instruction = f'"title": "{title}",' if title else '"title": "基于PDF内容生成一个简洁、准确、有吸引力的中文标题（10-30字）",'
+        
         return f"""
 ## 1. 角色与任务
 
@@ -177,12 +180,27 @@ class PDFProcessor:
 - 图表数据如何支撑文本论述
 - 架构设计如何解决文本中的问题
 
-## 3. 输出格式要求
+## 3. 标题生成要求
+
+{"请根据PDF文档的主要内容生成一个吸引人的中文标题，要求：" if not title else ""}
+{"- 标题应简洁明了，10-30个字" if not title else ""}
+{"- 准确反映文档的核心主题和价值" if not title else ""}
+{"- 避免使用\"解决方案\"、\"白皮书\"等通用词汇" if not title else ""}
+{"- 突出文档的技术特色或业务价值" if not title else ""}
+
+## 4. 语言质量要求
+
+- **使用标准简体中文**：确保所有文字使用标准简体中文字符
+- **避免字符编码错误**：检查并确保没有乱码或错误字符
+- **保持用词准确**：使用准确的技术术语和表达
+- **语言简洁明了**：避免冗余表达，保持语言简洁
+
+## 5. 输出格式要求
 
 你必须严格按照以下JSON格式输出：
 
 {{
-  "title": "{title if title else '从PDF中提炼出的解决方案主标题'}",
+  {title_instruction}
   "introduction": "200-300字的引人入胜的导语",
   "table_of_contents": [
     {{
@@ -220,6 +238,11 @@ class PDFProcessor:
    - 提供技术细节和实施要点
    - 分析方案的价值和优势
    - 给出具体的实施建议
+
+4. **语言质量保证**:
+   - 使用标准简体中文，避免繁体字或字符编码错误
+   - 确保所有技术术语准确无误
+   - 保持语言简洁明了，避免冗余表达
 
 ## 输出要求
 - 直接输出章节内容，无需标题

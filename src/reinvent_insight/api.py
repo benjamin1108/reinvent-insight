@@ -24,7 +24,7 @@ from .logger import setup_logger
 from . import config
 from .task_manager import manager # 导入共享的任务管理器
 from .worker import summary_task_worker_async # 导入新的异步工作流
-from .utils import generate_doc_hash  # 从 utils 导入
+from .utils import generate_doc_hash, is_pdf_document, extract_pdf_hash  # 从 utils 导入
 from .file_watcher import start_watching # 导入文件监控
 from .pdf_processor import PDFProcessor  # 导入PDF处理器
 
@@ -369,6 +369,10 @@ async def list_public_summaries():
                     word_count = count_chinese_words(pure_text)
                     stat = md_file.stat()
                     
+                    # 检查是否为PDF文档
+                    video_url = metadata.get("video_url", "")
+                    is_pdf = is_pdf_document(video_url)
+                    
                     summary_data = {
                         "filename": md_file.name,
                         "title_cn": title_cn,
@@ -378,12 +382,14 @@ async def list_public_summaries():
                         "created_at": stat.st_ctime,
                         "modified_at": stat.st_mtime,
                         "upload_date": metadata.get("upload_date", "1970-01-01"),
-                        "video_url": metadata.get("video_url", ""),
+                        "video_url": video_url,
                         "is_reinvent": metadata.get("is_reinvent", False),
                         "course_code": metadata.get("course_code"),
                         "level": metadata.get("level"),
                         "hash": doc_hash,
-                        "version": metadata.get("version", 0)
+                        "version": metadata.get("version", 0),
+                        "is_pdf": is_pdf,  # 添加PDF标识
+                        "content_type": "PDF文档" if is_pdf else "YouTube视频"  # 内容类型
                     }
                     
                     video_url = metadata.get("video_url", "")
@@ -825,7 +831,7 @@ else:
 
 # 在API类中添加新的请求模型
 class PDFAnalysisRequest(BaseModel):
-    title: Optional[str] = None
+    title: Optional[str] = None  # 可选的标题，如果为None则由AI生成
 
 # 在API路由中添加新的端点
 @app.post("/analyze-pdf")
@@ -850,8 +856,13 @@ async def analyze_pdf_endpoint(
         # 创建异步任务处理PDF分析
         from .pdf_worker import pdf_analysis_worker_async
         
+        # 处理标题：如果没有提供或只是文件名，让AI自动生成
+        display_title = title or file.filename or "未命名文档"
+        if display_title.lower().endswith('.pdf'):
+            display_title = display_title[:-4]
+        
         # 构造请求对象
-        req = PDFAnalysisRequest(title=title or file.filename)
+        req = PDFAnalysisRequest(title=display_title)
         
         task = asyncio.create_task(pdf_analysis_worker_async(req, task_id, tmp_file_path))
         manager.create_task(task_id, task)

@@ -35,6 +35,14 @@
   <div class="summary-card__metadata">
     <div class="summary-card__metadata-container">
       <div class="summary-card__metadata-left">
+        <div class="summary-card__content-type" :title="contentTypeText">
+          <svg class="summary-card__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+              :d="contentTypeIcon">
+            </path>
+          </svg>
+          <span>{{ contentTypeText }}</span>
+        </div>
         <div class="summary-card__word-count" title="字数">
           <svg class="summary-card__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
