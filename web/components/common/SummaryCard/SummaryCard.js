@@ -73,6 +73,16 @@ export default {
       return parts[0];
     });
     
+    // 内容类型文本
+    const contentTypeText = computed(() => {
+      return props.summaryType === 'reinvent' ? 're:Invent' : '精选内容';
+    });
+    
+    // 内容类型图标
+    const contentTypeIcon = computed(() => {
+      return props.summaryType === 'reinvent' ? '🎯' : '📚';
+    });
+    
     // 处理点击事件
     const handleClick = () => {
       emit('click', {
