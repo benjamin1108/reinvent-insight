@@ -207,7 +207,8 @@ class DeepSummaryWorkflow:
             full_content=full_content,
             full_outline=outline_content,
             chapter_number=index + 1,
-            current_chapter_title=chapter_title
+            current_chapter_title=chapter_title,
+            markdown_bold_rules=prompts.MARKDOWN_BOLD_RULES
         )
 
         for attempt in range(self.max_retries + 1):
@@ -356,7 +357,8 @@ class DeepSummaryWorkflow:
             content_type=content_type,
             content_description=content_description,
             full_content=full_content,
-            all_generated_chapters=full_chapters_text
+            all_generated_chapters=full_chapters_text,
+            markdown_bold_rules=prompts.MARKDOWN_BOLD_RULES
         )
 
         for attempt in range(self.max_retries + 1):
