@@ -26,7 +26,7 @@ async def pdf_analysis_worker_async(req: PDFAnalysisRequest, task_id: str, file_
         
         # 上传PDF文件
         pdf_file_info = await processor.upload_pdf(file_path)
-        await manager.send_message("PDF文件处理成功，正在提取内容...", task_id)
+        await manager.send_message("PDF文件上传成功，准备进行多模态分析...", task_id)
         
         # 处理用户提供的标题：清理文件名后缀和无意义的字符
         clean_title = None
@@ -39,30 +39,15 @@ async def pdf_analysis_worker_async(req: PDFAnalysisRequest, task_id: str, file_
             if len(clean_title) < 3 or clean_title.replace('_', '').replace('-', '').replace(' ', '').isdigit():
                 clean_title = None
         
-        # 直接从PDF提取文本内容，而不是生成大纲和章节
-        await manager.send_message("正在提取PDF文本内容...", task_id)
-        
-        # 使用简化的内容提取方法
-        pdf_content = await extract_pdf_content(processor, pdf_file_info, clean_title)
-        
-        # 保存提取的原始内容到任务目录
-        task_dir = Path("./downloads/tasks") / task_id
-        task_dir.mkdir(parents=True, exist_ok=True)
-        
-        # 保存PDF提取的原始内容
-        extracted_content_path = task_dir / "pdf_extracted_content.md"
-        with open(extracted_content_path, "w", encoding="utf-8") as f:
-            f.write(f"# PDF提取的原始内容\n\n")
-            f.write(f"**文件名**: {req.title or '未知'}\n")
-            f.write(f"**提取时间**: {datetime.now().isoformat()}\n")
-            f.write(f"**内容长度**: {len(pdf_content)} 字符\n\n")
-            f.write("---\n\n")
-            f.write(pdf_content)
-        
-        logger.info(f"PDF提取内容已保存到: {extracted_content_path}")
-        
         # 为PDF生成唯一标识符
-        pdf_identifier = generate_pdf_identifier(clean_title or "PDF文档", pdf_content[:200])
+        pdf_identifier = generate_pdf_identifier(clean_title or "PDF文档", pdf_file_info.get("name", ""))
+        
+        # 创建PDFContent对象
+        from .workflow import PDFContent
+        pdf_content = PDFContent(
+            file_info=pdf_file_info,
+            title=clean_title or "PDF文档分析"
+        )
         
         # 构造视频元数据（复用现有结构）
         metadata = VideoMetadata(
@@ -71,34 +56,36 @@ async def pdf_analysis_worker_async(req: PDFAnalysisRequest, task_id: str, file_
             video_url=pdf_identifier  # 使用唯一的PDF标识符
         )
         
-        # 清理临时文件
-        try:
-            os.unlink(file_path)
-        except:
-            pass
+        await manager.send_message("开始使用多模态分析PDF文档...", task_id)
         
-        # 删除Gemini上的文件（仅当文件已上传到Gemini时）
-        if not pdf_file_info.get("local_file", False):
-            try:
-                await processor.delete_file(pdf_file_info["name"])
-            except:
-                pass
-        
-        await manager.send_message("PDF内容提取完成，开始深度分析...", task_id)
-        
-        # 直接运行统一的摘要工作流，让它来处理内容分析和章节生成
+        # 直接运行统一的摘要工作流，传递PDFContent对象
         await run_deep_summary_workflow(
             task_id=task_id,
             model_name=config.PREFERRED_MODEL,
-            transcript=pdf_content,
+            content=pdf_content,
             video_metadata=metadata
         )
 
         logger.info(f"任务 {task_id} 的PDF分析工作流已完成。")
         
+        # 工作流完成后清理资源
+        # 对于本地文件，删除临时文件
+        if pdf_file_info.get("local_file", False):
+            try:
+                os.unlink(file_path)
+                logger.info(f"已删除临时PDF文件: {file_path}")
+            except Exception as e:
+                logger.warning(f"删除临时文件失败: {e}")
+        else:
+            # 对于上传到Gemini的文件，删除远程文件
+            try:
+                await processor.delete_file(pdf_file_info["name"])
+            except Exception as e:
+                logger.warning(f"删除Gemini文件失败: {e}")
+        
     except Exception as e:
-        logger.error(f"任务 {task_id} PDF分析失败: {e}", exc_info=True)
-        await manager.set_task_error(task_id, f"PDF分析失败: {str(e)}")
+        logger.error(f"任务 {task_id} PDF多模态分析失败: {e}", exc_info=True)
+        await manager.set_task_error(task_id, f"PDF多模态分析失败: {str(e)}")
         # 清理临时文件
         if file_path and os.path.exists(file_path):
             try:
@@ -106,73 +93,3 @@ async def pdf_analysis_worker_async(req: PDFAnalysisRequest, task_id: str, file_
             except:
                 pass
         return
-
-async def extract_pdf_content(processor: PDFProcessor, pdf_file_info: dict, title: str = None) -> str:
-    """
-    从PDF中提取文本内容，用于后续的统一工作流处理
-    """
-    try:
-        # 构建内容提取的提示词
-        prompt = f"""
-请仔细阅读这份PDF文档，并将其内容转换为结构化的文本格式。
-
-要求：
-1. 保持原文档的逻辑结构和层次关系
-2. 提取所有重要的文本信息，包括标题、段落、列表等
-3. 对于图表和架构图，请用文字描述其内容和要点
-4. 保持信息的完整性和准确性
-5. 使用标准简体中文输出
-
-{f"文档标题：{title}" if title else ""}
-
-请直接输出提取的文本内容，不需要额外的格式说明。
-"""
-        
-        # 创建模型实例
-        import google.generativeai as genai
-        model = genai.GenerativeModel(processor.model_name)
-        
-        # 根据文件类型选择处理方式
-        if pdf_file_info.get("local_file", False):
-            # 使用本地文件
-            pdf_file_path = pdf_file_info["uri"]
-            
-            # 使用异步方式读取文件并处理
-            loop = asyncio.get_event_loop()
-            
-            def read_and_process():
-                with open(pdf_file_path, "rb") as f:
-                    file_data = f.read()
-                return genai.GenerativeModel(processor.model_name).generate_content(
-                    [prompt, {"mime_type": "application/pdf", "data": file_data}],
-                    generation_config=genai.types.GenerationConfig(
-                        temperature=0.3,
-                        max_output_tokens=8000
-                    )
-                )
-            
-            response = await loop.run_in_executor(None, read_and_process)
-        else:
-            # 获取已上传的PDF文件引用
-            pdf_file = genai.get_file(name=pdf_file_info["name"])
-            
-            # 调用Gemini生成API
-            response = await model.generate_content_async(
-                [prompt, pdf_file],
-                generation_config=genai.types.GenerationConfig(
-                    temperature=0.3,
-                    max_output_tokens=8000
-                )
-            )
-        
-        # 添加标题前缀（如果有的话）
-        content = response.text
-        if title:
-            content = f"文档标题: {title}\n\n{content}"
-        
-        return content
-        
-    except Exception as e:
-        logger.error(f"提取PDF内容失败: {str(e)}")
-        # 如果提取失败，返回基本信息
-        return f"文档标题: {title or 'PDF文档'}\n\n无法提取详细内容，请检查PDF文件格式。"

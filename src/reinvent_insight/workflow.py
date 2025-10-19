@@ -4,7 +4,7 @@ import yaml
 import asyncio
 import shutil
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict, Any, Union
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -21,6 +21,29 @@ logger = logger.bind(name=__name__)
 # 定义一个任务根目录
 TASKS_ROOT_DIR = "./downloads/tasks"
 BASE_PROMPT_PATH = "./prompt/youtbe-deep-summary.txt"
+
+# ---- PDF Content Data Model ----
+@dataclass
+class PDFContent:
+    """PDF内容封装类"""
+    file_info: Dict[str, Any]  # PDF文件信息（包含file_id或本地路径）
+    title: str  # 文档标题
+    content_type: str = "pdf"  # 内容类型标识
+    
+    @property
+    def file_id(self) -> str:
+        """获取文件ID"""
+        return self.file_info.get("name", "")
+    
+    @property
+    def is_local(self) -> bool:
+        """是否为本地文件"""
+        return self.file_info.get("local_file", False)
+
+
+def is_pdf_content(content: Union[str, PDFContent]) -> bool:
+    """判断内容是否为PDF内容"""
+    return isinstance(content, PDFContent)
 
 def create_anchor(text: str) -> str:
     """根据给定的标题文本创建一个 Markdown 锚点链接。"""
@@ -74,10 +97,13 @@ def parse_outline(content: str) -> Tuple[Optional[str], Optional[List[str]], Opt
 
 # ---- Main Workflow Class ----
 class DeepSummaryWorkflow:
-    def __init__(self, task_id: str, model_name: str, transcript: str, video_metadata: VideoMetadata):
+    def __init__(self, task_id: str, model_name: str, content: Union[str, PDFContent], video_metadata: VideoMetadata):
         self.task_id = task_id
         self.model_name = model_name
-        self.transcript = transcript
+        self.content = content
+        self.is_pdf = is_pdf_content(content)
+        # 保持向后兼容：如果是字符串，设置transcript属性
+        self.transcript = content if isinstance(content, str) else ""
         self.metadata = video_metadata
         self.task_dir = os.path.join(TASKS_ROOT_DIR, self.task_id)
         self.summarizer = get_summarizer(model_name)
@@ -162,9 +188,23 @@ class DeepSummaryWorkflow:
 
     async def _generate_single_chapter(self, index: int, chapter_title: str, outline_content: str) -> str:
         """为单个章节生成内容，包含重试和标题校验修复逻辑"""
+        # 根据内容类型设置提示词参数
+        if self.is_pdf:
+            content_type = "PDF文档内容"
+            content_description = "PDF文档"
+            full_content = ""  # PDF模式下不需要文本内容
+            multimodal_guide = prompts.PDF_MULTIMODAL_GUIDE
+        else:
+            content_type = "完整英文字幕"
+            content_description = "完整字幕"
+            full_content = self.transcript
+            multimodal_guide = ""
+        
         prompt = prompts.CHAPTER_PROMPT_TEMPLATE.format(
-            base_prompt=self.base_prompt,
-            full_transcript=self.transcript,
+            base_prompt=self.base_prompt + multimodal_guide,
+            content_type=content_type,
+            content_description=content_description,
+            full_content=full_content,
             full_outline=outline_content,
             chapter_number=index + 1,
             current_chapter_title=chapter_title
@@ -172,7 +212,14 @@ class DeepSummaryWorkflow:
 
         for attempt in range(self.max_retries + 1):
             try:
-                chapter_content = await self.summarizer.generate_content(prompt)
+                # 根据内容类型选择生成方式
+                if self.is_pdf:
+                    chapter_content = await self.summarizer.generate_content_with_pdf(
+                        prompt,
+                        self.content.file_info
+                    )
+                else:
+                    chapter_content = await self.summarizer.generate_content(prompt)
                 
                 if not chapter_content or not chapter_content.strip():
                     raise ValueError("模型返回了空内容")
@@ -223,16 +270,38 @@ class DeepSummaryWorkflow:
 
     async def _generate_outline(self) -> Optional[str]:
         """步骤1：生成标题、引言和大纲，包含重试逻辑"""
-        await self._log("步骤 1/4: 正在分析视频内容结构...")
+        await self._log("步骤 1/4: 正在分析内容结构...")
+        
+        # 根据内容类型设置提示词参数
+        if self.is_pdf:
+            content_type = "PDF文档内容"
+            content_description = "PDF文档"
+            full_content = ""  # PDF模式下不需要文本内容
+            multimodal_guide = prompts.PDF_MULTIMODAL_GUIDE
+        else:
+            content_type = "完整英文字幕"
+            content_description = "完整字幕"
+            full_content = self.transcript
+            multimodal_guide = ""
         
         prompt = prompts.OUTLINE_PROMPT_TEMPLATE.format(
-            base_prompt=self.base_prompt,
-            full_transcript=self.transcript
+            base_prompt=self.base_prompt + multimodal_guide,
+            content_type=content_type,
+            content_description=content_description,
+            full_content=full_content
         )
         
         for attempt in range(self.max_retries + 1):
             try:
-                outline = await self.summarizer.generate_content(prompt)
+                # 根据内容类型选择生成方式
+                if self.is_pdf:
+                    outline = await self.summarizer.generate_content_with_pdf(
+                        prompt, 
+                        self.content.file_info
+                    )
+                else:
+                    outline = await self.summarizer.generate_content(prompt)
+                
                 if outline:
                     outline_path = os.path.join(self.task_dir, "outline.md")
                     with open(outline_path, "w", encoding="utf-8") as f:
@@ -270,15 +339,36 @@ class DeepSummaryWorkflow:
         
         full_chapters_text = "\n\n".join(all_chapters_content)
 
+        # 根据内容类型设置提示词参数
+        if self.is_pdf:
+            content_type = "PDF文档内容"
+            content_description = "PDF文档"
+            full_content = ""  # PDF模式下不需要文本内容
+            multimodal_guide = prompts.PDF_MULTIMODAL_GUIDE
+        else:
+            content_type = "完整英文字幕"
+            content_description = "完整字幕"
+            full_content = self.transcript
+            multimodal_guide = ""
+
         prompt = prompts.CONCLUSION_PROMPT_TEMPLATE.format(
-            base_prompt=self.base_prompt,
-            full_transcript=self.transcript,
+            base_prompt=self.base_prompt + multimodal_guide,
+            content_type=content_type,
+            content_description=content_description,
+            full_content=full_content,
             all_generated_chapters=full_chapters_text
         )
 
         for attempt in range(self.max_retries + 1):
             try:
-                conclusion_content = await self.summarizer.generate_content(prompt)
+                # 根据内容类型选择生成方式
+                if self.is_pdf:
+                    conclusion_content = await self.summarizer.generate_content_with_pdf(
+                        prompt,
+                        self.content.file_info
+                    )
+                else:
+                    conclusion_content = await self.summarizer.generate_content(prompt)
                 if conclusion_content:
                     conclusion_path = os.path.join(self.task_dir, "conclusion.md")
                     with open(conclusion_path, "w", encoding="utf-8") as f:
@@ -570,7 +660,7 @@ async def reassemble_from_task_id(task_id: str):
     except Exception as e:
         logger.error(f"重新组装时发生未知错误: {e}", exc_info=True)
 
-async def run_deep_summary_workflow(task_id: str, model_name: str, transcript: str, video_metadata: VideoMetadata):
+async def run_deep_summary_workflow(task_id: str, model_name: str, content: Union[str, PDFContent], video_metadata: VideoMetadata):
     """工作流的入口函数"""
-    workflow = DeepSummaryWorkflow(task_id, model_name, transcript, video_metadata=video_metadata)
+    workflow = DeepSummaryWorkflow(task_id, model_name, content, video_metadata=video_metadata)
     await workflow.run() 
