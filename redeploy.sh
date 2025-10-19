@@ -4,6 +4,7 @@
 # 使用方法: ./redeploy.sh [选项]
 # 选项:
 #   --no-backup  不备份现有数据
+#   --copy-dev-articles  自动复制开发环境文章到生产环境（默认不复制）
 #   --port PORT  指定端口号（默认：8001）
 #   --host HOST  指定主机地址（默认：0.0.0.0）
 #   --dry-run    显示将要执行的操作但不实际执行
@@ -22,6 +23,7 @@ NC='\033[0m' # No Color
 PORT=8001
 HOST="0.0.0.0"
 BACKUP=true
+COPY_DEV_ARTICLES=false  # 默认不复制开发环境文章
 PROJECT_NAME="reinvent-insight"
 DEPLOY_DIR="$HOME/${PROJECT_NAME}-prod"
 BACKUP_ROOT="$HOME/${PROJECT_NAME}-backups"  # 统一的备份根目录
@@ -39,6 +41,10 @@ while [[ $# -gt 0 ]]; do
   case $1 in
     --no-backup)
       BACKUP=false
+      shift
+      ;;
+    --copy-dev-articles)
+      COPY_DEV_ARTICLES=true
       shift
       ;;
     --port)
@@ -498,11 +504,11 @@ restore_data() {
         fi
     fi
     
-    # 备份恢复完成后，进行开发环境文章的增量复制
-    print_info "检查开发环境文章..."
+    # 检查是否需要复制开发环境文章
     DEV_SUMMARIES_DIR="$HOME/reinvent-insight/downloads/summaries"
     PROD_SUMMARIES_DIR="$DEPLOY_DIR/reinvent_insight-0.1.0/downloads/summaries"
     
+    # 检查开发环境是否有文章
     if [ -d "$DEV_SUMMARIES_DIR" ] && [ "$(ls -A "$DEV_SUMMARIES_DIR" 2>/dev/null)" ]; then
         DEV_FILE_COUNT=$(find "$DEV_SUMMARIES_DIR" -name "*.md" -type f 2>/dev/null | wc -l)
         
@@ -515,41 +521,56 @@ restore_data() {
         print_info "开发环境: $DEV_FILE_COUNT 篇文章"
         print_info "生产环境现有: $EXISTING_PROD_COUNT 篇文章（备份恢复后）"
         
-        print_info "执行增量同步检查..."
-        
-        # 增量复制：检查开发环境中是否有生产环境没有的文章
-        COPIED_COUNT=0
-        NEW_FILES=()
-        
-        for dev_file in "$DEV_SUMMARIES_DIR"/*.md; do
-            if [ -f "$dev_file" ]; then
-                filename=$(basename "$dev_file")
-                if [ ! -f "$PROD_SUMMARIES_DIR/$filename" ]; then
-                    cp "$dev_file" "$PROD_SUMMARIES_DIR/"
-                    COPIED_COUNT=$((COPIED_COUNT + 1))
-                    NEW_FILES+=("$filename")
-                    print_info "新增: $filename"
-                fi
+        # 如果没有通过命令行参数指定，询问用户
+        if [ "$COPY_DEV_ARTICLES" = false ] && [ "$DRY_RUN" = false ]; then
+            echo ""
+            echo -n -e "${YELLOW}是否复制开发环境的文章到生产环境？(y/N): ${NC}"
+            read -r copy_confirm
+            if [[ "$copy_confirm" =~ ^[Yy]$ ]]; then
+                COPY_DEV_ARTICLES=true
             fi
-        done
+        fi
         
-        if [ "$COPIED_COUNT" -gt 0 ]; then
-            print_success "增量同步完成，新增 $COPIED_COUNT 篇文章"
-            # 显示部分新增文章名称（避免输出过长）
-            if [ "$COPIED_COUNT" -le 5 ]; then
-                for file in "${NEW_FILES[@]}"; do
-                    print_info "  - $file"
-                done
-            else
-                for i in {0..4}; do
-                    if [ -n "${NEW_FILES[$i]}" ]; then
-                        print_info "  - ${NEW_FILES[$i]}"
+        # 执行复制操作
+        if [ "$COPY_DEV_ARTICLES" = true ]; then
+            print_info "执行增量同步检查..."
+            
+            # 增量复制：检查开发环境中是否有生产环境没有的文章
+            COPIED_COUNT=0
+            NEW_FILES=()
+            
+            for dev_file in "$DEV_SUMMARIES_DIR"/*.md; do
+                if [ -f "$dev_file" ]; then
+                    filename=$(basename "$dev_file")
+                    if [ ! -f "$PROD_SUMMARIES_DIR/$filename" ]; then
+                        cp "$dev_file" "$PROD_SUMMARIES_DIR/"
+                        COPIED_COUNT=$((COPIED_COUNT + 1))
+                        NEW_FILES+=("$filename")
+                        print_info "新增: $filename"
                     fi
-                done
-                print_info "  ... 以及其他 $((COPIED_COUNT - 5)) 篇文章"
+                fi
+            done
+            
+            if [ "$COPIED_COUNT" -gt 0 ]; then
+                print_success "增量同步完成，新增 $COPIED_COUNT 篇文章"
+                # 显示部分新增文章名称（避免输出过长）
+                if [ "$COPIED_COUNT" -le 5 ]; then
+                    for file in "${NEW_FILES[@]}"; do
+                        print_info "  - $file"
+                    done
+                else
+                    for i in {0..4}; do
+                        if [ -n "${NEW_FILES[$i]}" ]; then
+                            print_info "  - ${NEW_FILES[$i]}"
+                        fi
+                    done
+                    print_info "  ... 以及其他 $((COPIED_COUNT - 5)) 篇文章"
+                fi
+            else
+                print_info "没有新文章需要同步，开发环境和生产环境文章已保持一致"
             fi
         else
-            print_info "没有新文章需要同步，开发环境和生产环境文章已保持一致"
+            print_info "跳过开发环境文章复制"
         fi
     else
         print_info "开发环境没有文章"
