@@ -379,11 +379,32 @@ const app = createApp({
             const formData = new FormData();
             formData.append('file', analysisData.file);
             
+            // 添加上传进度日志
+            logs.value.push(`正在上传PDF文件 (${(analysisData.file.size / 1024 / 1024).toFixed(2)} MB)...`);
+            
             res = await axios.post('/analyze-pdf', formData, {
               headers: {
                 'Content-Type': 'multipart/form-data'
+              },
+              onUploadProgress: (progressEvent) => {
+                // 计算上传进度（0-20%用于上传）
+                const uploadPercent = Math.round((progressEvent.loaded * 20) / progressEvent.total);
+                progressPercent.value = uploadPercent;
+                
+                // 更新上传进度日志
+                const uploadMB = (progressEvent.loaded / 1024 / 1024).toFixed(2);
+                const totalMB = (progressEvent.total / 1024 / 1024).toFixed(2);
+                const lastLog = logs.value[logs.value.length - 1];
+                
+                if (lastLog && lastLog.includes('正在上传PDF文件')) {
+                  logs.value[logs.value.length - 1] = `正在上传PDF文件: ${uploadMB}MB / ${totalMB}MB (${Math.round((progressEvent.loaded * 100) / progressEvent.total)}%)`;
+                }
               }
             });
+            
+            // 上传完成
+            logs.value.push('PDF文件上传成功，服务器正在处理...');
+            progressPercent.value = 20;
           } else {
             // 处理URL分析（保持原有逻辑）
             res = await axios.post('/summarize', { url: analysisData.url });

@@ -40,7 +40,8 @@ async def pdf_analysis_worker_async(req: PDFAnalysisRequest, task_id: str, file_
                 clean_title = None
         
         # 为PDF生成唯一标识符
-        pdf_identifier = generate_pdf_identifier(clean_title or "PDF文档", pdf_file_info.get("name", ""))
+        # 使用临时标识符，实际的英文标题会在workflow中由AI生成
+        pdf_identifier = generate_pdf_identifier(clean_title or "PDF_Document", pdf_file_info.get("name", ""))
         
         # 创建PDFContent对象
         from .workflow import PDFContent
@@ -50,8 +51,9 @@ async def pdf_analysis_worker_async(req: PDFAnalysisRequest, task_id: str, file_
         )
         
         # 构造视频元数据（复用现有结构）
+        # 注意：这里的title会在workflow中被AI生成的英文标题替换
         metadata = VideoMetadata(
-            title=clean_title or "PDF文档分析",
+            title=clean_title or "PDF Document Analysis",  # 临时标题
             upload_date="19700101",
             video_url=pdf_identifier  # 使用唯一的PDF标识符
         )

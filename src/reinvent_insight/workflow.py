@@ -78,22 +78,54 @@ def load_base_prompt() -> str:
         logger.error(f"基础提示词文件未找到: {BASE_PROMPT_PATH}")
         return ""
 
-def parse_outline(content: str) -> Tuple[Optional[str], Optional[List[str]], Optional[str]]:
-    """从Markdown文本中解析标题、引言和章节列表"""
-    title_match = re.search(r"^#\s*(.*)", content, re.MULTILINE)
-    title = title_match.group(1).strip() if title_match else None
-
-    # 解析引言
-    introduction_match = re.search(r"###\s*引言\s*\n(.*?)(?=\n###|$)", content, re.DOTALL)
-    introduction = introduction_match.group(1).strip() if introduction_match else None
-
-    chapters = re.findall(r"^\d+\.\s*(.*)", content, re.MULTILINE)
+def extract_titles_from_outline(outline_content: str) -> Tuple[Optional[str], Optional[str]]:
+    """
+    从outline内容中提取中英文标题
     
-    if not title or not chapters:
-        logger.warning(f"无法从内容中解析出完整的标题和章节: {content[:500]}")
-        return None, None, None
+    Args:
+        outline_content: outline.md的完整内容
         
-    return title, chapters, introduction
+    Returns:
+        (title_en, title_cn) 元组，如果提取失败则返回(None, None)
+    """
+    title_en = None
+    title_cn = None
+    
+    # 方法1: 尝试提取JSON格式的标题信息
+    try:
+        json_match = re.search(r'\{[\s\S]*?"title_en"[\s\S]*?"title_cn"[\s\S]*?\}', outline_content)
+        if json_match:
+            import json
+            title_data = json.loads(json_match.group(0))
+            title_en = title_data.get('title_en', '').strip()
+            title_cn = title_data.get('title_cn', '').strip()
+            
+            if title_en and title_cn:
+                logger.info(f"成功从JSON格式提取标题 - EN: {title_en}, CN: {title_cn}")
+                return title_en, title_cn
+            else:
+                logger.warning(f"JSON中标题字段为空 - EN: {title_en}, CN: {title_cn}")
+    except json.JSONDecodeError as e:
+        logger.warning(f"JSON解析失败: {e}")
+    except Exception as e:
+        logger.warning(f"提取JSON标题时出错: {e}")
+    
+    # 方法2: 从Markdown标题中提取中文标题
+    title_match = re.search(r"^#\s*(.*)", outline_content, re.MULTILINE)
+    if title_match:
+        title_cn = title_match.group(1).strip()
+        logger.info(f"从Markdown提取中文标题: {title_cn}")
+    else:
+        logger.warning("无法从Markdown中提取标题")
+    
+    # 如果没有英文标题，记录警告
+    if not title_en:
+        logger.warning("未能提取英文标题，将在后续使用后备方案")
+    
+    return title_en, title_cn
+
+
+def parse_outline(content: str) -> T
 
 # ---- Main Workflow Class ----
 class DeepSummaryWorkflow:
@@ -109,6 +141,7 @@ class DeepSummaryWorkflow:
         self.summarizer = get_summarizer(model_name)
         self.base_prompt = load_base_prompt()
         self.max_retries = 2
+        self.generated_title_en = None  # 存储AI生成的英文标题
         
         # 确保任务目录存在
         os.makedirs(self.task_dir, exist_ok=True)
@@ -127,6 +160,21 @@ class DeepSummaryWorkflow:
             title, chapters_raw, introduction = parse_outline(outline_content)
             if not title or not chapters_raw:
                 raise Exception("解析大纲失败")
+            
+            # 对于PDF文档，尝试提取AI生成的英文标题
+            if self.is_pdf:
+                try:
+                    # 尝试从大纲内容中提取title_en
+                    import json
+                    # 查找JSON格式的内容
+                    json_match = re.search(r'\{[\s\S]*"title_en"[\s\S]*\}', outline_content)
+                    if json_match:
+                        outline_json = json.loads(json_match.group(0))
+                        self.generated_title_en = outline_json.get('title_en')
+                        if self.generated_title_en:
+                            logger.info(f"从大纲中提取到AI生成的英文标题: {self.generated_title_en}")
+                except Exception as e:
+                    logger.warning(f"无法从大纲中提取英文标题: {e}")
             
             # 清理章节标题，移除所有方括号，作为保险措施
             chapters = [re.sub(r'[\[\]]', '', c).strip() for c in chapters_raw]
@@ -147,7 +195,21 @@ class DeepSummaryWorkflow:
                 raise Exception("生成收尾内容失败")
             
             # 步骤 4: 组装最终报告
-            final_report, final_filename, doc_hash = await self._assemble_final_report(title, introduction, toc_md, conclusion_content, len(chapters), self.metadata)
+            # 如果是PDF且有AI生成的英文标题，更新metadata
+            metadata_for_report = self.metadata
+            if self.is_pdf and self.generated_title_en:
+                # 创建新的metadata对象，使用AI生成的英文标题
+                metadata_for_report = VideoMetadata(
+                    title=self.generated_title_en,
+                    upload_date=self.metadata.upload_date,
+                    video_url=self.metadata.video_url,
+                    is_reinvent=self.metadata.is_reinvent,
+                    course_code=self.metadata.course_code,
+                    level=self.metadata.level
+                )
+                logger.info(f"使用AI生成的英文标题作为文件名: {self.generated_title_en}")
+            
+            final_report, final_filename, doc_hash = await self._assemble_final_report(title, introduction, toc_md, conclusion_content, len(chapters), metadata_for_report)
             if not final_report:
                 raise Exception("组装最终报告失败")
 
@@ -307,6 +369,21 @@ class DeepSummaryWorkflow:
                     outline_path = os.path.join(self.task_dir, "outline.md")
                     with open(outline_path, "w", encoding="utf-8") as f:
                         f.write(outline)
+                    
+                    # 提取标题信息
+                    try:
+                        title_en, title_cn = extract_titles_from_outline(outline)
+                        if title_en:
+                            self.generated_title_en = title_en
+                            logger.info(f"任务 {self.task_id} - 成功提取英文标题: {title_en}")
+                        else:
+                            logger.warning(f"任务 {self.task_id} - 未能提取英文标题，将使用后备方案")
+                            # 提取失败时，保持 self.generated_title_en 为 None
+                            # 后续流程会使用 metadata.title 作为后备
+                    except Exception as e:
+                        logger.error(f"任务 {self.task_id} - 提取标题时出错: {e}", exc_info=True)
+                        # 即使提取失败，也不影响整体流程
+                    
                     await self._log("内容结构分析完成", progress=25)
                     return outline
                 

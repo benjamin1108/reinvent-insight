@@ -157,8 +157,15 @@ class PDFProcessor:
                 logger.info(f"Response tokens: {usage_metadata.candidates_token_count}")
                 logger.info(f"Total tokens: {usage_metadata.total_token_count}")
             
+            # 提取英文标题（如果存在）
+            title_en = None
+            if isinstance(outline_json, dict):
+                title_en = outline_json.get('title_en')
+                logger.info(f"提取到英文标题: {title_en}")
+            
             return {
                 "outline": outline_json,
+                "title_en": title_en,  # 添加英文标题
                 "file_id": pdf_file_info["name"],
                 "usage": getattr(response, 'usage_metadata', None)
             }
@@ -235,6 +242,9 @@ class PDFProcessor:
         # 如果用户提供了标题，使用用户标题；否则让AI根据内容生成
         title_instruction = f'"title": "{title}",' if title else '"title": "基于PDF内容生成一个简洁、准确、有吸引力的中文标题（10-30字）",'
         
+        # 添加英文标题生成指令
+        title_en_instruction = '"title_en": "基于PDF内容生成一个简洁的英文标题，优先使用PDF文档中的原始英文标题，如果没有则根据内容归纳一个（5-15个单词）",'
+        
         return f"""
 ## 1. 角色与任务
 
@@ -281,6 +291,7 @@ class PDFProcessor:
 
 {{
   {title_instruction}
+  {title_en_instruction}
   "introduction": "200-300字的引人入胜的导语",
   "table_of_contents": [
     {{
@@ -290,6 +301,12 @@ class PDFProcessor:
     }}
   ]
 }}
+
+**重要提示**：
+- title_en必须是纯英文，不包含中文字符
+- 如果PDF中有明确的英文标题（通常在封面或标题页），请优先使用
+- 如果没有原始英文标题，请根据文档核心内容归纳一个简洁的英文标题
+- 英文标题应该专业、准确，适合作为文件名使用
 """
     
     def _build_section_prompt(self, outline_item: Dict[str, Any], context: str) -> str:
