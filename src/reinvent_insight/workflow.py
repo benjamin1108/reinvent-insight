@@ -125,7 +125,22 @@ def extract_titles_from_outline(outline_content: str) -> Tuple[Optional[str], Op
     return title_en, title_cn
 
 
-def parse_outline(content: str) -> T
+def parse_outline(content: str) -> Tuple[Optional[str], Optional[List[str]], Optional[str]]:
+    """从Markdown文本中解析标题、引言和章节列表"""
+    title_match = re.search(r"^#\s*(.*)", content, re.MULTILINE)
+    title = title_match.group(1).strip() if title_match else None
+
+    # 解析引言
+    introduction_match = re.search(r"###\s*引言\s*\n(.*?)(?=\n###|$)", content, re.DOTALL)
+    introduction = introduction_match.group(1).strip() if introduction_match else None
+
+    chapters = re.findall(r"^\d+\.\s*(.*)", content, re.MULTILINE)
+    
+    if not title or not chapters:
+        logger.warning(f"无法从内容中解析出完整的标题和章节: {content[:500]}")
+        return None, None, None
+        
+    return title, chapters, introduction
 
 # ---- Main Workflow Class ----
 class DeepSummaryWorkflow:

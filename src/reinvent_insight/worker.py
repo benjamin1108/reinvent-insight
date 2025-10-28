@@ -48,7 +48,7 @@ async def summary_task_worker_async(url: str, task_id: str):
     await run_deep_summary_workflow(
         task_id=task_id,
         model_name=config.PREFERRED_MODEL,
-        transcript=content_for_summary,
+        content=content_for_summary,
         video_metadata=metadata
     )
 

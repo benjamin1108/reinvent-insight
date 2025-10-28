@@ -410,26 +410,46 @@ deploy_new_version() {
     
     # 验证PDF处理相关的Python模块是否正确安装
     print_info "验证PDF处理模块..."
-    if $VENV_NAME/bin/python -c "from reinvent_insight.pdf_processor import PDFProcessor; print('✓ PDF处理模块加载成功')" 2>/dev/null; then
-        print_success "PDF处理功能已正确安装"
-        # 验证依赖库
-        if $VENV_NAME/bin/python -c "import google.generativeai; print('✓ Google AI 客户端已安装')" 2>/dev/null; then
-            print_info "  ✓ Google Generative AI SDK 已安装"
+    
+    # 先验证核心依赖
+    local deps_ok=true
+    if ! $VENV_NAME/bin/python -c "import google.generativeai" 2>/dev/null; then
+        print_warning "  Google Generative AI SDK 未正确安装"
+        deps_ok=false
+    else
+        print_info "  ✓ Google Generative AI SDK 已安装"
+    fi
+    
+    if ! $VENV_NAME/bin/python -c "import reportlab" 2>/dev/null; then
+        print_warning "  ReportLab PDF处理库未正确安装"
+        deps_ok=false
+    else
+        print_info "  ✓ ReportLab PDF处理库已安装"
+    fi
+    
+    if ! $VENV_NAME/bin/python -c "import packaging" 2>/dev/null; then
+        print_warning "  packaging 模块未安装，尝试安装..."
+        $VENV_NAME/bin/pip install packaging >/dev/null 2>&1
+        if $VENV_NAME/bin/python -c "import packaging" 2>/dev/null; then
+            print_info "  ✓ packaging 模块已安装"
         else
-            print_warning "  Google Generative AI SDK 未安装，请检查依赖"
-        fi
-        if $VENV_NAME/bin/python -c "import reportlab; print('✓ ReportLab 已安装')" 2>/dev/null; then
-            print_info "  ✓ ReportLab PDF处理库已安装"
-        else
-            print_warning "  ReportLab PDF处理库未安装，请检查依赖"
-        fi
-        if $VENV_NAME/bin/python -c "import PyPDF2; print('✓ PyPDF2 已安装')" 2>/dev/null; then
-            print_info "  ✓ PyPDF2 PDF解析库已安装"
-        else
-            print_warning "  PyPDF2 PDF解析库未安装，请检查依赖"
+            print_warning "  packaging 模块安装失败"
+            deps_ok=false
         fi
     else
-        print_warning "PDF处理模块加载失败，请检查依赖"
+        print_info "  ✓ packaging 模块已安装"
+    fi
+    
+    # 最后验证PDF处理模块
+    if $VENV_NAME/bin/python -c "from reinvent_insight.pdf_processor import PDFProcessor" 2>/dev/null; then
+        print_success "PDF处理功能已正确安装"
+    else
+        if [ "$deps_ok" = true ]; then
+            print_warning "PDF处理模块加载失败，但依赖已安装（可能是配置问题）"
+        else
+            print_warning "PDF处理模块加载失败，部分依赖未正确安装"
+        fi
+        print_info "  提示：服务启动后会自动加载依赖，如果问题持续请检查日志"
     fi
     
     # 确保所有文件和目录的权限正确

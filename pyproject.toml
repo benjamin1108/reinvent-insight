@@ -27,6 +27,7 @@ dependencies = [
     "watchdog>=4.0.0",
     "python-multipart>=0.0.9",
     "reportlab>=4.0.0",
+    "packaging>=23.0",
 ]
 
 [tool.setuptools.packages.find]
