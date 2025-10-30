@@ -39,6 +39,7 @@ async def startup_event():
     应用启动时执行的事件。
     1. 初始化哈希映射缓存。
     2. 启动文件系统监控。
+    3. 检查 Cookie 健康状态。
     """
     logger.info("应用启动，开始初始化...")
     # 1. 初始化缓存
@@ -46,6 +47,10 @@ async def startup_event():
     
     # 2. 启动文件监控，并传入刷新缓存的回调函数
     start_watching(config.OUTPUT_DIR, init_hash_mappings)
+    
+    # 3. 检查 Cookie 健康状态
+    from .cookie_health_check import check_and_warn
+    check_and_warn()
 
 # --- 简易认证实现 ---
 session_tokens: Set[str] = set()
@@ -709,6 +714,69 @@ def refresh_cache(authorization: str = Header(None)):
     except Exception as e:
         logger.error(f"手动刷新缓存时发生错误: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"刷新缓存时发生内部错误: {e}")
+
+@app.get("/api/health")
+async def health_check():
+    """
+    系统健康检查端点（公开访问）
+    检查主程序和 Cookie Manager 服务的状态
+    """
+    from .cookie_health_check import CookieHealthCheck
+    
+    try:
+        checker = CookieHealthCheck()
+        cookie_status = checker.perform_full_check()
+        
+        # 判断整体健康状态
+        is_healthy = cookie_status['overall_status'] == 'healthy'
+        
+        return {
+            "status": "healthy" if is_healthy else "degraded",
+            "timestamp": cookie_status['timestamp'],
+            "components": {
+                "api": {
+                    "status": "healthy",
+                    "message": "API 服务运行正常"
+                },
+                "cookies": {
+                    "status": cookie_status['overall_status'],
+                    "service_running": cookie_status['service']['running'],
+                    "file_status": cookie_status['file']['status'],
+                    "content_valid": cookie_status['content']['valid'],
+                    "issues": cookie_status['issues'],
+                    "warnings": cookie_status['warnings']
+                }
+            }
+        }
+    except Exception as e:
+        logger.error(f"健康检查失败: {e}")
+        return {
+            "status": "error",
+            "timestamp": datetime.now().isoformat(),
+            "error": str(e)
+        }
+
+@app.get("/api/admin/cookie-status")
+async def get_cookie_status(authorization: str = Header(None)):
+    """
+    获取详细的 Cookie 状态（需要认证）
+    """
+    verify_token(authorization)
+    
+    from .cookie_health_check import CookieHealthCheck
+    
+    try:
+        checker = CookieHealthCheck()
+        result = checker.perform_full_check()
+        recommendations = checker.get_recommendations(result)
+        
+        return {
+            **result,
+            "recommendations": recommendations
+        }
+    except Exception as e:
+        logger.error(f"获取 Cookie 状态失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 class DeleteSummaryRequest(BaseModel):
     filename: str

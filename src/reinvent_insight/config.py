@@ -74,8 +74,8 @@ ADMIN_PASSWORD = _get_stripped_env("ADMIN_PASSWORD", "PASSWORD", default="passwo
 OUTPUT_DIR = PROJECT_ROOT / "downloads" / "summaries"
 # 定义字幕下载目录
 SUBTITLE_DIR = PROJECT_ROOT / "downloads" / "subtitles"
-# 定义 Cookies 文件路径 - 修复为正确的 .cookies 文件
-COOKIES_FILE = PROJECT_ROOT / ".cookies"
+# 定义 Cookies 文件路径 - 使用用户主目录统一存储
+COOKIES_FILE = Path.home() / ".cookies"
 
 # --- 下载配置 ---
 # yt-dlp 用户代理，模拟真实浏览器
@@ -91,10 +91,64 @@ DOWNLOAD_TIMEOUT = 60
 # 在并行生成章节时，每个API调用之间的延迟（秒）
 CHAPTER_GENERATION_DELAY_SECONDS = 0.5
 
+# --- Cookie Manager 配置 ---
+# Cookie 刷新间隔（小时）
+COOKIE_REFRESH_INTERVAL = int(os.getenv("COOKIE_REFRESH_INTERVAL", "6"))
+# 浏览器类型
+COOKIE_BROWSER_TYPE = os.getenv("COOKIE_BROWSER_TYPE", "chromium")
+# Cookie Store 路径 - 使用用户主目录统一存储
+COOKIE_STORE_PATH = Path.home() / ".cookies.json"
+
 def check_gemini_api_key():
     """检查 Gemini API Key 是否已配置"""
     if not GEMINI_API_KEY:
         logger.error("错误: GEMINI_API_KEY 未在 .env 文件中配置。")
         logger.error("请将 .env.example 复制为 .env 并填入您的 Google Gemini API 密钥。")
         return False
-    return True 
+    return True
+
+def check_legacy_cookie_paths():
+    """检查并提示迁移旧的 cookie 文件"""
+    import shutil
+    
+    legacy_cookies = PROJECT_ROOT / ".cookies"
+    legacy_store = PROJECT_ROOT / ".cookies.json"
+    
+    new_cookies = Path.home() / ".cookies"
+    new_store = Path.home() / ".cookies.json"
+    
+    migrated = False
+    
+    # 检查并迁移 Netscape 格式的 cookies
+    if legacy_cookies.exists() and not new_cookies.exists():
+        try:
+            shutil.copy2(legacy_cookies, new_cookies)
+            new_cookies.chmod(0o600)  # 设置安全权限
+            logger.info(f"已自动迁移 .cookies 到 {new_cookies}")
+            migrated = True
+        except Exception as e:
+            logger.warning(f"无法自动迁移 .cookies: {e}")
+            logger.info(f"请手动复制 {legacy_cookies} 到 {new_cookies}")
+    
+    # 检查并迁移 JSON 格式的 cookie store
+    if legacy_store.exists() and not new_store.exists():
+        try:
+            shutil.copy2(legacy_store, new_store)
+            new_store.chmod(0o600)  # 设置安全权限
+            logger.info(f"已自动迁移 .cookies.json 到 {new_store}")
+            migrated = True
+        except Exception as e:
+            logger.warning(f"无法自动迁移 .cookies.json: {e}")
+            logger.info(f"请手动复制 {legacy_store} 到 {new_store}")
+    
+    # 如果有迁移，提示用户
+    if migrated:
+        logger.info("Cookie 文件已迁移到用户主目录")
+        logger.info("旧文件已保留在项目目录，可以手动删除")
+    
+    # 如果旧文件存在但新文件也存在，只提示
+    elif (legacy_cookies.exists() or legacy_store.exists()) and (new_cookies.exists() or new_store.exists()):
+        logger.info("检测到项目目录下的旧 cookie 文件")
+        logger.info(f"当前使用: {new_cookies}")
+        logger.info(f"旧文件位置: {legacy_cookies}")
+        logger.info("如果不再需要，可以删除项目目录下的旧 cookie 文件") 

@@ -359,19 +359,19 @@ check_and_handle_backup() {
 stop_service() {
     print_info "检查并停止现有服务..."
     
-    # 如果使用 systemd
+    # 停止 Web 服务
     if systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
-        print_info "停止 systemd 服务..."
+        print_info "停止 Web 服务..."
         sudo systemctl stop "$SERVICE_NAME"
-        print_success "systemd 服务已停止"
+        print_success "Web 服务已停止"
     fi
     
     # 检查是否有进程在运行
     if pgrep -f "reinvent-insight web" > /dev/null; then
-        print_info "发现运行中的进程，正在停止..."
+        print_info "发现运行中的 Web 进程，正在停止..."
         pkill -f "reinvent-insight web"
         sleep 2
-        print_success "进程已停止"
+        print_success "Web 进程已停止"
     fi
 }
 
@@ -451,6 +451,7 @@ deploy_new_version() {
         fi
         print_info "  提示：服务启动后会自动加载依赖，如果问题持续请检查日志"
     fi
+    
     
     # 确保所有文件和目录的权限正确
     print_info "修复文件权限..."
@@ -727,18 +728,18 @@ EOF
         fi
     fi
     
-    # 启动 systemd 服务
+    # 启动 Web 服务
     sudo systemctl enable "$SERVICE_NAME"
     
     # 先停止服务（如果正在运行）
     if systemctl is-active --quiet "$SERVICE_NAME"; then
-        print_info "服务已在运行，先停止..."
+        print_info "Web 服务已在运行，先停止..."
         sudo systemctl stop "$SERVICE_NAME"
         sleep 2
     fi
     
-    # 启动服务
-    print_info "正在启动服务..."
+    # 启动 Web 服务
+    print_info "正在启动 Web 服务..."
     sudo systemctl start "$SERVICE_NAME"
     
     # 等待服务启动，最多等待 10 秒
@@ -748,18 +749,18 @@ EOF
         if systemctl is-active --quiet "$SERVICE_NAME"; then
             # 再检查一下进程是否真的在运行
             if pgrep -f "reinvent-insight web" > /dev/null; then
-                print_success "服务已成功启动"
+                print_success "Web 服务已成功启动"
                 print_info "服务运行在: http://$HOST:$PORT"
                 print_info "查看日志: sudo journalctl -u $SERVICE_NAME -f"
                 
                 # 测试服务是否响应
                 sleep 2
                 if curl -s -o /dev/null -w "%{http_code}" "http://localhost:$PORT" | grep -q "200\|302"; then
-                    print_success "服务正常响应 HTTP 请求"
+                    print_success "Web 服务正常响应 HTTP 请求"
                 else
-                    print_warning "服务已启动但可能还在初始化"
+                    print_warning "Web 服务已启动但可能还在初始化"
                 fi
-                return
+                break
             fi
         fi
         sleep 1
@@ -767,14 +768,16 @@ EOF
         echo -n "."
     done
     
-    echo ""
-    print_error "服务启动失败或启动超时"
-    print_info "查看错误: sudo journalctl -u $SERVICE_NAME -n 50"
-    
-    # 显示最近的错误日志
-    echo ""
-    echo "最近的错误日志："
-    sudo journalctl -u "$SERVICE_NAME" -n 10 --no-pager | grep -E "(ERROR|CRITICAL|Failed)" || echo "没有发现明显错误"
+    if [ $waited -ge $max_wait ]; then
+        echo ""
+        print_error "Web 服务启动失败或启动超时"
+        print_info "查看错误: sudo journalctl -u $SERVICE_NAME -n 50"
+        
+        # 显示最近的错误日志
+        echo ""
+        echo "最近的错误日志："
+        sudo journalctl -u "$SERVICE_NAME" -n 10 --no-pager | grep -E "(ERROR|CRITICAL|Failed)" || echo "没有发现明显错误"
+    fi
 }
 
 # 显示部署信息
@@ -785,7 +788,15 @@ show_deployment_info() {
     echo "======================================"
     echo "部署目录: $DEPLOY_DIR/reinvent_insight-0.1.0"
     echo "服务地址: http://$HOST:$PORT"
-    echo "服务名称: $SERVICE_NAME"
+    echo ""
+    echo "服务状态:"
+    echo "  • Web 服务: $SERVICE_NAME"
+    if systemctl is-active --quiet "$SERVICE_NAME"; then
+        echo "    状态: ✓ 运行中"
+    else
+        echo "    状态: ✗ 未运行"
+    fi
+    
     echo ""
     echo "功能特性:"
     echo "  • YouTube 链接分析"
@@ -806,11 +817,21 @@ show_deployment_info() {
     echo "  • AI 智能标题生成（PDF文档）"
     echo ""
     echo "常用命令:"
-    echo "  查看状态: sudo systemctl status $SERVICE_NAME"
-    echo "  查看日志: sudo journalctl -u $SERVICE_NAME -f"
-    echo "  停止服务: sudo systemctl stop $SERVICE_NAME"
-    echo "  启动服务: sudo systemctl start $SERVICE_NAME"
-    echo "  重启服务: sudo systemctl restart $SERVICE_NAME"
+    echo "  Web 服务:"
+    echo "    查看状态: sudo systemctl status $SERVICE_NAME"
+    echo "    查看日志: sudo journalctl -u $SERVICE_NAME -f"
+    echo "    停止服务: sudo systemctl stop $SERVICE_NAME"
+    echo "    启动服务: sudo systemctl start $SERVICE_NAME"
+    echo "    重启服务: sudo systemctl restart $SERVICE_NAME"
+    echo ""
+    echo "Cookie 服务部署:"
+    echo "  如需启用 YouTube Cookie 自动刷新功能，请运行："
+    echo "    ./deploy-cookie-service.sh"
+    echo ""
+    echo "  Cookie 服务将："
+    echo "    • 统一管理 cookies（存储在 ~/.cookies）"
+    echo "    • 自动刷新 YouTube cookies"
+    echo "    • 独立于 Web 服务运行"
     echo ""
     
     if [ -n "$LATEST_BACKUP" ]; then

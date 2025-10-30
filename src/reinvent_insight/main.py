@@ -2,6 +2,7 @@ import logging
 import asyncio
 import uuid
 import argparse
+import sys
 import questionary
 from rich.console import Console
 from rich.panel import Panel
@@ -115,6 +116,17 @@ def run_interactive_mode():
 
 def cli():
     """定义和处理命令行参数"""
+    # 检查并迁移旧的 cookie 文件（如果需要）
+    config.check_legacy_cookie_paths()
+    
+    # 检查是否是 cookie-manager 命令，如果是则直接调用 Click
+    if len(sys.argv) > 1 and sys.argv[1] == 'cookie-manager':
+        from .cookie_manager_cli import cookie_manager
+        # 移除程序名和 'cookie-manager'，保留其余参数给 Click
+        sys.argv = ['reinvent-insight cookie-manager'] + sys.argv[2:]
+        cookie_manager()
+        return
+    
     parser = argparse.ArgumentParser(
         description="""YouTube 视频字幕深度摘要工具。""",
         epilog="""使用 'python -m reinvent_insight.main <子命令> --help' 来查看特定子命令的详细帮助。
@@ -144,6 +156,9 @@ def cli():
     # 'reassemble' 子命令
     parser_reassemble = subparsers.add_parser('reassemble', help='根据任务ID重新组装报告。')
     parser_reassemble.add_argument('task_id', type=str, help='要重新组装的任务ID。')
+    
+    # 'cookie-manager' 子命令 - 不解析参数，直接传递给 Click
+    parser_cookie = subparsers.add_parser('cookie-manager', help='YouTube Cookie 管理器。', add_help=False)
     
     args = parser.parse_args()
 

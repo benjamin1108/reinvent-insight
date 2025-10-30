@@ -87,6 +87,10 @@ class SubtitleDownloader:
 
     def _get_base_command(self) -> list[str]:
         """获取基础的 yt-dlp 命令参数，包含反爬虫选项。"""
+        # 在下载前检查 cookie 健康状态
+        from .cookie_health_check import check_and_warn
+        check_and_warn()
+        
         command = [
             'yt-dlp',
             '--no-playlist',
