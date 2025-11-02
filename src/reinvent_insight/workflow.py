@@ -649,22 +649,47 @@ def _perform_assembly(title: str, introduction: str, toc_md: str, conclusion_md:
     insights = ""
     quotes = ""
 
+    # 记录原始conclusion内容用于调试
+    logger.debug(f"开始解析conclusion内容，总长度: {len(conclusion_md)}")
+    logger.debug(f"Conclusion前200字符: {conclusion_md[:200]}")
+
     # 使用 ### 作为分隔符来切分收尾部分的内容
     # 我们在前面加上换行符，以确保能正确处理文件开头的第一个部分
     conclusion_parts = re.split(r'\n###\s+', '\n' + conclusion_md)
+    logger.debug(f"切分后得到 {len(conclusion_parts)} 个部分")
 
-    for part in conclusion_parts:
+    for i, part in enumerate(conclusion_parts):
         part = part.strip()
         if not part:
             continue
         
+        # 记录每个部分的开头用于调试
+        logger.debug(f"部分 {i} 开头: {part[:50]}")
+        
         # 还原被切掉的 ### 标记，因为 split 会消耗掉分隔符
         full_part = "### " + part
         
-        if part.lower().startswith('洞见延伸'):
+        # 更宽松的匹配逻辑，支持多种可能的标题格式
+        part_lower = part.lower()
+        if '洞见' in part_lower and '延伸' in part_lower:
             insights = full_part
-        elif part.lower().startswith('金句&原声引用'):
+            logger.info(f"✓ 成功提取洞见延伸部分，长度: {len(insights)}")
+        elif '金句' in part_lower or ('原声' in part_lower and '引用' in part_lower):
             quotes = full_part
+            logger.info(f"✓ 成功提取金句&原声引用部分，长度: {len(quotes)}")
+    
+    # 如果没有成功提取，记录警告并尝试使用整个conclusion作为后备
+    if not insights and not quotes:
+        logger.warning("⚠ 未能从conclusion中提取洞见延伸和金句部分，将使用整个conclusion内容")
+        # 尝试直接使用conclusion内容，假设它已经包含了正确的格式
+        if '洞见' in conclusion_md or '金句' in conclusion_md:
+            # 如果conclusion包含这些关键词，直接使用
+            insights = conclusion_md
+            logger.info("使用整个conclusion内容作为洞见延伸")
+    elif not insights:
+        logger.warning("⚠ 未能从conclusion中提取洞见延伸部分")
+    elif not quotes:
+        logger.warning("⚠ 未能从conclusion中提取金句&原声引用部分")
 
     # 3. 从 outline.md 中提取目录 - > 已被废弃，现在直接使用传入的 toc_md
 
