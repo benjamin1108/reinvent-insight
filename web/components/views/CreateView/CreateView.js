@@ -4,7 +4,8 @@
  */
 export default {
   dependencies: [
-    ['tech-button', '/components/shared/TechButton', 'TechButton']
+    ['tech-button', '/components/shared/TechButton', 'TechButton'],
+    ['connection-status', '/components/common/ConnectionStatus', 'ConnectionStatus']
   ],
   
   props: {
@@ -42,6 +43,18 @@ export default {
     createdDocHash: {
       type: String,
       default: ''
+    },
+    
+    // 连接状态
+    connectionState: {
+      type: String,
+      default: 'disconnected'
+    },
+    
+    // 重连次数
+    reconnectAttempt: {
+      type: Number,
+      default: 0
     }
   },
   
@@ -50,7 +63,8 @@ export default {
     'start-analysis', 
     'view-summary',
     'file-selected',
-    'mode-changed'
+    'mode-changed',
+    'manual-reconnect'
   ],
   
   setup(props, { emit }) {

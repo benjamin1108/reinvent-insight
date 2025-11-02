@@ -122,13 +122,14 @@ export default {
     const activeSection = ref('');
     let scrollTimer = null;
     
-    // 解析内容HTML生成目录结构
+    // 解析内容HTML生成目录结构（只显示3级标题：h1, h2, h3）
     const parseContent = (html) => {
       if (!html) return [];
       
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, 'text/html');
-      const headings = doc.querySelectorAll('h1, h2, h3, h4, h5, h6');
+      // 只选择 h1, h2, h3 标题
+      const headings = doc.querySelectorAll('h1, h2, h3');
       
       const sections = [];
       const stack = [];
@@ -182,7 +183,7 @@ export default {
       return sections;
     };
     
-    // 生成目录HTML
+    // 生成目录HTML（不带编号，因为标题本身已有编号）
     const generateTocHtml = (sections) => {
       if (!sections || sections.length === 0) {
         return '';

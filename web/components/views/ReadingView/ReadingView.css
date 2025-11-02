@@ -299,7 +299,7 @@
   color: rgba(229, 231, 235, 0.85);
 }
 
-/* 有序列表 */
+/* 有序列表 - 默认显示数字 */
 .reading-view .prose-tech ol {
   list-style-type: decimal;
   list-style-position: outside;
@@ -310,6 +310,13 @@
   margin-bottom: 5px;
   padding-left: 5px;
   line-height: 26px;
+}
+
+/* 有序列表数字样式美化 */
+.reading-view .prose-tech ol > li::marker {
+  color: #22d3ee;
+  font-weight: 600;
+  font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', monospace;
 }
 
 /* 无序列表 */
@@ -891,8 +898,8 @@
   content: '';
 }
 
-/* 隐藏正文中目录（OL）数字 */
-.reading-view .prose-tech ol[data-inbody-toc] {
+/* 注释掉：不再隐藏正文中目录（OL）数字，让它们正常显示 */
+/* .reading-view .prose-tech ol[data-inbody-toc] {
   list-style: none;
   padding-left: 0;
   margin-left: 0;
@@ -902,4 +909,4 @@
 }
 .reading-view .prose-tech ol[data-inbody-toc] li::marker {
   content: '';
-}
+} */

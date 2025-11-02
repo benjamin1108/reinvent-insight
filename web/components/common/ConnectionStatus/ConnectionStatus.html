@@ -1,0 +1,14 @@
+<div v-if="shouldShow" 
+     class="connection-status" 
+     :class="`connection-status--${connectionState}`">
+  <div class="connection-status__indicator">
+    <span class="connection-status__dot"></span>
+    <span class="connection-status__text">{{ statusText }}</span>
+  </div>
+  
+  <button v-if="showReconnectBtn" 
+          @click="handleManualReconnect"
+          class="connection-status__btn">
+    手动重连
+  </button>
+</div>

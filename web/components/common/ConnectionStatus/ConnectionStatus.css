@@ -1,0 +1,76 @@
+.connection-status {
+  padding: 8px 16px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  margin-bottom: 12px;
+  transition: all 0.3s ease;
+}
+
+.connection-status__indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.connection-status__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+
+.connection-status--connecting {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+.connection-status--connecting .connection-status__dot {
+  animation: pulse 2s infinite;
+}
+
+.connection-status--reconnecting {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.connection-status--reconnecting .connection-status__dot {
+  animation: pulse 2s infinite;
+}
+
+.connection-status--disconnected {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.connection-status__btn {
+  padding: 4px 12px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  background-color: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.connection-status__btn:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.connection-status__btn:active {
+  transform: scale(0.95);
+}

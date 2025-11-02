@@ -119,6 +119,15 @@
   <div v-if="(loading || logs.length) && !title"
     class="create-view__progress-section">
     
+    <!-- Connection Status -->
+    <connection-status
+      v-if="loading"
+      :connection-state="connectionState"
+      :reconnect-attempt="reconnectAttempt"
+      :max-attempts="5"
+      @manual-reconnect="$emit('manual-reconnect')"
+    />
+    
     <h3 class="create-view__progress-title">
       <svg class="create-view__progress-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

@@ -44,6 +44,17 @@ const app = createApp({
     const progressPercent = ref(0);
     const createdFilename = ref('');
     const createdDocHash = ref('');
+    
+    // WebSocket重连相关状态
+    const connectionState = ref('disconnected');
+    const reconnectAttempts = ref(0);
+    const reconnectTimer = ref(null);
+    const currentTaskId = ref(null);
+    const currentWs = ref(null);
+    
+    const MAX_RECONNECT_ATTEMPTS = 5;
+    const BASE_RECONNECT_DELAY = 3000;
+    const MAX_RECONNECT_DELAY = 30000;
 
     // 笔记库状态
     const summaries = ref([]);
@@ -359,6 +370,25 @@ const app = createApp({
       localStorage.removeItem('active_task_id');
       localStorage.removeItem('active_task_url');
     };
+    
+    // 计算重连延迟（指数退避）
+    const getReconnectDelay = (attempt) => {
+      const delay = Math.min(
+        BASE_RECONNECT_DELAY * Math.pow(2, attempt),
+        MAX_RECONNECT_DELAY
+      );
+      // 添加随机抖动（±20%）
+      const jitter = delay * 0.2 * (Math.random() * 2 - 1);
+      return Math.floor(delay + jitter);
+    };
+    
+    // 手动重连
+    const manualReconnect = () => {
+      if (currentTaskId.value) {
+        reconnectAttempts.value = 0;
+        connectWebSocket(currentTaskId.value, true);
+      }
+    };
 
     const startSummarize = async (analysisData) => {
       requireAuth(async () => {
@@ -426,18 +456,35 @@ const app = createApp({
       });
     };
     
-    const connectWebSocket = (taskId) => {
+    const connectWebSocket = (taskId, isReconnect = false) => {
+      // 清理之前的重连定时器
+      if (reconnectTimer.value) {
+        clearTimeout(reconnectTimer.value);
+        reconnectTimer.value = null;
+      }
+
+      currentTaskId.value = taskId;
+      connectionState.value = isReconnect ? 'reconnecting' : 'connecting';
+
       const wsScheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrlObj = new URL(`/ws/${taskId}`, window.location.origin);
       wsUrlObj.protocol = wsScheme;
       const wsUrl = wsUrlObj.href;
       const ws = new WebSocket(wsUrl);
+      currentWs.value = ws;
+
       const displayedLogs = new Set(logs.value);
 
       ws.onopen = () => {
+        connectionState.value = 'connected';
+        reconnectAttempts.value = 0; // 重置重连计数
         loading.value = true;
+        
         if (logs.value.length === 0) {
           logs.value.push('已连接到分析服务...');
+        } else if (isReconnect) {
+          logs.value.push('连接已恢复');
+          showToast('连接已恢复', 'success', 2000);
         }
       };
 
@@ -458,33 +505,52 @@ const app = createApp({
           loading.value = false;
           progressPercent.value = 100;
           clearActiveTask();
+          connectionState.value = 'disconnected';
         } else if (data.type === 'log') {
           if (!displayedLogs.has(data.message)) {
             logs.value.push(data.message);
             displayedLogs.add(data.message);
           }
         } else if (data.type === 'progress') {
-          progressPercent.value = data.percent || 0;
+          progressPercent.value = data.progress || data.percent || 0;
           console.log(`📊 进度更新: ${progressPercent.value}%`);
         } else if (data.type === 'error') {
           logs.value.push(`错误: ${data.message}`);
           loading.value = false;
           clearActiveTask();
+          connectionState.value = 'disconnected';
         }
       };
 
-      ws.onclose = () => {
-        if (loading.value) {
-          logs.value.push('连接已断开');
+      ws.onclose = (event) => {
+        console.log('WebSocket关闭:', event.code, event.reason);
+        
+        // 如果任务还在进行中，尝试重连
+        if (loading.value && reconnectAttempts.value < MAX_RECONNECT_ATTEMPTS) {
+          connectionState.value = 'reconnecting';
+          reconnectAttempts.value++;
+          
+          const delay = getReconnectDelay(reconnectAttempts.value - 1);
+          logs.value.push(`连接断开，${Math.ceil(delay / 1000)}秒后尝试重连 (${reconnectAttempts.value}/${MAX_RECONNECT_ATTEMPTS})`);
+          
+          reconnectTimer.value = setTimeout(() => {
+            connectWebSocket(taskId, true);
+          }, delay);
+        } else if (loading.value && reconnectAttempts.value >= MAX_RECONNECT_ATTEMPTS) {
+          // 超过最大重连次数
+          connectionState.value = 'disconnected';
+          logs.value.push('连接失败，已达到最大重连次数');
+          showToast('连接失败，请检查网络后手动重连', 'danger');
           loading.value = false;
+        } else {
+          // 任务已完成或用户主动断开
+          connectionState.value = 'disconnected';
         }
       };
 
       ws.onerror = (error) => {
         console.error('WebSocket错误:', error);
-        logs.value.push('连接出现错误');
-        loading.value = false;
-        clearActiveTask();
+        // 错误会触发 onclose，在那里处理重连
       };
     };
 
@@ -1030,6 +1096,8 @@ const app = createApp({
       progressPercent,
       createdFilename,
       createdDocHash,
+      connectionState,
+      reconnectAttempts,
       summaries,
       libraryLoading,
       isShareView,
@@ -1102,7 +1170,8 @@ const app = createApp({
       selectLevel,
       selectYear,
       formatWordCount,
-      isValidYoutubeUrl
+      isValidYoutubeUrl,
+      manualReconnect
     };
   }
 });
@@ -1119,7 +1188,8 @@ const components = [
   ['reading-view', '/components/views/ReadingView', 'ReadingView'],
   ['video-player', '/components/common/VideoPlayer', 'VideoPlayer'],
   ['login-modal', '/components/common/LoginModal', 'LoginModal'],
-  ['toast-container', '/components/common/ToastContainer', 'ToastContainer']
+  ['toast-container', '/components/common/ToastContainer', 'ToastContainer'],
+  ['connection-status', '/components/common/ConnectionStatus', 'ConnectionStatus']
 ];
 
 // 更新加载进度
