@@ -244,7 +244,7 @@ sequenceDiagram
 
 ### 2. 安装步骤
 
-```
+```bash
 # 1. 克隆项目
 git clone https://github.com/benjamin1108/reinvent-insight.git
 cd reinvent-insight
@@ -257,6 +257,13 @@ source .venv/bin/activate       # 激活虚拟环境 (Linux/macOS)
 # 3. 安装项目依赖
 pip install --upgrade pip       # 升级pip
 pip install -e .                # 安装项目和所有依赖（-e 表示可编辑模式，适合开发）
+
+# 4. 安装中文字体（PDF生成必需）
+./scripts/install_chinese_fonts.sh
+# 或手动安装：
+# Ubuntu/Debian: sudo apt-get install fonts-noto-cjk fonts-wqy-microhei
+# CentOS/RHEL: sudo dnf install google-noto-sans-cjk-fonts wqy-microhei-fonts
+# 详见: docs/PDF_CHINESE_FONT_SETUP.md
 ```
 
 ### 3. 配置设置

@@ -234,6 +234,17 @@
   gap: 0.5rem;
 }
 
+/* 近期解读按钮容器 */
+.app-header__recent-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+/* 移动端近期解读容器 */
+.app-header__recent-wrapper--mobile {
+  width: 100%;
+}
+
 /* 桌面端操作区 - 默认隐藏 */
 .app-header__actions {
   display: none;

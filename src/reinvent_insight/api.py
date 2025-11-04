@@ -18,6 +18,7 @@ import re
 import urllib.parse
 from zhon import hanzi
 import yaml
+from datetime import datetime
 from urllib.parse import quote
 
 from .logger import setup_logger
@@ -378,14 +379,44 @@ async def list_public_summaries():
                     video_url = metadata.get("video_url", "")
                     is_pdf = is_pdf_document(video_url)
                     
+                    # 优先级：metadata的created_at > metadata的upload_date > 文件系统时间
+                    created_at_value = stat.st_ctime
+                    modified_at_value = stat.st_mtime
+                    
+                    # 1. 尝试从metadata中获取created_at（ISO格式字符串）
+                    if metadata.get("created_at"):
+                        try:
+                            # 解析ISO格式时间字符串为时间戳
+                            dt = datetime.fromisoformat(metadata.get("created_at").replace('Z', '+00:00'))
+                            created_at_value = dt.timestamp()
+                            modified_at_value = created_at_value
+                        except (ValueError, AttributeError) as e:
+                            logger.warning(f"解析文件 {md_file.name} 的created_at失败: {e}")
+                    
+                    # 2. 如果没有created_at，尝试使用upload_date（YYYYMMDD格式）
+                    elif metadata.get("upload_date"):
+                        try:
+                            upload_date_str = str(metadata.get("upload_date"))
+                            # 解析YYYYMMDD格式，例如 "20241102" 或 "2024-11-02"
+                            upload_date_str = upload_date_str.replace('-', '')
+                            if len(upload_date_str) == 8:
+                                year = int(upload_date_str[0:4])
+                                month = int(upload_date_str[4:6])
+                                day = int(upload_date_str[6:8])
+                                dt = datetime(year, month, day)
+                                created_at_value = dt.timestamp()
+                                modified_at_value = created_at_value
+                        except (ValueError, AttributeError) as e:
+                            logger.warning(f"解析文件 {md_file.name} 的upload_date失败: {e}")
+                    
                     summary_data = {
                         "filename": md_file.name,
                         "title_cn": title_cn,
                         "title_en": title_en,
                         "size": stat.st_size,
                         "word_count": word_count,
-                        "created_at": stat.st_ctime,
-                        "modified_at": stat.st_mtime,
+                        "created_at": created_at_value,
+                        "modified_at": modified_at_value,
                         "upload_date": metadata.get("upload_date", "1970-01-01"),
                         "video_url": video_url,
                         "is_reinvent": metadata.get("is_reinvent", False),

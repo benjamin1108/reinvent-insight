@@ -44,7 +44,7 @@
 
 /* === 基礎元素樣式 === */
 html, body {
-    font-family: "Noto Serif SC", serif;
+    font-family: "Noto Serif SC", "Source Han Serif SC", "Source Han Serif CN", "Songti SC", "SimSun", "STSong", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "WenQuanYi Micro Hei", serif;
     font-size: 16px;
     line-height: 1.6;
     color: rgba(0,0,0,.85);
@@ -194,7 +194,7 @@ html, body {
 }
 
 #nice code {
-    font-family: SFMono-Regular,Consolas,"Liberation Mono",Menlo,Courier,monospace;
+    font-family: "Source Code Pro", "Courier New", SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, "Microsoft YaHei", monospace;
 }
 
 #nice p code, #nice li section code { 
@@ -204,7 +204,7 @@ html, body {
     margin: 0 2px; 
     color: #06b6d4; /* 主题色 */
     background-color: rgba(6, 182, 212, 0.1); /* 主题色的浅色背景 */
-    font-family: SFMono-Regular,Consolas,"Liberation Mono",Menlo,Courier,monospace;
+    font-family: "Source Code Pro", "Courier New", SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, "Microsoft YaHei", monospace;
 }
 
 #nice strong { 
