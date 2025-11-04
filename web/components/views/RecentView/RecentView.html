@@ -1,0 +1,43 @@
+<div class="recent-view">
+  <!-- 页面标题 -->
+  <div class="recent-view__header">
+    <h2 class="recent-view__title">
+      最近文章
+    </h2>
+    <p class="recent-view__subtitle">快速浏览最近更新的深度分析笔记</p>
+  </div>
+
+  <!-- 加载状态 -->
+  <div v-if="loading" class="recent-view__loading">
+    <div class="recent-view__loading-content">
+      <svg class="recent-view__loading-icon" fill="none" viewBox="0 0 24 24">
+        <circle class="recent-view__loading-circle" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="recent-view__loading-path" fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+        </path>
+      </svg>
+      <p class="recent-view__loading-text">加载最近文章中...</p>
+    </div>
+  </div>
+
+  <!-- 时间轴内容 -->
+  <div v-else-if="recentArticles.length > 0" class="recent-view__content">
+    <recent-timeline
+      :articles="recentArticles"
+      :loading="false"
+      :max-items="10"
+      @article-click="handleArticleClick">
+    </recent-timeline>
+  </div>
+
+  <!-- 空状态 -->
+  <div v-else class="recent-view__empty">
+    <svg class="recent-view__empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+      </path>
+    </svg>
+    <h3 class="recent-view__empty-title">暂无最近文章</h3>
+    <p class="recent-view__empty-message">还没有任何文章，创建您的第一篇深度解读笔记吧！</p>
+  </div>
+</div>

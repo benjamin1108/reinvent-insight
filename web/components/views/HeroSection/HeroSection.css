@@ -53,6 +53,14 @@
   z-index: 10;
 }
 
+/* 时间轴容器 */
+.hero-section__timeline {
+  position: relative;
+  z-index: 10;
+  margin-top: 3rem;
+  width: 100%;
+}
+
 /* 标题样式 */
 .hero-section__title {
   font-size: 3rem;

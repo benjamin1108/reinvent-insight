@@ -1,0 +1,79 @@
+<div class="recent-timeline">
+  <!-- 标题区域 -->
+  <div class="recent-timeline__header">
+    <h2 class="recent-timeline__title">
+      <svg class="recent-timeline__title-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      近期解读
+    </h2>
+    <div class="recent-timeline__subtitle">最新 {{ displayArticles.length }} 篇深度分析</div>
+  </div>
+
+  <!-- 加载状态 -->
+  <div v-if="loading" class="recent-timeline__loading">
+    <div class="loading-spinner"></div>
+    <span>加载中...</span>
+  </div>
+
+  <!-- 时间轴内容 -->
+  <div v-else-if="displayArticles.length > 0" class="recent-timeline__content">
+    <div
+      v-for="(article, index) in displayArticles"
+      :key="article.hash"
+      class="timeline-item"
+      :class="{ 'timeline-item--first': index === 0 }"
+      @click="handleArticleClick(article)"
+      @keydown="handleKeyDown($event, article)"
+      tabindex="0"
+      role="button"
+      :aria-label="`打开文章：${article.title_cn || article.title_en}`">
+      
+      <!-- 时间轴节点 -->
+      <div class="timeline-item__node">
+        <div class="timeline-item__dot"></div>
+        <div v-if="index < displayArticles.length - 1" class="timeline-item__line"></div>
+      </div>
+
+      <!-- 内容卡片 -->
+      <div class="timeline-item__card">
+        <!-- 时间标签 -->
+        <div class="timeline-item__date">
+          <svg class="timeline-item__date-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          {{ article.formattedDate }}
+        </div>
+
+        <!-- 文章标题 -->
+        <h3 class="timeline-item__title">
+          {{ article.title_cn || article.title_en }}
+        </h3>
+
+        <!-- 文章元信息 -->
+        <div class="timeline-item__meta">
+          <span v-if="article.content_type" class="timeline-item__badge">
+            {{ article.content_type }}
+          </span>
+          <span class="timeline-item__action">
+            查看详情
+            <svg class="timeline-item__action-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 空状态 -->
+  <div v-else class="recent-timeline__empty">
+    <svg class="recent-timeline__empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+    <p>暂无近期解读</p>
+  </div>
+</div>

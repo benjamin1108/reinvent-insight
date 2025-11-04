@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>简单时间轴测试</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #111827;
+      color: #e5e7eb;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      padding: 20px;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { text-align: center; color: #22d3ee; margin-bottom: 2rem; }
+  </style>
+  <link rel="stylesheet" href="/components/common/RecentTimeline/RecentTimeline.css">
+</head>
+<body>
+  <div class="container">
+    <h1>📅 时间轴组件简单测试</h1>
+    <div id="timeline-container"></div>
+  </div>
+
+  <script type="module">
+    const now = Math.floor(Date.now() / 1000);
+    const mockArticles = [
+      { hash: 'mock1', title_cn: 'AWS re:Invent 2024 主题演讲', content_type: 'Keynote', modified_at: now - 3600 },
+      { hash: 'mock2', title_cn: '深入解析 Amazon EKS 最佳实践', content_type: '300 - Advanced', modified_at: now - 7200 },
+      { hash: 'mock3', title_cn: '构建高可用微服务架构', content_type: '200 - Intermediate', modified_at: now - 86400 }
+    ];
+
+    function formatDate(timestamp) {
+      const date = new Date(timestamp * 1000);
+      return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+    }
+
+    document.getElementById('timeline-container').innerHTML = '<div class="recent-timeline"><div class="recent-timeline__header"><h2 class="recent-timeline__title">近期解读</h2></div><div class="recent-timeline__content">' + mockArticles.map((a, i) => '<div class="timeline-item ' + (i === 0 ? 'timeline-item--first' : '') + '" onclick="alert(\'' + a.title_cn + '\')"><div class="timeline-item__node"><div class="timeline-item__dot"></div>' + (i < mockArticles.length - 1 ? '<div class="timeline-item__line"></div>' : '') + '</div><div class="timeline-item__card"><div class="timeline-item__date">' + formatDate(a.modified_at) + '</div><h3 class="timeline-item__title">' + a.title_cn + '</h3><div class="timeline-item__meta">' + (a.content_type ? '<span class="timeline-item__badge">' + a.content_type + '</span>' : '') + '</div></div></div>').join('') + '</div></div>';
+  </script>
+</body>
+</html>

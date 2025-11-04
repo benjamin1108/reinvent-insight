@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>测试 RecentTimeline 组件</title>
+  
+  <!-- Vue 3 -->
+  <script src="/js/vendor/vue.global.prod.min.js"></script>
+  <script src="/js/vendor/axios.min.js"></script>
+  
+  <!-- 基础样式 -->
+  <link rel="stylesheet" href="/css/base/effects.css">
+  <link rel="stylesheet" href="/css/app.css">
+  
+  <!-- 组件系统 -->
+  <script src="/js/core/event-bus.js"></script>
+  <script src="/js/core/component-loader.js"></script>
+  
+  <style>
+    body {
+      background: #111827;
+      color: #e5e7eb;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+    
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .test-header {
+      text-align: center;
+      margin-bottom: 2rem;
+      padding: 2rem;
+    }
+    
+    .test-header h1 {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #22d3ee;
+      margin-bottom: 0.5rem;
+    }
+    
+    .test-header p {
+      color: #9ca3af;
+    }
+    
+    .test-controls {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-bottom: 2rem;
+    }
+    
+    .test-button {
+      padding: 0.75rem 1.5rem;
+      background: linear-gradient(135deg, #22d3ee 0%, #3b82f6 100%);
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform 0.2s;
+    }
+    
+    .test-button:hover {
+      transform: translateY(-2px);
+    }
+    
+    .test-button.secondary {
+      background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="test-container">
+    <div class="test-header">
+      <h1>📅 RecentTimeline 组件测试</h1>
+      <p>测试最近解读时间轴组件的显示效果</p>
+    </div>
+    
+    <div class="test-controls">
+      <button class="test-button" @click="loadRealData">加载真实数据</button>
+      <button class="test-button secondary" @click="loadMockData">加载模拟数据</button>
+      <button class="test-button secondary" @click="clearData">清空数据</button>
+    </div>
+    
+    <!-- 调试信息 -->
+    <div style="background: rgba(34, 211, 238, 0.1); padding: 1rem; margin-bottom: 1rem; border-radius: 0.5rem; text-align: center;">
+      <p style="color: #22d3ee; margin: 0;">文章数量: {{ articles.length }} | 加载状态: {{ loading ? '加载中' : '已完成' }}</p>
+    </div>
+    
+    <!-- 时间轴组件 -->
+    <recent-timeline
+      :articles="articles"
+      :loading="loading"
+      :max-items="6"
+      @article-click="handleArticleClick">
+    </recent-timeline>
+    
+    <!-- 点击提示 -->
+    <div v-if="clickedArticle" 
+      style="position: fixed; bottom: 20px; right: 20px; padding: 1rem; background: rgba(34, 211, 238, 0.2); border: 1px solid #22d3ee; border-radius: 0.5rem; max-width: 300px;">
+      <h3 style="margin: 0 0 0.5rem 0; color: #22d3ee;">点击了文章：</h3>
+      <p style="margin: 0; font-size: 0.875rem;">{{ clickedArticle.title_cn || clickedArticle.title_en }}</p>
+    </div>
+  </div>
+
+  <script type="module">
+    const { createApp, ref } = Vue;
+    
+    const app = createApp({
+      setup() {
+        const articles = ref([]);
+        const loading = ref(false);
+        const clickedArticle = ref(null);
+        
+        // 加载真实数据
+        const loadRealData = async () => {
+          loading.value = true;
+          try {
+            const response = await axios.get('/api/public/summaries');
+            const allArticles = response.data.summaries || [];
+            
+            const validArticles = allArticles.filter(article => 
+              article && article.hash && (article.title_cn || article.title_en)
+            );
+            
+            const sortedArticles = validArticles
+              .sort((a, b) => b.modified_at - a.modified_at)
+              .slice(0, 10);
+            
+            articles.value = sortedArticles;
+          } catch (error) {
+            console.error('加载数据失败:', error);
+            articles.value = [];
+          } finally {
+            loading.value = false;
+          }
+        };
+        
+        // 加载模拟数据
+        const loadMockData = () => {
+          const now = Math.floor(Date.now() / 1000);
+          articles.value = [
+            {
+              hash: 'mock1',
+              title_cn: 'AWS re:Invent 2024 主题演讲 - 云原生架构的未来',
+              title_en: 'AWS re:Invent 2024 Keynote - Future of Cloud Native',
+              content_type: 'Keynote',
+              modified_at: now - 3600
+            },
+            {
+              hash: 'mock2',
+              title_cn: '深入解析 Amazon EKS 最佳实践',
+              title_en: 'Deep Dive: Amazon EKS Best Practices',
+              content_type: '300 - Advanced',
+              modified_at: now - 7200
+            },
+            {
+              hash: 'mock3',
+              title_cn: '构建高可用微服务架构',
+              content_type: '200 - Intermediate',
+              modified_at: now - 86400
+            },
+            {
+              hash: 'mock4',
+              title_cn: 'Serverless 应用开发入门',
+              content_type: '100 - Beginner',
+              modified_at: now - 172800
+            },
+            {
+              hash: 'mock5',
+              title_cn: 'AI/ML 在云端的实践',
+              modified_at: now - 259200
+            },
+            {
+              hash: 'mock6',
+              title_cn: '数据湖与数据仓库的架构选择',
+              modified_at: now - 345600
+            }
+          ];
+        };
+        
+        // 清空数据
+        const clearData = () => {
+          articles.value = [];
+        };
+        
+        // 处理文章点击
+        const handleArticleClick = (article) => {
+          console.log('点击文章:', article);
+          clickedArticle.value = article;
+          setTimeout(() => {
+            clickedArticle.value = null;
+          }, 3000);
+        };
+        
+        return {
+          articles,
+          loading,
+          clickedArticle,
+          loadRealData,
+          loadMockData,
+          clearData,
+          handleArticleClick
+        };
+      }
+    });
+    
+    // 注册组件
+    const componentLoader = window.ComponentLoader;
+    
+    componentLoader.loadComponent('recent-timeline', '/components/common/RecentTimeline', 'RecentTimeline')
+      .then(() => {
+        const vueApp = app.mount('#app');
+        console.log('✅ 应用已挂载');
+        // 自动加载模拟数据
+        vueApp.loadMockData();
+      })
+      .catch(error => {
+        console.error('❌ 组件加载失败:', error);
+      });
+  </script>
+</body>
+</html>

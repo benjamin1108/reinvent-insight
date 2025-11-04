@@ -1,0 +1,212 @@
+/* RecentView组件样式 */
+
+/* 引入依赖组件样式 */
+@import url('/components/common/RecentTimeline/RecentTimeline.css');
+
+/* 主容器样式 */
+.recent-view {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+  animation: recent-view-fadeIn 0.5s ease-in-out;
+}
+
+@keyframes recent-view-fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 页面标题样式 */
+.recent-view__header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.recent-view__title {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: 1.875rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #22d3ee 0%, #3b82f6 50%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+  text-rendering: optimizeLegibility;
+}
+
+.recent-view__subtitle {
+  font-family: 'Inter', 'Source Han Sans SC', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  color: #9ca3af;
+  font-weight: 500;
+  font-size: 1rem;
+  letter-spacing: 0;
+}
+
+/* 加载状态样式 */
+.recent-view__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 0;
+}
+
+.recent-view__loading-content {
+  text-align: center;
+}
+
+.recent-view__loading-icon {
+  width: 2rem;
+  height: 2rem;
+  color: #22d3ee;
+  margin: 0 auto 1rem;
+  animation: recent-view-spin 1s linear infinite;
+}
+
+.recent-view__loading-circle {
+  opacity: 0.25;
+}
+
+.recent-view__loading-path {
+  opacity: 0.75;
+}
+
+.recent-view__loading-text {
+  color: #9ca3af;
+}
+
+@keyframes recent-view-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 内容区域样式 */
+.recent-view__content {
+  margin-top: 1.5rem;
+}
+
+/* 空状态样式 */
+.recent-view__empty {
+  text-align: center;
+  padding: 3rem 1.5rem;
+}
+
+.recent-view__empty-icon {
+  width: 4rem;
+  height: 4rem;
+  color: #4b5563;
+  margin: 0 auto 1.5rem;
+}
+
+.recent-view__empty-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #d1d5db;
+  margin-bottom: 0.5rem;
+}
+
+.recent-view__empty-message {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .recent-view {
+    padding: 1rem;
+  }
+  
+  .recent-view__header {
+    margin-bottom: 1.5rem;
+  }
+  
+  .recent-view__title {
+    font-size: 1.5rem;
+  }
+  
+  .recent-view__subtitle {
+    font-size: 0.875rem;
+  }
+  
+  .recent-view__loading {
+    padding: 2rem 0;
+  }
+  
+  .recent-view__empty {
+    padding: 2rem 1rem;
+  }
+  
+  .recent-view__empty-icon {
+    width: 3rem;
+    height: 3rem;
+  }
+}
+
+/* 极小屏幕优化 */
+@media (max-width: 480px) {
+  .recent-view {
+    padding: 0.75rem;
+  }
+  
+  .recent-view__header {
+    margin-bottom: 1rem;
+  }
+  
+  .recent-view__title {
+    font-size: 1.25rem;
+  }
+  
+  .recent-view__subtitle {
+    font-size: 0.8125rem;
+  }
+}
+
+/* 减少动画模式支持 */
+@media (prefers-reduced-motion: reduce) {
+  .recent-view {
+    animation: none;
+  }
+  
+  .recent-view__loading-icon {
+    animation: none;
+  }
+}
+
+/* 深色主题支持（默认） */
+.recent-view {
+  background-color: transparent;
+  color: #e5e7eb;
+}
+
+/* 确保与其他组件的兼容性 */
+.recent-view *,
+.recent-view *::before,
+.recent-view *::after {
+  box-sizing: border-box;
+}
+
+/* 清除默认样式 */
+.recent-view h1,
+.recent-view h2,
+.recent-view h3,
+.recent-view h4,
+.recent-view h5,
+.recent-view h6 {
+  margin: 0;
+}
+
+.recent-view p {
+  margin: 0;
+}

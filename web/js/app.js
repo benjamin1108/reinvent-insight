@@ -76,6 +76,10 @@ const app = createApp({
     const currentVersion = ref(1); // 统一为数字类型
     const documentLoading = ref(false);
 
+    // 认证状态 - 必须在 getInitialView 之前声明
+    const isAuthenticated = ref(false);
+    const showLogin = ref(false);
+
     // 视图控制
     const getInitialView = () => {
       const path = window.location.pathname;
@@ -85,14 +89,16 @@ const app = createApp({
       if (hashMatch || docMatch) {
         return 'read';
       }
+      
+      // 如果已登录，默认显示最近文章页面
+      if (isAuthenticated.value) {
+        return 'recent';
+      }
+      
       return 'library';
     };
     
     const currentView = ref(getInitialView());
-    
-    // 认证状态
-    const isAuthenticated = ref(false);
-    const showLogin = ref(false);
     
     // TOC 相关状态
     const showToc = ref(
@@ -120,7 +126,7 @@ const app = createApp({
     const mainContent = ref(null);
     
     // 环境信息状态
-    const environmentInfo = ref({
+    const environmentInfo = reactive({
       environment: 'production',
       is_development: false,
       loaded: false
@@ -134,9 +140,9 @@ const app = createApp({
 
     // ===== 计算属性 =====
     
-    // 显示首页区域的条件
+    // 显示首页区域的条件 - 仅在未登录且在 library 视图时显示
     const showHeroSection = computed(() => {
-      return !isAuthenticated.value && currentView.value !== 'read' && !isShareView.value;
+      return currentView.value === 'library' && !isAuthenticated.value && !isShareView.value;
     });
     
     // 最终确定的日志（用于进度显示）
@@ -240,7 +246,7 @@ const app = createApp({
         isAuthenticated.value = true;
         showLogin.value = false;
         
-        currentView.value = 'library';
+        currentView.value = 'recent';
         await nextTick();
         console.log('🔐 登录成功，正在重新加载笔记库...');
         await loadSummaries();
@@ -311,7 +317,7 @@ const app = createApp({
     // 视图导航方法
     const goHome = () => {
       history.pushState(null, '', '/');
-      currentView.value = 'library';
+      currentView.value = isAuthenticated.value ? 'recent' : 'library';
       clearReadingState();
       closeVideoPlayer();
     };
@@ -583,7 +589,7 @@ const app = createApp({
         libraryLoading.value = false;
       }
     };
-
+    
     const loadSummary = async (filename, pushState = true) => {
       documentLoading.value = true;
       readingError.value = '';
@@ -1057,17 +1063,17 @@ const app = createApp({
       await restoreTask();
       
       // 加载笔记库（已登录用户或访客都需要）
-      if (currentView.value === 'library') {
+      if (currentView.value === 'library' || currentView.value === 'recent') {
         await loadSummaries();
       }
       
       // 加载环境信息
       try {
         const res = await axios.get('/api/env');
-        environmentInfo.value = { ...res.data, loaded: true };
+        Object.assign(environmentInfo, res.data, { loaded: true });
       } catch (error) {
         console.error('获取环境信息失败:', error);
-        environmentInfo.value.loaded = true;
+        environmentInfo.loaded = true;
       }
       
       // 添加点击外部关闭下拉菜单的监听器
@@ -1184,6 +1190,7 @@ const components = [
   ['app-header', '/components/common/AppHeader', 'AppHeader'],
   ['hero-section', '/components/views/HeroSection', 'HeroSection'],
   ['create-view', '/components/views/CreateView', 'CreateView'],
+  ['recent-view', '/components/views/RecentView', 'RecentView'],
   ['library-view', '/components/views/LibraryView', 'LibraryView'],
   ['reading-view', '/components/views/ReadingView', 'ReadingView'],
   ['video-player', '/components/common/VideoPlayer', 'VideoPlayer'],
