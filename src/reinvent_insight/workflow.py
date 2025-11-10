@@ -20,7 +20,6 @@ logger = logger.bind(name=__name__)
 
 # 定义一个任务根目录
 TASKS_ROOT_DIR = "./downloads/tasks"
-BASE_PROMPT_PATH = "./prompt/youtbe-deep-summary.txt"
 
 # ---- PDF Content Data Model ----
 @dataclass
@@ -69,14 +68,7 @@ def generate_toc_with_links(chapters: List[str]) -> str:
     return "\n".join(toc_md_lines)
 
 # ---- Helper Functions ----
-def load_base_prompt() -> str:
-    """加载基础提示词模板"""
-    try:
-        with open(BASE_PROMPT_PATH, "r", encoding="utf-8") as f:
-            return f.read()
-    except FileNotFoundError:
-        logger.error(f"基础提示词文件未找到: {BASE_PROMPT_PATH}")
-        return ""
+# Note: load_base_prompt() 已移除，现在使用 PromptManager
 
 def extract_titles_from_outline(outline_content: str) -> Tuple[Optional[str], Optional[str]]:
     """
@@ -154,7 +146,6 @@ class DeepSummaryWorkflow:
         self.metadata = video_metadata
         self.task_dir = os.path.join(TASKS_ROOT_DIR, self.task_id)
         self.summarizer = get_summarizer(model_name)
-        self.base_prompt = load_base_prompt()
         self.max_retries = 2
         self.generated_title_en = None  # 存储AI生成的英文标题
         
@@ -237,55 +228,66 @@ class DeepSummaryWorkflow:
             await task_manager.set_task_error(self.task_id, "分析过程中出现错误，请稍后重试")
 
     async def _generate_chapters_parallel(self, chapters: List[str], title: str, outline_content: str) -> bool:
-        """步骤2：并行生成所有章节的内容"""
+        """步骤2：顺序生成所有章节的内容（避免重复）"""
         await self._log(f"步骤 2/4: 正在深度分析 {len(chapters)} 个核心章节...")
 
-        tasks = []
-        for i, chapter_title in enumerate(chapters):
-            task = self._generate_single_chapter(i, chapter_title, outline_content)
-            tasks.append(task)
-            # 在启动每个任务后，增加一个固定的延迟，以避免瞬间请求过多
-            await asyncio.sleep(config.CHAPTER_GENERATION_DELAY_SECONDS)
-        
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
         successful_chapters = 0
-        for i, result in enumerate(results):
-            if isinstance(result, str):
-                # 章节成功生成，只在本地记录日志，避免刷屏
-                logger.info(f"任务 {self.task_id} - 章节 '{chapters[i]}' 已成功生成。")
-                successful_chapters += 1
-            else:
-                logger.error(f"任务 {self.task_id} - 生成章节 '{chapters[i]}' 失败: {result}", exc_info=result)
+        generated_chapters_content = []  # 存储已生成的章节内容
         
-        progress = 25 + int(50 * (successful_chapters / len(chapters)))
-        await self._log(f"章节分析完成（{successful_chapters}/{len(chapters)}）", progress=progress)
+        for i, chapter_title in enumerate(chapters):
+            try:
+                # 传入已生成的章节内容，避免重复
+                previous_chapters = "\n\n---\n\n".join(generated_chapters_content) if generated_chapters_content else ""
+                
+                chapter_content = await self._generate_single_chapter(
+                    i, 
+                    chapter_title, 
+                    outline_content,
+                    previous_chapters  # 新增参数：前面已生成的章节
+                )
+                
+                if chapter_content:
+                    generated_chapters_content.append(chapter_content)
+                    successful_chapters += 1
+                    logger.info(f"任务 {self.task_id} - 章节 {i+1}/{len(chapters)} '{chapter_title}' 已成功生成。")
+                    
+                    # 更新进度
+                    progress = 25 + int(50 * (successful_chapters / len(chapters)))
+                    await self._log(f"已完成 {successful_chapters}/{len(chapters)} 个章节", progress=progress)
+                else:
+                    logger.error(f"任务 {self.task_id} - 章节 '{chapter_title}' 生成失败")
+                    
+            except Exception as e:
+                logger.error(f"任务 {self.task_id} - 生成章节 '{chapter_title}' 时出错: {e}", exc_info=True)
+        
+        await self._log(f"章节分析完成（{successful_chapters}/{len(chapters)}）", progress=75)
 
         return successful_chapters == len(chapters)
 
-    async def _generate_single_chapter(self, index: int, chapter_title: str, outline_content: str) -> str:
+    async def _generate_single_chapter(self, index: int, chapter_title: str, outline_content: str, previous_chapters: str = "") -> str:
         """为单个章节生成内容，包含重试和标题校验修复逻辑"""
         # 根据内容类型设置提示词参数
         if self.is_pdf:
             content_type = "PDF文档内容"
             content_description = "PDF文档"
             full_content = ""  # PDF模式下不需要文本内容
-            multimodal_guide = prompts.PDF_MULTIMODAL_GUIDE
+            pdf_multimodal_guide = "pdf_multimodal_guide"  # 启用 PDF 多模态指南
         else:
             content_type = "完整英文字幕"
             content_description = "完整字幕"
             full_content = self.transcript
-            multimodal_guide = ""
+            pdf_multimodal_guide = ""  # 不启用
         
-        prompt = prompts.CHAPTER_PROMPT_TEMPLATE.format(
-            base_prompt=self.base_prompt + multimodal_guide,
+        prompt = prompts.format_prompt(
+            'chapter_template',
             content_type=content_type,
             content_description=content_description,
             full_content=full_content,
             full_outline=outline_content,
             chapter_number=index + 1,
             current_chapter_title=chapter_title,
-            markdown_bold_rules=prompts.MARKDOWN_BOLD_RULES
+            pdf_multimodal_guide=pdf_multimodal_guide,
+            previous_chapters=previous_chapters  # 传入前面已生成的章节
         )
 
         for attempt in range(self.max_retries + 1):
@@ -355,18 +357,19 @@ class DeepSummaryWorkflow:
             content_type = "PDF文档内容"
             content_description = "PDF文档"
             full_content = ""  # PDF模式下不需要文本内容
-            multimodal_guide = prompts.PDF_MULTIMODAL_GUIDE
+            pdf_multimodal_guide = "pdf_multimodal_guide"  # 启用 PDF 多模态指南
         else:
             content_type = "完整英文字幕"
             content_description = "完整字幕"
             full_content = self.transcript
-            multimodal_guide = ""
+            pdf_multimodal_guide = ""  # 不启用
         
-        prompt = prompts.OUTLINE_PROMPT_TEMPLATE.format(
-            base_prompt=self.base_prompt + multimodal_guide,
+        prompt = prompts.format_prompt(
+            'outline_template',
             content_type=content_type,
             content_description=content_description,
-            full_content=full_content
+            full_content=full_content,
+            pdf_multimodal_guide=pdf_multimodal_guide
         )
         
         for attempt in range(self.max_retries + 1):
@@ -437,20 +440,20 @@ class DeepSummaryWorkflow:
             content_type = "PDF文档内容"
             content_description = "PDF文档"
             full_content = ""  # PDF模式下不需要文本内容
-            multimodal_guide = prompts.PDF_MULTIMODAL_GUIDE
+            pdf_multimodal_guide = "pdf_multimodal_guide"  # 启用 PDF 多模态指南
         else:
             content_type = "完整英文字幕"
             content_description = "完整字幕"
             full_content = self.transcript
-            multimodal_guide = ""
+            pdf_multimodal_guide = ""  # 不启用
 
-        prompt = prompts.CONCLUSION_PROMPT_TEMPLATE.format(
-            base_prompt=self.base_prompt + multimodal_guide,
+        prompt = prompts.format_prompt(
+            'conclusion_template',
             content_type=content_type,
             content_description=content_description,
             full_content=full_content,
             all_generated_chapters=full_chapters_text,
-            markdown_bold_rules=prompts.MARKDOWN_BOLD_RULES
+            pdf_multimodal_guide=pdf_multimodal_guide
         )
 
         for attempt in range(self.max_retries + 1):

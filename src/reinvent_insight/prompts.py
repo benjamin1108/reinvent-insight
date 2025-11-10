@@ -3,197 +3,176 @@
 提示词模板模块
 
 说明：
-- 基础提示词从 ./prompt/youtbe-deep-summary.txt 加载（在 workflow.py 中）
-- 本模块定义特定任务的提示词模板和公共规则
+- 本模块现在使用 PromptManager 进行统一管理
+- 所有 prompt 定义在 ./prompt/ 目录下
+- 本模块提供向后兼容的接口，但建议使用新的 PromptManager API
+
+迁移指南：
+- 旧方式: prompts.PDF_MULTIMODAL_GUIDE
+- 新方式: get_prompt_manager().get_prompt('pdf_multimodal_guide')
 """
 
-# PDF多模态分析指导
-PDF_MULTIMODAL_GUIDE = ""
-# PDF_MULTIMODAL_GUIDE = """
-# ## 多模态分析指南
+import os
+from loguru import logger
+from .prompt_manager import get_prompt_manager, PromptManager
 
-# 你正在分析一份PDF文档，该文档同时包含**文字、架构图、流程图、数据图表**等多种信息。你必须发挥你的多模态分析能力，**将从文本内容中获得的理解与从视觉元素中获得的洞察力相结合**。
+logger = logger.bind(name=__name__)
 
-# ### 文本分析重点：
-# - 核心概念和技术术语
-# - 业务价值和技术优势
-# - 问题描述和解决方案
-# - 实施步骤和最佳实践
+# ============================================
+# 全局 PromptManager 实例
+# ============================================
 
-# ### 视觉元素分析重点：
-# - **架构图**: 仔细分析系统组件、数据流向、部署结构、组件间的交互关系
-# - **流程图**: 理解业务流程、操作步骤、决策树、流程分支
-# - **数据图表**: 提取性能指标、趋势分析、对比数据、统计信息
-# - **截图**: 观察UI设计、配置示例、代码片段、界面布局
+# 检查是否在开发模式（通过环境变量）
+_enable_hot_reload = os.getenv('PROMPT_HOT_RELOAD', 'false').lower() == 'true'
 
-# ### 关联分析：
-# - 文本中提到的概念如何在图中体现
-# - 图表数据如何支撑文本论述
-# - 架构设计如何解决文本中描述的问题
-# - 视觉信息如何补充和深化文本内容
+try:
+    _manager = get_prompt_manager(enable_hot_reload=_enable_hot_reload)
+    logger.info(f"PromptManager initialized (hot_reload={_enable_hot_reload})")
+except Exception as e:
+    logger.error(f"Failed to initialize PromptManager: {e}")
+    _manager = None
 
-# ### 分析要求：
-# - 不要忽略任何图表和视觉元素
-# - 将图表中的关键信息转化为文字描述
-# - 确保分析的完整性和准确性
-# - 突出视觉元素中的独特洞察
-# """
 
-# Markdown 加粗样式规则（公共规则，避免重复）
-MARKDOWN_BOLD_RULES = """
-## Markdown 加粗样式规则
-在生成 Markdown 内容时，严格遵守以下加粗样式规则：
-1. 加粗语法（`**...**`）中只允许纯中文字符（无标点）或纯英文字符（字母、数字）
-2. 禁止在加粗内容中包含任何引号（中文 `""`、英文 `""`）、括号（中文 `（）`、英文 `()`）或任何其他标点
-3. 如果原始内容包含引号或括号，将其移到加粗范围外，或重写句子以移除这些字符
-4. 确保加粗内容简洁，避免复杂结构，降低解析失败风险
-5. 示例：
-   - ✅ 正确：`**控制平面**`、`**专家提示**`、`**LoadBalancingRouter**`
-   - ❌ 错误：`**"控制平面"**`、`**控制平面（Control Plane）**`、`**"VPC路由"**`
-6. 输出内容需兼容 CommonMark 规范，确保在 markdown-it 等渲染器中正确渲染为 `<strong>`
-"""
+# ============================================
+# 向后兼容的常量和模板
+# ============================================
 
-# 步骤一：生成大纲和标题的提示词模板
-OUTLINE_PROMPT_TEMPLATE = """
-{base_prompt}
+def _get_with_deprecation_warning(key: str, var_name: str) -> str:
+    """
+    获取 prompt 并记录弃用警告
+    
+    Args:
+        key: prompt key
+        var_name: 变量名（用于警告信息）
+        
+    Returns:
+        prompt 内容
+    """
+    logger.warning(
+        f"Accessing '{var_name}' directly is deprecated. "
+        f"Please use: get_prompt_manager().get_prompt('{key}') or format_prompt('{key}', ...)"
+    )
+    
+    if _manager is None:
+        logger.error("PromptManager not initialized, returning empty string")
+        return ""
+    
+    try:
+        return _manager.get_prompt(key)
+    except Exception as e:
+        logger.error(f"Failed to get prompt '{key}': {e}")
+        return ""
 
-## 输入素材
-- {content_type}: 
-{full_content}
 
----
-## 当前任务
-你的**唯一任务**是根据上方提供的{content_description}，生成这份深度笔记的 **中文标题**、**英文标题**、**引言** 和 **大纲索引**。
+# 使用 __getattr__ 实现动态属性访问
+def __getattr__(name: str):
+    """
+    动态属性访问，提供向后兼容性
+    
+    支持的旧常量：
+    - PDF_MULTIMODAL_GUIDE
+    - MARKDOWN_BOLD_RULES
+    - OUTLINE_PROMPT_TEMPLATE
+    - CHAPTER_PROMPT_TEMPLATE
+    - CONCLUSION_PROMPT_TEMPLATE
+    """
+    # 映射旧常量名到新的 prompt key
+    _legacy_mapping = {
+        'PDF_MULTIMODAL_GUIDE': 'pdf_multimodal_guide',
+        'MARKDOWN_BOLD_RULES': 'markdown_bold_rules',
+        'OUTLINE_PROMPT_TEMPLATE': 'outline_template',
+        'CHAPTER_PROMPT_TEMPLATE': 'chapter_template',
+        'CONCLUSION_PROMPT_TEMPLATE': 'conclusion_template',
+    }
+    
+    if name in _legacy_mapping:
+        key = _legacy_mapping[name]
+        return _get_with_deprecation_warning(key, name)
+    
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
-## 标题提取/生成规则
-1. **英文标题 (title_en)**：
-   - 优先从PDF内容中提取原始的英文标题
-   - 如果PDF中没有明确的英文标题，则基于内容生成一个简洁、专业的英文标题
-   - 英文标题应该准确反映文档的核心主题
-   - 格式：简洁的英文短语或句子，不超过15个单词
-   - 示例："AI Scaling Laws and 2030 Predictions" 或 "Deep Learning Architecture Guide"
 
-2. **中文标题 (title_cn)**：
-   - 基于内容生成一个高度概括核心内容的中文标题
-   - 应该具有吸引力和信息量
+# ============================================
+# 新的推荐 API
+# ============================================
 
-## 特殊格式要求
-1. **标题输出**：首先输出JSON格式的标题信息，然后输出Markdown格式的内容
-2. **引言**：激发读者阅读兴趣，准确反映整体内容
-3. **大纲索引**：10-20 个主要章节，每个标题都言之有物
-4. **纯文本限制**：章节标题必须是纯文本，**严禁**包含 Markdown 链接格式或方括号 `[]()【】「」`，避免 TOC 跳转失效
-5. **格式严格性**：不要添加任何额外的解释或章节内容
+def get_prompt(key: str, raw: bool = False) -> str:
+    """
+    获取 prompt 内容（推荐使用）
+    
+    Args:
+        key: prompt 标识符
+        raw: 是否返回原始内容（不进行片段组合）
+        
+    Returns:
+        prompt 内容字符串
+        
+    Example:
+        >>> base_prompt = get_prompt('youtube_deep_summary_base')
+        >>> markdown_rules = get_prompt('markdown_bold_rules')
+    """
+    if _manager is None:
+        raise RuntimeError("PromptManager not initialized")
+    
+    return _manager.get_prompt(key, raw=raw)
 
-## 输出格式
-```json
-{{
-  "title_en": "[提取或生成的英文标题]",
-  "title_cn": "[生成的中文标题]"
-}}
-```
 
-# [中文标题]
+def format_prompt(key: str, **params) -> str:
+    """
+    格式化 prompt 模板（推荐使用）
+    
+    Args:
+        key: prompt 标识符
+        **params: 模板参数
+        
+    Returns:
+        格式化后的 prompt 字符串
+        
+    Example:
+        >>> outline_prompt = format_prompt(
+        ...     'outline_template',
+        ...     content_type='完整英文字幕',
+        ...     content_description='完整字幕',
+        ...     full_content=transcript
+        ... )
+    """
+    if _manager is None:
+        raise RuntimeError("PromptManager not initialized")
+    
+    return _manager.format_prompt(key, **params)
 
-### 引言
-[这里是引言内容]
 
-### 主要目录
-1. [第一章标题]
-2. [第二章标题]
-...
+def list_available_prompts() -> list:
+    """
+    列出所有可用的 prompt
+    
+    Returns:
+        PromptConfig 对象列表
+    """
+    if _manager is None:
+        raise RuntimeError("PromptManager not initialized")
+    
+    return _manager.list_prompts()
 
----
-**请严格遵守上述指令，首先输出JSON格式的标题信息，然后输出标题、引言和大纲索引。**
-"""
 
-# 步骤二：生成单个章节内容的提示词模板
-CHAPTER_PROMPT_TEMPLATE = """
-{base_prompt}
+def reload_prompts() -> None:
+    """
+    重新加载所有 prompt（用于开发模式）
+    """
+    if _manager is None:
+        raise RuntimeError("PromptManager not initialized")
+    
+    _manager.reload_prompts()
 
-## 全局上下文
-- **{content_type}**: {full_content}
-- **完整大纲**: 
-{full_outline}
 
----
-## 当前任务
-你的任务是为上述 **完整大纲** 中的**特定一章**撰写详细内容。
+# ============================================
+# 导出的公共 API
+# ============================================
 
-**当前章节**：第 `{chapter_number}` 章 - `{current_chapter_title}`
-
-请基于**{content_description}**提供的上下文，并理解当前章节在**完整大纲**中的位置，为其撰写深入、详尽的内容。
-
-## 风格与一致性要求
-- **风格统一**: 写作风格、专业口吻和分析深度必须与报告其他部分保持高度一致，把自己想象成正在撰写一部完整作品
-- **参考上下文**: 审视上方的**完整大纲**，理解当前章节的承上启下作用
-- **术语一致**: 确保专业术语与**原内容**和**基础提示词**中定义的标准保持一致
-
-## 章节内容结构
-请严格遵循以下结构，但不要机械地使用"章节摘要"、"关键论点"等字眼作为标题，应根据具体内容灵活命名：
-
-1. **章节摘要**：对该章节的核心内容进行全面、详细的概括
-2. **关键论点/数据/案例**：精确引用与本章相关的关键论点、数据和实例
-3. **深入解读**：分析这部分内容为什么重要，它与现有认知有何不同，或带来了哪些补充
-
-## 输出要求
-- **只输出**第 `{chapter_number}` 章 **'{current_chapter_title}'** 的完整内容
-- **格式关键**：输出必须以 `### {chapter_number}. {current_chapter_title}` (Markdown H3 标题) 开头
-- 不需要包含引言、总结、其他章节或任何无关的文字
-
-{markdown_bold_rules}
-
----
-**请开始撰写第 `{chapter_number}` 章 - `{current_chapter_title}` 的内容。**
-"""
-
-# 步骤三：生成洞见与金句的提示词模板
-CONCLUSION_PROMPT_TEMPLATE = """
-{base_prompt}
-
-## 全局上下文
-- **{content_type}**: {full_content}
-- **已生成的全部正文内容**: 
-{all_generated_chapters}
-
----
-## 当前任务
-你已经完成了报告所有正文章节的撰写。现在，你的任务是基于 **{content_description}** 和 **已生成的全部正文内容**，为整份报告撰写收尾部分。
-
-## 具体任务
-请生成以下两个部分：
-
-1. **洞见延伸**：结合行业趋势或学术前沿，给出不多于 10 条具有可操作性的启示
-2. **金句&原声引用**：从原内容中挑选不多于 10 条有代表性的原句，并附上精准的中文翻译
-
-## 重要约束
-- 输出的"洞见延伸"、"金句&原声引用"必须**结合已生成的全部正文内容**中所提到的内容
-- **不要**输出原内容中有但正文内容中没有提到的内容
-- 确保与正文的连贯性和一致性
-
-## 输出格式要求
-请严格按照以下格式输出，使用 Markdown H3 标题（`###`）：
-
-```markdown
-### 洞见延伸
-1. [第一条洞见]
-2. [第二条洞见]
-...
-
-### 金句&原声引用
-1. **原文**: "[英文原句]"
-   **译文**: [中文翻译]
-2. **原文**: "[英文原句]"
-   **译文**: [中文翻译]
-...
-```
-
-## 重要约束
-- 必须使用 `### 洞见延伸` 和 `### 金句&原声引用` 作为标题
-- 不要输出其他标题、大纲或任何正文内容
-- 确保格式严格符合上述要求
-
-{markdown_bold_rules}
-
----
-**请开始生成洞见延伸和金句。**
-"""
+__all__ = [
+    'get_prompt',
+    'format_prompt',
+    'list_available_prompts',
+    'reload_prompts',
+    'get_prompt_manager',
+]
