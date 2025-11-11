@@ -151,4 +151,17 @@ def check_legacy_cookie_paths():
         logger.info("检测到项目目录下的旧 cookie 文件")
         logger.info(f"当前使用: {new_cookies}")
         logger.info(f"旧文件位置: {legacy_cookies}")
-        logger.info("如果不再需要，可以删除项目目录下的旧 cookie 文件") 
+        logger.info("如果不再需要，可以删除项目目录下的旧 cookie 文件")
+
+# --- 文档处理配置 ---
+# 文本文件最大大小（字节）
+MAX_TEXT_FILE_SIZE = int(os.getenv("MAX_TEXT_FILE_SIZE", str(10 * 1024 * 1024)))  # 默认 10MB
+
+# 二进制文件最大大小（字节）
+MAX_BINARY_FILE_SIZE = int(os.getenv("MAX_BINARY_FILE_SIZE", str(50 * 1024 * 1024)))  # 默认 50MB
+
+# 支持的文本格式
+SUPPORTED_TEXT_FORMATS = ['.txt', '.md']
+
+# 支持的二进制格式
+SUPPORTED_BINARY_FORMATS = ['.pdf', '.docx']

@@ -22,13 +22,14 @@ logger = logger.bind(name=__name__)
 TASKS_ROOT_DIR = "./downloads/tasks"
 BASE_PROMPT_PATH = "./prompt/youtbe-deep-summary.txt"
 
-# ---- PDF Content Data Model ----
+# ---- Document Content Data Model ----
 @dataclass
-class PDFContent:
-    """PDF内容封装类"""
-    file_info: Dict[str, Any]  # PDF文件信息（包含file_id或本地路径）
+class DocumentContent:
+    """文档内容封装类（支持多种格式）"""
+    file_info: Dict[str, Any]  # 文件信息（包含file_id或本地路径）
     title: str  # 文档标题
-    content_type: str = "pdf"  # 内容类型标识
+    content_type: str = "pdf"  # 内容类型标识: 'text', 'multimodal', 'pdf'
+    text_content: Optional[str] = None  # 文本内容（仅text类型使用）
     
     @property
     def file_id(self) -> str:
@@ -39,11 +40,30 @@ class PDFContent:
     def is_local(self) -> bool:
         """是否为本地文件"""
         return self.file_info.get("local_file", False)
+    
+    @property
+    def is_text(self) -> bool:
+        """是否为文本类型"""
+        return self.content_type == "text"
+    
+    @property
+    def is_multimodal(self) -> bool:
+        """是否为多模态类型（包括PDF和DOCX）"""
+        return self.content_type in ("multimodal", "pdf")
 
 
-def is_pdf_content(content: Union[str, PDFContent]) -> bool:
-    """判断内容是否为PDF内容"""
-    return isinstance(content, PDFContent)
+# 保持向后兼容
+PDFContent = DocumentContent
+
+
+def is_pdf_content(content: Union[str, DocumentContent]) -> bool:
+    """判断内容是否为PDF内容（向后兼容）"""
+    return isinstance(content, DocumentContent)
+
+
+def is_document_content(content: Union[str, DocumentContent]) -> bool:
+    """判断内容是否为文档内容"""
+    return isinstance(content, DocumentContent)
 
 def create_anchor(text: str) -> str:
     """根据给定的标题文本创建一个 Markdown 锚点链接。"""
@@ -144,13 +164,25 @@ def parse_outline(content: str) -> Tuple[Optional[str], Optional[List[str]], Opt
 
 # ---- Main Workflow Class ----
 class DeepSummaryWorkflow:
-    def __init__(self, task_id: str, model_name: str, content: Union[str, PDFContent], video_metadata: VideoMetadata):
+    def __init__(self, task_id: str, model_name: str, content: Union[str, DocumentContent], video_metadata: VideoMetadata):
         self.task_id = task_id
         self.model_name = model_name
         self.content = content
-        self.is_pdf = is_pdf_content(content)
-        # 保持向后兼容：如果是字符串，设置transcript属性
-        self.transcript = content if isinstance(content, str) else ""
+        
+        # 判断内容类型
+        if isinstance(content, str):
+            # 向后兼容：字符串视为transcript
+            self.content_type = "transcript"
+            self.transcript = content
+            self.is_pdf = False
+        elif isinstance(content, DocumentContent):
+            self.content_type = content.content_type
+            self.transcript = content.text_content or ""
+            # 向后兼容：保持is_pdf属性
+            self.is_pdf = content.is_multimodal
+        else:
+            raise ValueError(f"不支持的内容类型: {type(content)}")
+        
         self.metadata = video_metadata
         self.task_dir = os.path.join(TASKS_ROOT_DIR, self.task_id)
         self.summarizer = get_summarizer(model_name)
@@ -290,12 +322,20 @@ class DeepSummaryWorkflow:
             previous_chapters: 已生成的章节列表，每个元素包含 {'index', 'title', 'content'}
         """
         # 根据内容类型设置提示词参数
-        if self.is_pdf:
+        if self.content_type == "text":
+            # 文本文档模式
+            content_type = "文档文本内容"
+            content_description = "文档内容"
+            full_content = self.transcript
+            multimodal_guide = ""
+        elif self.content_type in ("multimodal", "pdf"):
+            # 多模态文档模式（PDF/DOCX）
             content_type = "PDF文档内容"
             content_description = "PDF文档"
-            full_content = ""  # PDF模式下不需要文本内容
+            full_content = ""  # 多模态模式下不需要文本内容
             multimodal_guide = prompts.PDF_MULTIMODAL_GUIDE
         else:
+            # 向后兼容：transcript模式
             content_type = "完整英文字幕"
             content_description = "完整字幕"
             full_content = self.transcript
@@ -331,12 +371,17 @@ class DeepSummaryWorkflow:
         for attempt in range(self.max_retries + 1):
             try:
                 # 根据内容类型选择生成方式
-                if self.is_pdf:
+                if self.content_type == "text":
+                    # 文本注入方式
+                    chapter_content = await self.summarizer.generate_content(prompt)
+                elif self.content_type in ("multimodal", "pdf"):
+                    # 多模态方式
                     chapter_content = await self.summarizer.generate_content_with_pdf(
                         prompt,
                         self.content.file_info
                     )
                 else:
+                    # 向后兼容：transcript方式
                     chapter_content = await self.summarizer.generate_content(prompt)
                 
                 if not chapter_content or not chapter_content.strip():
@@ -391,12 +436,20 @@ class DeepSummaryWorkflow:
         await self._log("步骤 1/4: 正在分析内容结构...")
         
         # 根据内容类型设置提示词参数
-        if self.is_pdf:
+        if self.content_type == "text":
+            # 文本文档模式
+            content_type = "文档文本内容"
+            content_description = "文档内容"
+            full_content = self.transcript
+            multimodal_guide = ""
+        elif self.content_type in ("multimodal", "pdf"):
+            # 多模态文档模式（PDF/DOCX）
             content_type = "PDF文档内容"
             content_description = "PDF文档"
-            full_content = ""  # PDF模式下不需要文本内容
+            full_content = ""  # 多模态模式下不需要文本内容
             multimodal_guide = prompts.PDF_MULTIMODAL_GUIDE
         else:
+            # 向后兼容：transcript模式
             content_type = "完整英文字幕"
             content_description = "完整字幕"
             full_content = self.transcript
@@ -413,12 +466,17 @@ class DeepSummaryWorkflow:
         for attempt in range(self.max_retries + 1):
             try:
                 # 根据内容类型选择生成方式
-                if self.is_pdf:
+                if self.content_type == "text":
+                    # 文本注入方式
+                    outline = await self.summarizer.generate_content(prompt)
+                elif self.content_type in ("multimodal", "pdf"):
+                    # 多模态方式
                     outline = await self.summarizer.generate_content_with_pdf(
                         prompt, 
                         self.content.file_info
                     )
                 else:
+                    # 向后兼容：transcript方式
                     outline = await self.summarizer.generate_content(prompt)
                 
                 if outline:
@@ -474,12 +532,20 @@ class DeepSummaryWorkflow:
         full_chapters_text = "\n\n".join(all_chapters_content)
 
         # 根据内容类型设置提示词参数
-        if self.is_pdf:
+        if self.content_type == "text":
+            # 文本文档模式
+            content_type = "文档文本内容"
+            content_description = "文档内容"
+            full_content = self.transcript
+            multimodal_guide = ""
+        elif self.content_type in ("multimodal", "pdf"):
+            # 多模态文档模式（PDF/DOCX）
             content_type = "PDF文档内容"
             content_description = "PDF文档"
-            full_content = ""  # PDF模式下不需要文本内容
+            full_content = ""  # 多模态模式下不需要文本内容
             multimodal_guide = prompts.PDF_MULTIMODAL_GUIDE
         else:
+            # 向后兼容：transcript模式
             content_type = "完整英文字幕"
             content_description = "完整字幕"
             full_content = self.transcript
@@ -497,12 +563,17 @@ class DeepSummaryWorkflow:
         for attempt in range(self.max_retries + 1):
             try:
                 # 根据内容类型选择生成方式
-                if self.is_pdf:
+                if self.content_type == "text":
+                    # 文本注入方式
+                    conclusion_content = await self.summarizer.generate_content(prompt)
+                elif self.content_type in ("multimodal", "pdf"):
+                    # 多模态方式
                     conclusion_content = await self.summarizer.generate_content_with_pdf(
                         prompt,
                         self.content.file_info
                     )
                 else:
+                    # 向后兼容：transcript方式
                     conclusion_content = await self.summarizer.generate_content(prompt)
                 if conclusion_content:
                     conclusion_path = os.path.join(self.task_dir, "conclusion.md")

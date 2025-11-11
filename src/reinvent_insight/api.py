@@ -647,11 +647,27 @@ async def get_summary_pdf(filename: str, response: Response):
 async def websocket_endpoint(websocket: WebSocket, task_id: str):
     await manager.connect(websocket, task_id)
     try:
+        # 保持连接活跃，同时支持心跳
         while True:
-            await websocket.receive_text()
+            try:
+                # 设置超时，避免无限等待
+                data = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+                # 如果收到 ping，回复 pong（心跳机制）
+                if data == "ping":
+                    await websocket.send_json({"type": "pong"})
+            except asyncio.TimeoutError:
+                # 超时后发送心跳检查连接是否还活着
+                try:
+                    await websocket.send_json({"type": "heartbeat"})
+                except Exception:
+                    # 如果发送失败，说明连接已断开
+                    break
     except WebSocketDisconnect:
         manager.disconnect(task_id)
         logger.info(f"客户端 {task_id} 断开连接。")
+    except Exception as e:
+        logger.error(f"WebSocket 连接异常 {task_id}: {e}")
+        manager.disconnect(task_id)
 
 @app.get("/summaries")
 async def list_summaries(authorization: str = Header(None)):
@@ -932,6 +948,10 @@ else:
 class PDFAnalysisRequest(BaseModel):
     title: Optional[str] = None  # 可选的标题，如果为None则由AI生成
 
+
+class DocumentAnalysisRequest(BaseModel):
+    title: Optional[str] = None  # 可选的标题
+
 # 在API路由中添加新的端点
 @app.post("/analyze-pdf")
 async def analyze_pdf_endpoint(
@@ -971,6 +991,82 @@ async def analyze_pdf_endpoint(
     except Exception as e:
         logger.error(f"处理上传PDF失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"处理上传PDF失败: {str(e)}")
+
+
+@app.post("/analyze-document")
+async def analyze_document_endpoint(
+    file: UploadFile = File(...),
+    title: Optional[str] = None,
+    authorization: str = Header(None)
+):
+    """
+    通用文档分析端点
+    支持格式：TXT, MD, PDF, DOCX
+    """
+    verify_token(authorization)
+    
+    # 验证文件格式
+    file_ext = Path(file.filename).suffix.lower()
+    supported_formats = ['.txt', '.md', '.pdf', '.docx']
+    
+    if file_ext not in supported_formats:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"不支持的文件格式: {file_ext}. 支持的格式: {', '.join(supported_formats)}"
+        )
+    
+    # 验证文件大小
+    max_size = config.MAX_TEXT_FILE_SIZE if file_ext in ['.txt', '.md'] else config.MAX_BINARY_FILE_SIZE
+    
+    task_id = str(uuid.uuid4())
+    
+    try:
+        # 创建临时文件保存上传的文档
+        with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as tmp_file:
+            content = await file.read()
+            
+            # 检查文件大小
+            if len(content) > max_size:
+                os.unlink(tmp_file.name)
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"文件大小超过限制 ({max_size / 1024 / 1024:.1f}MB)"
+                )
+            
+            tmp_file.write(content)
+            tmp_file_path = tmp_file.name
+        
+        # 创建异步任务处理文档分析
+        from .document_worker import document_analysis_worker_async
+        
+        # 处理标题
+        display_title = title or file.filename or "未命名文档"
+        # 移除文件扩展名
+        if display_title.lower().endswith(file_ext):
+            display_title = display_title[:-len(file_ext)]
+        
+        task = asyncio.create_task(
+            document_analysis_worker_async(task_id, tmp_file_path, display_title)
+        )
+        manager.create_task(task_id, task)
+        
+        return SummarizeResponse(
+            task_id=task_id, 
+            message=f"文档分析任务已创建（{file_ext[1:].upper()}），请连接 WebSocket。", 
+            status="created"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"处理上传文档失败: {e}", exc_info=True)
+        # 清理临时文件
+        if 'tmp_file_path' in locals() and os.path.exists(tmp_file_path):
+            try:
+                os.unlink(tmp_file_path)
+            except Exception:
+                pass
+        raise HTTPException(status_code=500, detail=f"处理上传文档失败: {str(e)}")
 
 def serve(host: str = "0.0.0.0", port: int = 8001, reload: bool = False):
     """使用 uvicorn 启动 Web 服务器。"""

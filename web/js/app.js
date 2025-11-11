@@ -411,14 +411,25 @@ const app = createApp({
         try {
           let res;
           if (analysisData.file) {
-            // 处理PDF文件上传
+            // 处理文档文件上传
             const formData = new FormData();
             formData.append('file', analysisData.file);
             
-            // 添加上传进度日志
-            logs.value.push(`正在上传PDF文件 (${(analysisData.file.size / 1024 / 1024).toFixed(2)} MB)...`);
+            // 获取文件类型
+            const fileName = analysisData.file.name;
+            const fileExt = fileName.split('.').pop().toUpperCase();
+            const fileTypeMap = {
+              'TXT': '文本文档',
+              'MD': 'Markdown 文档',
+              'PDF': 'PDF 文档',
+              'DOCX': 'Word 文档'
+            };
+            const fileTypeName = fileTypeMap[fileExt] || '文档';
             
-            res = await axios.post('/analyze-pdf', formData, {
+            // 添加上传进度日志
+            logs.value.push(`正在上传${fileTypeName} (${(analysisData.file.size / 1024 / 1024).toFixed(2)} MB)...`);
+            
+            res = await axios.post('/analyze-document', formData, {
               headers: {
                 'Content-Type': 'multipart/form-data'
               },
@@ -432,14 +443,14 @@ const app = createApp({
                 const totalMB = (progressEvent.total / 1024 / 1024).toFixed(2);
                 const lastLog = logs.value[logs.value.length - 1];
                 
-                if (lastLog && lastLog.includes('正在上传PDF文件')) {
-                  logs.value[logs.value.length - 1] = `正在上传PDF文件: ${uploadMB}MB / ${totalMB}MB (${Math.round((progressEvent.loaded * 100) / progressEvent.total)}%)`;
+                if (lastLog && lastLog.includes('正在上传')) {
+                  logs.value[logs.value.length - 1] = `正在上传${fileTypeName}: ${uploadMB}MB / ${totalMB}MB (${Math.round((progressEvent.loaded * 100) / progressEvent.total)}%)`;
                 }
               }
             });
             
             // 上传完成
-            logs.value.push('PDF文件上传成功，服务器正在处理...');
+            logs.value.push(`${fileTypeName}上传成功，服务器正在处理...`);
             progressPercent.value = 20;
           } else {
             // 处理URL分析（保持原有逻辑）
@@ -525,6 +536,14 @@ const app = createApp({
           loading.value = false;
           clearActiveTask();
           connectionState.value = 'disconnected';
+        } else if (data.type === 'heartbeat') {
+          // 收到服务器心跳，回复 ping 保持连接
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send('ping');
+          }
+        } else if (data.type === 'pong') {
+          // 收到服务器的 pong 响应，连接正常
+          console.log('💓 WebSocket 心跳正常');
         }
       };
 

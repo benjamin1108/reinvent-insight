@@ -776,3 +776,28 @@
     animation: none;
   }
 } 
+
+
+/* 文件类型图标样式 */
+.create-view__file-icon--txt {
+  color: #10b981; /* 绿色 - 文本文件 */
+}
+
+.create-view__file-icon--md {
+  color: #3b82f6; /* 蓝色 - Markdown */
+}
+
+.create-view__file-icon--pdf {
+  color: #ef4444; /* 红色 - PDF */
+}
+
+.create-view__file-icon--docx {
+  color: #2563eb; /* 深蓝色 - Word */
+}
+
+/* 文件类型标签 */
+.create-view__file-type {
+  color: #9ca3af;
+  font-size: 0.875rem;
+  margin: 0.25rem 0;
+}

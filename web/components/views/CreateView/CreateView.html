@@ -5,7 +5,7 @@
       <h2 class="create-view__title">
         reInvent Insights
       </h2>
-      <p class="create-view__subtitle">输入 YouTube 链接、网页链接或PDF链接，或上传PDF文件，获得深度解读</p>
+      <p class="create-view__subtitle">输入 YouTube 链接、或上传文档文件（TXT、MD、PDF、DOCX），获得深度解读</p>
     </div>
 
     <div class="create-view__input-section">
@@ -25,7 +25,7 @@
           <svg class="create-view__tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          PDF文件
+          文档文件
         </button>
       </div>
 
@@ -68,7 +68,7 @@
           <input 
             ref="fileInput"
             type="file" 
-            accept=".pdf"
+            accept=".txt,.md,.pdf,.docx"
             @change="handleFileUpload"
             class="create-view__file-input"
             style="display: none;" />
@@ -78,16 +78,18 @@
             <svg class="create-view__file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <p class="create-view__file-text">点击选择或拖拽PDF文件</p>
-            <p class="create-view__file-hint">支持 PDF 格式，最大 50MB</p>
+            <p class="create-view__file-text">点击选择或拖拽文档文件</p>
+            <p class="create-view__file-hint">支持 TXT、MD、PDF、DOCX 格式</p>
+            <p class="create-view__file-hint">文本文件最大 10MB，PDF/DOCX 最大 50MB</p>
           </div>
           
           <!-- 文件已选择状态 -->
           <div v-if="selectedFile" class="create-view__file-selected">
-            <svg class="create-view__file-icon create-view__file-icon--pdf" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg :class="['create-view__file-icon', getFileIconClass]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <p class="create-view__file-name">{{ selectedFileName }}</p>
+            <p class="create-view__file-type">{{ getFileTypeLabel }}</p>
             <p class="create-view__file-size">{{ formatFileSize(selectedFile.size) }}</p>
             <button 
               @click.stop="clearFile"

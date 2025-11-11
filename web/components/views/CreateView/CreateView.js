@@ -113,8 +113,28 @@ export default {
       if (inputMode.value === 'url') {
         return '分析链接内容';
       } else {
-        return '分析PDF文件';
+        return '分析文档文件';
       }
+    });
+    
+    // 获取文件类型标签
+    const getFileTypeLabel = computed(() => {
+      if (!selectedFile.value) return '';
+      const ext = selectedFileName.value.split('.').pop().toUpperCase();
+      const typeMap = {
+        'TXT': '文本文档',
+        'MD': 'Markdown 文档',
+        'PDF': 'PDF 文档',
+        'DOCX': 'Word 文档'
+      };
+      return typeMap[ext] || ext + ' 文件';
+    });
+    
+    // 获取文件图标类名
+    const getFileIconClass = computed(() => {
+      if (!selectedFile.value) return '';
+      const ext = selectedFileName.value.split('.').pop().toLowerCase();
+      return `create-view__file-icon--${ext}`;
     });
     
     // 切换输入模式
@@ -163,10 +183,35 @@ export default {
     // 处理文件上传
     const handleFileUpload = (event) => {
       const file = event.target.files[0];
-      if (file && file.type === 'application/pdf') {
-        // 检查文件大小（50MB以内）
-        if (file.size > 50 * 1024 * 1024) {
-          alert('文件太大，请选择小于50MB的PDF文件。');
+      if (!file) return;
+      
+      // 支持的文件类型
+      const supportedTypes = {
+        'text/plain': { ext: '.txt', maxSize: 10 * 1024 * 1024, name: 'TXT' },
+        'text/markdown': { ext: '.md', maxSize: 10 * 1024 * 1024, name: 'Markdown' },
+        'application/pdf': { ext: '.pdf', maxSize: 50 * 1024 * 1024, name: 'PDF' },
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': { ext: '.docx', maxSize: 50 * 1024 * 1024, name: 'Word' }
+      };
+      
+      // 通过文件扩展名判断（更可靠）
+      const fileName = file.name.toLowerCase();
+      let fileType = null;
+      
+      if (fileName.endsWith('.txt')) {
+        fileType = supportedTypes['text/plain'];
+      } else if (fileName.endsWith('.md')) {
+        fileType = supportedTypes['text/markdown'];
+      } else if (fileName.endsWith('.pdf')) {
+        fileType = supportedTypes['application/pdf'];
+      } else if (fileName.endsWith('.docx')) {
+        fileType = supportedTypes['application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      }
+      
+      if (fileType) {
+        // 检查文件大小
+        if (file.size > fileType.maxSize) {
+          const maxSizeMB = fileType.maxSize / (1024 * 1024);
+          alert(`文件太大，${fileType.name} 文件最大支持 ${maxSizeMB}MB。`);
           return;
         }
         
@@ -176,9 +221,7 @@ export default {
       } else {
         selectedFile.value = null;
         selectedFileName.value = '';
-        if (file) {
-          alert('请选择有效的PDF文件。');
-        }
+        alert('请选择支持的文件格式：TXT、MD、PDF 或 DOCX。');
       }
     };
     
@@ -190,10 +233,29 @@ export default {
       const files = event.dataTransfer.files;
       if (files.length > 0) {
         const file = files[0];
-        if (file.type === 'application/pdf') {
+        const fileName = file.name.toLowerCase();
+        
+        // 支持的文件类型
+        const supportedTypes = {
+          '.txt': { maxSize: 10 * 1024 * 1024, name: 'TXT' },
+          '.md': { maxSize: 10 * 1024 * 1024, name: 'Markdown' },
+          '.pdf': { maxSize: 50 * 1024 * 1024, name: 'PDF' },
+          '.docx': { maxSize: 50 * 1024 * 1024, name: 'Word' }
+        };
+        
+        let fileType = null;
+        for (const [ext, config] of Object.entries(supportedTypes)) {
+          if (fileName.endsWith(ext)) {
+            fileType = config;
+            break;
+          }
+        }
+        
+        if (fileType) {
           // 检查文件大小
-          if (file.size > 50 * 1024 * 1024) {
-            alert('文件太大，请选择小于50MB的PDF文件。');
+          if (file.size > fileType.maxSize) {
+            const maxSizeMB = fileType.maxSize / (1024 * 1024);
+            alert(`文件太大，${fileType.name} 文件最大支持 ${maxSizeMB}MB。`);
             return;
           }
           
@@ -201,7 +263,7 @@ export default {
           selectedFileName.value = file.name;
           emit('file-selected', file);
         } else {
-          alert('请选择有效的PDF文件。');
+          alert('请选择支持的文件格式：TXT、MD、PDF 或 DOCX。');
         }
       }
     };
@@ -240,6 +302,8 @@ export default {
       inputMode,
       canStartAnalysis,
       getAnalysisButtonText,
+      getFileTypeLabel,
+      getFileIconClass,
       switchInputMode,
       clearUrl,
       clearFile,
