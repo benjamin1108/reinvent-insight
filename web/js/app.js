@@ -45,12 +45,12 @@ const app = createApp({
     const createdFilename = ref('');
     const createdDocHash = ref('');
     
-    // WebSocket重连相关状态
+    // SSE 重连相关状态
     const connectionState = ref('disconnected');
     const reconnectAttempts = ref(0);
     const reconnectTimer = ref(null);
     const currentTaskId = ref(null);
-    const currentWs = ref(null);
+    const currentEventSource = ref(null);
     
     const MAX_RECONNECT_ATTEMPTS = 5;
     const BASE_RECONNECT_DELAY = 3000;
@@ -392,7 +392,7 @@ const app = createApp({
     const manualReconnect = () => {
       if (currentTaskId.value) {
         reconnectAttempts.value = 0;
-        connectWebSocket(currentTaskId.value, true);
+        connectSSE(currentTaskId.value, true);
       }
     };
 
@@ -463,7 +463,7 @@ const app = createApp({
             localStorage.setItem('active_task_url', analysisData.url);
           }
           
-          connectWebSocket(taskId);
+          connectSSE(taskId);
         } catch (error) {
           console.error('任务创建失败:', error);
           loading.value = false;
@@ -473,7 +473,7 @@ const app = createApp({
       });
     };
     
-    const connectWebSocket = (taskId, isReconnect = false) => {
+    const connectSSE = (taskId, isReconnect = false) => {
       // 清理之前的重连定时器
       if (reconnectTimer.value) {
         clearTimeout(reconnectTimer.value);
@@ -483,16 +483,23 @@ const app = createApp({
       currentTaskId.value = taskId;
       connectionState.value = isReconnect ? 'reconnecting' : 'connecting';
 
-      const wsScheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrlObj = new URL(`/ws/${taskId}`, window.location.origin);
-      wsUrlObj.protocol = wsScheme;
-      const wsUrl = wsUrlObj.href;
-      const ws = new WebSocket(wsUrl);
-      currentWs.value = ws;
+      // 构建 SSE URL，包含认证 token
+      // EventSource 不支持自定义 Header，所以通过查询参数传递 token
+      const token = localStorage.getItem('authToken');
+      const sseUrl = token 
+        ? `/api/tasks/${taskId}/stream?token=${encodeURIComponent(token)}`
+        : `/api/tasks/${taskId}/stream`;
+      
+      console.log(`🔌 建立 SSE 连接: ${sseUrl.replace(/token=[^&]+/, 'token=***')}`);
+      
+      // 创建 EventSource
+      const eventSource = new EventSource(sseUrl);
+      currentEventSource.value = eventSource;
 
       const displayedLogs = new Set(logs.value);
 
-      ws.onopen = () => {
+      // 连接打开
+      eventSource.onopen = () => {
         connectionState.value = 'connected';
         reconnectAttempts.value = 0; // 重置重连计数
         loading.value = true;
@@ -505,50 +512,58 @@ const app = createApp({
         }
       };
 
-      ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        
-        if (data.type === 'result') {
-          title.value = data.title;
+      // 接收消息
+      eventSource.addEventListener('message', (event) => {
+        try {
+          const data = JSON.parse(event.data);
           
-          // 保存文件名和 hash（如果有的话）
-          if (data.filename) {
-            createdFilename.value = data.filename;
+          if (data.type === 'result') {
+            // 处理结果消息
+            title.value = data.title;
+            
+            // 保存文件名和 hash（如果有的话）
+            if (data.filename) {
+              createdFilename.value = data.filename;
+            }
+            if (data.hash) {
+              createdDocHash.value = data.hash;
+            }
+            
+            loading.value = false;
+            progressPercent.value = 100;
+            clearActiveTask();
+            connectionState.value = 'disconnected';
+            eventSource.close();
+          } else if (data.type === 'log') {
+            // 处理日志消息
+            if (!displayedLogs.has(data.message)) {
+              logs.value.push(data.message);
+              displayedLogs.add(data.message);
+            }
+          } else if (data.type === 'progress') {
+            // 处理进度消息
+            progressPercent.value = data.progress || 0;
+            console.log(`📊 进度更新: ${progressPercent.value}%`);
+          } else if (data.type === 'error') {
+            // 处理错误消息
+            logs.value.push(`错误: ${data.message}`);
+            loading.value = false;
+            clearActiveTask();
+            connectionState.value = 'disconnected';
+            eventSource.close();
+          } else if (data.type === 'heartbeat') {
+            // 心跳消息，保持连接活跃
+            console.log('💓 SSE 心跳正常');
           }
-          if (data.hash) {
-            createdDocHash.value = data.hash;
-          }
-          
-          loading.value = false;
-          progressPercent.value = 100;
-          clearActiveTask();
-          connectionState.value = 'disconnected';
-        } else if (data.type === 'log') {
-          if (!displayedLogs.has(data.message)) {
-            logs.value.push(data.message);
-            displayedLogs.add(data.message);
-          }
-        } else if (data.type === 'progress') {
-          progressPercent.value = data.progress || data.percent || 0;
-          console.log(`📊 进度更新: ${progressPercent.value}%`);
-        } else if (data.type === 'error') {
-          logs.value.push(`错误: ${data.message}`);
-          loading.value = false;
-          clearActiveTask();
-          connectionState.value = 'disconnected';
-        } else if (data.type === 'heartbeat') {
-          // 收到服务器心跳，回复 ping 保持连接
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send('ping');
-          }
-        } else if (data.type === 'pong') {
-          // 收到服务器的 pong 响应，连接正常
-          console.log('💓 WebSocket 心跳正常');
+        } catch (error) {
+          console.error('解析 SSE 消息失败:', error, event.data);
         }
-      };
+      });
 
-      ws.onclose = (event) => {
-        console.log('WebSocket关闭:', event.code, event.reason);
+      // 连接错误
+      eventSource.onerror = (error) => {
+        console.error('SSE 连接错误:', error);
+        eventSource.close();
         
         // 如果任务还在进行中，尝试重连
         if (loading.value && reconnectAttempts.value < MAX_RECONNECT_ATTEMPTS) {
@@ -559,7 +574,7 @@ const app = createApp({
           logs.value.push(`连接断开，${Math.ceil(delay / 1000)}秒后尝试重连 (${reconnectAttempts.value}/${MAX_RECONNECT_ATTEMPTS})`);
           
           reconnectTimer.value = setTimeout(() => {
-            connectWebSocket(taskId, true);
+            connectSSE(taskId, true);
           }, delay);
         } else if (loading.value && reconnectAttempts.value >= MAX_RECONNECT_ATTEMPTS) {
           // 超过最大重连次数
@@ -571,11 +586,6 @@ const app = createApp({
           // 任务已完成或用户主动断开
           connectionState.value = 'disconnected';
         }
-      };
-
-      ws.onerror = (error) => {
-        console.error('WebSocket错误:', error);
-        // 错误会触发 onclose，在那里处理重连
       };
     };
 
@@ -1049,7 +1059,7 @@ const app = createApp({
       
       if (taskId && taskUrl) {
         url.value = taskUrl;
-        connectWebSocket(taskId);
+        connectSSE(taskId);
       }
     };
 

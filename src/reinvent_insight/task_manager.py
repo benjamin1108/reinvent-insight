@@ -2,7 +2,7 @@ import asyncio
 import logging
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
-from fastapi import WebSocket
+from asyncio import Queue
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -25,114 +25,179 @@ class TaskState:
     result_title: Optional[str] = None
     result_summary: Optional[str] = None
     result_path: Optional[str] = None # 最终报告的文件路径
-    websocket: Optional[WebSocket] = None
     task: Optional[asyncio.Task] = None
+    message_queue: Optional[Queue] = None  # SSE 消息队列
 
 class TaskManager:
-    """管理 WebSocket 连接和后台任务状态"""
+    """管理 SSE 连接和后台任务状态"""
     def __init__(self):
         self.tasks: Dict[str, TaskState] = {}
+        self.max_queue_size = 100  # 限制队列大小，防止内存溢出
 
-    async def connect(self, websocket: WebSocket, task_id: str):
+    async def register_sse_connection(self, task_id: str) -> Queue:
+        """
+        注册 SSE 连接，返回消息队列
+        
+        Args:
+            task_id: 任务ID
+            
+        Returns:
+            Queue: 消息队列，用于接收任务更新
+            
+        Raises:
+            ValueError: 如果任务不存在
+        """
         if task_id not in self.tasks:
-            await websocket.close(code=4001, reason="Invalid task ID")
-            logger.warning(f"拒绝了无效任务ID的WebSocket连接: {task_id}")
-            return
+            raise ValueError(f"任务 {task_id} 不存在")
         
-        await websocket.accept()
+        # 创建新的消息队列
+        queue = Queue(maxsize=self.max_queue_size)
+        self.tasks[task_id].message_queue = queue
+        logger.info(f"SSE 连接已注册到任务: {task_id}")
         
-        # 检查是否是首次连接（websocket为None）
-        is_first_connection = self.tasks[task_id].websocket is None
+        # 如果任务已经有历史消息，将它们放入队列
+        task_state = self.tasks[task_id]
+        for log_message in task_state.logs:
+            try:
+                await queue.put({"type": "log", "message": log_message})
+            except asyncio.QueueFull:
+                logger.warning(f"任务 {task_id} 的消息队列已满，丢弃历史日志")
+                break
         
-        self.tasks[task_id].websocket = websocket
-        logger.info(f"客户端已连接到任务: {task_id}")
+        # 如果有进度信息，也发送
+        if task_state.progress > 0:
+            try:
+                await queue.put({
+                    "type": "progress",
+                    "progress": task_state.progress,
+                    "message": task_state.logs[-1] if task_state.logs else ""
+                })
+            except asyncio.QueueFull:
+                logger.warning(f"任务 {task_id} 的消息队列已满，丢弃进度信息")
         
-        # 只有在重连时才发送历史记录
-        if not is_first_connection:
-            await self.send_history(task_id)
+        # 如果任务已完成，发送结果
+        if task_state.status == "completed":
+            await self._send_result_to_queue(task_id)
+        elif task_state.status == "error":
+            try:
+                await queue.put({
+                    "type": "error",
+                    "message": task_state.logs[-1] if task_state.logs else "未知错误"
+                })
+            except asyncio.QueueFull:
+                logger.warning(f"任务 {task_id} 的消息队列已满，丢弃错误信息")
+        
+        return queue
 
-    def disconnect(self, task_id: str):
+    async def unregister_sse_connection(self, task_id: str):
+        """
+        注销 SSE 连接，清理队列资源
+        
+        Args:
+            task_id: 任务ID
+        """
         if task_id in self.tasks:
-            self.tasks[task_id].websocket = None
-            logger.info(f"客户端从任务断开: {task_id}")
+            self.tasks[task_id].message_queue = None
+            logger.info(f"SSE 连接已从任务断开: {task_id}")
 
     async def send_message(self, message: str, task_id: str):
+        """
+        发送日志消息到队列
+        
+        Args:
+            message: 日志消息
+            task_id: 任务ID
+        """
         if task_id in self.tasks:
             self.tasks[task_id].logs.append(message)
-            ws = self.tasks[task_id].websocket
-            if ws:
+            queue = self.tasks[task_id].message_queue
+            if queue:
                 try:
-                    await ws.send_json({"type": "log", "message": message})
+                    await asyncio.wait_for(
+                        queue.put({"type": "log", "message": message}),
+                        timeout=1.0
+                    )
+                except asyncio.TimeoutError:
+                    logger.warning(f"向任务 {task_id} 发送日志消息超时（队列可能已满）")
                 except Exception as e:
-                    logger.warning(f"向客户端 {task_id} 发送日志消息失败 (可能已断开): {e}")
+                    logger.warning(f"向任务 {task_id} 发送日志消息失败: {e}")
 
     async def send_result(self, title: str, summary: str, task_id: str, filename: str = None, doc_hash: str = None):
+        """
+        发送任务结果到队列
+        
+        Args:
+            title: 文档标题
+            summary: 文档摘要内容
+            task_id: 任务ID
+            filename: 文件名（可选）
+            doc_hash: 文档哈希（可选）
+        """
         if task_id in self.tasks:
             task_state = self.tasks[task_id]
             task_state.status = "completed"
             task_state.result_title = title
             task_state.result_summary = summary
             
+            await self._send_result_to_queue(task_id, filename, doc_hash)
+    
+    async def _send_result_to_queue(self, task_id: str, filename: str = None, doc_hash: str = None):
+        """
+        内部方法：将结果发送到消息队列
+        
+        Args:
+            task_id: 任务ID
+            filename: 文件名（可选）
+            doc_hash: 文档哈希（可选）
+        """
+        task_state = self.tasks[task_id]
+        queue = task_state.message_queue
+        
+        if queue:
             # 清理内容，移除 metadata 和重复标题
-            cleaned_summary = clean_content_metadata(summary, title)
+            cleaned_summary = clean_content_metadata(
+                task_state.result_summary, 
+                task_state.result_title
+            )
             
-            ws = task_state.websocket
-            if ws:
+            result_data = {
+                "type": "result",
+                "title": task_state.result_title,
+                "summary": cleaned_summary
+            }
+            
+            # 如果没有传入 filename 和 doc_hash，尝试从 result_path 获取
+            if not filename and task_state.result_path:
+                filename = Path(task_state.result_path).name
+            
+            if not doc_hash and filename:
                 try:
-                    result_data = {
-                        "type": "result",
-                        "title": title,
-                        "summary": cleaned_summary  # 发送清理后的内容
-                    }
-                    
-                    # 如果有文件名和 hash，添加到结果中
-                    if filename:
-                        result_data["filename"] = filename
-                    if doc_hash:
-                        result_data["hash"] = doc_hash
-                        
-                    await ws.send_json(result_data)
-                except Exception as e:
-                    logger.warning(f"向客户端 {task_id} 发送最终结果失败 (可能已断开): {e}")
+                    from .api import filename_to_hash
+                    doc_hash = filename_to_hash.get(filename)
+                except (ImportError, KeyError):
+                    pass
+            
+            # 添加文件名和 hash
+            if filename:
+                result_data["filename"] = filename
+            if doc_hash:
+                result_data["hash"] = doc_hash
+            
+            try:
+                await asyncio.wait_for(
+                    queue.put(result_data),
+                    timeout=1.0
+                )
+            except asyncio.TimeoutError:
+                logger.warning(f"向任务 {task_id} 发送结果超时（队列可能已满）")
+            except Exception as e:
+                logger.warning(f"向任务 {task_id} 发送结果失败: {e}")
 
     def set_task_result(self, task_id: str, file_path: str):
         """当任务完成时，由工作流调用，用于记录最终产物路径。"""
         if task_id in self.tasks:
             self.tasks[task_id].result_path = file_path
             logger.info(f"任务 {task_id} 结果路径已记录: {file_path}")
-
-    async def send_history(self, task_id: str):
-        if task_id in self.tasks:
-            task_state = self.tasks[task_id]
-            ws = task_state.websocket
-            if not ws:
-                return
-
-            try:
-                for log_message in task_state.logs:
-                    await ws.send_json({"type": "log", "message": log_message})
-                
-                await self.update_progress(task_id, task_state.progress)
-
-                if task_state.status == "completed":
-                    # 获取文件名和 hash（如果有的话）
-                    filename = None
-                    doc_hash = None
-                    if task_state.result_path:
-                        # 从文件路径提取文件名
-                        filename = Path(task_state.result_path).name
-                        # 尝试获取 hash
-                        try:
-                            from .api import filename_to_hash
-                            doc_hash = filename_to_hash.get(filename)
-                        except (ImportError, KeyError):
-                            pass
-                    
-                    await self.send_result(task_state.result_title, task_state.result_summary, task_id, filename, doc_hash)
-                elif task_state.status == "error":
-                    await self.set_task_error(task_id, task_state.logs[-1] if task_state.logs else "未知错误")
-            except Exception as e:
-                logger.warning(f"向客户端 {task_id} 发送历史记录失败 (可能已断开): {e}")
 
     def create_task(self, task_id: str, coro: asyncio.Task):
         # 将 coro 包装一下，确保任务完成时能被正确处理
@@ -157,39 +222,62 @@ class TaskManager:
         pass
 
     async def update_progress(self, task_id: str, progress: int, message: Optional[str] = None):
-        """更新任务进度并发送通知"""
+        """
+        更新任务进度并发送到队列
+        
+        Args:
+            task_id: 任务ID
+            progress: 进度百分比 (0-100)
+            message: 可选的进度消息
+        """
         if task_id in self.tasks:
             task_state = self.tasks[task_id]
             task_state.progress = progress
             if message:
                 task_state.logs.append(message)
             
-            ws = task_state.websocket
-            if ws:
+            queue = task_state.message_queue
+            if queue:
                 try:
-                    await ws.send_json({
-                        "type": "progress",
-                        "progress": progress,
-                        "message": message or task_state.logs[-1]
-                    })
+                    await asyncio.wait_for(
+                        queue.put({
+                            "type": "progress",
+                            "progress": progress,
+                            "message": message or (task_state.logs[-1] if task_state.logs else "")
+                        }),
+                        timeout=1.0
+                    )
+                except asyncio.TimeoutError:
+                    logger.warning(f"向任务 {task_id} 更新进度超时（队列可能已满）")
                 except Exception as e:
-                    logger.warning(f"向客户端 {task_id} 更新进度失败 (可能已断开): {e}")
+                    logger.warning(f"向任务 {task_id} 更新进度失败: {e}")
     
     async def set_task_error(self, task_id: str, message: str):
-        """将任务状态设置为错误并发送通知"""
+        """
+        设置任务错误状态并发送到队列
+        
+        Args:
+            task_id: 任务ID
+            message: 错误消息
+        """
         if task_id in self.tasks:
             task_state = self.tasks[task_id]
             task_state.status = "error"
             task_state.logs.append(message)
-            ws = task_state.websocket
-            if ws:
+            queue = task_state.message_queue
+            if queue:
                 try:
-                    await ws.send_json({
-                        "type": "error",
-                        "message": message
-                    })
+                    await asyncio.wait_for(
+                        queue.put({
+                            "type": "error",
+                            "message": message
+                        }),
+                        timeout=1.0
+                    )
+                except asyncio.TimeoutError:
+                    logger.warning(f"向任务 {task_id} 发送错误消息超时（队列可能已满）")
                 except Exception as e:
-                    logger.warning(f"向客户端 {task_id} 发送错误消息失败 (可能已断开): {e}")
+                    logger.warning(f"向任务 {task_id} 发送错误消息失败: {e}")
 
 # 创建一个全局唯一的 TaskManager 实例
 manager = TaskManager() 

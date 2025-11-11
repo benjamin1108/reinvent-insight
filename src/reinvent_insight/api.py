@@ -1,5 +1,5 @@
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Header, Request, Response, UploadFile, File
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Header, Request, Response, UploadFile, File
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, HttpUrl
 import logging
 import asyncio
@@ -11,7 +11,8 @@ import tempfile
 import os
 import sys
 import uvicorn
-from typing import Set, Optional, Dict, List
+from typing import Set, Optional, Dict, List, AsyncGenerator
+import json
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import re
@@ -643,31 +644,109 @@ async def get_summary_pdf(filename: str, response: Response):
         logger.error(f"获取PDF文件失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"获取PDF文件失败: {str(e)}")
 
-@app.websocket("/ws/{task_id}")
-async def websocket_endpoint(websocket: WebSocket, task_id: str):
-    await manager.connect(websocket, task_id)
+async def generate_sse_stream(task_id: str, request: Request) -> AsyncGenerator[str, None]:
+    """
+    SSE 流式响应生成器
+    
+    Args:
+        task_id: 任务ID
+        request: FastAPI Request 对象，用于检测客户端断开
+        
+    Yields:
+        str: SSE 格式的消息字符串
+    """
     try:
-        # 保持连接活跃，同时支持心跳
+        # 注册 SSE 连接，获取消息队列
+        queue = await manager.register_sse_connection(task_id)
+        logger.info(f"开始为任务 {task_id} 生成 SSE 流")
+        
+        # 持续从队列读取消息并发送
         while True:
+            # 检查客户端是否断开连接
+            if await request.is_disconnected():
+                logger.info(f"客户端断开连接，停止 SSE 流: {task_id}")
+                break
+            
             try:
-                # 设置超时，避免无限等待
-                data = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
-                # 如果收到 ping，回复 pong（心跳机制）
-                if data == "ping":
-                    await websocket.send_json({"type": "pong"})
-            except asyncio.TimeoutError:
-                # 超时后发送心跳检查连接是否还活着
-                try:
-                    await websocket.send_json({"type": "heartbeat"})
-                except Exception:
-                    # 如果发送失败，说明连接已断开
+                # 从队列获取消息，设置超时避免无限等待
+                message = await asyncio.wait_for(queue.get(), timeout=30.0)
+                
+                # 格式化为 SSE 格式
+                # SSE 格式: event: message\ndata: {json}\n\n
+                sse_message = f"event: message\ndata: {json.dumps(message, ensure_ascii=False)}\n\n"
+                yield sse_message
+                
+                # 如果是结果或错误消息，任务已完成，关闭连接
+                if message.get("type") in ["result", "error"]:
+                    logger.info(f"任务 {task_id} 已完成，关闭 SSE 流")
                     break
-    except WebSocketDisconnect:
-        manager.disconnect(task_id)
-        logger.info(f"客户端 {task_id} 断开连接。")
+                    
+            except asyncio.TimeoutError:
+                # 超时后发送心跳保持连接
+                heartbeat = f"event: heartbeat\ndata: {json.dumps({'type': 'heartbeat'})}\n\n"
+                yield heartbeat
+                continue
+                
+    except ValueError as e:
+        # 任务不存在
+        logger.error(f"任务 {task_id} 不存在: {e}")
+        error_message = f"event: message\ndata: {json.dumps({'type': 'error', 'message': '任务不存在'}, ensure_ascii=False)}\n\n"
+        yield error_message
     except Exception as e:
-        logger.error(f"WebSocket 连接异常 {task_id}: {e}")
-        manager.disconnect(task_id)
+        # 其他错误
+        logger.error(f"SSE 流生成错误 {task_id}: {e}", exc_info=True)
+        error_message = f"event: message\ndata: {json.dumps({'type': 'error', 'message': f'服务器错误: {str(e)}'}, ensure_ascii=False)}\n\n"
+        yield error_message
+    finally:
+        # 清理资源
+        await manager.unregister_sse_connection(task_id)
+        logger.info(f"SSE 连接已清理: {task_id}")
+
+@app.get("/api/tasks/{task_id}/stream")
+async def stream_task_updates(
+    task_id: str, 
+    request: Request, 
+    token: Optional[str] = None,
+    authorization: str = Header(None)
+):
+    """
+    SSE 端点，流式推送任务更新
+    
+    Args:
+        task_id: 任务ID
+        request: FastAPI Request 对象
+        token: 查询参数中的认证 token（EventSource 不支持自定义 Header）
+        authorization: Bearer Token（向后兼容）
+        
+    Returns:
+        StreamingResponse with text/event-stream content type
+    """
+    # 验证认证 - 优先使用查询参数中的 token
+    if token:
+        # 直接验证 token（不需要 Bearer 前缀）
+        if token not in session_tokens:
+            raise HTTPException(status_code=401, detail="令牌无效，请重新登录")
+    else:
+        # 回退到 Header 认证（向后兼容）
+        verify_token(authorization)
+    
+    # 验证任务是否存在
+    task_state = manager.get_task_state(task_id)
+    if not task_state:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    
+    # 返回 SSE 流式响应
+    return StreamingResponse(
+        generate_sse_stream(task_id, request),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # 禁用 Nginx 缓冲
+        }
+    )
+
+
 
 @app.get("/summaries")
 async def list_summaries(authorization: str = Header(None)):
