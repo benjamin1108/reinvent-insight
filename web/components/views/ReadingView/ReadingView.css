@@ -96,6 +96,7 @@
   background: #111827;
   position: relative;
   transition: all 0.3s ease;
+  height: 100vh; /* 确保高度正确 */
 }
 
 .reading-view__content::-webkit-scrollbar {
@@ -107,22 +108,24 @@
   width: calc(100% - var(--toc-width, 300px));
   position: absolute;
   left: var(--toc-width, 300px);
-  height: 100%;
+  height: 100vh; /* 使用视口高度而不是100% */
+  top: 0;
 }
 
 .reading-view__content--no-toc {
   width: 100%;
   margin-left: 0;
   position: relative;
+  height: 100vh; /* 确保高度正确 */
 }
 
 /* 文章包装器 */
 .reading-view__article-wrapper {
-  min-height: 100vh;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 1.5rem;
-  max-width: 1400px; /* 增加最大宽度，让文章更饱满 */
+  padding: 2rem 1.5rem 3rem; /* 增加底部padding，确保能滚动到底 */
+  max-width: 1200px; /* 限制最大宽度，提升阅读体验 */
   margin: 0 auto;
 }
 
@@ -132,10 +135,19 @@
   background: linear-gradient(135deg, rgba(15, 23, 42, 0.6), rgba(30, 41, 59, 0.4), rgba(15, 23, 42, 0.6));
   border: 1px solid #374151;
   border-radius: 1rem;
-  padding: 2.5rem; /* 减少内边距，让内容更饱满 */
+  padding: 3rem 4rem; /* 增加内边距，特别是左右边距 */
   box-shadow: 0 0 20px rgba(6, 182, 212, 0.1), 0 0 40px rgba(6, 182, 212, 0.05);
   backdrop-filter: blur(10px);
   position: relative;
+  margin-bottom: 2rem; /* 确保底部有足够空间 */
+}
+
+/* 当隐藏目录时，进一步增加内边距 */
+.reading-view__content--no-toc .reading-view__article {
+  padding: 3rem 6rem; /* 隐藏目录时增加更多左右边距 */
+  max-width: 900px; /* 限制文字宽度，提升阅读体验 */
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .reading-view__version-selector {
@@ -678,23 +690,26 @@
     position: relative;
     left: 0;
     margin-left: 0;
+    height: 100vh;
   }
   
   .reading-view__content--no-toc {
     max-width: none;
     margin: 0;
     position: relative;
+    height: 100vh;
   }
   
   .reading-view__article-wrapper {
-    padding: 1rem;
+    padding: 1rem 1rem 3rem; /* 增加底部padding */
   }
   
   .reading-view__article {
-    padding: 0;
+    padding: 1.5rem; /* 移动端保持适度内边距 */
     background: none;
     border: none;
     box-shadow: none;
+    margin-bottom: 2rem;
   }
   
   .reading-view__article-header {
@@ -749,7 +764,12 @@
 /* 极小屏幕优化 */
 @media (max-width: 480px) {
   .reading-view__article-wrapper {
-    padding: 0.75rem;
+    padding: 0.75rem 0.75rem 2.5rem; /* 增加底部padding */
+  }
+  
+  .reading-view__article {
+    padding: 1rem; /* 极小屏幕保持基本内边距 */
+    margin-bottom: 1.5rem;
   }
   
   .reading-view__article-header {

@@ -237,34 +237,58 @@ class DeepSummaryWorkflow:
             await task_manager.set_task_error(self.task_id, "分析过程中出现错误，请稍后重试")
 
     async def _generate_chapters_parallel(self, chapters: List[str], title: str, outline_content: str) -> bool:
-        """步骤2：并行生成所有章节的内容"""
+        """步骤2：顺序生成所有章节的内容（每个章节都能看到前面已生成的章节，避免冗余）"""
         await self._log(f"步骤 2/4: 正在深度分析 {len(chapters)} 个核心章节...")
 
-        tasks = []
-        for i, chapter_title in enumerate(chapters):
-            task = self._generate_single_chapter(i, chapter_title, outline_content)
-            tasks.append(task)
-            # 在启动每个任务后，增加一个固定的延迟，以避免瞬间请求过多
-            await asyncio.sleep(config.CHAPTER_GENERATION_DELAY_SECONDS)
-        
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
+        generated_chapters = []  # 存储已生成的章节内容
         successful_chapters = 0
-        for i, result in enumerate(results):
-            if isinstance(result, str):
-                # 章节成功生成，只在本地记录日志，避免刷屏
-                logger.info(f"任务 {self.task_id} - 章节 '{chapters[i]}' 已成功生成。")
-                successful_chapters += 1
-            else:
-                logger.error(f"任务 {self.task_id} - 生成章节 '{chapters[i]}' 失败: {result}", exc_info=result)
         
-        progress = 25 + int(50 * (successful_chapters / len(chapters)))
-        await self._log(f"章节分析完成（{successful_chapters}/{len(chapters)}）", progress=progress)
+        # 顺序生成每个章节
+        for i, chapter_title in enumerate(chapters):
+            try:
+                # 传入已生成的所有章节
+                chapter_content = await self._generate_single_chapter(
+                    i, 
+                    chapter_title, 
+                    outline_content,
+                    generated_chapters.copy()  # 传入已生成的章节
+                )
+                
+                if chapter_content and isinstance(chapter_content, str):
+                    logger.info(f"任务 {self.task_id} - 章节 '{chapter_title}' 已成功生成。")
+                    generated_chapters.append({
+                        'index': i,
+                        'title': chapter_title,
+                        'content': chapter_content
+                    })
+                    successful_chapters += 1
+                else:
+                    logger.error(f"任务 {self.task_id} - 生成章节 '{chapter_title}' 返回空内容")
+                
+            except Exception as e:
+                logger.error(f"任务 {self.task_id} - 生成章节 '{chapter_title}' 失败: {e}", exc_info=e)
+            
+            # 更新进度
+            progress = 25 + int(50 * ((i + 1) / len(chapters)))
+            await self._log(f"章节分析进度（{i + 1}/{len(chapters)}）", progress=progress)
+            
+            # 章节间添加小延迟，避免API限流
+            if i < len(chapters) - 1:
+                await asyncio.sleep(config.CHAPTER_GENERATION_DELAY_SECONDS)
+
+        await self._log(f"章节分析完成（{successful_chapters}/{len(chapters)}）", progress=75)
 
         return successful_chapters == len(chapters)
 
-    async def _generate_single_chapter(self, index: int, chapter_title: str, outline_content: str) -> str:
-        """为单个章节生成内容，包含重试和标题校验修复逻辑"""
+    async def _generate_single_chapter(self, index: int, chapter_title: str, outline_content: str, previous_chapters: List[Dict] = None) -> str:
+        """为单个章节生成内容，包含重试和标题校验修复逻辑
+        
+        Args:
+            index: 章节索引
+            chapter_title: 章节标题
+            outline_content: 完整大纲内容
+            previous_chapters: 已生成的章节列表，每个元素包含 {'index', 'title', 'content'}
+        """
         # 根据内容类型设置提示词参数
         if self.is_pdf:
             content_type = "PDF文档内容"
@@ -277,6 +301,20 @@ class DeepSummaryWorkflow:
             full_content = self.transcript
             multimodal_guide = ""
         
+        # 构建已生成章节的上下文
+        if previous_chapters and len(previous_chapters) > 0:
+            # 传入上一个章节的完整内容
+            last_chapter = previous_chapters[-1]
+            previous_chapters_context = prompts.PREVIOUS_CHAPTER_CONTEXT_TEMPLATE.format(
+                chapter_index=last_chapter['index'] + 1,
+                chapter_title=last_chapter['title'],
+                chapter_content=last_chapter['content']
+            )
+            deduplication_instruction = prompts.DEDUPLICATION_INSTRUCTION_WITH_PREVIOUS
+        else:
+            previous_chapters_context = ""
+            deduplication_instruction = prompts.DEDUPLICATION_INSTRUCTION_FIRST
+        
         prompt = prompts.CHAPTER_PROMPT_TEMPLATE.format(
             base_prompt=self.base_prompt + multimodal_guide,
             content_type=content_type,
@@ -285,7 +323,9 @@ class DeepSummaryWorkflow:
             full_outline=outline_content,
             chapter_number=index + 1,
             current_chapter_title=chapter_title,
-            markdown_bold_rules=prompts.MARKDOWN_BOLD_RULES
+            previous_chapters_context=previous_chapters_context,
+            deduplication_instruction=deduplication_instruction,
+            quality_control_rules=prompts.QUALITY_CONTROL_RULES
         )
 
         for attempt in range(self.max_retries + 1):
@@ -366,7 +406,8 @@ class DeepSummaryWorkflow:
             base_prompt=self.base_prompt + multimodal_guide,
             content_type=content_type,
             content_description=content_description,
-            full_content=full_content
+            full_content=full_content,
+            quality_control_rules=prompts.QUALITY_CONTROL_RULES
         )
         
         for attempt in range(self.max_retries + 1):
@@ -450,7 +491,7 @@ class DeepSummaryWorkflow:
             content_description=content_description,
             full_content=full_content,
             all_generated_chapters=full_chapters_text,
-            markdown_bold_rules=prompts.MARKDOWN_BOLD_RULES
+            quality_control_rules=prompts.QUALITY_CONTROL_RULES
         )
 
         for attempt in range(self.max_retries + 1):
