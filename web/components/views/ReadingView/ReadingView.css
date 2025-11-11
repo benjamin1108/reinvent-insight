@@ -515,7 +515,7 @@
 
 /* TOC样式 */
 .reading-view__toc-wrapper {
-  height: 100%;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -524,14 +524,16 @@
 .reading-view__toc-sidebar {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 1.5rem;
+  padding-bottom: 6rem; /* 大幅增加底部padding，确保能滚动到最底部 */
   background: transparent;
+  min-height: 0; /* 关键：允许flex子元素正确收缩 */
 }
 
 .reading-view__toc-content {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+  /* 移除flex布局，使用普通块级布局 */
+  display: block;
 }
 
 .reading-view__toc-title {
@@ -544,10 +546,10 @@
 }
 
 .reading-view__toc-list {
-  flex: 1;
   list-style: none;
   padding: 0;
   margin: 0;
+  /* 移除这里的padding-bottom，改为在内部ul上设置 */
 }
 
 .reading-view__toc-list ul,
@@ -555,6 +557,11 @@
   list-style: none;
   padding: 0;
   margin: 0;
+}
+
+/* 为最外层的toc-list添加底部空间 */
+.reading-view__toc-list > .toc-list {
+  padding-bottom: 4rem; /* 确保最后一项完全可见，增加更多空间 */
 }
 
 .reading-view__toc-list li {

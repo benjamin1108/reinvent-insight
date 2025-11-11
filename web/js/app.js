@@ -1,33 +1,136 @@
 const { createApp, ref, onMounted, computed, nextTick, watch, onUnmounted, reactive } = Vue;
 
+// 全局库加载状态跟踪
+window.librariesReady = window.librariesReady || {
+  marked: typeof window.marked !== 'undefined',
+  hljs: typeof window.hljs !== 'undefined',
+  axios: typeof window.axios !== 'undefined',
+  Vue: typeof window.Vue !== 'undefined'
+};
+
 // 确保 marked 准备就绪
 const ensureMarkedReady = (callback) => {
-  if (typeof window.marked !== 'undefined') {
+  const checkMarked = () => {
+    if (typeof window.marked !== 'undefined') {
+      window.librariesReady.marked = true;
+      return true;
+    }
+    return false;
+  };
+  
+  if (checkMarked()) {
+    console.log('✅ marked已就绪，直接执行回调');
     callback(window.marked);
-  } else {
-    const script = document.createElement('script');
-    script.src = '/js/vendor/marked.min.js';
-    script.onload = () => callback(window.marked);
-    document.head.appendChild(script);
+    return;
   }
+  
+  console.log('⏳ marked未加载，等待加载...');
+  
+  // 检查是否已经在加载中
+  if (window.markedLoadingPromise) {
+    window.markedLoadingPromise.then(() => {
+      console.log('✅ marked加载完成（复用Promise）');
+      callback(window.marked);
+    });
+    return;
+  }
+  
+  // 首先尝试等待已有的script标签加载完成
+  const existingScript = document.querySelector('script[src*="marked"]');
+  if (existingScript) {
+    console.log('⏳ 检测到marked脚本标签，等待加载完成...');
+    window.markedLoadingPromise = new Promise((resolve, reject) => {
+      // 设置超时检查
+      let checkCount = 0;
+      const maxChecks = 50; // 最多检查5秒
+      const checkInterval = setInterval(() => {
+        checkCount++;
+        if (checkMarked()) {
+          clearInterval(checkInterval);
+          console.log('✅ marked加载完成（轮询检测）');
+          resolve(window.marked);
+        } else if (checkCount >= maxChecks) {
+          clearInterval(checkInterval);
+          console.error('❌ marked加载超时');
+          reject(new Error('marked加载超时'));
+        }
+      }, 100);
+      
+      // 同时监听script的load事件（如果还没触发）
+      if (existingScript.readyState === undefined || existingScript.readyState === 'loading') {
+        existingScript.addEventListener('load', () => {
+          if (checkMarked()) {
+            clearInterval(checkInterval);
+            resolve(window.marked);
+          }
+        });
+        existingScript.addEventListener('error', () => {
+          clearInterval(checkInterval);
+          reject(new Error('marked脚本加载失败'));
+        });
+      }
+    });
+  } else {
+    // 如果没有找到script标签，动态创建一个
+    console.log('⏳ 动态加载marked.js...');
+    window.markedLoadingPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = '/js/vendor/marked.min.js';
+      script.onload = () => {
+        console.log('✅ marked.js脚本加载完成');
+        window.librariesReady.marked = true;
+        resolve(window.marked);
+      };
+      script.onerror = () => {
+        console.error('❌ marked.js加载失败');
+        reject(new Error('marked.js加载失败'));
+      };
+      document.head.appendChild(script);
+    });
+  }
+  
+  window.markedLoadingPromise.then(() => {
+    callback(window.marked);
+  }).catch(error => {
+    console.error('❌ marked加载错误:', error);
+  });
 };
 
 // 配置 marked 和 highlight.js
-ensureMarkedReady((markedInstance) => {
-  markedInstance.setOptions({
-    gfm: true,
-    highlight: function (code, lang) {
-      if (lang && hljs.getLanguage(lang)) {
-        try {
-          return hljs.highlight(code, { language: lang }).value;
-        } catch (__) { }
-      }
-      return hljs.highlightAuto(code).value;
-    },
-    breaks: true,
-    gfm: true
-  });
-});
+const configureMarked = (markedInstance) => {
+  if (!markedInstance || !markedInstance.setOptions) {
+    console.warn('⚠️ marked实例无效，跳过配置');
+    return;
+  }
+  
+  try {
+    markedInstance.setOptions({
+      gfm: true,
+      highlight: function (code, lang) {
+        if (typeof hljs !== 'undefined') {
+          if (lang && hljs.getLanguage(lang)) {
+            try {
+              return hljs.highlight(code, { language: lang }).value;
+            } catch (__) { }
+          }
+          return hljs.highlightAuto(code).value;
+        }
+        return code; // 如果hljs未加载，返回原始代码
+      },
+      breaks: true,
+      pedantic: false,
+      sanitize: false,
+      smartLists: true,
+      smartypants: false
+    });
+    console.log('✅ marked配置完成');
+  } catch (error) {
+    console.error('❌ marked配置失败:', error);
+  }
+};
+
+// 初始配置marked（如果已加载）
+ensureMarkedReady(configureMarked);
 
 
 
@@ -664,6 +767,12 @@ const app = createApp({
         
         const data = res.data;
         
+        console.log('📄 加载文档数据:', {
+          title: data.title_cn || data.title,
+          contentLength: data.content?.length || 0,
+          hasContent: !!data.content
+        });
+        
         // 检查是否需要重定向到新的统一hash
         if (data.redirect && data.new_hash) {
           showToast(data.message || '文档链接已更新', 'info');
@@ -783,26 +892,39 @@ const app = createApp({
       const needVersionSwitch = targetVersion !== defaultVersion;
       
       const updateContent = (contentToRender = content) => {
-        if (contentToRender) {
-          // 确保marked.js使用正确的配置
-          if (typeof marked !== 'undefined' && marked.setOptions) {
-            marked.setOptions({
-              breaks: true,      // 支持硬换行
-              gfm: true,        // GitHub风格的markdown
-              pedantic: false,  // 不严格遵循原始markdown规范
-              sanitize: false,  // 不移除HTML标签
-              smartLists: true, // 智能列表处理
-              smartypants: false
-            });
-          }
+        if (!contentToRender) {
+          console.warn('⚠️ 没有内容可渲染');
+          return;
+        }
+        
+        console.log('🔄 开始渲染内容，长度:', contentToRender.length);
+        
+        // 确保marked已加载
+        if (typeof marked === 'undefined' || typeof window.marked === 'undefined') {
+          console.error('❌ marked未定义，无法渲染');
+          return;
+        }
+        
+        try {
+          // 确保marked配置正确
+          configureMarked(marked);
           
           const renderedHtml = marked.parse(contentToRender);
           readingContent.value = renderedHtml;
+          console.log('✅ 内容渲染完成，HTML长度:', renderedHtml.length);
+          
+          // 强制触发Vue的响应式更新
+          nextTick(() => {
+            console.log('✅ DOM已更新');
+          });
+        } catch (error) {
+          console.error('❌ 内容渲染失败:', error);
         }
       };
       
       if (needVersionSwitch) {
         // 需要切换版本：先显示加载状态，然后加载目标版本内容
+        console.log('🔄 需要切换到版本:', targetVersion);
         documentLoading.value = true;
         nextTick(async () => {
           try {
@@ -811,22 +933,22 @@ const app = createApp({
             console.error('切换到保存的版本失败，使用默认内容:', error);
             // 切换失败，使用当前内容并重置版本选择器
             currentVersion.value = defaultVersion;
-            if (typeof marked !== 'undefined') {
-              updateContent();
-            } else {
-              ensureMarkedReady(() => updateContent());
-            }
+            ensureMarkedReady(() => updateContent());
           } finally {
             documentLoading.value = false;
           }
         });
       } else {
         // 不需要切换版本：直接显示当前内容
-        if (typeof marked !== 'undefined') {
-          updateContent();
-        } else {
-          ensureMarkedReady(() => updateContent());
-        }
+        console.log('✅ 使用默认版本，直接渲染内容，content长度:', content?.length || 0);
+        
+        // 使用nextTick确保在DOM准备好后渲染
+        nextTick(() => {
+          ensureMarkedReady(() => {
+            console.log('✅ marked.js已就绪，开始渲染内容');
+            updateContent(content);
+          });
+        });
       }
     };
 
@@ -854,30 +976,36 @@ const app = createApp({
           const res = await axios.get(`/api/public/doc/${readingHash.value}/${versionNumber}`);
           const data = res.data;
           
-          // 确保marked.js配置正确
-          if (typeof marked !== 'undefined' && marked.setOptions) {
-            marked.setOptions({
-              breaks: true,
-              gfm: true,
-              pedantic: false,
-              sanitize: false,
-              smartLists: true,
-              smartypants: false
-            });
-          }
+          console.log('📄 版本切换：获取到内容，长度:', data.content?.length || 0);
           
-          // 更新阅读视图的内容和标题
-          readingContent.value = marked.parse(data.content);
-          documentTitle.value = data.title_cn || data.title;
-          documentTitleEn.value = data.title_en || '';
+          // 使用ensureMarkedReady确保marked已加载
+          await new Promise((resolve, reject) => {
+            ensureMarkedReady(() => {
+              try {
+                // 确保marked配置正确
+                configureMarked(marked);
+                
+                // 更新阅读视图的内容和标题
+                const renderedHtml = marked.parse(data.content);
+                readingContent.value = renderedHtml;
+                documentTitle.value = data.title_cn || data.title;
+                documentTitleEn.value = data.title_en || '';
+                
+                console.log('✅ 版本内容渲染完成，HTML长度:', renderedHtml.length);
+                resolve();
+              } catch (error) {
+                reject(error);
+              }
+            });
+          });
           
           // 将用户选择的版本保存到 localStorage（成功后才保存）
           localStorage.setItem(`document_version_${readingHash.value}`, versionNumber);
           
-          console.log(`版本切换成功: ${previousVersion} → ${versionNumber}`);
+          console.log(`✅ 版本切换成功: ${previousVersion} → ${versionNumber}`);
           
         } catch (error) {
-          console.error('切换版本失败:', error);
+          console.error('❌ 切换版本失败:', error);
           
           // 回退版本选择器状态
           currentVersion.value = previousVersion;
