@@ -1215,30 +1215,103 @@ const app = createApp({
 const componentLoader = window.ComponentLoader;
 
 // 注册主要组件（依赖组件将自动加载）
+// 配置格式：{ name, path, fileName, critical, priority, version }
 const components = [
-  ['app-header', '/components/common/AppHeader', 'AppHeader'],
-  ['hero-section', '/components/views/HeroSection', 'HeroSection'],
-  ['create-view', '/components/views/CreateView', 'CreateView'],
-  ['recent-view', '/components/views/RecentView', 'RecentView'],
-  ['library-view', '/components/views/LibraryView', 'LibraryView'],
-  ['reading-view', '/components/views/ReadingView', 'ReadingView'],
-  ['video-player', '/components/common/VideoPlayer', 'VideoPlayer'],
-  ['login-modal', '/components/common/LoginModal', 'LoginModal'],
-  ['toast-container', '/components/common/ToastContainer', 'ToastContainer'],
-  ['connection-status', '/components/common/ConnectionStatus', 'ConnectionStatus']
+  // 关键组件 - 首屏必需
+  {
+    name: 'app-header',
+    path: '/components/common/AppHeader',
+    fileName: 'AppHeader',
+    critical: true,
+    priority: 1,
+    version: '1.0.0'
+  },
+  {
+    name: 'toast-container',
+    path: '/components/common/ToastContainer',
+    fileName: 'ToastContainer',
+    critical: true,
+    priority: 1,
+    version: '1.0.0'
+  },
+  {
+    name: 'hero-section',
+    path: '/components/views/HeroSection',
+    fileName: 'HeroSection',
+    critical: true,
+    priority: 2,
+    version: '1.0.0'
+  },
+  {
+    name: 'library-view',
+    path: '/components/views/LibraryView',
+    fileName: 'LibraryView',
+    critical: true,
+    priority: 2,
+    version: '1.0.0'
+  },
+  {
+    name: 'recent-view',
+    path: '/components/views/RecentView',
+    fileName: 'RecentView',
+    critical: true,
+    priority: 2,
+    version: '1.0.0'
+  },
+  
+  // 非关键组件 - 可延迟加载
+  {
+    name: 'reading-view',
+    path: '/components/views/ReadingView',
+    fileName: 'ReadingView',
+    critical: false,
+    priority: 5,
+    version: '1.0.0'
+  },
+  {
+    name: 'create-view',
+    path: '/components/views/CreateView',
+    fileName: 'CreateView',
+    critical: false,
+    priority: 6,
+    version: '1.0.0'
+  },
+  {
+    name: 'video-player',
+    path: '/components/common/VideoPlayer',
+    fileName: 'VideoPlayer',
+    critical: false,
+    priority: 7,
+    version: '1.0.0'
+  },
+  {
+    name: 'login-modal',
+    path: '/components/common/LoginModal',
+    fileName: 'LoginModal',
+    critical: false,
+    priority: 4,
+    version: '1.0.0'
+  },
+  {
+    name: 'connection-status',
+    path: '/components/common/ConnectionStatus',
+    fileName: 'ConnectionStatus',
+    critical: false,
+    priority: 8,
+    version: '1.0.0'
+  }
 ];
 
 // 更新加载进度
-const updateLoadingProgress = (message) => {
+const updateLoadingProgress = (message, percent = null) => {
   const progressEl = document.getElementById('loading-progress');
   if (progressEl) {
-    progressEl.textContent = message;
+    if (percent !== null) {
+      progressEl.textContent = `${message} (${percent}%)`;
+    } else {
+      progressEl.textContent = message;
+    }
   }
-};
-
-// 组件加载进度回调
-window.updateComponentProgress = (componentName, current, total) => {
-  updateLoadingProgress(`正在加载组件 ${componentName} (${current}/${total})`);
 };
 
 // 隐藏加载指示器并显示应用
@@ -1261,39 +1334,67 @@ const showApp = () => {
   }
 };
 
-// 批量注册组件
-updateLoadingProgress('正在加载组件...');
+// 批量注册组件（使用关键组件优先加载策略）
+updateLoadingProgress('正在初始化...');
 
-componentLoader.registerComponents(app, components).then((results) => {
-  updateLoadingProgress('组件加载完成，正在初始化...');
-  
-  // 给一个短暂的延迟确保所有组件都准备好
-  setTimeout(() => {
-    // 挂载应用
-    app.mount('#app');
+// 使用LoadingStrategy进行关键组件优先加载
+window.LoadingStrategy.loadCriticalFirst(app, components, {
+  useCache: true,
+  timeout: 10000,
+  onProgress: (loaded, total, name, phase) => {
+    const percent = Math.round((loaded / total) * 100);
+    const phaseText = phase === 'critical' ? '关键组件' : '组件';
+    updateLoadingProgress(`正在加载${phaseText}: ${name}`, percent);
+  },
+  onCriticalComplete: (results) => {
+    // 关键组件加载完成，立即挂载应用
+    console.log('✅ 关键组件加载完成，挂载应用...');
+    updateLoadingProgress('正在启动应用...');
     
-    // 再给一个短暂延迟确保Vue渲染完成
     setTimeout(() => {
-      showApp();
-      console.log('✅ 应用已启动');
+      app.mount('#app');
       
-      // 输出加载的组件信息
-      const successful = results.filter(r => r.success);
-      const failed = results.filter(r => !r.success);
-      if (failed.length > 0) {
-        console.warn(`⚠️ ${failed.length} 个组件加载失败:`, failed.map(r => r.name));
-      }
-    }, 100);
-  }, 100);
+      setTimeout(() => {
+        showApp();
+        console.log('✅ 应用已启动，后台继续加载非关键组件...');
+      }, 50);
+    }, 50);
+  }
+}).then((results) => {
+  console.log('✅ 所有组件加载完成');
+  
+  // 输出性能报告
+  if (window.PerformanceMonitor) {
+    const report = window.PerformanceMonitor.getReport();
+    console.log(`📊 性能统计: 总耗时 ${report.totalLoadTime.toFixed(2)}ms, 缓存命中率 ${(report.cacheHitRate * 100).toFixed(1)}%`);
+  }
+  
+  // 输出缓存统计
+  if (window.CacheManager) {
+    const stats = window.CacheManager.getStats();
+    console.log(`💾 缓存统计: 命中率 ${(stats.hitRate * 100).toFixed(1)}%, 条目数 ${stats.entryCount}`);
+  }
+  
+  // 检查失败的组件
+  const failed = results.filter(r => !r.success);
+  if (failed.length > 0) {
+    console.warn(`⚠️ ${failed.length} 个组件加载失败:`, failed.map(r => r.name));
+  }
 }).catch(error => {
   console.error('❌ 组件加载失败:', error);
   updateLoadingProgress('组件加载失败，正在降级处理...');
   
   // 降级处理：仍然挂载应用，但可能缺少某些组件
   setTimeout(() => {
-    app.mount('#app');
-    setTimeout(() => {
-      showApp();
-    }, 100);
+    try {
+      app.mount('#app');
+      setTimeout(() => {
+        showApp();
+        console.warn('⚠️ 应用已启动（降级模式）');
+      }, 100);
+    } catch (mountError) {
+      console.error('❌ 应用挂载失败:', mountError);
+      updateLoadingProgress('应用启动失败，请刷新页面');
+    }
   }, 500);
 }); 

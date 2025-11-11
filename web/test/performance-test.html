@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>组件加载性能测试</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #e5e7eb;
+    }
+    
+    h1 {
+      color: #22d3ee;
+    }
+    
+    .test-section {
+      background: #2a2a2a;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    
+    .test-section h2 {
+      color: #60a5fa;
+      margin-top: 0;
+    }
+    
+    button {
+      background: #22d3ee;
+      color: #1a1a1a;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      margin: 5px;
+    }
+    
+    button:hover {
+      background: #06b6d4;
+    }
+    
+    .result {
+      background: #374151;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+    
+    .success {
+      color: #10b981;
+    }
+    
+    .warning {
+      color: #f59e0b;
+    }
+    
+    .error {
+      color: #ef4444;
+    }
+    
+    .metric {
+      display: inline-block;
+      margin: 10px 20px 10px 0;
+    }
+    
+    .metric-label {
+      color: #9ca3af;
+      font-size: 12px;
+    }
+    
+    .metric-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #22d3ee;
+    }
+  </style>
+</head>
+<body>
+  <h1>🚀 组件加载性能测试</h1>
+  
+  <div class="test-section">
+    <h2>1. CacheManager 测试</h2>
+    <button onclick="testCacheManager()">运行测试</button>
+    <div id="cache-result" class="result"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>2. PerformanceMonitor 测试</h2>
+    <button onclick="testPerformanceMonitor()">运行测试</button>
+    <div id="perf-result" class="result"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>3. LoadingStrategy 测试</h2>
+    <button onclick="testLoadingStrategy()">运行测试</button>
+    <div id="strategy-result" class="result"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>4. 性能基准测试</h2>
+    <button onclick="runBenchmark()">运行基准测试</button>
+    <div id="benchmark-result" class="result"></div>
+    <div id="benchmark-metrics"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>5. 导出性能报告</h2>
+    <button onclick="exportReport('json')">导出 JSON</button>
+    <button onclick="exportReport('csv')">导出 CSV</button>
+    <button onclick="clearAllData()">清除所有数据</button>
+  </div>
+
+  <!-- 加载核心模块 -->
+  <script src="/js/core/cache-manager.js"></script>
+  <script src="/js/core/performance-monitor.js"></script>
+  <script src="/js/core/component-loader.js"></script>
+  <script src="/js/core/loading-strategy.js"></script>
+  
+  <script>
+    // 测试 CacheManager
+    function testCacheManager() {
+      const result = document.getElementById('cache-result');
+      result.innerHTML = '运行中...';
+      
+      try {
+        // 清空缓存
+        CacheManager.clear();
+        CacheManager.resetStats();
+        
+        const tests = [];
+        
+        // 测试1: 基本存取
+        const testData = { name: 'test', template: '<div>test</div>' };
+        CacheManager.set('test-key', testData);
+        const retrieved = CacheManager.get('test-key');
+        tests.push({
+          name: '基本存取',
+          pass: retrieved && retrieved.name === 'test'
+        });
+        
+        // 测试2: 缓存命中
+        CacheManager.get('test-key');
+        const stats = CacheManager.getStats();
+        tests.push({
+          name: '缓存命中统计',
+          pass: stats.hits === 2 && stats.hitRate === 1
+        });
+        
+        // 测试3: 缓存未命中
+        CacheManager.get('non-existent');
+        const stats2 = CacheManager.getStats();
+        tests.push({
+          name: '缓存未命中统计',
+          pass: stats2.misses === 1
+        });
+        
+        // 测试4: TTL过期
+        CacheManager.set('expire-test', testData, { ttl: 100 });
+        setTimeout(() => {
+          const expired = CacheManager.get('expire-test');
+          tests.push({
+            name: 'TTL过期',
+            pass: expired === null
+          });
+          
+          displayTestResults(result, tests);
+        }, 150);
+        
+        // 先显示前3个测试结果
+        setTimeout(() => {
+          displayTestResults(result, tests.slice(0, 3));
+        }, 10);
+        
+      } catch (error) {
+        result.innerHTML = `<span class="error">❌ 测试失败: ${error.message}</span>`;
+      }
+    }
+    
+    // 测试 PerformanceMonitor
+    function testPerformanceMonitor() {
+      const result = document.getElementById('perf-result');
+      result.innerHTML = '运行中...';
+      
+      try {
+        PerformanceMonitor.clear();
+        const tests = [];
+        
+        // 测试1: 计时功能
+        PerformanceMonitor.start('test-timer');
+        setTimeout(() => {
+          const duration = PerformanceMonitor.end('test-timer');
+          tests.push({
+            name: '计时功能',
+            pass: duration >= 50 && duration < 100
+          });
+          
+          // 测试2: 组件加载记录
+          PerformanceMonitor.recordComponentLoad('test-component', {
+            loadTime: 123,
+            cacheHit: true,
+            fileSize: 1024
+          });
+          
+          const metrics = PerformanceMonitor.getComponentMetrics('test-component');
+          tests.push({
+            name: '组件加载记录',
+            pass: metrics && metrics.loadTime === 123
+          });
+          
+          // 测试3: 性能报告
+          const report = PerformanceMonitor.getReport();
+          tests.push({
+            name: '性能报告生成',
+            pass: report && report.componentCount === 1
+          });
+          
+          displayTestResults(result, tests);
+        }, 50);
+        
+      } catch (error) {
+        result.innerHTML = `<span class="error">❌ 测试失败: ${error.message}</span>`;
+      }
+    }
+    
+    // 测试 LoadingStrategy
+    function testLoadingStrategy() {
+      const result = document.getElementById('strategy-result');
+      result.innerHTML = '运行中...';
+      
+      try {
+        const tests = [];
+        
+        // 测试组件配置
+        const components = [
+          { name: 'comp1', path: '/test', critical: true, priority: 1 },
+          { name: 'comp2', path: '/test', critical: false, priority: 5 },
+          { name: 'comp3', path: '/test', critical: true, priority: 2 }
+        ];
+        
+        // 测试1: 组件分类
+        const { critical, nonCritical } = LoadingStrategy.categorizeComponents(components);
+        tests.push({
+          name: '组件分类',
+          pass: critical.length === 2 && nonCritical.length === 1
+        });
+        
+        // 测试2: 优先级排序
+        tests.push({
+          name: '优先级排序',
+          pass: critical[0].priority === 1 && critical[1].priority === 2
+        });
+        
+        // 测试3: 策略建议
+        const recommendation = LoadingStrategy.getStrategyRecommendation(components);
+        tests.push({
+          name: '策略建议',
+          pass: recommendation.strategy === 'critical-first'
+        });
+        
+        displayTestResults(result, tests);
+        
+      } catch (error) {
+        result.innerHTML = `<span class="error">❌ 测试失败: ${error.message}</span>`;
+      }
+    }
+    
+    // 运行基准测试
+    async function runBenchmark() {
+      const result = document.getElementById('benchmark-result');
+      const metrics = document.getElementById('benchmark-metrics');
+      result.innerHTML = '运行基准测试...';
+      metrics.innerHTML = '';
+      
+      try {
+        // 清空所有数据
+        CacheManager.clear();
+        CacheManager.resetStats();
+        PerformanceMonitor.clear();
+        
+        // 模拟组件加载
+        const componentCount = 10;
+        const startTime = performance.now();
+        
+        for (let i = 0; i < componentCount; i++) {
+          const name = `component-${i}`;
+          const loadTime = Math.random() * 500 + 100; // 100-600ms
+          
+          // 模拟加载延迟
+          await new Promise(resolve => setTimeout(resolve, loadTime));
+          
+          // 记录性能
+          PerformanceMonitor.recordComponentLoad(name, {
+            loadTime,
+            cacheHit: i > 5, // 后半部分模拟缓存命中
+            fileSize: Math.random() * 10000 + 1000
+          });
+          
+          // 存入缓存
+          CacheManager.set(`cache-${name}`, { name, data: 'test' });
+        }
+        
+        const totalTime = performance.now() - startTime;
+        
+        // 获取统计信息
+        const perfReport = PerformanceMonitor.getReport();
+        const cacheStats = CacheManager.getStats();
+        
+        // 显示结果
+        result.innerHTML = `
+          <span class="success">✅ 基准测试完成</span><br>
+          总耗时: ${totalTime.toFixed(2)}ms<br>
+          组件数量: ${componentCount}<br>
+          平均加载时间: ${perfReport.averageLoadTime.toFixed(2)}ms<br>
+          缓存命中率: ${(perfReport.cacheHitRate * 100).toFixed(1)}%
+        `;
+        
+        // 显示指标
+        metrics.innerHTML = `
+          <div class="metric">
+            <div class="metric-label">总加载时间</div>
+            <div class="metric-value">${totalTime.toFixed(0)}ms</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">平均加载时间</div>
+            <div class="metric-value">${perfReport.averageLoadTime.toFixed(0)}ms</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">缓存命中率</div>
+            <div class="metric-value">${(perfReport.cacheHitRate * 100).toFixed(0)}%</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">缓存条目</div>
+            <div class="metric-value">${cacheStats.entryCount}</div>
+          </div>
+        `;
+        
+        // 检查性能目标
+        const checks = [];
+        checks.push({
+          name: '平均加载时间 < 500ms',
+          pass: perfReport.averageLoadTime < 500,
+          value: `${perfReport.averageLoadTime.toFixed(2)}ms`
+        });
+        checks.push({
+          name: '缓存命中率 > 30%',
+          pass: perfReport.cacheHitRate > 0.3,
+          value: `${(perfReport.cacheHitRate * 100).toFixed(1)}%`
+        });
+        
+        result.innerHTML += '<br><br><strong>性能目标检查:</strong><br>';
+        checks.forEach(check => {
+          const icon = check.pass ? '✅' : '❌';
+          const className = check.pass ? 'success' : 'error';
+          result.innerHTML += `<span class="${className}">${icon} ${check.name}: ${check.value}</span><br>`;
+        });
+        
+      } catch (error) {
+        result.innerHTML = `<span class="error">❌ 基准测试失败: ${error.message}</span>`;
+      }
+    }
+    
+    // 导出报告
+    function exportReport(format) {
+      try {
+        const data = PerformanceMonitor.export(format);
+        const blob = new Blob([data], { 
+          type: format === 'json' ? 'application/json' : 'text/csv' 
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `performance-report.${format}`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        alert(`性能报告已导出为 ${format.toUpperCase()} 格式`);
+      } catch (error) {
+        alert(`导出失败: ${error.message}`);
+      }
+    }
+    
+    // 清除所有数据
+    function clearAllData() {
+      CacheManager.clear();
+      CacheManager.resetStats();
+      PerformanceMonitor.clear();
+      alert('所有数据已清除');
+    }
+    
+    // 显示测试结果
+    function displayTestResults(element, tests) {
+      let html = '';
+      tests.forEach(test => {
+        const icon = test.pass ? '✅' : '❌';
+        const className = test.pass ? 'success' : 'error';
+        html += `<span class="${className}">${icon} ${test.name}</span><br>`;
+      });
+      
+      const passed = tests.filter(t => t.pass).length;
+      const total = tests.length;
+      html += `<br><strong>通过: ${passed}/${total}</strong>`;
+      
+      element.innerHTML = html;
+    }
+  </script>
+</body>
+</html>
