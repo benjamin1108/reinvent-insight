@@ -191,12 +191,17 @@
         :error="readingError" 
         :versions="documentVersions" 
         :current-version="Number(currentVersion)" 
+        :current-hash="currentDocHash"
         :initial-show-toc="showToc"
-        :initial-toc-width="tocWidth" 
+        :initial-toc-width="tocWidth"
+        :initial-display-mode="displayMode"
+        :core-summary="coreSummary"
+        :simplified-text="simplifiedText"
         @toc-toggle="toggleToc" 
         @toc-resize="handleTocResize"
         @article-click="handleArticleClick" 
-        @version-change="switchVersion">
+        @version-change="switchVersion"
+        @display-mode-change="handleDisplayModeChange">
       </reading-view>
 
     </main>

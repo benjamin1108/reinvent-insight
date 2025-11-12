@@ -106,7 +106,10 @@ export default {
     };
     
     const handleToggleToc = () => {
+      console.log('🔘 [HEADER] handleToggleToc 被调用');
+      console.log('🔍 [HEADER] 当前 showToc prop:', props.showToc);
       emit('toggle-toc');
+      console.log('✅ [HEADER] 已发送 toggle-toc 事件');
     };
     
     return {

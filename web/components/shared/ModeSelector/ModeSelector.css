@@ -1,0 +1,153 @@
+/* ModeSelector 组件样式 */
+
+.mode-selector {
+  display: flex;
+  justify-content: center;
+  padding: 1rem 0;
+  margin-bottom: 1.5rem;
+}
+
+.mode-selector__buttons {
+  display: inline-flex;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid #374151;
+  border-radius: 0.75rem;
+  padding: 0.375rem;
+  backdrop-filter: blur(10px);
+}
+
+.mode-selector__button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  background: transparent;
+  border: none;
+  border-radius: 0.5rem;
+  color: #9ca3af;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  font-family: 'Inter', 'PingFang SC', 'SF Pro Text', sans-serif;
+}
+
+.mode-selector__button:hover {
+  background: rgba(34, 211, 238, 0.05);
+  color: #e5e7eb;
+}
+
+.mode-selector__button:focus {
+  outline: 2px solid #22d3ee;
+  outline-offset: 2px;
+}
+
+.mode-selector__button--active {
+  background: rgba(34, 211, 238, 0.1);
+  color: #22d3ee;
+  font-weight: 600;
+  position: relative;
+}
+
+.mode-selector__button--active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0.75rem;
+  right: 0.75rem;
+  height: 2px;
+  background: linear-gradient(to right, #22d3ee, #3b82f6);
+  border-radius: 1px;
+}
+
+.mode-selector__icon {
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.mode-selector__label {
+  display: inline;
+}
+
+.mode-selector__label--short {
+  display: none;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .mode-selector {
+    padding: 0.75rem 0;
+    margin-bottom: 1rem;
+  }
+  
+  .mode-selector__buttons {
+    width: 100%;
+    justify-content: space-between;
+    gap: 4px;
+    padding: 0.25rem;
+  }
+  
+  .mode-selector__button {
+    flex: 1;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.5rem 0.5rem;
+    font-size: 0.8125rem;
+  }
+  
+  .mode-selector__icon {
+    font-size: 1rem;
+  }
+  
+  .mode-selector__label {
+    display: none;
+  }
+  
+  .mode-selector__label--short {
+    display: inline;
+  }
+  
+  .mode-selector__button--active::after {
+    left: 0.5rem;
+    right: 0.5rem;
+  }
+}
+
+/* 极小屏幕优化 */
+@media (max-width: 480px) {
+  .mode-selector__button {
+    padding: 0.5rem 0.375rem;
+    font-size: 0.75rem;
+  }
+  
+  .mode-selector__icon {
+    font-size: 0.875rem;
+  }
+}
+
+/* 键盘导航支持 */
+.mode-selector__button:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: 2px;
+}
+
+/* 减少动画模式 */
+@media (prefers-reduced-motion: reduce) {
+  .mode-selector__button {
+    transition: none;
+  }
+}
+
+/* 高对比度模式 */
+@media (prefers-contrast: high) {
+  .mode-selector__button--active {
+    color: #ffffff;
+    background: rgba(34, 211, 238, 0.3);
+  }
+  
+  .mode-selector__button--active::after {
+    background: #ffffff;
+  }
+}

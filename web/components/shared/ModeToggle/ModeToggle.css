@@ -1,0 +1,82 @@
+.mode-toggle {
+    display: flex;
+    gap: 8px;
+    padding: 16px 0;
+    justify-content: center;
+    align-items: center;
+}
+
+.mode-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--text-secondary, #888);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.mode-button:hover:not(.disabled) {
+    color: var(--text-color, #e0e0e0);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.mode-button.active {
+    color: var(--primary-color, #22d3ee);
+    border-bottom-color: var(--primary-color, #22d3ee);
+}
+
+.mode-button.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.mode-icon {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.mode-label {
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+    .mode-toggle {
+        width: 100%;
+        gap: 4px;
+    }
+    
+    .mode-button {
+        flex: 1;
+        justify-content: center;
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+    
+    .mode-label {
+        font-size: 12px;
+    }
+    
+    .mode-icon {
+        font-size: 16px;
+    }
+}
+
+/* 响应式：小屏幕使用缩写 */
+@media (max-width: 480px) {
+    .mode-label {
+        display: none;
+    }
+    
+    .mode-button {
+        padding: 8px 16px;
+    }
+}

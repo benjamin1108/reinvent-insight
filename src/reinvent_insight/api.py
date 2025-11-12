@@ -35,6 +35,31 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Reinvent Insight API", description="YouTube 字幕深度摘要后端服务", version="0.1.0")
 
+async def start_visual_watcher():
+    """启动可视化解读文件监测器"""
+    # 检查配置开关
+    visual_enabled = os.getenv("VISUAL_INTERPRETATION_ENABLED", "true").lower() == "true"
+    
+    if not visual_enabled:
+        logger.info("可视化解读功能已禁用（VISUAL_INTERPRETATION_ENABLED=false）")
+        return
+    
+    try:
+        from .visual_watcher import VisualInterpretationWatcher
+        
+        watcher = VisualInterpretationWatcher(
+            watch_dir=config.OUTPUT_DIR,
+            model_name=config.PREFERRED_MODEL
+        )
+        
+        # 在后台运行监测器
+        asyncio.create_task(watcher.start_watching())
+        logger.info("可视化解读文件监测器已启动")
+        
+    except Exception as e:
+        logger.error(f"启动可视化解读监测器失败: {e}", exc_info=True)
+
+
 @app.on_event("startup")
 async def startup_event():
     """
@@ -42,6 +67,7 @@ async def startup_event():
     1. 初始化哈希映射缓存。
     2. 启动文件系统监控。
     3. 检查 Cookie 健康状态。
+    4. 启动可视化解读文件监测器。
     """
     logger.info("应用启动，开始初始化...")
     # 1. 初始化缓存
@@ -53,6 +79,9 @@ async def startup_event():
     # 3. 检查 Cookie 健康状态
     from .cookie_health_check import check_and_warn
     check_and_warn()
+    
+    # 4. 启动可视化解读文件监测器
+    await start_visual_watcher()
 
 # --- 简易认证实现 ---
 session_tokens: Set[str] = set()
@@ -551,6 +580,127 @@ async def get_public_summary_by_hash_and_version(doc_hash: str, version: int):
 
     # 复用现有的获取文档逻辑
     return await get_public_summary(target_version_info["filename"])
+
+
+@app.get("/api/article/{doc_hash}/visual")
+async def get_visual_interpretation(doc_hash: str, version: Optional[int] = None):
+    """
+    获取文章的可视化解读 HTML（版本跟随深度解读）
+    
+    Args:
+        doc_hash: 文档哈希
+        version: 可选的版本号（如果不指定，使用默认版本）
+        
+    Returns:
+        HTML 内容或错误信息
+    """
+    try:
+        # 获取文章文件名（可能包含版本号）
+        if version is not None:
+            # 如果指定了版本，从版本列表中查找
+            versions = hash_to_versions.get(doc_hash, [])
+            filename = None
+            for v_filename in versions:
+                if f"_v{version}.md" in v_filename or (version == 0 and "_v" not in v_filename):
+                    filename = v_filename
+                    break
+            if not filename:
+                raise HTTPException(status_code=404, detail=f"版本 {version} 未找到")
+        else:
+            # 使用默认版本
+            filename = hash_to_filename.get(doc_hash)
+            if not filename:
+                raise HTTPException(status_code=404, detail="文章未找到")
+        
+        # 构建可视化 HTML 文件路径（保持与深度解读相同的版本号）
+        base_name = Path(filename).stem
+        visual_filename = f"{base_name}_visual.html"
+        visual_path = config.OUTPUT_DIR / visual_filename
+        
+        if not visual_path.exists():
+            raise HTTPException(status_code=404, detail="可视化解读尚未生成")
+        
+        # 读取 HTML 内容
+        html_content = visual_path.read_text(encoding="utf-8")
+        
+        return Response(
+            content=html_content,
+            media_type="text/html",
+            headers={
+                "Cache-Control": "public, max-age=3600",
+                "Content-Security-Policy": "default-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com"
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取可视化解读失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="服务器错误")
+
+
+@app.get("/api/article/{doc_hash}/visual/status")
+async def get_visual_status(doc_hash: str, version: Optional[int] = None):
+    """
+    获取可视化解读的生成状态（版本跟随深度解读）
+    
+    Args:
+        doc_hash: 文档哈希
+        version: 可选的版本号（如果不指定，使用默认版本）
+        
+    Returns:
+        状态信息: {status: 'pending'|'processing'|'completed'|'failed', version: int}
+    """
+    try:
+        # 获取文章文件名（可能包含版本号）
+        if version is not None:
+            # 如果指定了版本，从版本列表中查找
+            versions = hash_to_versions.get(doc_hash, [])
+            filename = None
+            for v_filename in versions:
+                if f"_v{version}.md" in v_filename or (version == 0 and "_v" not in v_filename):
+                    filename = v_filename
+                    break
+            if not filename:
+                raise HTTPException(status_code=404, detail=f"版本 {version} 未找到")
+        else:
+            # 使用默认版本
+            filename = hash_to_filename.get(doc_hash)
+            if not filename:
+                raise HTTPException(status_code=404, detail="文章未找到")
+        
+        # 读取文章元数据
+        article_path = config.OUTPUT_DIR / filename
+        content = article_path.read_text(encoding="utf-8")
+        
+        # 解析元数据
+        if content.startswith("---"):
+            parts = content.split("---", 2)
+            if len(parts) >= 3:
+                import yaml
+                metadata = yaml.safe_load(parts[1])
+                visual_info = metadata.get("visual_interpretation", {})
+                
+                # 提取当前文件的版本号
+                import re
+                version_match = re.search(r'_v(\d+)\.md$', filename)
+                current_version = int(version_match.group(1)) if version_match else 0
+                
+                return {
+                    "status": visual_info.get("status", "pending"),
+                    "file": visual_info.get("file"),
+                    "generated_at": visual_info.get("generated_at"),
+                    "version": current_version
+                }
+        
+        return {"status": "pending", "version": 0}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取可视化状态失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="服务器错误")
+
 
 @app.get("/api/public/summaries/{filename}/pdf")
 async def get_summary_pdf(filename: str, response: Response):

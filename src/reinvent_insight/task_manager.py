@@ -217,6 +217,19 @@ class TaskManager:
 
     def get_task_state(self, task_id: str) -> Optional[TaskState]:
         return self.tasks.get(task_id)
+    
+    def get_running_tasks_count(self) -> int:
+        """
+        获取当前运行中的任务数量
+        
+        Returns:
+            运行中的任务数量
+        """
+        running_count = sum(
+            1 for task in self.tasks.values()
+            if task.status == "running"
+        )
+        return running_count
 
     def cleanup_task(self, task_id: str):
         pass

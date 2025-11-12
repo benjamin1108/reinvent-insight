@@ -1,0 +1,19 @@
+<div class="mode-selector">
+  <div class="mode-selector__buttons">
+    <button
+      v-for="mode in modes"
+      :key="mode.id"
+      :class="[
+        'mode-selector__button',
+        { 'mode-selector__button--active': isActive(mode.id) }
+      ]"
+      @click="handleModeClick(mode.id)"
+      :aria-label="mode.label"
+      :aria-current="isActive(mode.id) ? 'true' : 'false'"
+    >
+      <span class="mode-selector__icon">{{ mode.icon }}</span>
+      <span class="mode-selector__label">{{ mode.label }}</span>
+      <span class="mode-selector__label--short">{{ mode.shortLabel }}</span>
+    </button>
+  </div>
+</div>

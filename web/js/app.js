@@ -173,11 +173,17 @@ const app = createApp({
     const readingError = ref('');
     const readingFilename = ref('');
     const readingHash = ref('');
+    const currentDocHash = ref(''); // 当前文档哈希（用于可视化解读）
     
     // 版本管理状态
     const documentVersions = ref([]);
     const currentVersion = ref(1); // 统一为数字类型
     const documentLoading = ref(false);
+    
+    // ========== 显示模式状态 ==========
+    const displayMode = ref('deep'); // 'deep' | 'quick'
+    const coreSummary = ref(null); // 核心要点数据（预留）
+    const simplifiedText = ref(''); // 精简摘要内容（预留）
 
     // 认证状态 - 必须在 getInitialView 之前声明
     const isAuthenticated = ref(false);
@@ -457,7 +463,14 @@ const app = createApp({
 
     // TOC 相关方法
     const toggleToc = () => {
+      console.log('🔘 [APP] toggleToc 被调用');
+      console.log('🔍 [APP] 当前 showToc:', showToc.value);
+      
       showToc.value = !showToc.value;
+      
+      console.log('✅ [APP] 切换后 showToc:', showToc.value);
+      console.log('💾 [APP] 保存到 localStorage');
+      
       localStorage.setItem('showToc', showToc.value);
     };
 
@@ -853,6 +866,7 @@ const app = createApp({
       readingFilename.value = filename;
       readingVideoUrl.value = videoUrl;
       readingHash.value = docHash;
+      currentDocHash.value = docHash; // 设置当前文档哈希用于可视化解读
       documentVersions.value = versions;
       
       // 切换视图
@@ -1047,6 +1061,50 @@ const app = createApp({
       }
     };
 
+    // ========== 显示模式相关方法 ==========
+    
+    // 处理显示模式切换
+    const handleDisplayModeChange = (mode) => {
+      try {
+        console.log('🔄 切换显示模式:', displayMode.value, '→', mode);
+        displayMode.value = mode;
+        
+        // TODO: 后续在此处触发后端数据加载
+        // 根据模式加载对应的数据
+        // if (mode === 'core-summary' && !coreSummary.value && readingHash.value) {
+        //   loadCoreSummary(readingHash.value);
+        // } else if (mode === 'simplified-text' && !simplifiedText.value && readingHash.value) {
+        //   loadSimplifiedText(readingHash.value);
+        // }
+        
+        console.log('✅ 显示模式切换成功:', mode);
+      } catch (error) {
+        console.error('❌ 显示模式切换失败:', error);
+        showToast('模式切换失败，请重试', 'danger');
+      }
+    };
+    
+    // TODO: 预留后端数据加载方法
+    // const loadCoreSummary = async (docHash) => {
+    //   try {
+    //     const res = await axios.get(`/api/public/doc/${docHash}/summary`);
+    //     coreSummary.value = res.data;
+    //   } catch (error) {
+    //     console.error('加载核心要点失败:', error);
+    //     showToast('加载核心要点失败', 'danger');
+    //   }
+    // };
+    
+    // const loadSimplifiedText = async (docHash) => {
+    //   try {
+    //     const res = await axios.get(`/api/public/doc/${docHash}/simplified`);
+    //     simplifiedText.value = res.data.content;
+    //   } catch (error) {
+    //     console.error('加载精简摘要失败:', error);
+    //     showToast('加载精简摘要失败', 'danger');
+    //   }
+    // };
+    
     // 视频播放器相关方法
     const extractYoutubeVideoId = (url) => {
       if (!url) {
@@ -1261,6 +1319,13 @@ const app = createApp({
         loadSummaries();
       }
     });
+    
+    // 🔍 调试：监控 showToc 变化
+    watch(showToc, (newVal, oldVal) => {
+      console.log('🔄 [APP WATCH] showToc 变化:', oldVal, '->', newVal);
+      console.log('🔍 [APP WATCH] currentView:', currentView.value);
+      console.log('🔍 [APP WATCH] displayMode:', displayMode.value);
+    });
 
     onUnmounted(() => {
       window.removeEventListener('popstate', handleRouting);
@@ -1291,9 +1356,13 @@ const app = createApp({
       readingError,
       readingFilename,
       readingHash,
+      currentDocHash,
       documentVersions,
       currentVersion,
       documentLoading,
+      displayMode,
+      coreSummary,
+      simplifiedText,
       currentView,
       isAuthenticated,
       showLogin,
@@ -1337,6 +1406,7 @@ const app = createApp({
       loadSummaryByHash,
       viewSummary,
       switchVersion,
+      handleDisplayModeChange,
       openVideoPlayer,
       closeVideoPlayer,
       toggleVideoPlayerMinimize,

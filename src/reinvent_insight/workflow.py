@@ -699,10 +699,44 @@ class DeepSummaryWorkflow:
             await self._log(f"报告整理完成")
             # 更新任务状态，包含最终文件路径
             task_manager.set_task_result(self.task_id, str(final_path))
+            
+            # 启动可视化解读生成任务（后台异步，不阻塞）
+            version_for_visual = new_version if existing_files else 0
+            await self._start_visual_interpretation_task(str(final_path), version_for_visual)
+            
             return final_report, final_filename, doc_hash
         except Exception as e:
             logger.error(f"任务 {self.task_id} - 组装最终报告时出错: {e}", exc_info=True)
             return None, None, None
+
+    async def _start_visual_interpretation_task(self, article_path: str, version: int = 0):
+        """启动可视化解读生成的后台任务"""
+        try:
+            # 生成新的任务ID
+            visual_task_id = f"{self.task_id}_visual"
+            
+            logger.info(f"准备启动可视化解读任务: {visual_task_id} (版本: {version})")
+            
+            # 创建工作器
+            from .visual_worker import VisualInterpretationWorker
+            worker = VisualInterpretationWorker(
+                task_id=visual_task_id,
+                article_path=article_path,
+                model_name=self.model_name,
+                version=version
+            )
+            
+            # 创建后台任务
+            task_manager.create_task(
+                visual_task_id,
+                worker.run()
+            )
+            
+            logger.info(f"可视化解读生成任务已启动: {visual_task_id} (版本: {version})")
+            
+        except Exception as e:
+            logger.error(f"启动可视化解读任务失败: {e}", exc_info=True)
+            # 不影响主流程，只记录错误
 
     async def _log(self, message: str, progress: int = None, error: bool = False):
         """向 TaskManager 发送日志和进度更新"""

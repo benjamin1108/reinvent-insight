@@ -4,8 +4,87 @@
  */
 export default {
   dependencies: [
-    ['version-selector', '/components/shared/VersionSelector', 'VersionSelector']
+    ['version-selector', '/components/shared/VersionSelector', 'VersionSelector'],
+    ['mode-selector', '/components/shared/ModeSelector', 'ModeSelector'],
+    ['mode-toggle', '/components/shared/ModeToggle', 'ModeToggle']
   ],
+  
+  components: {
+    'core-summary-view': {
+      template: `
+        <div class="core-summary-view">
+          <div v-if="!hasData" class="core-summary-view__placeholder">
+            <div class="core-summary-view__placeholder-card">
+              <div class="core-summary-view__placeholder-icon">📌</div>
+              <h2 class="core-summary-view__placeholder-title">核心要点</h2>
+              <div class="core-summary-view__placeholder-content">
+                <div class="core-summary-view__placeholder-badge">🚀 功能即将推出</div>
+                <p class="core-summary-view__placeholder-text">
+                  我们正在开发核心要点提取功能，将为您智能提炼文章的关键信息和核心观点。
+                </p>
+                <p class="core-summary-view__placeholder-text">
+                  敬请期待！
+                </p>
+              </div>
+            </div>
+          </div>
+          <div v-else class="core-summary-view__content">
+            <!-- TODO: 后端数据接入后实现 -->
+          </div>
+        </div>
+      `,
+      props: {
+        summaryData: {
+          type: Object,
+          default: null
+        }
+      },
+      setup(props) {
+        const { computed } = Vue;
+        const hasData = computed(() => {
+          return props.summaryData && props.summaryData.keyPoints && props.summaryData.keyPoints.length > 0;
+        });
+        return { hasData };
+      }
+    },
+    'simplified-text-view': {
+      template: `
+        <div class="simplified-text-view">
+          <div v-if="!hasContent" class="simplified-text-view__placeholder">
+            <div class="simplified-text-view__placeholder-header">
+              <div class="simplified-text-view__placeholder-icon">📝</div>
+              <h2 class="simplified-text-view__placeholder-title">精简摘要</h2>
+            </div>
+            <div class="simplified-text-view__placeholder-content">
+              <p class="simplified-text-view__placeholder-badge">功能即将推出</p>
+              <p class="simplified-text-view__placeholder-text">
+                我们正在开发精简摘要功能，将为您提供简洁易读的文章概要，帮助您快速了解文章的主要内容和核心观点。
+              </p>
+              <p class="simplified-text-view__placeholder-text">
+                敬请期待！
+              </p>
+            </div>
+          </div>
+          <div v-else class="simplified-text-view__content">
+            <div class="simplified-text-view__text" v-html="simplifiedContent"></div>
+          </div>
+        </div>
+      `,
+      props: {
+        simplifiedContent: {
+          type: String,
+          default: ''
+        }
+      },
+      setup(props) {
+        const { computed } = Vue;
+        const hasContent = computed(() => {
+          return props.simplifiedContent && props.simplifiedContent.trim().length > 0;
+        });
+        return { hasContent };
+      }
+    }
+  },
   
   props: {
     // 文章内容（HTML）
@@ -95,6 +174,49 @@ export default {
     scrollOffset: {
       type: Number,
       default: 80
+    },
+    
+    // ========== 显示模式相关 Props ==========
+    
+    // 初始显示模式
+    initialDisplayMode: {
+      type: String,
+      default: 'full-analysis',
+      validator: (value) => ['quick', 'deep'].includes(value)
+    },
+    
+    // 核心要点数据（预留后端数据接口）
+    coreSummary: {
+      type: Object,
+      default: null
+      // 预期数据格式：
+      // {
+      //   keyPoints: [
+      //     {
+      //       title: string,        // 要点标题
+      //       content: string,      // 要点内容
+      //       importance: 'high' | 'medium' | 'low'  // 重要程度
+      //     }
+      //   ],
+      //   mainTheme: string,        // 主题
+      //   tags: string[],           // 标签
+      //   generatedAt: string       // ISO 8601 时间戳
+      // }
+    },
+    
+    // 精简摘要内容（预留后端数据接口）
+    simplifiedText: {
+      type: String,
+      default: ''
+      // 预期数据格式：纯文本或简单 Markdown
+      // 示例：
+      // "本文介绍了...\n\n主要观点包括：\n1. ...\n2. ...\n\n结论：..."
+    },
+    
+    // 当前文档的哈希值（用于获取可视化解读）
+    currentHash: {
+      type: String,
+      default: ''
     }
   },
   
@@ -103,7 +225,8 @@ export default {
     'article-click',
     'version-change',
     'toc-toggle',
-    'toc-resize'
+    'toc-resize',
+    'display-mode-change'
   ],
   
   setup(props, { emit }) {
@@ -113,7 +236,7 @@ export default {
     const tocSidebar = ref(null);
     
     // 状态管理
-    const isTocVisible = computed(() => props.initialShowToc);
+    const isTocVisible = ref(props.initialShowToc);
     const tocWidth = ref(props.initialTocWidth);
     const isDragging = ref(false);
     const dragStartX = ref(0);
@@ -121,6 +244,28 @@ export default {
     const parsedSections = ref([]);
     const activeSection = ref('');
     let scrollTimer = null;
+    
+    // ========== 显示模式状态管理 ==========
+    const displayMode = ref(props.initialDisplayMode);
+    
+    // ========== 可视化解读状态管理 ==========
+    const visualAvailable = ref(false);
+    const visualStatus = ref('pending');  // 'pending' | 'processing' | 'completed' | 'failed'
+    const visualHtmlUrl = ref(null);
+    const visualHtmlContent = ref('');  // 存储加载的 HTML 内容
+    const currentVersion = ref(0);
+    
+    // 根据显示模式决定是否显示目录
+    // 只有"Deep Insight"模式才显示目录（不是 Quick Insight）
+    const shouldShowToc = computed(() => {
+      const result = displayMode.value !== 'quick' && isTocVisible.value;
+      console.log('🔍 [DEBUG] shouldShowToc 计算:', {
+        displayMode: displayMode.value,
+        isTocVisible: isTocVisible.value,
+        result
+      });
+      return result;
+    });
     
     // 解析内容HTML生成目录结构（只显示3级标题：h1, h2, h3）
     const parseContent = (html) => {
@@ -239,7 +384,16 @@ export default {
     
     // TOC相关方法
     const toggleToc = () => {
-      emit('toc-toggle');
+      console.log('🔄 [DEBUG] toggleToc 被调用');
+      console.log('🔍 [DEBUG] 当前 isTocVisible:', isTocVisible.value);
+      console.log('🔍 [DEBUG] 当前 displayMode:', displayMode.value);
+      
+      isTocVisible.value = !isTocVisible.value;
+      
+      console.log('✅ [DEBUG] 切换后 isTocVisible:', isTocVisible.value);
+      console.log('✅ [DEBUG] shouldShowToc:', shouldShowToc.value);
+      
+      emit('toc-toggle', isTocVisible.value);
     };
     
     const handleTocClick = (event) => {
@@ -508,6 +662,111 @@ export default {
       emit('version-change', version);
     };
     
+    // ========== 显示模式相关方法 ==========
+    
+    // 处理显示模式切换
+    const handleDisplayModeChange = async (mode) => {
+      try {
+        if (mode === displayMode.value) return;
+        
+        displayMode.value = mode;
+        
+        // 不再自动全屏，用户可以手动使用浏览器的全屏功能
+        
+        emit('display-mode-change', mode);
+      } catch (error) {
+        console.error('模式切换失败:', error);
+      }
+    };
+    
+    // ========== 可视化解读相关方法 ==========
+    
+    // 检查可视化状态
+    const checkVisualStatus = async () => {
+      console.log('🔍 [DEBUG] checkVisualStatus 开始');
+      console.log('🔍 [DEBUG] currentHash:', props.currentHash);
+      console.log('🔍 [DEBUG] currentVersion:', currentVersion.value);
+      
+      if (!props.currentHash) {
+        console.log('⚠️ [DEBUG] 没有 currentHash，跳过检查');
+        return;
+      }
+      
+      try {
+        const url = `/api/article/${props.currentHash}/visual/status?version=${currentVersion.value}`;
+        console.log('🔍 [DEBUG] 请求 URL:', url);
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        console.log('🔍 [DEBUG] API 响应:', data);
+        
+        visualStatus.value = data.status;
+        visualAvailable.value = data.status === 'completed';
+        
+        console.log('🔍 [DEBUG] visualStatus:', visualStatus.value);
+        console.log('🔍 [DEBUG] visualAvailable:', visualAvailable.value);
+        
+        if (visualAvailable.value) {
+          visualHtmlUrl.value = `/api/article/${props.currentHash}/visual?version=${currentVersion.value}`;
+          console.log('✅ [DEBUG] 可视化可用，URL:', visualHtmlUrl.value);
+          // 预加载 HTML 内容
+          await loadVisualHtml();
+        } else {
+          console.log('⚠️ [DEBUG] 可视化不可用，状态:', data.status);
+        }
+      } catch (error) {
+        console.error('❌ [DEBUG] 检查可视化状态失败:', error);
+      }
+    };
+    
+    // 加载可视化 HTML 内容
+    const loadVisualHtml = async () => {
+      if (!visualHtmlUrl.value) return;
+      
+      try {
+        const response = await fetch(visualHtmlUrl.value);
+        const html = await response.text();
+        
+        // 提取 body 内容（移除 html, head 标签，只保留 body 内的内容和 style）
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        
+        // 提取 style 标签
+        const styles = Array.from(doc.querySelectorAll('style'))
+          .map(style => style.outerHTML)
+          .join('\n');
+        
+        // 提取 body 内容
+        const bodyContent = doc.body ? doc.body.innerHTML : '';
+        
+        // 组合 style 和 body 内容
+        visualHtmlContent.value = `${styles}\n${bodyContent}`;
+        
+        console.log('可视化 HTML 加载成功');
+      } catch (error) {
+        console.error('加载可视化 HTML 失败:', error);
+      }
+    };
+    
+    // 处理版本切换（同步可视化版本）
+    const handleVersionChangeWithVisual = async (version) => {
+      currentVersion.value = version;
+      
+      // 重新检查当前版本的可视化状态
+      await checkVisualStatus();
+      
+      // 如果在 Quick Insight 模式，重新加载 HTML
+      if (displayMode.value === 'quick' && visualAvailable.value) {
+        await loadVisualHtml();
+      }
+      
+      // 触发原有的版本切换事件
+      emit('version-change', version);
+    };
+    
+    // 全屏相关方法已移除
+    
     // 响应式处理
     const handleResize = () => {
       // 在移动设备上自动隐藏TOC
@@ -645,8 +904,68 @@ export default {
       // 触发 Vue 重新计算 tocHtml
     });
     
+    // 🔍 调试：监控关键状态变化
+    
+    // 监听 props.initialShowToc 的变化，同步到本地状态
+    watch(() => props.initialShowToc, (newVal, oldVal) => {
+      console.log('� [DEBUG]] props.initialShowToc 变化:', oldVal, '->', newVal);
+      console.log('🔍 [DEBUG] 当前本地 isTocVisible:', isTocVisible.value);
+      
+      // 同步 prop 到本地状态
+      if (newVal !== isTocVisible.value) {
+        console.log('✅ [DEBUG] 同步 prop 到本地状态');
+        isTocVisible.value = newVal;
+      }
+    });
+    
+    watch(isTocVisible, (newVal, oldVal) => {
+      console.log('🔄 [DEBUG] isTocVisible 变化:', oldVal, '->', newVal);
+      console.log('🔍 [DEBUG] 当前 displayMode:', displayMode.value);
+      console.log('🔍 [DEBUG] 计算后 shouldShowToc:', shouldShowToc.value);
+    });
+    
+    watch(visualAvailable, (newVal, oldVal) => {
+      console.log('🔄 [DEBUG] visualAvailable 变化:', oldVal, '->', newVal);
+    });
+    
+    watch(visualStatus, (newVal, oldVal) => {
+      console.log('🔄 [DEBUG] visualStatus 变化:', oldVal, '->', newVal);
+    });
+    
+    watch(displayMode, (newVal, oldVal) => {
+      console.log('🔄 [DEBUG] displayMode 变化:', oldVal, '->', newVal);
+      console.log('🔍 [DEBUG] 当前 isTocVisible:', isTocVisible.value);
+      console.log('🔍 [DEBUG] 当前 shouldShowToc:', shouldShowToc.value);
+      
+      // 从 Quick Insight 切换回 Deep Insight 时，确保目录状态正确
+      if (oldVal === 'quick' && newVal === 'full-analysis') {
+        console.log('✅ [DEBUG] 从 Quick Insight 切换回 Deep Insight');
+        // 目录状态保持不变，由 shouldShowToc 计算属性自动处理
+      }
+    });
+    
+    watch(() => props.currentHash, (newVal, oldVal) => {
+      console.log('🔄 [DEBUG] currentHash 变化:', oldVal, '->', newVal);
+      if (newVal) {
+        console.log('🔍 [DEBUG] currentHash 变化，重新检查可视化状态');
+        checkVisualStatus();
+      }
+    });
+    
     // 生命周期
     onMounted(() => {
+      console.log('🚀 [DEBUG] ReadingView onMounted');
+      console.log('🔍 [DEBUG] 初始 props:', {
+        currentHash: props.currentHash,
+        initialDisplayMode: props.initialDisplayMode,
+        currentVersion: props.currentVersion
+      });
+      console.log('🔍 [DEBUG] 初始状态:', {
+        displayMode: displayMode.value,
+        visualAvailable: visualAvailable.value,
+        visualStatus: visualStatus.value
+      });
+      
       window.addEventListener('resize', handleResize);
       document.addEventListener('keydown', handleKeydown);
       
@@ -662,6 +981,8 @@ export default {
         container.addEventListener('scroll', debouncedHandleScroll);
       }
       
+      // 全屏监听已移除
+      
       // 初始响应式检查
       handleResize();
       
@@ -672,6 +993,10 @@ export default {
           ensureHeadingIds();
         });
       }
+      
+      // 检查可视化状态
+      console.log('🔍 [DEBUG] 准备检查可视化状态...');
+      checkVisualStatus();
     });
     
     onUnmounted(() => {
@@ -683,6 +1008,8 @@ export default {
       document.removeEventListener('mouseup', endDrag);
       document.removeEventListener('touchmove', handleDrag);
       document.removeEventListener('touchend', endDrag);
+      
+      // 全屏监听已移除
       
       // 移除滚动监听
       const container = document.querySelector('.reading-view__content');
@@ -718,17 +1045,26 @@ export default {
       tocWidth,
       isDragging,
       activeSection,
+      displayMode,
+      visualAvailable,
+      visualStatus,
+      visualHtmlUrl,
+      visualHtmlContent,
+      currentVersion,
       
       // 计算属性
       hasMultipleVersions,
       tocHtml,
       cleanContent,
+      shouldShowToc,
       
       // 方法
       toggleToc,
       handleTocClick,
       handleArticleClick,
-      handleVersionChange,
+      handleVersionChange: handleVersionChangeWithVisual,
+      handleDisplayModeChange,
+      checkVisualStatus,
       scrollToElement,
       resetLayout,
       startDrag,

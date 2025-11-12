@@ -165,3 +165,13 @@ SUPPORTED_TEXT_FORMATS = ['.txt', '.md']
 
 # 支持的二进制格式
 SUPPORTED_BINARY_FORMATS = ['.pdf', '.docx']
+
+# --- 可视化解读配置 ---
+# 是否启用可视化解读生成功能
+VISUAL_INTERPRETATION_ENABLED = os.getenv("VISUAL_INTERPRETATION_ENABLED", "true").lower() == "true"
+
+# text2html 提示词文件路径
+TEXT2HTML_PROMPT_PATH = PROJECT_ROOT / "prompt" / "text2html.txt"
+
+# 可视化 HTML 存储目录（与深度解读同目录）
+VISUAL_HTML_DIR = OUTPUT_DIR

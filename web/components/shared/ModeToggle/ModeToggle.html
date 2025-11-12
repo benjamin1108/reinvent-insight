@@ -1,0 +1,16 @@
+<div class="mode-toggle">
+    <button
+        v-for="mode in modes"
+        :key="mode.id"
+        class="mode-button"
+        :class="{
+            'active': currentMode === mode.id,
+            'disabled': mode.id === 'quick' && isQuickModeDisabled
+        }"
+        :title="mode.id === 'quick' ? quickModeTooltip : mode.description"
+        @click="handleModeChange(mode.id)"
+    >
+        <span class="mode-icon">{{ mode.icon }}</span>
+        <span class="mode-label">{{ mode.label }}</span>
+    </button>
+</div>

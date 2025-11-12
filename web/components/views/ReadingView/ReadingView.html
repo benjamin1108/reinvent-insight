@@ -17,11 +17,34 @@
     </div>
   </div>
 
-  <!-- 主要内容 -->
+  <!-- Quick Insight 模式 (可视化解读) - 独立显示，不受其他容器影响 -->
+  <div
+    v-else-if="displayMode === 'quick' && visualAvailable"
+    class="reading-view__visual-container"
+    key="quick-insight">
+    
+    <!-- 模式切换器 - 固定在顶部 -->
+    <div class="reading-view__visual-header">
+      <mode-toggle
+        :current-mode="displayMode"
+        :visual-available="visualAvailable"
+        :visual-status="visualStatus"
+        @mode-change="handleDisplayModeChange">
+      </mode-toggle>
+    </div>
+    
+    <!-- 直接注入 HTML 内容 -->
+    <div 
+      v-html="visualHtmlContent"
+      class="reading-view__visual-content">
+    </div>
+  </div>
+
+  <!-- 主要内容 (Deep Insight 模式) -->
   <div v-else class="reading-view__layout" :style="{ '--toc-width': tocWidth + 'px' }">
     
     <!-- 目录 -->
-    <div v-if="isTocVisible" class="reading-view__toc">
+    <div v-if="shouldShowToc" class="reading-view__toc">
       <!-- 新增：TOC包装器，用于对齐和间距 -->
       <div class="reading-view__toc-wrapper" 
            :style="{ width: tocWidth + 'px' }"
@@ -52,15 +75,12 @@
     </div>
 
     <!-- 文章内容区域 -->
-    <div class="reading-view__content" :class="{ 'reading-view__content--no-toc': !isTocVisible }">
+    <div class="reading-view__content" :class="{ 'reading-view__content--no-toc': !shouldShowToc }">
       <div class="reading-view__article-wrapper">
-        <div 
-          v-if="cleanContent" 
-          @click="handleArticleClick"
-          class="reading-view__article">
+        <div class="reading-view__article">
           
           <!-- 版本选择器（移至滚动容器外部） -->
-          <div v-if="hasMultipleVersions" class="reading-view__version-selector">
+          <div v-if="hasMultipleVersions && displayMode === 'deep'" class="reading-view__version-selector">
             <version-selector
               :versions="versions"
               :current-version="Number(currentVersion)"
@@ -70,14 +90,27 @@
           
           <!-- 可滚动的内容容器 -->
           <div class="reading-view__scroll-content">
-            <!-- 文章头部，包含标题和分割线 -->
+            <!-- 文章头部，包含标题 -->
             <div v-if="documentTitleEn || documentTitle" class="reading-view__article-header">
               <h1 v-if="documentTitleEn" class="reading-view__title-en">{{ documentTitleEn }}</h1>
               <h2 v-if="documentTitle" class="reading-view__title-cn">{{ documentTitle }}</h2>
-          </div>
-
-          <!-- 文章正文 -->
-          <div v-html="cleanContent" class="reading-view__body prose-tech"></div>
+            </div>
+            
+            <!-- 模式切换器 - 放在标题之后，内容之前 -->
+            <div v-if="visualAvailable || visualStatus === 'processing'" class="reading-view__mode-toggle-wrapper">
+              <mode-toggle
+                :current-mode="displayMode"
+                :visual-available="visualAvailable"
+                :visual-status="visualStatus"
+                @mode-change="handleDisplayModeChange"
+                class="reading-view__mode-toggle">
+              </mode-toggle>
+            </div>
+            
+            <!-- Deep Insight 模式内容 -->
+            <div class="reading-view__full-analysis">
+              <div @click="handleArticleClick" v-html="cleanContent" class="reading-view__body prose-tech"></div>
+            </div>
           </div>
         </div>
       </div>
