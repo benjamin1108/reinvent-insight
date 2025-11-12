@@ -699,7 +699,21 @@ const app = createApp({
         // 根据认证状态使用不同的API端点
         const endpoint = isAuthenticated.value ? '/summaries' : '/api/public/summaries';
         console.log(`📚 正在加载笔记库，认证状态: ${isAuthenticated.value}, 端点: ${endpoint}`);
-        const res = await axios.get(endpoint);
+        
+        let res;
+        try {
+          res = await axios.get(endpoint);
+        } catch (error) {
+          // 如果认证端点返回401，自动切换到公开端点
+          if (error.response?.status === 401 && isAuthenticated.value) {
+            console.log('🔄 认证失效，切换到公开端点');
+            isAuthenticated.value = false;
+            res = await axios.get('/api/public/summaries');
+          } else {
+            throw error;
+          }
+        }
+        
         console.log('📚 API响应:', res.data);
         
         // 统一处理API响应格式
@@ -832,6 +846,16 @@ const app = createApp({
       
       // 处理传统的多参数调用（来自 LibraryView）
       const title = dataOrTitle;
+      
+      // 先设置文档数据
+      documentTitle.value = title_cn || title;
+      documentTitleEn.value = title_en || '';
+      readingFilename.value = filename;
+      readingVideoUrl.value = videoUrl;
+      readingHash.value = docHash;
+      documentVersions.value = versions;
+      
+      // 切换视图
       currentView.value = 'read';
       
       // 使用 nextTick 确保在DOM更新后执行滚动，彻底解决视图切换时的滚动位置残留问题
@@ -842,13 +866,6 @@ const app = createApp({
           window.scrollTo(0, 0); // Fallback
         }
       });
-      
-      documentTitle.value = title_cn || title;
-      documentTitleEn.value = title_en || '';
-      readingFilename.value = filename;
-      readingVideoUrl.value = videoUrl;
-      readingHash.value = docHash;
-      documentVersions.value = versions;
       
       // 恢复用户之前选择的版本，如果没有则使用第一个版本
       let savedVersion = null;
@@ -942,11 +959,13 @@ const app = createApp({
         // 不需要切换版本：直接显示当前内容
         console.log('✅ 使用默认版本，直接渲染内容，content长度:', content?.length || 0);
         
-        // 使用nextTick确保在DOM准备好后渲染
+        // 使用双重nextTick确保视图完全切换后再渲染内容
         nextTick(() => {
-          ensureMarkedReady(() => {
-            console.log('✅ marked.js已就绪，开始渲染内容');
-            updateContent(content);
+          nextTick(() => {
+            ensureMarkedReady(() => {
+              console.log('✅ marked.js已就绪，开始渲染内容');
+              updateContent(content);
+            });
           });
         });
       }
@@ -1392,8 +1411,8 @@ const components = [
     name: 'reading-view',
     path: '/components/views/ReadingView',
     fileName: 'ReadingView',
-    critical: false,
-    priority: 5,
+    critical: true,  // 改为关键组件，因为直接访问文章链接时需要立即显示
+    priority: 3,
     version: '1.0.0'
   },
   {
