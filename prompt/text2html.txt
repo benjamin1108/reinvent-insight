@@ -30,6 +30,7 @@
     *   **背景：** 所有卡片（主卡片和迷你卡片）均使用深灰色背景（例如 `#1a1a1a` 或 `#222222`）。
     *   **圆角：** 主卡片使用较大圆角半径（`rounded-xl` 或 `rounded-2xl`），迷你卡片使用较小圆角半径（`rounded-lg`）。
     *   **分隔：** 使用细微边框（`border: 1px solid #333;`）或适合暗黑模式的轻微阴影（`shadow-md` 或 `shadow-lg`）。
+    *   **内边距：** 确保所有卡片有足够的内边距（主卡片 `p-6` 或 `p-8`，迷你卡片 `p-4` 或 `p-6`），防止内容贴边或重叠。
 7.  **主标题强化 (Main Title Enhancement)：**
     *   使主中文标题显著增大（例如，`text-5xl` 或 `text-6xl`, `font-bold`）。
     *   在其下方添加一个较小的、对应的英文标题（例如，`text-xl` 或 `text-lg`, `font-semibold`，颜色稍浅，如 `text-gray-300` 或 `text-gray-400`）。示例：“Xiaomi Corporation 2024 Annual Financial Report Analysis”。
@@ -60,14 +61,27 @@
     *   **来源：** 通过 CDN 引入 Font Awesome (v5/v6)。
     *   **风格：** 偏好简洁、现代的**线框风格 (outline-style)** 图标。
     *   **使用：** 放置于主标题附近，可选择性地（且需微妙地）用于迷你卡片内部（靠近标题处）、列表前缀等。**严格禁止使用 Emoji 作为功能性图标**。颜色应协调；关键图标可使用高亮色。
+    *   **布局约束（关键）：** 
+        *   图标与文字必须使用 flexbox 布局（`flex items-center gap-2` 或 `gap-3`），确保有足够间距。
+        *   避免使用绝对定位（`absolute`）放置图标，除非有明确的容器约束。
+        *   图标大小要适中（`text-2xl` 到 `text-4xl`），避免过大导致布局错乱。
+        *   如果图标和文字在同一行，使用 `inline-flex` 或 `flex` 容器包裹，设置 `items-center` 垂直居中。
+        *   **严格避免图标与文字重叠**：始终使用 `gap-*` 类或 `margin` 来保持间距。
 2.  **数据可视化 (推荐 Chart.js)：**
     *   **应用场景：** 用于展示趋势、增长率、构成（饼图/环形图）、比较（柱状图）等适合的数据 [引用：数据可视化最佳实践]。
     *   **技术：** 通过 CDN 嵌入 Chart.js。
     *   **位置：** 放置在讨论财务或业务分析的相关主卡片内部。
     *   **样式：** 图表颜色必须与暗黑主题和高亮色保持一致。确保图表清晰、易读且响应式。
+    *   **容器高度限制（关键）：** 所有包含 `<canvas>` 的图表容器必须设置明确的高度。使用 `style="height: 400px"` 或 Tailwind 类如 `h-96`（384px）、`h-80`（320px）。推荐高度范围：300-500px。这对于防止 Chart.js 渲染异常至关重要。
+    *   **容器约束（关键）：** 
+        *   **必须**将每个 `<canvas>` 元素包裹在一个具有明确高度限制的容器 `<div>` 中。
+        *   容器必须设置固定高度（例如 `h-64`、`h-80`、`h-96`）或最大高度（例如 `max-h-96`）。
+        *   在 Chart.js 配置中，必须设置 `options.maintainAspectRatio = false` 和 `options.responsive = true`。
+        *   示例结构：`<div class="h-80"><canvas id="myChart"></canvas></div>`
 **技术与动画：**
 1.  **技术栈：**
     *   HTML5, TailwindCSS 3+ (CDN), 原生 JavaScript (用于 Intersection Observer/图表初始化), Font Awesome (CDN), Chart.js (CDN)。
+    *   **布局最佳实践：** 优先使用 Flexbox（`flex`）和 Grid（`grid`）进行布局，避免使用 `float` 或复杂的绝对定位。确保所有元素有明确的容器和间距控制。
 2.  **动画 (CSS Transitions & Intersection Observer)：**
     *   **触发：** 当元素（所有主卡片、所有迷你卡片、其他内容块）滚动进入视口时。
     *   **效果：** 平滑、微妙的**淡入/向上滑动**效果（模仿 Apple 风格）。通过 JavaScript 的 `Intersection Observer API` 添加/移除 CSS 类来触发 `CSS Transitions` 实现。确保动画性能流畅。为网格项应用轻微延迟以产生交错效果。

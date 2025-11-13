@@ -856,7 +856,7 @@ export default {
           
           heightUpdateTimer = setTimeout(() => {
             // 更新 iframe 高度（添加 20px 缓冲）
-            iframeHeight.value = height + 20;
+            iframeHeight.value = height;
             //console.log('📏 [DEBUG] 更新 iframe 高度:', iframeHeight.value);
           }, 100);  // 100ms 防抖
         }
