@@ -110,9 +110,9 @@ tasks:
   # --------------------------------------------------------------------------
   # 用于将深度解读文章转换为可视化 HTML 网页
   visual_generation:
-    provider: gemini
-    model_name: gemini-2.5-pro
-    api_key_env: GEMINI_API_KEY
+    provider: dashscope
+    model_name: qwen3-max
+    api_key_env: DASHSCOPE_API_KEY
     
     generation:
       # 可视化生成需要更高的创造性
@@ -120,7 +120,7 @@ tasks:
       top_p: 0.9
       top_k: 40
       # 生成 HTML 需要较大的输出空间
-      max_output_tokens: 128000
+      max_output_tokens: 65535
     
     rate_limit:
       interval: 0.5
@@ -176,52 +176,52 @@ tasks:
   # --------------------------------------------------------------------------
   
   # 视频摘要任务 - 使用 DashScope
-  dashscope_video_summary:
-    provider: dashscope
-    model_name: qwen3-max  # 可选: qwen-turbo, qwen-plus, qwen-max, qwen-max-longcontext
-    api_key_env: DASHSCOPE_API_KEY
+  # dashscope_video_summary:
+  #   provider: dashscope
+  #   model_name: qwen3-max  # 可选: qwen-turbo, qwen-plus, qwen-max, qwen-max-longcontext
+  #   api_key_env: DASHSCOPE_API_KEY
     
-    generation:
-      temperature: 0.7
-      top_p: 0.9
-      top_k: 40  # DashScope 不使用 top_k，但保留用于兼容性
-      max_output_tokens: 8000
+  #   generation:
+  #     temperature: 0.7
+  #     top_p: 0.9
+  #     top_k: 40  # DashScope 不使用 top_k，但保留用于兼容性
+  #     max_output_tokens: 8000
     
-    rate_limit:
-      interval: 0.5
-      max_retries: 3
-      retry_backoff_base: 2.0
+  #   rate_limit:
+  #     interval: 0.5
+  #     max_retries: 3
+  #     retry_backoff_base: 2.0
 
-  # PDF 处理任务 - 使用 DashScope 多模态
-  dashscope_pdf_processing:
-    provider: dashscope
-    model_name: qwen-vl-max  # 多模态模型: qwen-vl-plus, qwen-vl-max
-    api_key_env: DASHSCOPE_API_KEY
+  # # PDF 处理任务 - 使用 DashScope 多模态
+  # dashscope_pdf_processing:
+  #   provider: dashscope
+  #   model_name: qwen-vl-max  # 多模态模型: qwen-vl-plus, qwen-vl-max
+  #   api_key_env: DASHSCOPE_API_KEY
     
-    generation:
-      temperature: 0.7
-      top_p: 0.9
-      top_k: 40
-      max_output_tokens: 8000
+  #   generation:
+  #     temperature: 0.7
+  #     top_p: 0.9
+  #     top_k: 40
+  #     max_output_tokens: 8000
     
-    rate_limit:
-      interval: 0.5
-      max_retries: 3
-      retry_backoff_base: 2.0
+  #   rate_limit:
+  #     interval: 0.5
+  #     max_retries: 3
+  #     retry_backoff_base: 2.0
   
-  # 测试任务 - 使用最快的模型
-  dashscope_test:
-    provider: dashscope
-    model_name: qwen-turbo
-    api_key_env: DASHSCOPE_API_KEY
+  # # 测试任务 - 使用最快的模型
+  # dashscope_test:
+  #   provider: dashscope
+  #   model_name: qwen-turbo
+  #   api_key_env: DASHSCOPE_API_KEY
     
-    generation:
-      temperature: 0.7
-      top_p: 0.9
-      top_k: 40
-      max_output_tokens: 2000
+  #   generation:
+  #     temperature: 0.7
+  #     top_p: 0.9
+  #     top_k: 40
+  #     max_output_tokens: 2000
     
-    rate_limit:
-      interval: 0.5
-      max_retries: 2
-      retry_backoff_base: 2.0
+  #   rate_limit:
+  #     interval: 0.5
+  #     max_retries: 2
+  #     retry_backoff_base: 2.0

@@ -1431,6 +1431,24 @@
   width: 100%;
   background: #121212;
   overflow-x: hidden;
+  /* 重置可能干扰的样式 */
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+/* 确保可视化内容中的样式不被覆盖 */
+.reading-view__visual-content * {
+  /* 允许内部样式优先 */
+  all: revert;
+}
+
+/* 但保留基本的盒模型 */
+.reading-view__visual-content *,
+.reading-view__visual-content *::before,
+.reading-view__visual-content *::after {
+  box-sizing: border-box;
 }
 
 /* 全屏模式样式已移除 */

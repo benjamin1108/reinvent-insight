@@ -724,24 +724,81 @@ export default {
         const response = await fetch(visualHtmlUrl.value);
         const html = await response.text();
         
-        // 提取 body 内容（移除 html, head 标签，只保留 body 内的内容和 style）
+        // 提取完整的 head 和 body 内容，保留所有样式和脚本
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
         
-        // 提取 style 标签
-        const styles = Array.from(doc.querySelectorAll('style'))
-          .map(style => style.outerHTML)
+        // 提取 head 中的所有样式相关标签（link, style）
+        const headStyles = Array.from(doc.head.querySelectorAll('link[rel="stylesheet"], style'))
+          .map(el => el.outerHTML)
           .join('\n');
         
-        // 提取 body 内容
-        const bodyContent = doc.body ? doc.body.innerHTML : '';
+        // 提取 head 中的所有脚本标签
+        const headScripts = Array.from(doc.head.querySelectorAll('script'))
+          .map(el => {
+            // 对于内联脚本，需要重新创建以确保执行
+            if (el.src) {
+              return el.outerHTML;
+            } else {
+              // 内联脚本需要特殊处理
+              return `<script>${el.textContent}</script>`;
+            }
+          })
+          .join('\n');
         
-        // 组合 style 和 body 内容
-        visualHtmlContent.value = `${styles}\n${bodyContent}`;
+        // 提取 body 内容（不包括脚本，脚本单独处理）
+        const bodyClone = doc.body.cloneNode(true);
+        // 移除 body 中的 script 标签，稍后单独添加
+        Array.from(bodyClone.querySelectorAll('script')).forEach(script => script.remove());
+        const bodyContent = bodyClone.innerHTML;
         
-        console.log('可视化 HTML 加载成功');
+        // 提取 body 中的脚本标签
+        const bodyScripts = Array.from(doc.body?.querySelectorAll('script') || [])
+          .map(el => {
+            if (el.src) {
+              return el.outerHTML;
+            } else {
+              return `<script>${el.textContent}</script>`;
+            }
+          })
+          .join('\n');
+        
+        // 组合所有内容：样式 + head脚本 + body内容 + body脚本
+        visualHtmlContent.value = `${headStyles}\n${headScripts}\n${bodyContent}\n${bodyScripts}`;
+        
+        console.log('✅ 可视化 HTML 加载成功');
+        console.log('📦 包含内容:', {
+          样式数量: doc.head.querySelectorAll('link[rel="stylesheet"], style').length,
+          head脚本数量: doc.head.querySelectorAll('script').length,
+          body脚本数量: doc.body?.querySelectorAll('script').length || 0
+        });
+        
+        // 等待 DOM 更新后执行脚本
+        await nextTick();
+        
+        // 手动执行内联脚本（因为 v-html 不会自动执行脚本）
+        const container = document.querySelector('.reading-view__visual-content');
+        if (container) {
+          const scripts = container.querySelectorAll('script');
+          scripts.forEach(oldScript => {
+            const newScript = document.createElement('script');
+            if (oldScript.src) {
+              newScript.src = oldScript.src;
+            } else {
+              newScript.textContent = oldScript.textContent;
+            }
+            // 复制其他属性
+            Array.from(oldScript.attributes).forEach(attr => {
+              if (attr.name !== 'src') {
+                newScript.setAttribute(attr.name, attr.value);
+              }
+            });
+            oldScript.parentNode.replaceChild(newScript, oldScript);
+          });
+          console.log('✅ 脚本已重新执行');
+        }
       } catch (error) {
-        console.error('加载可视化 HTML 失败:', error);
+        console.error('❌ 加载可视化 HTML 失败:', error);
       }
     };
     
