@@ -99,7 +99,7 @@ def normalize_youtube_url(url: str) -> str:
         return f"https://www.youtube.com/watch?v={video_id}"
     
     # 匹配标准 youtube.com 格式
-    standard_pattern = re.compile(r'(?:https?://)?(?:www\.|mutube\.com/watch\?v=([a-zA-Z0-9_-]{11})(?:&.*)?')
+    standard_pattern = re.compile(r'(?:https?://)?(?:www\.|m\.)?youtube\.com/watch\?v=([a-zA-Z0-9_-]{11})(?:&.*)?')
     standard_match = standard_pattern.match(url)
     if standard_match:
         video_id = standard_match.group(1)
