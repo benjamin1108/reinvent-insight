@@ -414,32 +414,23 @@ export default {
     const scrollToSection = (sectionId) => {
       // 使用nextTick确保DOM已更新
       nextTick(() => {
-        // 尝试找到真正的滚动容器
-        const possibleContainers = [
-          document.querySelector('.reading-view__content'),
-          document.querySelector('.reading-view'),
-          document.documentElement,
-          document.body,
-          window
-        ].filter(Boolean);
+        // 优先在文章正文中查找元素（.reading-view__body 包含实际的文章内容）
+        const bodyContainer = document.querySelector('.reading-view__body');
         
-        // 优先使用内容容器查找元素
-        const container = document.querySelector('.reading-view__content');
-        
-        if (!container) {
+        if (!bodyContainer) {
           return;
         }
         
         // 列出所有可用的标题ID用于调试
-        const allHeadings = container.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        const allHeadings = bodyContainer.querySelectorAll('h1, h2, h3, h4, h5, h6');
         
         // 在文章正文中查找目标元素
         let element;
         try {
           if (typeof CSS !== 'undefined' && CSS.escape) {
-            element = container.querySelector(`#${CSS.escape(sectionId)}`);
+            element = bodyContainer.querySelector(`#${CSS.escape(sectionId)}`);
           } else {
-            element = container.querySelector(`[id="${sectionId}"]`);
+            element = bodyContainer.querySelector(`[id="${sectionId}"]`);
           }
         } catch (e) {
           element = document.getElementById(sectionId);
@@ -460,9 +451,9 @@ export default {
           for (const idVariation of idVariations) {
             try {
               if (typeof CSS !== 'undefined' && CSS.escape) {
-                element = container.querySelector(`#${CSS.escape(idVariation)}`);
+                element = bodyContainer.querySelector(`#${CSS.escape(idVariation)}`);
               } else {
-                element = container.querySelector(`[id="${idVariation}"]`);
+                element = bodyContainer.querySelector(`[id="${idVariation}"]`);
               }
               
               if (element) {
@@ -521,7 +512,14 @@ export default {
           return;
         }
         
-        // 检测哪个容器是真正的滚动容器
+        // 找到真正的滚动容器
+        // 尝试顺序：.reading-view__content -> .reading-view -> window
+        const possibleContainers = [
+          document.querySelector('.reading-view__content'),
+          document.querySelector('.reading-view'),
+          window
+        ].filter(Boolean);
+        
         let scrollContainer = null;
         
         for (const testContainer of possibleContainers) {
@@ -548,26 +546,33 @@ export default {
           scrollContainer = window; // 回退到window
         }
         
+        // 执行滚动 - 使用统一的 scrollIntoView 方法
+        // 计算目标位置，考虑 scrollOffset
+        const scrollOffset = props.scrollOffset || 80;
+        
+        // 获取元素相对于滚动容器的位置
+        const elementRect = element.getBoundingClientRect();
+        const containerRect = scrollContainer === window 
+          ? { top: 0 } 
+          : scrollContainer.getBoundingClientRect();
+        
+        // 计算目标滚动位置
+        const elementTop = elementRect.top - containerRect.top;
+        const currentScroll = scrollContainer === window 
+          ? window.pageYOffset 
+          : scrollContainer.scrollTop;
+        
+        const targetScroll = currentScroll + elementTop - scrollOffset;
+        
         // 执行滚动
         if (scrollContainer === window) {
-          // 使用window滚动
-          const elementRect = element.getBoundingClientRect();
-          const targetTop = window.pageYOffset + elementRect.top - (props.scrollOffset || 80);
-          
           window.scrollTo({
-            top: Math.max(0, targetTop),
+            top: Math.max(0, targetScroll),
             behavior: 'smooth'
           });
         } else {
-          // 使用容器滚动
-          const containerRect = scrollContainer.getBoundingClientRect();
-          const elementRect = element.getBoundingClientRect();
-          const currentScrollTop = scrollContainer.scrollTop;
-          const elementOffsetTop = elementRect.top - containerRect.top + currentScrollTop;
-          const targetScrollTop = Math.max(0, elementOffsetTop - (props.scrollOffset || 80));
-          
           scrollContainer.scrollTo({
-            top: targetScrollTop,
+            top: Math.max(0, targetScroll),
             behavior: 'smooth'
           });
         }
@@ -579,15 +584,6 @@ export default {
         if (window.history.replaceState) {
           window.history.replaceState(null, null, `#${sectionId}`);
         }
-        
-        // 额外的备用方案：直接使用scrollIntoView
-        setTimeout(() => {
-          element.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start',
-            inline: 'nearest'
-          });
-        }, 100);
       });
     };
     
@@ -779,21 +775,27 @@ export default {
     const handleScroll = () => {
       if (!cleanContent.value) return;
       
-      const container = document.querySelector('.reading-view__content');
-      if (!container) return;
+      // 在文章正文中查找标题
+      const bodyContainer = document.querySelector('.reading-view__body');
+      if (!bodyContainer) return;
       
-      const scrollTop = container.scrollTop;
+      // 获取滚动容器
+      const scrollContainer = document.querySelector('.reading-view__content');
+      if (!scrollContainer) return;
+      
+      const scrollTop = scrollContainer.scrollTop;
       
       // 获取所有标题元素
-      const headings = container.querySelectorAll('h1, h2, h3, h4, h5, h6');
+      const headings = bodyContainer.querySelectorAll('h1, h2, h3, h4, h5, h6');
       let currentSection = '';
       
       headings.forEach(heading => {
         if (heading.id) {
           const rect = heading.getBoundingClientRect();
-          const top = rect.top + scrollTop - props.scrollOffset;
+          const containerRect = scrollContainer.getBoundingClientRect();
+          const relativeTop = rect.top - containerRect.top;
           
-          if (scrollTop >= top - 10) {
+          if (relativeTop <= props.scrollOffset + 10) {
             currentSection = heading.id;
           }
         }
@@ -838,12 +840,13 @@ export default {
     
     // 确保实际DOM中的标题有ID
     const ensureHeadingIds = () => {
-      const container = document.querySelector('.reading-view__content');
-      if (!container) {
+      // 在文章正文中查找标题
+      const bodyContainer = document.querySelector('.reading-view__body');
+      if (!bodyContainer) {
         return;
       }
       
-      const headings = container.querySelectorAll('h1, h2, h3, h4, h5, h6');
+      const headings = bodyContainer.querySelectorAll('h1, h2, h3, h4, h5, h6');
       
       headings.forEach((heading, index) => {
         if (!heading.id) {
@@ -937,10 +940,34 @@ export default {
       console.log('🔍 [DEBUG] 当前 isTocVisible:', isTocVisible.value);
       console.log('🔍 [DEBUG] 当前 shouldShowToc:', shouldShowToc.value);
       
-      // 从 Quick Insight 切换回 Deep Insight 时，确保目录状态正确
-      if (oldVal === 'quick' && newVal === 'full-analysis') {
-        console.log('✅ [DEBUG] 从 Quick Insight 切换回 Deep Insight');
-        // 目录状态保持不变，由 shouldShowToc 计算属性自动处理
+      // 切换到 Deep Insight 模式时，重新初始化 DOM
+      if (newVal === 'deep' && oldVal !== 'deep') {
+        console.log('✅ [DEBUG] 切换到 Deep Insight 模式，重新初始化');
+        // DOM 会被重新渲染，需要等待 DOM 更新后重新初始化标题 ID
+        // 使用双重 nextTick 确保 v-html 内容完全渲染
+        nextTick(() => {
+          nextTick(() => {
+            console.log('🔧 [DEBUG] 重新解析内容和初始化标题 ID');
+            if (cleanContent.value) {
+              parsedSections.value = parseContent(cleanContent.value);
+              ensureHeadingIds();
+              console.log('✅ [DEBUG] 标题 ID 初始化完成');
+              
+              // 验证 DOM 元素是否存在
+              const bodyContainer = document.querySelector('.reading-view__body');
+              const scrollContainer = document.querySelector('.reading-view__content');
+              console.log('🔍 [DEBUG] bodyContainer 存在:', !!bodyContainer);
+              console.log('🔍 [DEBUG] scrollContainer 存在:', !!scrollContainer);
+              
+              if (bodyContainer) {
+                const headings = bodyContainer.querySelectorAll('h1, h2, h3, h4, h5, h6');
+                console.log('🔍 [DEBUG] 找到标题数量:', headings.length);
+                console.log('🔍 [DEBUG] 前3个标题 ID:', 
+                  Array.from(headings).slice(0, 3).map(h => h.id));
+              }
+            }
+          });
+        });
       }
     });
     
