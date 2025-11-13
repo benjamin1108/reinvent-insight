@@ -628,7 +628,28 @@ async def get_visual_interpretation(doc_hash: str, version: Optional[int] = None
             media_type="text/html",
             headers={
                 "Cache-Control": "public, max-age=3600",
-                "Content-Security-Policy": "default-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com"
+                # 更新 CSP 策略以允许可视化 HTML 所需的外部资源
+                # 包含国内 CDN 镜像和原始 CDN
+                "Content-Security-Policy": (
+                    "default-src 'self' 'unsafe-inline' 'unsafe-eval' "
+                    "https://fonts.googleapis.com https://fonts.gstatic.com "
+                    "https://fonts.loli.net https://gstatic.loli.net "
+                    "https://cdn.tailwindcss.com https://cdn.jsdelivr.net "
+                    "https://cdnjs.cloudflare.com "
+                    "https://lf26-cdn-tos.bytecdntp.com https://lf6-cdn-tos.bytecdntp.com "
+                    "https://unpkg.com https://cdn.bootcdn.net; "
+                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
+                    "https://cdn.tailwindcss.com https://cdn.jsdelivr.net "
+                    "https://cdnjs.cloudflare.com "
+                    "https://lf26-cdn-tos.bytecdntp.com https://lf6-cdn-tos.bytecdntp.com "
+                    "https://unpkg.com https://cdn.bootcdn.net; "
+                    "style-src 'self' 'unsafe-inline' "
+                    "https://fonts.googleapis.com https://fonts.loli.net "
+                    "https://cdnjs.cloudflare.com https://cdn.bootcdn.net; "
+                    "font-src 'self' https://fonts.gstatic.com https://gstatic.loli.net "
+                    "https://cdnjs.cloudflare.com https://cdn.bootcdn.net; "
+                    "img-src 'self' data: https:;"
+                )
             }
         )
         

@@ -1425,24 +1425,30 @@
   flex-shrink: 0;
 }
 
-/* iframe 容器 */
-.reading-view__visual-iframe-container {
+/* 可视化内容 - 直接注入的 HTML */
+.reading-view__visual-content {
   flex: 1;
   width: 100%;
   background: #121212;
   overflow-x: hidden;
-  overflow-y: auto;
-  position: relative;
+  /* 重置可能干扰的样式 */
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
 }
 
-/* iframe 元素 */
-.reading-view__visual-iframe {
-  width: 100%;
-  min-height: 100vh;
-  border: none;
-  display: block;
-  background: #121212;
-  /* 高度通过内联样式动态设置 */
+/* 确保可视化内容中的样式不被覆盖 */
+.reading-view__visual-content * {
+  /* 允许内部样式优先 */
+  all: revert;
+}
+
+/* 但保留基本的盒模型 */
+.reading-view__visual-content *,
+.reading-view__visual-content *::before,
+.reading-view__visual-content *::after {
+  box-sizing: border-box;
 }
 
 /* 全屏模式样式已移除 */
@@ -1480,15 +1486,3 @@
 }
 
 /* 移动端全屏按钮样式已移除 */
-
-/* 移动端 iframe 适配 */
-@media (max-width: 768px) {
-  .reading-view__visual-iframe-container {
-    /* 移动端优化滚动 */
-    -webkit-overflow-scrolling: touch;
-  }
-  
-  .reading-view__visual-iframe {
-    min-height: 100vh;
-  }
-}

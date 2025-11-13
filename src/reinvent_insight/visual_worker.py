@@ -323,6 +323,9 @@ class VisualInterpretationWorker:
         Returns:
             保存的文件路径
         """
+        # 注入 iframe 高度通信脚本
+        html_content = self._inject_iframe_script(html_content)
+        
         # 生成文件名：{原文件名}_visual.html 或 {原文件名}_v2_visual.html
         base_name = self.article_path.stem
         
@@ -345,6 +348,73 @@ class VisualInterpretationWorker:
         logger.info(f"可视化 HTML 已保存: {html_path} (版本: {self.version})")
         
         return html_path
+    
+    def _inject_iframe_script(self, html_content: str) -> str:
+        """
+        在 HTML 的 </body> 标签前注入 iframe 高度通信脚本
+        
+        Args:
+            html_content: 原始 HTML 内容
+            
+        Returns:
+            注入脚本后的 HTML 内容
+        """
+        # iframe 高度通信脚本
+        iframe_script = """
+<script>
+(function() {
+  function sendHeight() {
+    const height = Math.max(
+      document.body.scrollHeight,
+      document.body.offsetHeight,
+      document.documentElement.clientHeight,
+      document.documentElement.scrollHeight,
+      document.documentElement.offsetHeight
+    );
+    
+    window.parent.postMessage({
+      type: 'iframe-height',
+      height: height
+    }, '*');
+  }
+  
+  // 初始发送
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', sendHeight);
+  } else {
+    sendHeight();
+  }
+  
+  // 监听内容变化
+  window.addEventListener('load', sendHeight);
+  window.addEventListener('resize', sendHeight);
+  
+  // 使用 MutationObserver 监听 DOM 变化
+  const observer = new MutationObserver(sendHeight);
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    characterData: true
+  });
+})();
+</script>
+"""
+        
+        # 在 </body> 标签前注入脚本
+        if '</body>' in html_content.lower():
+            # 找到最后一个 </body> 标签的位置
+            body_end_pos = html_content.lower().rfind('</body>')
+            html_content = (
+                html_content[:body_end_pos] +
+                iframe_script +
+                html_content[body_end_pos:]
+            )
+            logger.info("已注入 iframe 高度通信脚本")
+        else:
+            logger.warning("未找到 </body> 标签，无法注入脚本")
+        
+        return html_content
     
     async def _update_article_metadata(self, html_path: Path):
         """

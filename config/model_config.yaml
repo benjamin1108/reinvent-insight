@@ -110,17 +110,17 @@ tasks:
   # --------------------------------------------------------------------------
   # 用于将深度解读文章转换为可视化 HTML 网页
   visual_generation:
-    provider: dashscope
-    model_name: qwen3-max
-    api_key_env: DASHSCOPE_API_KEY
+    provider: gemini
+    model_name: gemini-2.5-pro
+    api_key_env: GEMINI_API_KEY
     
     generation:
       # 可视化生成需要更高的创造性
-      temperature: 0.8
+      temperature: 0.5
       top_p: 0.9
       top_k: 40
       # 生成 HTML 需要较大的输出空间
-      max_output_tokens: 65535
+      max_output_tokens: 128000
     
     rate_limit:
       interval: 0.5

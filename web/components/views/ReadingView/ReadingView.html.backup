@@ -33,18 +33,10 @@
       </mode-toggle>
     </div>
     
-    <!-- iframe 容器 -->
-    <div class="reading-view__visual-iframe-container">
-      <iframe
-        ref="visualIframe"
-        :src="visualHtmlUrl"
-        class="reading-view__visual-iframe"
-        :style="{ height: iframeHeight + 'px' }"
-        frameborder="0"
-        scrolling="no"
-        sandbox="allow-scripts allow-same-origin"
-        @load="handleIframeLoad">
-      </iframe>
+    <!-- 直接注入 HTML 内容 -->
+    <div 
+      v-html="visualHtmlContent"
+      class="reading-view__visual-content">
     </div>
   </div>
 
