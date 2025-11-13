@@ -2,26 +2,21 @@ import logging
 import asyncio
 import json
 from typing import Dict, Any, Optional, List
-import google.generativeai as genai
-from google.generativeai import types
-from . import config
+from .model_config import get_model_client
 
 logger = logging.getLogger(__name__)
 
 class PDFProcessor:
-    """PDF处理器，使用Gemini多模态能力处理PDF文件"""
+    """PDF处理器，使用多模态能力处理PDF文件"""
     
     def __init__(self):
-        """初始化Gemini客户端"""
-        if not config.GEMINI_API_KEY:
-            raise ValueError("Gemini API Key未配置")
-        
-        genai.configure(api_key=config.GEMINI_API_KEY)
-        self.model_name = "gemini-2.0-flash-exp"  # 使用最新的Gemini模型
+        """初始化模型客户端"""
+        # 使用任务类型获取模型客户端
+        self.client = get_model_client("pdf_processing")
     
     async def upload_pdf(self, pdf_file_path: str) -> Dict[str, Any]:
         """
-        将PDF文件上传到Gemini API
+        将PDF文件上传到API
         
         Args:
             pdf_file_path: PDF文件路径
@@ -29,65 +24,12 @@ class PDFProcessor:
         Returns:
             包含文件信息的字典
         """
-        try:
-            # 使用异步执行器避免阻塞
-            loop = asyncio.get_event_loop()
-            
-            # 尝试使用新的 API 方式上传文件
-            try:
-                # 首先尝试直接上传（适用于较新的 API 版本）
-                pdf_file = await loop.run_in_executor(
-                    None, 
-                    lambda: genai.upload_file(path=pdf_file_path)
-                )
-            except TypeError as te:
-                if "ragStoreName" in str(te):
-                    # 如果需要 ragStoreName，使用文件 API 的替代方法
-                    logger.warning("检测到 API 变更，使用替代上传方法")
-                    
-                    # 读取文件内容并使用模型直接处理
-                    import os
-                    file_size = os.path.getsize(pdf_file_path)
-                    
-                    # 创建一个模拟的文件信息对象
-                    file_info = {
-                        "name": f"files/{os.path.basename(pdf_file_path)}",
-                        "display_name": os.path.basename(pdf_file_path),
-                        "mime_type": "application/pdf",
-                        "size_bytes": file_size,
-                        "create_time": None,
-                        "expiration_time": None,
-                        "uri": pdf_file_path,  # 使用本地路径
-                        "local_file": True  # 标记为本地文件
-                    }
-                    
-                    logger.info(f"使用本地文件处理: {file_info['name']}")
-                    return file_info
-                else:
-                    raise te
-            
-            # 返回文件信息
-            file_info = {
-                "name": pdf_file.name,
-                "display_name": pdf_file.display_name,
-                "mime_type": pdf_file.mime_type,
-                "size_bytes": pdf_file.size_bytes,
-                "create_time": pdf_file.create_time,
-                "expiration_time": pdf_file.expiration_time,
-                "uri": pdf_file.uri,
-                "local_file": False
-            }
-            
-            logger.info(f"PDF上传成功: {file_info['name']}")
-            return file_info
-            
-        except Exception as e:
-            logger.error(f"PDF上传失败: {str(e)}")
-            raise
+        # 使用客户端的上传方法
+        return await self.client.upload_file(pdf_file_path)
     
     async def generate_outline(self, pdf_file_info: Dict[str, Any], title: Optional[str] = None) -> Dict[str, Any]:
         """
-        使用Gemini生成内容大纲
+        生成内容大纲
         
         Args:
             pdf_file_info: PDF文件信息
@@ -100,46 +42,15 @@ class PDFProcessor:
             # 构建提示词
             prompt = self._build_outline_prompt(title)
             
-            # 创建模型实例
-            model = genai.GenerativeModel(self.model_name)
-            
-            # 根据文件类型选择处理方式
-            if pdf_file_info.get("local_file", False):
-                # 使用本地文件
-                pdf_file_path = pdf_file_info["uri"]
-                
-                # 使用异步方式读取文件并处理
-                loop = asyncio.get_event_loop()
-                
-                def read_and_process():
-                    with open(pdf_file_path, "rb") as f:
-                        file_data = f.read()
-                    return genai.GenerativeModel(self.model_name).generate_content(
-                        [prompt, {"mime_type": "application/pdf", "data": file_data}],
-                        generation_config=genai.types.GenerationConfig(
-                            temperature=0.8,
-                            max_output_tokens=8000,
-                            response_mime_type="application/json"
-                        )
-                    )
-                
-                response = await loop.run_in_executor(None, read_and_process)
-            else:
-                # 获取已上传的PDF文件引用
-                pdf_file = genai.get_file(name=pdf_file_info["name"])
-                
-                # 调用Gemini生成内容API
-                response = await model.generate_content_async(
-                    [prompt, pdf_file],
-                    generation_config=genai.types.GenerationConfig(
-                        temperature=0.8,
-                        max_output_tokens=8000,
-                        response_mime_type="application/json"
-                    )
-                )
+            # 使用客户端生成内容（JSON格式）
+            response_text = await self.client.generate_content_with_file(
+                prompt,
+                pdf_file_info,
+                is_json=True
+            )
             
             # 解析响应
-            outline_json = json.loads(response.text)
+            outline_json = json.loads(response_text)
             
             # 调试：记录返回的JSON结构
             logger.info(f"API返回的outline结构类型: {type(outline_json)}")
@@ -149,13 +60,6 @@ class PDFProcessor:
                     logger.info(f"第一个元素的键: {list(outline_json[0].keys()) if isinstance(outline_json[0], dict) else 'not a dict'}")
             elif isinstance(outline_json, dict):
                 logger.info(f"outline是字典，键: {list(outline_json.keys())}")
-            
-            # 记录API使用情况
-            if hasattr(response, 'usage_metadata'):
-                usage_metadata = response.usage_metadata
-                logger.info(f"Prompt tokens: {usage_metadata.prompt_token_count}")
-                logger.info(f"Response tokens: {usage_metadata.candidates_token_count}")
-                logger.info(f"Total tokens: {usage_metadata.total_token_count}")
             
             # 提取英文标题（如果存在）
             title_en = None
@@ -167,7 +71,7 @@ class PDFProcessor:
                 "outline": outline_json,
                 "title_en": title_en,  # 添加英文标题
                 "file_id": pdf_file_info["name"],
-                "usage": getattr(response, 'usage_metadata', None)
+                "usage": None  # 使用情况由客户端内部记录
             }
             
         except Exception as e:
@@ -181,7 +85,7 @@ class PDFProcessor:
         pdf_file_info: Dict[str, Any]
     ) -> str:
         """
-        使用Gemini生成章节内容
+        生成章节内容
         
         Args:
             outline_item: 大纲项目
@@ -195,43 +99,12 @@ class PDFProcessor:
             # 构建章节生成的完整prompt
             prompt = self._build_section_prompt(outline_item, context)
             
-            # 创建模型实例
-            model = genai.GenerativeModel(self.model_name)
-            
-            # 根据文件类型选择处理方式
-            if pdf_file_info.get("local_file", False):
-                # 使用本地文件
-                pdf_file_path = pdf_file_info["uri"]
-                
-                # 使用异步方式读取文件并处理
-                loop = asyncio.get_event_loop()
-                
-                def read_and_process():
-                    with open(pdf_file_path, "rb") as f:
-                        file_data = f.read()
-                    return genai.GenerativeModel(self.model_name).generate_content(
-                        [prompt, {"mime_type": "application/pdf", "data": file_data}],
-                        generation_config=genai.types.GenerationConfig(
-                            temperature=0.8,
-                            max_output_tokens=8000
-                        )
-                    )
-                
-                response = await loop.run_in_executor(None, read_and_process)
-            else:
-                # 获取已上传的PDF文件引用
-                pdf_file = genai.get_file(name=pdf_file_info["name"])
-                
-                # 调用Gemini生成API
-                response = await model.generate_content_async(
-                    [prompt, pdf_file],
-                    generation_config=genai.types.GenerationConfig(
-                        temperature=0.8,
-                        max_output_tokens=8000
-                    )
-                )
-            
-            return response.text
+            # 使用客户端生成内容
+            return await self.client.generate_content_with_file(
+                prompt,
+                pdf_file_info,
+                is_json=False
+            )
             
         except Exception as e:
             logger.error(f"生成章节内容失败: {str(e)}")
@@ -350,7 +223,7 @@ class PDFProcessor:
     
     async def delete_file(self, file_id: str) -> bool:
         """
-        删除Gemini上传的文件
+        删除上传的文件
         
         Args:
             file_id: 文件ID
@@ -358,12 +231,5 @@ class PDFProcessor:
         Returns:
             删除是否成功
         """
-        try:
-            # 使用异步执行器避免阻塞
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, lambda: genai.delete_file(name=file_id))
-            logger.info(f"已删除文件: {file_id}")
-            return True
-        except Exception as e:
-            logger.error(f"删除文件失败: {str(e)}")
-            return False
+        # 使用客户端的删除方法
+        return await self.client.delete_file(file_id)

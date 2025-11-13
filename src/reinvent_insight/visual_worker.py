@@ -15,7 +15,7 @@ from datetime import datetime
 from loguru import logger
 
 from . import config
-from .summarizer import get_summarizer
+from .model_config import get_model_client
 from .task_manager import manager as task_manager
 
 logger = logger.bind(name=__name__)
@@ -24,21 +24,21 @@ logger = logger.bind(name=__name__)
 class VisualInterpretationWorker:
     """可视化解读生成工作器"""
     
-    def __init__(self, task_id: str, article_path: str, model_name: str, version: int = 0):
+    def __init__(self, task_id: str, article_path: str, model_name: str = None, version: int = 0):
         """
         初始化可视化解读工作器
         
         Args:
             task_id: 任务ID（用于进度推送）
             article_path: 深度解读文章的文件路径
-            model_name: AI模型名称（复用现有配置）
+            model_name: AI模型名称（已废弃，保留用于兼容性）
             version: 文章版本号（默认0表示无版本）
         """
         self.task_id = task_id
         self.article_path = Path(article_path)
-        self.model_name = model_name
         self.version = version
-        self.summarizer = get_summarizer(model_name)
+        # 使用任务类型获取模型客户端
+        self.client = get_model_client("visual_generation")
         self.text2html_prompt = self._load_text2html_prompt()
         self.max_retries = 3
         
@@ -174,7 +174,7 @@ class VisualInterpretationWorker:
     
     async def _generate_html(self, prompt: str) -> str:
         """
-        调用 AI 生成 HTML，包含重试逻辑
+        调用 AI 生成 HTML
         
         Args:
             prompt: 完整提示词
@@ -183,34 +183,23 @@ class VisualInterpretationWorker:
             生成的 HTML 内容
             
         Raises:
-            RuntimeError: 达到最大重试次数仍失败
+            RuntimeError: 生成失败
         """
-        for attempt in range(self.max_retries):
-            try:
-                logger.info(f"调用 AI 生成 HTML (尝试 {attempt + 1}/{self.max_retries})")
-                
-                html = await self.summarizer.generate_content(prompt)
-                
-                if html and html.strip():
-                    logger.success(f"AI 生成成功，HTML 长度: {len(html)} 字符")
-                    return html
-                
-                raise ValueError("AI 返回空内容")
-                
-            except Exception as e:
-                logger.warning(
-                    f"生成 HTML 失败 (尝试 {attempt + 1}/{self.max_retries}): {e}"
-                )
-                
-                if attempt == self.max_retries - 1:
-                    raise
-                
-                # 指数退避
-                wait_time = 2 ** attempt
-                logger.info(f"等待 {wait_time} 秒后重试...")
-                await asyncio.sleep(wait_time)
-        
-        raise RuntimeError("达到最大重试次数")
+        try:
+            logger.info("调用 AI 生成 HTML")
+            
+            # 使用新的模型客户端（内置重试机制）
+            html = await self.client.generate_content(prompt)
+            
+            if html and html.strip():
+                logger.success(f"AI 生成成功，HTML 长度: {len(html)} 字符")
+                return html
+            
+            raise ValueError("AI 返回空内容")
+            
+        except Exception as e:
+            logger.error(f"生成 HTML 失败: {e}")
+            raise RuntimeError(f"HTML 生成失败: {e}") from e
     
     def _clean_html(self, html: str) -> str:
         """

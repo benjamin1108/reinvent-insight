@@ -12,7 +12,7 @@ from loguru import logger
 
 from . import config
 from . import prompts
-from .summarizer import get_summarizer
+from .model_config import get_model_client
 from .task_manager import manager as task_manager
 from .downloader import VideoMetadata, sanitize_filename
 
@@ -185,7 +185,14 @@ class DeepSummaryWorkflow:
         
         self.metadata = video_metadata
         self.task_dir = os.path.join(TASKS_ROOT_DIR, self.task_id)
-        self.summarizer = get_summarizer(model_name)
+        # 根据内容类型选择模型客户端
+        if isinstance(content, DocumentContent):
+            if content.is_multimodal:
+                self.client = get_model_client("pdf_processing")
+            else:
+                self.client = get_model_client("document_analysis")
+        else:
+            self.client = get_model_client("video_summary")
         self.base_prompt = load_base_prompt()
         self.max_retries = 2
         self.generated_title_en = None  # 存储AI生成的英文标题
@@ -373,16 +380,16 @@ class DeepSummaryWorkflow:
                 # 根据内容类型选择生成方式
                 if self.content_type == "text":
                     # 文本注入方式
-                    chapter_content = await self.summarizer.generate_content(prompt)
+                    chapter_content = await self.client.generate_content(prompt)
                 elif self.content_type in ("multimodal", "pdf"):
                     # 多模态方式
-                    chapter_content = await self.summarizer.generate_content_with_pdf(
+                    chapter_content = await self.client.generate_content_with_file(
                         prompt,
                         self.content.file_info
                     )
                 else:
                     # 向后兼容：transcript方式
-                    chapter_content = await self.summarizer.generate_content(prompt)
+                    chapter_content = await self.client.generate_content(prompt)
                 
                 if not chapter_content or not chapter_content.strip():
                     raise ValueError("模型返回了空内容")
@@ -468,16 +475,16 @@ class DeepSummaryWorkflow:
                 # 根据内容类型选择生成方式
                 if self.content_type == "text":
                     # 文本注入方式
-                    outline = await self.summarizer.generate_content(prompt)
+                    outline = await self.client.generate_content(prompt)
                 elif self.content_type in ("multimodal", "pdf"):
                     # 多模态方式
-                    outline = await self.summarizer.generate_content_with_pdf(
+                    outline = await self.client.generate_content_with_file(
                         prompt, 
                         self.content.file_info
                     )
                 else:
                     # 向后兼容：transcript方式
-                    outline = await self.summarizer.generate_content(prompt)
+                    outline = await self.client.generate_content(prompt)
                 
                 if outline:
                     outline_path = os.path.join(self.task_dir, "outline.md")
@@ -565,16 +572,16 @@ class DeepSummaryWorkflow:
                 # 根据内容类型选择生成方式
                 if self.content_type == "text":
                     # 文本注入方式
-                    conclusion_content = await self.summarizer.generate_content(prompt)
+                    conclusion_content = await self.client.generate_content(prompt)
                 elif self.content_type in ("multimodal", "pdf"):
                     # 多模态方式
-                    conclusion_content = await self.summarizer.generate_content_with_pdf(
+                    conclusion_content = await self.client.generate_content_with_file(
                         prompt,
                         self.content.file_info
                     )
                 else:
                     # 向后兼容：transcript方式
-                    conclusion_content = await self.summarizer.generate_content(prompt)
+                    conclusion_content = await self.client.generate_content(prompt)
                 if conclusion_content:
                     conclusion_path = os.path.join(self.task_dir, "conclusion.md")
                     with open(conclusion_path, "w", encoding="utf-8") as f:

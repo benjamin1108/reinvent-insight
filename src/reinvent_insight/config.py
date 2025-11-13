@@ -39,6 +39,7 @@ else:
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 XAI_API_KEY = os.getenv("XAI_API_KEY")
 ALIBABA_API_KEY = os.getenv("ALIBABA_API_KEY")
+DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY")
 
 # --- 日志配置 ---
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
@@ -47,7 +48,13 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 PROMPT_FILE_PATH = PROJECT_ROOT / "prompt" / "youtbe-deep-summary.txt"
 
 # --- 模型配置 ---
+# 注意：模型配置已迁移到 config/model_config.yaml
+# 请使用 model_config.get_model_client(task_type) 获取模型客户端
+# PREFERRED_MODEL 已废弃，保留用于向后兼容
 PREFERRED_MODEL = os.getenv("PREFERRED_MODEL", "Gemini")
+
+# 模型配置文件路径
+MODEL_CONFIG_PATH = PROJECT_ROOT / "config" / "model_config.yaml"
 
 # --- 下载配置 ---
 DOWNLOAD_DIR = PROJECT_ROOT / "downloads"

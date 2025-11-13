@@ -1,0 +1,227 @@
+# ============================================================================
+# 统一模型配置文件
+# ============================================================================
+# 
+# 该配置文件定义了不同任务类型使用的AI模型及其参数。
+# 
+# 配置优先级：
+#   1. 运行时参数（最高优先级）
+#   2. 环境变量（格式：MODEL_{TASK_TYPE}_{PARAMETER}）
+#   3. 本配置文件
+#   4. 默认值（最低优先级）
+#
+# 环境变量示例：
+#   MODEL_PDF_PROCESSING_MODEL_NAME=gemini-2.5-pro
+#   MODEL_VIDEO_SUMMARY_TEMPERATURE=0.8
+#
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# 默认配置
+# ----------------------------------------------------------------------------
+# 当任务类型未定义特定配置时，使用此默认配置
+default:
+  # 模型提供商：gemini, xai, alibaba
+  provider: gemini
+  
+  # 模型名称
+  model_name: gemini-2.5-pro
+  
+  # API Key 环境变量名称（实际的 API Key 从环境变量读取）
+  api_key_env: GEMINI_API_KEY
+  
+  # 生成参数
+  generation:
+    # 温度：控制输出的随机性 (0.0-1.0)
+    # 较低的值使输出更确定，较高的值使输出更有创造性
+    temperature: 0.5
+    
+    # Top-p：核采样参数 (0.0-1.0)
+    # 控制输出的多样性
+    top_p: 0.9
+    
+    # Top-k：候选词数量
+    # 限制每步采样的候选词数量
+    top_k: 40
+    
+    # 最大输出令牌数
+    max_output_tokens: 65535
+  
+  # 速率限制
+  rate_limit:
+    # API 调用间隔（秒）
+    interval: 0.5
+    
+    # 最大重试次数
+    max_retries: 3
+    
+    # 重试退避基数（指数退避）
+    retry_backoff_base: 2.0
+
+# ----------------------------------------------------------------------------
+# 任务特定配置
+# ----------------------------------------------------------------------------
+tasks:
+  # --------------------------------------------------------------------------
+  # 视频摘要任务
+  # --------------------------------------------------------------------------
+  # 用于处理 YouTube 视频字幕，生成深度解读文章
+  video_summary:
+    provider: gemini
+    model_name: gemini-2.5-pro
+    api_key_env: GEMINI_API_KEY
+    
+    generation:
+      temperature: 0.7
+      top_p: 0.9
+      top_k: 40
+      # 视频摘要需要更大的输出空间
+      max_output_tokens: 65535
+    
+    rate_limit:
+      interval: 0.5
+      max_retries: 3
+      retry_backoff_base: 2.0
+
+  # --------------------------------------------------------------------------
+  # PDF 处理任务
+  # --------------------------------------------------------------------------
+  # 用于处理 PDF 文档，进行多模态分析（文本+图表）
+  pdf_processing:
+    provider: gemini
+    # 使用 flash 模型以获得更快的响应速度
+    model_name: gemini-2.5-pro
+    api_key_env: GEMINI_API_KEY
+    
+    generation:
+      # PDF 分析使用稍高的温度以获得更有创造性的解读
+      temperature: 0.5
+      top_p: 0.9
+      top_k: 40
+      max_output_tokens: 8000
+    
+    rate_limit:
+      interval: 0.5
+      max_retries: 3
+      retry_backoff_base: 2.0
+
+  # --------------------------------------------------------------------------
+  # 可视化生成任务
+  # --------------------------------------------------------------------------
+  # 用于将深度解读文章转换为可视化 HTML 网页
+  visual_generation:
+    provider: gemini
+    model_name: gemini-2.5-pro
+    api_key_env: GEMINI_API_KEY
+    
+    generation:
+      # 可视化生成需要更高的创造性
+      temperature: 0.8
+      top_p: 0.9
+      top_k: 40
+      # 生成 HTML 需要较大的输出空间
+      max_output_tokens: 128000
+    
+    rate_limit:
+      interval: 0.5
+      max_retries: 3
+      retry_backoff_base: 2.0
+
+  # --------------------------------------------------------------------------
+  # 文档分析任务
+  # --------------------------------------------------------------------------
+  # 用于处理 TXT、MD、DOCX 等文档格式
+  document_analysis:
+    provider: gemini
+    model_name: gemini-2.5-pro
+    api_key_env: GEMINI_API_KEY
+    
+    generation:
+      temperature: 0.7
+      top_p: 0.9
+      top_k: 40
+      max_output_tokens: 128000
+    
+    rate_limit:
+      interval: 0.5
+      max_retries: 3
+      retry_backoff_base: 2.0
+
+# ============================================================================
+# 配置说明
+# ============================================================================
+#
+# 1. 模型选择建议：
+#    - gemini-2.5-pro: 最强大的模型，适合复杂任务（视频摘要、可视化生成）
+#    - gemini-2.0-flash-exp: 更快的响应速度，适合实时任务（PDF处理）
+#
+# 2. 温度参数调优：
+#    - 0.0-0.3: 非常确定性，适合事实性任务
+#    - 0.4-0.7: 平衡创造性和准确性，适合大多数任务
+#    - 0.8-1.0: 高创造性，适合内容生成任务
+#
+# 3. 速率限制：
+#    - interval: 根据 API 配额调整，避免触发速率限制
+#    - max_retries: 建议 3-5 次，平衡可靠性和响应时间
+#
+# 4. 环境变量覆盖示例：
+#    export MODEL_PDF_PROCESSING_MODEL_NAME=gemini-2.5-pro
+#    export MODEL_VIDEO_SUMMARY_TEMPERATURE=0.8
+#    export MODEL_DEFAULT_API_KEY=your-api-key-here
+#
+# ============================================================================
+
+  # --------------------------------------------------------------------------
+  # DashScope 配置（阿里云通义千问）
+  # --------------------------------------------------------------------------
+  
+  # 视频摘要任务 - 使用 DashScope
+  dashscope_video_summary:
+    provider: dashscope
+    model_name: qwen3-max  # 可选: qwen-turbo, qwen-plus, qwen-max, qwen-max-longcontext
+    api_key_env: DASHSCOPE_API_KEY
+    
+    generation:
+      temperature: 0.7
+      top_p: 0.9
+      top_k: 40  # DashScope 不使用 top_k，但保留用于兼容性
+      max_output_tokens: 8000
+    
+    rate_limit:
+      interval: 0.5
+      max_retries: 3
+      retry_backoff_base: 2.0
+
+  # PDF 处理任务 - 使用 DashScope 多模态
+  dashscope_pdf_processing:
+    provider: dashscope
+    model_name: qwen-vl-max  # 多模态模型: qwen-vl-plus, qwen-vl-max
+    api_key_env: DASHSCOPE_API_KEY
+    
+    generation:
+      temperature: 0.7
+      top_p: 0.9
+      top_k: 40
+      max_output_tokens: 8000
+    
+    rate_limit:
+      interval: 0.5
+      max_retries: 3
+      retry_backoff_base: 2.0
+  
+  # 测试任务 - 使用最快的模型
+  dashscope_test:
+    provider: dashscope
+    model_name: qwen-turbo
+    api_key_env: DASHSCOPE_API_KEY
+    
+    generation:
+      temperature: 0.7
+      top_p: 0.9
+      top_k: 40
+      max_output_tokens: 2000
+    
+    rate_limit:
+      interval: 0.5
+      max_retries: 2
+      retry_backoff_base: 2.0
