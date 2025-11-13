@@ -79,10 +79,42 @@ def sanitize_filename(filename: str) -> str:
     sanitized = re.sub(r'\s+', ' ', sanitized).strip()
     return sanitized
 
+def normalize_youtube_url(url: str) -> str:
+    """
+    标准化 YouTube URL，移除不必要的参数。
+    
+    支持的格式：
+    - https://www.youtube.com/watch?v=VIDEO_ID
+    - https://youtu.be/VIDEO_ID
+    - https://youtu.be/VIDEO_ID?si=SHARE_ID
+    - https://m.youtube.com/watch?v=VIDEO_ID
+    
+    返回标准格式：https://www.youtube.com/watch?v=VIDEO_ID
+    """
+    # 匹配 youtu.be 短链接格式
+    short_pattern = re.compile(r'(?:https?://)?(?:www\.)?youtu\.be/([a-zA-Z0-9_-]{11})(?:\?.*)?')
+    short_match = short_pattern.match(url)
+    if short_match:
+        video_id = short_match.group(1)
+        return f"https://www.youtube.com/watch?v={video_id}"
+    
+    # 匹配标准 youtube.com 格式
+    standard_pattern = re.compile(r'(?:https?://)?(?:www\.|mutube\.com/watch\?v=([a-zA-Z0-9_-]{11})(?:&.*)?')
+    standard_match = standard_pattern.match(url)
+    if standard_match:
+        video_id = standard_match.group(1)
+        return f"https://www.youtube.com/watch?v={video_id}"
+    
+    # 如果无法匹配，返回原始 URL
+    logger.warning(f"无法解析 YouTube URL 格式: {url}")
+    return url
+
 class SubtitleDownloader:
     """封装 yt-dlp 调用，用于下载和处理字幕。"""
     def __init__(self, url: str):
-        self.url = url
+        # 标准化 URL，移除不必要的参数
+        self.url = normalize_youtube_url(url)
+        logger.info(f"标准化后的 URL: {self.url}")
         self.metadata: Optional[VideoMetadata] = None
 
     def _get_base_command(self) -> list[str]:
