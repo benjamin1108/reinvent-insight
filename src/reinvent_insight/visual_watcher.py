@@ -144,13 +144,41 @@ class VisualInterpretationWatcher:
         if file_key in self.processed_files:
             return False
         
-        # 2. 检查对应的可视化 HTML 是否存在
+        # 2. 检查是否有正在运行的可视化任务（避免重复生成）
+        base_name = md_file.stem
+        # 移除版本号后缀以获取基础名称
+        version_match = re.match(r'^(.+)_v(\d+)$', base_name)
+        if version_match:
+            base_name = version_match.group(1)
+        
+        # 检查是否有相关的可视化任务正在运行
+        # 遍历所有任务，查找与当前文件相关的可视化任务
+        for task_id, task_state in task_manager.tasks.items():
+            # 检查任务 ID 是否包含 _visual 标识
+            if '_visual' not in task_id:
+                continue
+            
+            # 检查任务状态是否为运行中或待处理
+            if task_state.status not in ['pending', 'running']:
+                continue
+            
+            # 检查任务 ID 是否与当前文件相关
+            # workflow 触发的任务格式：{task_id}_visual
+            # watcher 触发的任务格式：visual_{filename}_{timestamp}
+            normalized_base = base_name.replace(' ', '_')
+            if normalized_base in task_id or base_name in task_id:
+                logger.info(
+                    f"跳过 {md_file.name}，已有可视化任务正在运行: {task_id} (状态: {task_state.status})"
+                )
+                return False
+        
+        # 3. 检查对应的可视化 HTML 是否存在
         visual_html = self._get_visual_html_path(md_file)
         if not visual_html.exists():
             logger.info(f"发现新文件需要生成可视化: {md_file.name}")
             return True
         
-        # 3. 检查版本是否匹配
+        # 4. 检查版本是否匹配
         md_version = self._extract_version(md_file.stem)
         html_version = self._extract_version(visual_html.stem)
         
