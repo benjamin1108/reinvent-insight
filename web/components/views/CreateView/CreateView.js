@@ -55,6 +55,18 @@ export default {
     reconnectAttempt: {
       type: Number,
       default: 0
+    },
+    
+    // 当前错误信息
+    currentError: {
+      type: Object,
+      default: null
+    },
+    
+    // 是否展开错误详情
+    showErrorDetails: {
+      type: Boolean,
+      default: false
     }
   },
   
@@ -69,6 +81,11 @@ export default {
   
   setup(props, { emit }) {
     const { computed, ref } = Vue;
+    
+    // 错误处理辅助函数（从全局获取）
+    const getErrorIcon = window.getErrorIcon || ((type) => '⚠️');
+    const getErrorColor = window.getErrorColor || ((type) => '#6b7280');
+    const getErrorTitle = window.getErrorTitle || ((type) => '错误');
     
     // 文件上传相关
     const selectedFileName = ref('');
@@ -312,7 +329,11 @@ export default {
       handleFileUpload,
       handleFileDrop,
       formatFileSize,
-      handleViewSummary
+      handleViewSummary,
+      // 错误处理方法
+      getErrorIcon,
+      getErrorColor,
+      getErrorTitle
     };
   }
 };

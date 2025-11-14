@@ -801,3 +801,122 @@
   font-size: 0.875rem;
   margin: 0.25rem 0;
 }
+
+
+/* 错误卡片样式 */
+.create-view__error-card {
+  margin-top: 1.5rem;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  animation: create-view-slideUp 0.3s ease-out;
+}
+
+.create-view__error-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.create-view__error-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.create-view__error-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #f3f4f6;
+  margin: 0;
+}
+
+.create-view__error-message {
+  color: #d1d5db;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  margin: 0 0 1rem 0;
+}
+
+.create-view__error-suggestions {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 0.5rem;
+  border-left: 3px solid #06b6d4;
+}
+
+.create-view__error-suggestions-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #06b6d4;
+  margin: 0 0 0.5rem 0;
+}
+
+.create-view__error-suggestions-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: #d1d5db;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.create-view__error-suggestions-list li {
+  margin-bottom: 0.25rem;
+}
+
+.create-view__error-suggestions-list li:last-child {
+  margin-bottom: 0;
+}
+
+.create-view__error-details {
+  margin-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 1rem;
+}
+
+.create-view__error-details-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  color: #9ca3af;
+  font-size: 0.875rem;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.create-view__error-details-toggle:hover {
+  color: #d1d5db;
+}
+
+.create-view__error-details-icon {
+  width: 1rem;
+  height: 1rem;
+  transition: transform 0.2s;
+}
+
+.create-view__error-details-icon--open {
+  transform: rotate(180deg);
+}
+
+.create-view__error-details-content {
+  margin-top: 0.75rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 0.5rem;
+  overflow-x: auto;
+}
+
+.create-view__error-details-content pre {
+  margin: 0;
+  color: #9ca3af;
+  font-size: 0.8125rem;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}

@@ -161,8 +161,11 @@
       <!-- 创建分析视图 -->
       <create-view v-if="currentView === 'create' && isAuthenticated && !isShareView" :url="url" :loading="loading"
         :progress-percent="progressPercent" :logs="logs" :finalized-logs="finalizedLogs"
-        :title="title" :created-doc-hash="createdDocHash" @update:url="url = $event" @start-analysis="startSummarize"
-        @view-summary="viewSummary">
+        :title="title" :created-doc-hash="createdDocHash" 
+        :current-error="currentError" :show-error-details="showErrorDetails"
+        :connection-state="connectionState" :reconnect-attempt="reconnectAttempts"
+        @update:url="url = $event" @start-analysis="startSummarize"
+        @view-summary="viewSummary" @manual-reconnect="manualReconnect">
       </create-view>
 
       <!-- 最近文章视图 -->

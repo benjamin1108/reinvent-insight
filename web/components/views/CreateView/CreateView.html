@@ -150,6 +150,45 @@
         <span class="create-view__log-text create-view__log-text--pending">{{ logs[logs.length - 1] }}</span>
       </div>
     </div>
+    
+    <!-- 错误详情卡片 -->
+    <div v-if="currentError && !loading" class="create-view__error-card">
+      <div class="create-view__error-header">
+        <span class="create-view__error-icon" :style="{ color: getErrorColor(currentError.error_type) }">
+          {{ getErrorIcon(currentError.error_type) }}
+        </span>
+        <h4 class="create-view__error-title">{{ getErrorTitle(currentError.error_type) }}</h4>
+      </div>
+      
+      <p class="create-view__error-message">{{ currentError.message }}</p>
+      
+      <!-- 建议操作 -->
+      <div v-if="currentError.suggestions && currentError.suggestions.length > 0" class="create-view__error-suggestions">
+        <p class="create-view__error-suggestions-title">建议操作：</p>
+        <ul class="create-view__error-suggestions-list">
+          <li v-for="(suggestion, index) in currentError.suggestions" :key="index">
+            {{ suggestion }}
+          </li>
+        </ul>
+      </div>
+      
+      <!-- 技术详情（可展开） -->
+      <div v-if="currentError.technical_details" class="create-view__error-details">
+        <button 
+          @click="showErrorDetails = !showErrorDetails"
+          class="create-view__error-details-toggle">
+          <span>{{ showErrorDetails ? '隐藏' : '展开' }}技术详情</span>
+          <svg 
+            :class="['create-view__error-details-icon', { 'create-view__error-details-icon--open': showErrorDetails }]"
+            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        <div v-if="showErrorDetails" class="create-view__error-details-content">
+          <pre>{{ currentError.technical_details }}</pre>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Result -->

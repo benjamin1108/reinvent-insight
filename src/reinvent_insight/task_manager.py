@@ -265,26 +265,49 @@ class TaskManager:
                 except Exception as e:
                     logger.warning(f"向任务 {task_id} 更新进度失败: {e}")
     
-    async def set_task_error(self, task_id: str, message: str):
+    async def set_task_error(self, task_id: str, error_info):
         """
         设置任务错误状态并发送到队列
         
         Args:
             task_id: 任务ID
-            message: 错误消息
+            error_info: 错误信息，可以是字符串或字典
+                如果是字典，应包含: error_type, message, technical_details, suggestions 等字段
         """
         if task_id in self.tasks:
             task_state = self.tasks[task_id]
             task_state.status = "error"
-            task_state.logs.append(message)
+            
+            # 处理不同类型的错误信息
+            if isinstance(error_info, dict):
+                # 结构化错误信息
+                error_message = error_info.get("message", "未知错误")
+                task_state.logs.append(error_message)
+                
+                error_data = {
+                    "type": "error",
+                    "error_type": error_info.get("error_type", "unknown"),
+                    "message": error_message,
+                    "technical_details": error_info.get("technical_details"),
+                    "suggestions": error_info.get("suggestions"),
+                    "retry_after": error_info.get("retry_after")
+                }
+            else:
+                # 简单字符串错误消息（向后兼容）
+                error_message = str(error_info)
+                task_state.logs.append(error_message)
+                
+                error_data = {
+                    "type": "error",
+                    "error_type": "unknown",
+                    "message": error_message
+                }
+            
             queue = task_state.message_queue
             if queue:
                 try:
                     await asyncio.wait_for(
-                        queue.put({
-                            "type": "error",
-                            "message": message
-                        }),
+                        queue.put(error_data),
                         timeout=1.0
                     )
                 except asyncio.TimeoutError:

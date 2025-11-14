@@ -19,10 +19,31 @@ async def summary_task_worker_async(url: str, task_id: str):
         
         # 使用 to_thread 将同步的下载操作放入后台线程
         dl = downloader.SubtitleDownloader(url)
-        subtitle_text, metadata = await loop.run_in_executor(None, dl.download)
+        subtitle_text, metadata, error = await loop.run_in_executor(None, dl.download)
 
-        if not subtitle_text or not metadata:
-            raise ValueError("无法获取字幕，请检查链接。")
+        if error or not subtitle_text or not metadata:
+            # 下载失败，发送结构化错误信息
+            if error:
+                error_dict = error.to_dict()
+                error_message = error.message
+                
+                # 构建详细的错误消息
+                if error.suggestions:
+                    error_message += "\n\n建议操作："
+                    for suggestion in error.suggestions:
+                        error_message += f"\n• {suggestion}"
+                
+                logger.error(f"任务 {task_id} 下载字幕失败: {error.error_type.value} - {error.message}")
+                await manager.set_task_error(task_id, error_dict)
+            else:
+                # 未知错误
+                logger.error(f"任务 {task_id} 下载字幕失败: 未知错误")
+                await manager.set_task_error(task_id, {
+                    "error_type": "unknown",
+                    "message": "无法获取字幕，请检查链接",
+                    "suggestions": ["检查 URL 是否正确", "检查网络连接"]
+                })
+            return
             
         video_title = metadata.title
         # 将原始视频标题写入任务目录，供后续重新拼接等操作使用
@@ -35,9 +56,28 @@ async def summary_task_worker_async(url: str, task_id: str):
 
         await manager.send_message(f"字幕获取成功，准备开始深度分析", task_id)
 
+    except ValueError as e:
+        # URL 验证错误
+        logger.error(f"任务 {task_id} URL 验证失败: {e}", exc_info=True)
+        await manager.set_task_error(task_id, {
+            "error_type": "invalid_url",
+            "message": str(e),
+            "suggestions": [
+                "检查 URL 格式是否正确",
+                "确保是有效的 YouTube 链接",
+                "示例: https://www.youtube.com/watch?v=VIDEO_ID"
+            ]
+        })
+        return
     except Exception as e:
-        logger.error(f"任务 {task_id} 下载字幕失败: {e}", exc_info=True)
-        await manager.set_task_error(task_id, f"字幕获取失败，请检查视频链接是否正确")
+        # 其他未预期的错误
+        logger.error(f"任务 {task_id} 发生未预期错误: {e}", exc_info=True)
+        await manager.set_task_error(task_id, {
+            "error_type": "unknown",
+            "message": f"发生未预期错误: {str(e)}",
+            "technical_details": str(e),
+            "suggestions": ["请稍后重试", "如果问题持续，请联系技术支持"]
+        })
         return
 
     # 将标题和字幕拼接，为大模型提供更完整的上下文

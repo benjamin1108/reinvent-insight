@@ -132,7 +132,69 @@ const configureMarked = (markedInstance) => {
 // 初始配置marked（如果已加载）
 ensureMarkedReady(configureMarked);
 
+// ===== 错误类型映射 =====
+const ERROR_TYPE_CONFIG = {
+  network_timeout: {
+    icon: '⏱️',
+    color: '#f59e0b', // 橙色
+    title: '网络超时'
+  },
+  access_forbidden: {
+    icon: '🚫',
+    color: '#ef4444', // 红色
+    title: '访问被拒绝'
+  },
+  no_subtitles: {
+    icon: '📝',
+    color: '#3b82f6', // 蓝色
+    title: '字幕不可用'
+  },
+  tool_missing: {
+    icon: '🔧',
+    color: '#ef4444', // 红色
+    title: '工具缺失'
+  },
+  invalid_url: {
+    icon: '❌',
+    color: '#ef4444', // 红色
+    title: '无效的 URL'
+  },
+  video_not_found: {
+    icon: '🔍',
+    color: '#f59e0b', // 橙色
+    title: '视频未找到'
+  },
+  rate_limited: {
+    icon: '⏸️',
+    color: '#eab308', // 黄色
+    title: '请求过于频繁'
+  },
+  unknown: {
+    icon: '⚠️',
+    color: '#6b7280', // 灰色
+    title: '未知错误'
+  }
+};
 
+// 获取错误图标
+const getErrorIcon = (errorType) => {
+  return ERROR_TYPE_CONFIG[errorType]?.icon || ERROR_TYPE_CONFIG.unknown.icon;
+};
+
+// 获取错误颜色
+const getErrorColor = (errorType) => {
+  return ERROR_TYPE_CONFIG[errorType]?.color || ERROR_TYPE_CONFIG.unknown.color;
+};
+
+// 获取错误标题
+const getErrorTitle = (errorType) => {
+  return ERROR_TYPE_CONFIG[errorType]?.title || ERROR_TYPE_CONFIG.unknown.title;
+};
+
+// 将错误处理函数暴露到全局，供组件使用
+window.getErrorIcon = getErrorIcon;
+window.getErrorColor = getErrorColor;
+window.getErrorTitle = getErrorTitle;
 
 // 创建Vue应用实例
 const app = createApp({
@@ -147,6 +209,10 @@ const app = createApp({
     const progressPercent = ref(0);
     const createdFilename = ref('');
     const createdDocHash = ref('');
+    
+    // 错误状态
+    const currentError = ref(null); // 存储结构化错误信息
+    const showErrorDetails = ref(false); // 是否展开技术细节
     
     // SSE 重连相关状态
     const connectionState = ref('disconnected');
@@ -661,8 +727,22 @@ const app = createApp({
             progressPercent.value = data.progress || 0;
             console.log(`📊 进度更新: ${progressPercent.value}%`);
           } else if (data.type === 'error') {
-            // 处理错误消息
-            logs.value.push(`错误: ${data.message}`);
+            // 处理结构化错误消息
+            console.log('📛 收到错误消息:', data);
+            
+            // 存储结构化错误信息
+            currentError.value = {
+              error_type: data.error_type || 'unknown',
+              message: data.message || '未知错误',
+              technical_details: data.technical_details,
+              suggestions: data.suggestions || [],
+              retry_after: data.retry_after
+            };
+            
+            // 添加错误日志
+            const errorTitle = getErrorTitle(data.error_type || 'unknown');
+            logs.value.push(`${getErrorIcon(data.error_type || 'unknown')} ${errorTitle}: ${data.message}`);
+            
             loading.value = false;
             clearActiveTask();
             connectionState.value = 'disconnected';
