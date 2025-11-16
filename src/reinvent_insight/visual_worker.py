@@ -76,35 +76,47 @@ class VisualInterpretationWorker:
             生成的 HTML 文件路径，失败返回 None
         """
         try:
-            logger.info(f"开始生成可视化解读 - 任务: {self.task_id}")
+            logger.info(f"开始生成可视化解读 - 任务: {self.task_id}, 文章: {self.article_path}")
             await self._log("正在生成可视化解读...", progress=10)
             
             # 1. 读取深度解读内容
+            logger.info(f"步骤1: 读取文章内容 - {self.article_path}")
             article_content = await self._read_article_content()
+            logger.info(f"文章内容长度: {len(article_content)} 字符")
             await self._log("已读取文章内容", progress=20)
             
             # 2. 构建完整提示词
+            logger.info("步骤2: 构建提示词")
             full_prompt = self._build_prompt(article_content)
+            logger.info(f"提示词长度: {len(full_prompt)} 字符")
             await self._log("已构建提示词", progress=30)
             
             # 3. 调用 AI 生成 HTML
+            logger.info("步骤3: 调用 AI 生成 HTML")
             html_content = await self._generate_html(full_prompt)
+            logger.info(f"AI 返回内容长度: {len(html_content)} 字符")
             await self._log("AI 生成完成", progress=60)
             
             # 4. 清理 HTML 内容
+            logger.info("步骤4: 清理 HTML 内容")
             html_content = self._clean_html(html_content)
+            logger.info(f"清理后 HTML 长度: {len(html_content)} 字符")
             await self._log("HTML 清理完成", progress=70)
             
             # 5. 验证 HTML 格式
+            logger.info("步骤5: 验证 HTML 格式")
             if not self._validate_html(html_content):
                 raise ValueError("生成的 HTML 格式无效")
             await self._log("HTML 验证通过", progress=80)
             
-            # 5. 保存 HTML 文件
+            # 6. 保存 HTML 文件
+            logger.info("步骤6: 保存 HTML 文件")
             html_path = await self._save_html(html_content)
-            await self._log("HTML 文件已保存", progress=90)
+            logger.info(f"HTML 文件已保存到: {html_path}")
+            await self._log(f"HTML 文件已保存: {html_path.name}", progress=90)
             
-            # 6. 更新文章元数据
+            # 7. 更新文章元数据
+            logger.info("步骤7: 更新文章元数据")
             await self._update_article_metadata(html_path)
             await self._log("可视化解读生成完成！", progress=100)
             
@@ -114,7 +126,8 @@ class VisualInterpretationWorker:
         except Exception as e:
             error_msg = f"可视化解读生成失败: {e}"
             logger.error(f"任务 {self.task_id} - {error_msg}", exc_info=True)
-            await task_manager.set_task_error(self.task_id, "可视化解读生成失败")
+            await self._log(f"生成失败: {str(e)}", progress=0)
+            await task_manager.set_task_error(self.task_id, f"可视化解读生成失败: {str(e)}")
             return None
     
     async def _read_article_content(self) -> str:
@@ -203,45 +216,6 @@ class VisualInterpretationWorker:
     
     def _clean_html(self, html: str) -> str:
         """
-        清理 AI 生成的 HTML，移除多余的解释文字和代码块标记
-        
-        Args:
-            html: 原始 HTML 内容
-            
-        Returns:
-            清理后的 HTML
-        """
-        import re
-        
-        # 1. 尝试提取 ```html 代码块中的内容
-        html_block_match = re.search(r'```html\s*(.*?)\s*```', html, re.DOTALL | re.IGNORECASE)
-        if html_block_match:
-            html = html_block_match.group(1)
-            logger.info("从 markdown 代码块中提取 HTML")
-        
-        # 2. 如果没有代码块，尝试找到 <!DOCTYPE html> 或 <html 的位置
-        if '<!DOCTYPE html>' in html:
-            start_idx = html.find('<!DOCTYPE html>')
-            html = html[start_idx:]
-            logger.info("从 <!DOCTYPE html> 开始提取")
-        elif '<html' in html.lower():
-            start_idx = html.lower().find('<html')
-            html = html[start_idx:]
-            logger.info("从 <html 标签开始提取")
-        
-        # 3. 移除 HTML 结束后的多余内容
-        if '</html>' in html.lower():
-            end_idx = html.lower().rfind('</html>') + len('</html>')
-            html = html[:end_idx]
-            logger.info("移除 </html> 之后的内容")
-        
-        # 4. 移除可能的 markdown 代码块结束标记
-        html = re.sub(r'```\s*$', '', html, flags=re.MULTILINE)
-        
-        return html.strip()
-    
-    def _clean_html(self, html: str) -> str:
-        """
         清理 HTML 内容，移除多余的前缀和后缀
         
         Args:
@@ -323,31 +297,50 @@ class VisualInterpretationWorker:
         Returns:
             保存的文件路径
         """
-        # 注入 iframe 高度通信脚本
-        html_content = self._inject_iframe_script(html_content)
-        
-        # 生成文件名：{原文件名}_visual.html 或 {原文件名}_v2_visual.html
-        base_name = self.article_path.stem
-        
-        # 如果原文件名包含版本号（如 article_v2），提取基础名称
-        version_match = re.match(r'^(.+)_v(\d+)$', base_name)
-        if version_match:
-            base_name = version_match.group(1)
-            self.version = int(version_match.group(2))
-        
-        # 构建 HTML 文件名
-        if self.version > 0:
-            html_filename = f"{base_name}_v{self.version}_visual.html"
-        else:
-            html_filename = f"{base_name}_visual.html"
-        
-        html_path = self.article_path.parent / html_filename
-        
-        # 保存文件
-        html_path.write_text(html_content, encoding="utf-8")
-        logger.info(f"可视化 HTML 已保存: {html_path} (版本: {self.version})")
-        
-        return html_path
+        try:
+            # 注入 iframe 高度通信脚本
+            logger.info("注入 iframe 通信脚本")
+            html_content = self._inject_iframe_script(html_content)
+            
+            # 生成文件名：{原文件名}_visual.html 或 {原文件名}_v2_visual.html
+            base_name = self.article_path.stem
+            logger.info(f"原始文件名: {base_name}")
+            
+            # 如果原文件名包含版本号（如 article_v2），提取基础名称
+            version_match = re.match(r'^(.+)_v(\d+)$', base_name)
+            if version_match:
+                base_name = version_match.group(1)
+                self.version = int(version_match.group(2))
+                logger.info(f"检测到版本号: v{self.version}, 基础名称: {base_name}")
+            
+            # 构建 HTML 文件名
+            if self.version > 0:
+                html_filename = f"{base_name}_v{self.version}_visual.html"
+            else:
+                html_filename = f"{base_name}_visual.html"
+            
+            html_path = self.article_path.parent / html_filename
+            logger.info(f"目标 HTML 路径: {html_path}")
+            
+            # 确保目录存在
+            html_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # 保存文件
+            logger.info(f"写入 HTML 文件，内容长度: {len(html_content)} 字符")
+            html_path.write_text(html_content, encoding="utf-8")
+            
+            # 验证文件是否成功保存
+            if not html_path.exists():
+                raise IOError(f"HTML 文件保存失败，文件不存在: {html_path}")
+            
+            file_size = html_path.stat().st_size
+            logger.success(f"可视化 HTML 已保存: {html_path} (版本: {self.version}, 大小: {file_size} 字节)")
+            
+            return html_path
+            
+        except Exception as e:
+            logger.error(f"保存 HTML 文件失败: {e}", exc_info=True)
+            raise
     
     def _inject_iframe_script(self, html_content: str) -> str:
         """

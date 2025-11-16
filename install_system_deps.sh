@@ -50,6 +50,18 @@ install_ubuntu_deps() {
     print_info "更新包列表..."
     sudo apt-get update -qq
     
+    # Node.js (yt-dlp 需要 JavaScript 运行时)
+    print_info "检查 Node.js..."
+    if ! command -v node &> /dev/null; then
+        print_info "安装 Node.js 18.x LTS..."
+        curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+        print_success "Node.js 安装完成"
+    else
+        NODE_VERSION=$(node --version)
+        print_info "Node.js 已安装: $NODE_VERSION"
+    fi
+    
     # PDF 处理相关依赖
     print_info "安装 PDF 处理库..."
     sudo apt-get install -y -qq \
@@ -105,6 +117,18 @@ install_ubuntu_deps() {
 # CentOS/RHEL/Fedora 系统依赖安装
 install_centos_deps() {
     print_info "开始安装 CentOS/RHEL/Fedora 系统依赖..."
+    
+    # Node.js (yt-dlp 需要 JavaScript 运行时)
+    print_info "检查 Node.js..."
+    if ! command -v node &> /dev/null; then
+        print_info "安装 Node.js 18.x LTS..."
+        curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+        sudo yum install -y nodejs
+        print_success "Node.js 安装完成"
+    else
+        NODE_VERSION=$(node --version)
+        print_info "Node.js 已安装: $NODE_VERSION"
+    fi
     
     # PDF 处理相关依赖
     print_info "安装 PDF 处理库..."
@@ -167,6 +191,14 @@ verify_fonts() {
     # 检查中文字体
     local noto_fonts=$(fc-list | grep -i "noto.*cjk" | wc -l)
     local wqy_fonts=$(fc-list | grep -i "wqy" | wc -l)
+    
+    # 验证 Node.js
+    if command -v node &> /dev/null; then
+        local node_version=$(node --version)
+        print_success "Node.js: $node_version"
+    else
+        print_warning "Node.js: 未安装"
+    fi
     
     echo ""
     echo "======================================"
@@ -241,18 +273,22 @@ show_summary() {
     echo -e "${GREEN}安装总结${NC}"
     echo "======================================"
     echo "已安装的组件:"
+    echo "  ✓ Node.js (JavaScript 运行时，yt-dlp 需要)"
     echo "  ✓ PDF 处理库 (Cairo, Pango, etc.)"
     echo "  ✓ 中文字体 (Noto CJK, WQY)"
     echo "  ✓ Playwright 浏览器依赖"
     echo ""
     echo "下一步:"
     echo "  1. 安装 Python 依赖:"
-    echo "     pip install weasyprint reportlab playwright"
+    echo "     pip install weasyprint reportlab playwright yt-dlp"
     echo ""
     echo "  2. 安装 Playwright 浏览器:"
     echo "     playwright install chromium"
     echo ""
-    echo "  3. 测试 PDF 生成:"
+    echo "  3. 测试 YouTube 下载:"
+    echo "     yt-dlp --dump-json --no-playlist 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'"
+    echo ""
+    echo "  4. 测试 PDF 生成:"
     echo "     python -c 'from weasyprint import HTML; HTML(string=\"<h1>测试</h1>\").write_pdf(\"/tmp/test.pdf\")'"
     echo ""
     echo "======================================"

@@ -246,6 +246,7 @@ class OutlineGenerator:
         
         # 使用现有的 OUTLINE_PROMPT_TEMPLATE 并添加自适应指令
         prompt = prompts.OUTLINE_PROMPT_TEMPLATE.format(
+            role_and_style=prompts.ROLE_AND_STYLE_GUIDE,
             base_prompt=base_prompt + multimodal_guide + adaptive_instructions,
             content_type=content_type,
             content_description=content_description,
@@ -345,6 +346,49 @@ def create_anchor(text: str) -> str:
     text = re.sub(r'\s+', '-', text)
     return text
 
+
+def remove_parenthetical_english(text: str) -> str:
+    """
+    移除文本中的"中文（英文）"格式
+    
+    这是一个后处理函数，用于清理模型生成的内容中不必要的英文注释。
+    这是提示词优化的补充保险措施，确保即使模型偶尔犯错也能自动修正。
+    
+    Examples:
+        "目标（goals）" -> "目标"
+        "**方法**（methods）" -> "**方法**"
+        "超人级表现（superhuman performance）" -> "超人级表现"
+        "OpenAI 是一家公司" -> "OpenAI 是一家公司"  # 无括号，保持不变
+    
+    Args:
+        text: 待处理的文本
+        
+    Returns:
+        清理后的文本
+    """
+    import re
+    
+    # 匹配模式：中文（可能包含加粗标记**）后跟括号，括号内是英文
+    # 支持：中文（英文）、**中文**（英文）、中文 (英文) 等格式
+    # [\u4e00-\u9fa5*]+ 匹配中文字符和星号（用于加粗）
+    pattern = r'([\u4e00-\u9fa5*]+)[\s]*[\(（]([a-zA-Z\s\-]+)[\)）]'
+    
+    def replace_func(match):
+        chinese_part = match.group(1)
+        # 直接返回中文部分，去掉括号和英文
+        return chinese_part
+    
+    # 执行替换
+    cleaned_text = re.sub(pattern, replace_func, text)
+    
+    # 记录清理情况
+    if cleaned_text != text:
+        removed_count = len(re.findall(pattern, text))
+        logger.info(f"后处理清理：移除了 {removed_count} 处不必要的英文注释")
+    
+    return cleaned_text
+
+
 def generate_toc_with_links(chapters: List[str]) -> str:
     """根据章节列表生成带锚点链接的 Markdown 目录。"""
     toc_md_lines = ["### 主要目录"]
@@ -380,10 +424,23 @@ def extract_titles_from_outline(outline_content: str) -> Tuple[Optional[str], Op
     
     # 方法1: 尝试提取JSON格式的标题信息
     try:
-        json_match = re.search(r'\{[\s\S]*?"title_en"[\s\S]*?"title_cn"[\s\S]*?\}', outline_content)
-        if json_match:
+        # 使用更健壮的JSON提取方法：查找第一个{，然后匹配括号平衡
+        json_str = None
+        start_idx = outline_content.find('{')
+        if start_idx != -1:
+            brace_count = 0
+            for i in range(start_idx, len(outline_content)):
+                if outline_content[i] == '{':
+                    brace_count += 1
+                elif outline_content[i] == '}':
+                    brace_count -= 1
+                    if brace_count == 0:
+                        json_str = outline_content[start_idx:i+1]
+                        break
+        
+        if json_str:
             import json
-            title_data = json.loads(json_match.group(0))
+            title_data = json.loads(json_str)
             title_en = title_data.get('title_en', '').strip()
             title_cn = title_data.get('title_cn', '').strip()
             
@@ -630,6 +687,7 @@ class DeepSummaryWorkflow:
             deduplication_instruction = prompts.DEDUPLICATION_INSTRUCTION_FIRST
         
         prompt = prompts.CHAPTER_PROMPT_TEMPLATE.format(
+            role_and_style=prompts.ROLE_AND_STYLE_GUIDE,
             base_prompt=self.base_prompt + multimodal_guide,
             content_type=content_type,
             content_description=content_description,
@@ -690,6 +748,10 @@ class DeepSummaryWorkflow:
                     chapter_content = f"{expected_title_prefix}\n\n{chapter_content}"
                 # ---- End: 标题校验和修复逻辑 ----
 
+                # ---- Start: 后处理清理不必要的英文注释 ----
+                chapter_content = remove_parenthetical_english(chapter_content)
+                # ---- End: 后处理清理 ----
+
                 chapter_path = os.path.join(self.task_dir, f"chapter_{index + 1}.md")
                 with open(chapter_path, "w", encoding="utf-8") as f:
                     f.write(chapter_content)
@@ -730,6 +792,7 @@ class DeepSummaryWorkflow:
             multimodal_guide = ""
         
         prompt = prompts.OUTLINE_PROMPT_TEMPLATE.format(
+            role_and_style=prompts.ROLE_AND_STYLE_GUIDE,
             base_prompt=self.base_prompt + multimodal_guide,
             content_type=content_type,
             content_description=content_description,
@@ -754,6 +817,9 @@ class DeepSummaryWorkflow:
                     outline = await self.client.generate_content(prompt)
                 
                 if outline:
+                    # 后处理：清理不必要的英文注释
+                    outline = remove_parenthetical_english(outline)
+                    
                     outline_path = os.path.join(self.task_dir, "outline.md")
                     with open(outline_path, "w", encoding="utf-8") as f:
                         f.write(outline)
@@ -826,6 +892,7 @@ class DeepSummaryWorkflow:
             multimodal_guide = ""
 
         prompt = prompts.CONCLUSION_PROMPT_TEMPLATE.format(
+            role_and_style=prompts.ROLE_AND_STYLE_GUIDE,
             base_prompt=self.base_prompt + multimodal_guide,
             content_type=content_type,
             content_description=content_description,
@@ -850,6 +917,9 @@ class DeepSummaryWorkflow:
                     # 向后兼容：transcript方式
                     conclusion_content = await self.client.generate_content(prompt)
                 if conclusion_content:
+                    # 后处理：清理不必要的英文注释
+                    conclusion_content = remove_parenthetical_english(conclusion_content)
+                    
                     conclusion_path = os.path.join(self.task_dir, "conclusion.md")
                     with open(conclusion_path, "w", encoding="utf-8") as f:
                         f.write(conclusion_content)
@@ -989,7 +1059,19 @@ class DeepSummaryWorkflow:
             # 生成新的任务ID
             visual_task_id = f"{self.task_id}_visual"
             
-            logger.info(f"准备启动可视化解读任务: {visual_task_id} (版本: {version})")
+            logger.info(f"准备启动可视化解读任务: {visual_task_id}")
+            logger.info(f"  - 文章路径: {article_path}")
+            logger.info(f"  - 版本号: {version}")
+            logger.info(f"  - 模型: {self.model_name}")
+            
+            # 验证文章文件是否存在
+            from pathlib import Path
+            article_file = Path(article_path)
+            if not article_file.exists():
+                logger.error(f"文章文件不存在，无法启动可视化任务: {article_path}")
+                return
+            
+            logger.info(f"文章文件存在，大小: {article_file.stat().st_size} 字节")
             
             # 创建工作器
             from .visual_worker import VisualInterpretationWorker
@@ -1006,7 +1088,7 @@ class DeepSummaryWorkflow:
                 worker.run()
             )
             
-            logger.info(f"可视化解读生成任务已启动: {visual_task_id} (版本: {version})")
+            logger.success(f"可视化解读生成任务已启动: {visual_task_id} (版本: {version})")
             
         except Exception as e:
             logger.error(f"启动可视化解读任务失败: {e}", exc_info=True)

@@ -481,88 +481,208 @@ class SubtitleDownloader:
             logger.error(f"解析 yt-dlp 输出的 JSON 失败: {e}")
             return False
 
-    def _download_subtitles_with_retry(self, subtitle_langs: list[str]) -> tuple[bool, Optional[DownloadError]]:
+    def _list_available_subtitles(self) -> tuple[dict, Optional[DownloadError]]:
         """
-        使用重试机制下载字幕。
+        列出视频所有可用的字幕。
         
+        Returns:
+            tuple: (字幕字典 {lang: is_auto}, 错误对象)
+            字幕字典格式: {'en': False, 'zh-Hans': True} 表示英文是人工字幕，中文是自动生成
+        """
+        try:
+            logger.info("正在获取可用字幕列表...")
+            command = self._get_base_command()
+            command.extend(['--list-subs', '--skip-download'])
+            command.append(self.url)
+            
+            result = subprocess.run(
+                command,
+                capture_output=True, text=True, check=True, encoding='utf-8'
+            )
+            
+            # 解析输出，提取字幕信息
+            output = result.stdout
+            subtitles = {}
+            
+            # 查找 "Available subtitles" 和 "Available automatic captions" 部分
+            in_manual_section = False
+            in_auto_section = False
+            
+            for line in output.splitlines():
+                line_lower = line.lower()
+                
+                if 'available subtitles' in line_lower and 'automatic' not in line_lower:
+                    in_manual_section = True
+                    in_auto_section = False
+                    continue
+                elif 'available automatic captions' in line_lower or 'auto-generated' in line_lower:
+                    in_auto_section = True
+                    in_manual_section = False
+                    continue
+                elif line.startswith('Available formats') or line.startswith('[info]'):
+                    in_manual_section = False
+                    in_auto_section = False
+                    continue
+                
+                # 提取语言代码（通常在行首）
+                if in_manual_section or in_auto_section:
+                    # 匹配语言代码格式：en, zh-Hans, zh-CN 等
+                    match = re.match(r'^([a-z]{2}(?:-[A-Z][a-z]+)?(?:-[A-Z]{2})?)\s', line)
+                    if match:
+                        lang = match.group(1)
+                        subtitles[lang] = in_auto_section  # True 表示自动生成
+            
+            if subtitles:
+                manual_subs = [lang for lang, is_auto in subtitles.items() if not is_auto]
+                auto_subs = [lang for lang, is_auto in subtitles.items() if is_auto]
+                logger.info(f"找到 {len(subtitles)} 个字幕: 人工 {len(manual_subs)} 个, 自动 {len(auto_subs)} 个")
+                logger.info(f"人工字幕: {', '.join(manual_subs) if manual_subs else '无'}")
+                logger.info(f"自动字幕: {', '.join(auto_subs) if auto_subs else '无'}")
+            else:
+                logger.warning("未找到任何可用字幕")
+            
+            return subtitles, None
+            
+        except subprocess.CalledProcessError as e:
+            error_msg = e.stderr.strip() if e.stderr else str(e)
+            download_error = classify_download_error(stderr=error_msg, returncode=e.returncode)
+            logger.error(f"获取字幕列表失败: {download_error.message}")
+            return {}, download_error
+            
+        except FileNotFoundError as e:
+            download_error = classify_download_error(exception=e)
+            logger.error(f"工具缺失: {download_error.message}")
+            return {}, download_error
+    
+    def _select_best_subtitle(self, available_subs: dict) -> Optional[str]:
+        """
+        根据优先级选择最佳字幕。
+        
+        优先级：
+        1. 人工英文字幕 (en, en-US, en-GB)
+        2. 人工中文字幕 (zh-Hans, zh-CN, zh, zh-Hant, zh-TW)
+        3. 自动英文字幕
+        4. 自动中文字幕
+        
+        Args:
+            available_subs: 字幕字典 {lang: is_auto}
+            
+        Returns:
+            选中的语言代码，如果没有可用字幕返回 None
+        """
+        if not available_subs:
+            return None
+        
+        # 定义优先级列表
+        priority_list = [
+            # 人工英文
+            ('en', False),
+            ('en-US', False),
+            ('en-GB', False),
+            # 人工中文
+            ('zh-Hans', False),
+            ('zh-CN', False),
+            ('zh', False),
+            ('zh-Hant', False),
+            ('zh-TW', False),
+            # 自动英文
+            ('en', True),
+            ('en-US', True),
+            ('en-GB', True),
+            # 自动中文
+            ('zh-Hans', True),
+            ('zh-CN', True),
+            ('zh', True),
+            ('zh-Hant', True),
+            ('zh-TW', True),
+        ]
+        
+        for lang, is_auto in priority_list:
+            if lang in available_subs and available_subs[lang] == is_auto:
+                sub_type = "自动生成" if is_auto else "人工"
+                logger.info(f"选择字幕: {lang} ({sub_type})")
+                return lang
+        
+        # 如果没有匹配优先级的，选择第一个可用的
+        first_lang = next(iter(available_subs))
+        sub_type = "自动生成" if available_subs[first_lang] else "人工"
+        logger.info(f"使用备选字幕: {first_lang} ({sub_type})")
+        return first_lang
+    
+    def _download_single_subtitle(self, lang: str) -> tuple[bool, Optional[DownloadError]]:
+        """
+        下载指定语言的字幕，带重试机制。
+        
+        Args:
+            lang: 语言代码
+            
         Returns:
             tuple: (是否成功, 错误对象)
         """
-        for lang in subtitle_langs:
-            attempt = 0
-            while attempt <= self.retry_strategy.config.max_attempts:
-                try:
-                    logger.info(f"尝试下载 {lang} 字幕 (第 {attempt + 1} 次)...")
-                    
-                    command = self._get_base_command()
-                    command.extend([
-                        '--write-sub',
-                        '--write-auto-sub',
-                        '--sub-lang', lang,
-                        '--sub-format', 'vtt',
-                        '--skip-download',
-                        '-o', str(config.SUBTITLE_DIR / f"{self.metadata.sanitized_title}.%(ext)s"),
-                    ])
-                    command.append(self.url)
+        attempt = 0
+        while attempt <= self.retry_strategy.config.max_attempts:
+            try:
+                logger.info(f"下载 {lang} 字幕 (第 {attempt + 1} 次)...")
+                
+                command = self._get_base_command()
+                command.extend([
+                    '--write-sub',
+                    '--write-auto-sub',
+                    '--sub-lang', lang,
+                    '--sub-format', 'vtt',
+                    '--skip-download',
+                    '-o', str(config.SUBTITLE_DIR / f"{self.metadata.sanitized_title}.%(ext)s"),
+                ])
+                command.append(self.url)
 
-                    result = subprocess.run(
-                        command,
-                        capture_output=True, text=True, check=True, encoding='utf-8'
-                    )
-                    
-                    # 检查是否成功下载了字幕文件
-                    expected_vtt_path = config.SUBTITLE_DIR / f"{self.metadata.sanitized_title}.{lang}.vtt"
-                    if expected_vtt_path.exists():
-                        logger.info(f"成功下载 {lang} 字幕: {expected_vtt_path.name}")
-                        return True, None
-                    
-                except subprocess.CalledProcessError as e:
-                    error_msg = e.stderr.strip() if e.stderr else str(e)
-                    
-                    # 分类错误
-                    download_error = classify_download_error(
-                        stderr=error_msg,
-                        returncode=e.returncode
-                    )
-                    self.error_history.append(download_error)
-                    
-                    logger.warning(
-                        f"下载 {lang} 字幕失败 (第 {attempt + 1} 次): "
-                        f"{download_error.error_type.value} - {download_error.message}"
-                    )
-                    
-                    # 如果是无字幕错误，尝试下一种语言
-                    if download_error.error_type == DownloadErrorType.NO_SUBTITLES:
-                        logger.info(f"视频没有可用的 {lang} 字幕，尝试下一种语言")
-                        break
-                    
-                    # 判断是否应该重试
-                    if not self.retry_strategy.should_retry(download_error, attempt):
-                        logger.error(f"错误不可重试或已达到最大重试次数")
-                        return False, download_error
-                    
-                    # 计算延迟时间并等待
-                    delay = self.retry_strategy.get_delay(download_error, attempt)
-                    logger.info(f"等待 {delay:.1f} 秒后重试...")
-                    time.sleep(delay)
-                    
-                    attempt += 1
-                    continue
-                    
-                except FileNotFoundError as e:
-                    download_error = classify_download_error(exception=e)
-                    self.error_history.append(download_error)
-                    logger.error(f"工具缺失: {download_error.message}")
+                result = subprocess.run(
+                    command,
+                    capture_output=True, text=True, check=True, encoding='utf-8'
+                )
+                
+                # 检查是否成功下载了字幕文件
+                expected_vtt_path = config.SUBTITLE_DIR / f"{self.metadata.sanitized_title}.{lang}.vtt"
+                if expected_vtt_path.exists():
+                    logger.info(f"成功下载 {lang} 字幕: {expected_vtt_path.name}")
+                    return True, None
+                
+            except subprocess.CalledProcessError as e:
+                error_msg = e.stderr.strip() if e.stderr else str(e)
+                download_error = classify_download_error(stderr=error_msg, returncode=e.returncode)
+                self.error_history.append(download_error)
+                
+                logger.warning(
+                    f"下载 {lang} 字幕失败 (第 {attempt + 1} 次): "
+                    f"{download_error.error_type.value} - {download_error.message}"
+                )
+                
+                # 判断是否应该重试
+                if not self.retry_strategy.should_retry(download_error, attempt):
+                    logger.error(f"错误不可重试或已达到最大重试次数")
                     return False, download_error
                 
-                # 如果成功但没有返回，说明文件不存在，继续重试
+                # 计算延迟时间并等待
+                delay = self.retry_strategy.get_delay(download_error, attempt)
+                logger.info(f"等待 {delay:.1f} 秒后重试...")
+                time.sleep(delay)
+                
                 attempt += 1
+                continue
+                
+            except FileNotFoundError as e:
+                download_error = classify_download_error(exception=e)
+                self.error_history.append(download_error)
+                logger.error(f"工具缺失: {download_error.message}")
+                return False, download_error
+            
+            # 如果成功但没有返回，说明文件不存在，继续重试
+            attempt += 1
         
-        # 所有语言都尝试失败
+        # 重试失败
         last_error = self.error_history[-1] if self.error_history else DownloadError(
             error_type=DownloadErrorType.UNKNOWN,
-            message="所有尝试都失败，无法下载字幕",
-            suggestions=["检查视频是否有字幕", "尝试其他视频"]
+            message=f"下载 {lang} 字幕失败",
+            suggestions=["检查网络连接", "稍后重试"]
         )
         return False, last_error
 
@@ -584,34 +704,59 @@ class SubtitleDownloader:
             )
             return None, None, error
 
-        expected_vtt_path = config.SUBTITLE_DIR / f"{self.metadata.sanitized_title}.en.vtt"
+        # 检查是否已经存在字幕文件（任何语言）
+        possible_langs = ['en', 'en-US', 'en-GB', 'zh-Hans', 'zh-CN', 'zh', 'zh-Hant', 'zh-TW']
+        for lang in possible_langs:
+            existing_vtt_path = config.SUBTITLE_DIR / f"{self.metadata.sanitized_title}.{lang}.vtt"
+            if existing_vtt_path.exists():
+                logger.info(f"字幕文件已存在，直接使用: {existing_vtt_path.name}")
+                subtitle_text = self.clean_vtt(existing_vtt_path.read_text(encoding="utf-8"))
+                return subtitle_text, self.metadata, None
 
-        # 检查是否已经存在字幕文件
-        if expected_vtt_path.exists():
-            logger.info(f"字幕文件已存在，直接使用: {expected_vtt_path.name}")
-            subtitle_text = self.clean_vtt(expected_vtt_path.read_text(encoding="utf-8"))
-            return subtitle_text, self.metadata, None
-
-        # 尝试下载字幕，按优先级排序
-        subtitle_languages = ['en', 'en-US', 'en-GB']
+        # 1. 先列出所有可用字幕
+        available_subs, list_error = self._list_available_subtitles()
         
-        success, error = self._download_subtitles_with_retry(subtitle_languages)
+        if list_error:
+            # 如果获取字幕列表失败，返回错误
+            logger.error(f"无法获取字幕列表: {list_error.message}")
+            return None, None, list_error
+        
+        if not available_subs:
+            # 视频没有任何字幕
+            error = DownloadError(
+                error_type=DownloadErrorType.NO_SUBTITLES,
+                message="该视频没有任何可用字幕",
+                suggestions=["该视频未上传字幕", "尝试其他视频"]
+            )
+            return None, None, error
+        
+        # 2. 根据优先级选择最佳字幕
+        selected_lang = self._select_best_subtitle(available_subs)
+        
+        if not selected_lang:
+            error = DownloadError(
+                error_type=DownloadErrorType.NO_SUBTITLES,
+                message="无法选择合适的字幕",
+                suggestions=["检查可用字幕列表", "尝试其他视频"]
+            )
+            return None, None, error
+        
+        # 3. 下载选中的字幕
+        success, download_error = self._download_single_subtitle(selected_lang)
         
         if success:
-            # 找到下载的字幕文件
-            for lang in subtitle_languages:
-                vtt_path = config.SUBTITLE_DIR / f"{self.metadata.sanitized_title}.{lang}.vtt"
-                if vtt_path.exists():
-                    logger.info(f"使用 {lang} 字幕文件: {vtt_path.name}")
-                    subtitle_text = self.clean_vtt(vtt_path.read_text(encoding="utf-8"))
-                    return subtitle_text, self.metadata, None
+            vtt_path = config.SUBTITLE_DIR / f"{self.metadata.sanitized_title}.{selected_lang}.vtt"
+            if vtt_path.exists():
+                logger.info(f"使用 {selected_lang} 字幕文件: {vtt_path.name}")
+                subtitle_text = self.clean_vtt(vtt_path.read_text(encoding="utf-8"))
+                return subtitle_text, self.metadata, None
         
         # 下载失败
-        logger.error(f"所有尝试都失败，无法下载字幕: {self.url}")
-        if error:
-            logger.error(f"最终错误: {error.error_type.value} - {error.message}")
+        logger.error(f"下载字幕失败: {self.url}")
+        if download_error:
+            logger.error(f"错误: {download_error.error_type.value} - {download_error.message}")
         
-        return None, None, error
+        return None, None, download_error
 
     @staticmethod
     def clean_vtt(vtt_content: str) -> str:
