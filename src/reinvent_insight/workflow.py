@@ -65,6 +65,273 @@ def is_document_content(content: Union[str, DocumentContent]) -> bool:
     """判断内容是否为文档内容"""
     return isinstance(content, DocumentContent)
 
+
+# ---- Adaptive Outline Generation Data Models ----
+@dataclass
+class ChapterPlan:
+    """章节规划"""
+    index: int
+    title: str
+    depth_recommendation: 'DepthRecommendation'
+    estimated_source_length: int  # 估计的原始内容长度（词数）
+    source_coverage_percent: float  # 在原始内容中的覆盖百分比
+
+
+@dataclass
+class OutlinePlan:
+    """大纲规划"""
+    title_en: str
+    title_cn: str
+    introduction: str
+    chapters: List[ChapterPlan]
+    total_estimated_words: int
+
+
+class OutlineParseError(Exception):
+    """大纲解析错误"""
+    pass
+
+
+class OutlineGenerator:
+    """大纲生成器（增强版，支持自适应章节划分和深度建议）"""
+    
+    def __init__(self, config_obj: Optional['AdaptiveOutlineConfig'] = None):
+        """
+        初始化生成器
+        
+        Args:
+            config_obj: 可选配置对象
+        """
+        from .adaptive_outline_config import get_config
+        from .content_analyzer import ContentAnalyzer
+        from .chapter_depth_advisor import ChapterDepthAdvisor
+        
+        self.config = config_obj or get_config()
+        self.content_analyzer = ContentAnalyzer()
+        self.depth_advisor = ChapterDepthAdvisor()
+    
+    async def generate_outline(
+        self, 
+        content: Union[str, DocumentContent],
+        model_client: Any,
+        base_prompt: str,
+        task_id: str
+    ) -> OutlinePlan:
+        """
+        生成包含篇幅建议的结构化大纲
+        
+        Args:
+            content: 原始内容
+            model_client: 模型客户端
+            base_prompt: 基础提示词
+            task_id: 任务ID（用于日志）
+            
+        Returns:
+            OutlinePlan: 结构化大纲规划
+        """
+        # 1. 分析内容
+        stats = self.content_analyzer.analyze(content)
+        logger.info(
+            f"任务 {task_id} - 内容分析: {stats.total_words} 词, "
+            f"{stats.estimated_topics} 个主题, "
+            f"密度 {stats.content_density:.2f}"
+        )
+        
+        # 2. 决定章节数量范围
+        content_type = content.content_type if isinstance(content, DocumentContent) else 'transcript'
+        chapter_range = self._determine_chapter_range(stats, content_type)
+        logger.info(
+            f"任务 {task_id} - 建议章节范围: {chapter_range[0]}-{chapter_range[1]} 章"
+        )
+        
+        # 3. 构建自适应提示词
+        prompt = self._build_adaptive_prompt(content, stats, chapter_range, base_prompt)
+        
+        # 4. 调用 LLM 生成大纲
+        outline_text = await self._call_llm(content, model_client, prompt)
+        
+        # 5. 解析大纲并添加深度建议
+        outline_plan = self._parse_and_enrich_outline(outline_text, stats, task_id)
+        
+        logger.info(
+            f"任务 {task_id} - 大纲生成完成: {len(outline_plan.chapters)} 章, "
+            f"预计总字数 {outline_plan.total_estimated_words}"
+        )
+        
+        return outline_plan
+    
+    def _determine_chapter_range(self, stats: 'ContentStats', content_type: str) -> Tuple[int, int]:
+        """根据内容统计决定章节数量范围"""
+        chapter_range = self.config.get_chapter_range(stats.total_words, content_type)
+        
+        # 根据估计的主题数量微调
+        # 如果主题数量明显少于建议的最小章节数，适当减少
+        if stats.estimated_topics < chapter_range[0]:
+            adjusted_min = max(stats.estimated_topics, 3)  # 至少3章
+            chapter_range = (adjusted_min, chapter_range[1])
+        
+        return chapter_range
+    
+    def _build_adaptive_prompt(
+        self,
+        content: Union[str, DocumentContent],
+        stats: 'ContentStats',
+        chapter_range: Tuple[int, int],
+        base_prompt: str
+    ) -> str:
+        """构建包含自适应指令的提示词"""
+        # 根据内容类型设置参数
+        if isinstance(content, str):
+            content_type = "完整英文字幕"
+            content_description = "完整字幕"
+            full_content = content
+            multimodal_guide = ""
+        elif content.is_text:
+            content_type = "文档文本内容"
+            content_description = "文档内容"
+            full_content = content.text_content or ""
+            multimodal_guide = ""
+        elif content.is_multimodal:
+            content_type = "PDF文档内容"
+            content_description = "PDF文档"
+            full_content = ""
+            multimodal_guide = prompts.PDF_MULTIMODAL_GUIDE
+        else:
+            content_type = "完整英文字幕"
+            content_description = "完整字幕"
+            full_content = content.text_content or ""
+            multimodal_guide = ""
+        
+        # 构建自适应指令
+        adaptive_instructions = f"""
+## 自适应章节划分指导
+
+**内容统计**：
+- 总词数：{stats.total_words} 词
+- 估计主题数：{stats.estimated_topics} 个
+- 内容密度：{stats.content_density:.2f}
+- 主要语言：{stats.language}
+
+**章节划分要求**：
+1. **根据实际篇幅分章**：建议生成 {chapter_range[0]}-{chapter_range[1]} 个章节
+2. **避免强制分章**：如果某个主题在原文中只有少量讨论（少于 {self.config.min_chapter_source_length} 词），不要单独成章，而应合并到相关章节
+3. **标注覆盖范围**：为每个章节估计其在原始内容中的覆盖百分比和大致词数
+4. **防止内容稀薄**：不要为了故事完整性而强制创建原文中没有充分讨论的章节
+
+**输出格式要求**：
+除了标准的 Markdown 大纲外，还需要在 JSON 部分添加每个章节的元数据：
+
+```json
+{{
+  "title_en": "[英文标题]",
+  "title_cn": "[中文标题]",
+  "estimated_total_words": [预计总生成字数],
+  "chapters": [
+    {{
+      "index": 1,
+      "title": "[章节标题]",
+      "source_coverage_percent": [该章节在原文中的覆盖百分比，如 15],
+      "estimated_source_length": [该章节对应的原文词数，如 1200]
+    }},
+    ...
+  ]
+}}
+```
+
+**重要约束**：
+- 每个章节的 estimated_source_length 应该基于原文实际内容量估计
+- 所有章节的 source_coverage_percent 总和应该接近 100%
+- 如果某个主题原文内容很少，estimated_source_length 会很小，后续生成时会相应简化
+"""
+        
+        # 使用现有的 OUTLINE_PROMPT_TEMPLATE 并添加自适应指令
+        prompt = prompts.OUTLINE_PROMPT_TEMPLATE.format(
+            base_prompt=base_prompt + multimodal_guide + adaptive_instructions,
+            content_type=content_type,
+            content_description=content_description,
+            full_content=full_content,
+            quality_control_rules=prompts.QUALITY_CONTROL_RULES
+        )
+        
+        return prompt
+    
+    async def _call_llm(
+        self,
+        content: Union[str, DocumentContent],
+        model_client: Any,
+        prompt: str
+    ) -> str:
+        """调用 LLM 生成大纲"""
+        if isinstance(content, str):
+            # 文本注入方式
+            return await model_client.generate_content(prompt)
+        elif content.is_text:
+            # 文本文档模式
+            return await model_client.generate_content(prompt)
+        elif content.is_multimodal:
+            # 多模态方式
+            return await model_client.generate_content_with_file(
+                prompt,
+                content.file_info
+            )
+        else:
+            # 默认方式
+            return await model_client.generate_content(prompt)
+    
+    def _parse_and_enrich_outline(
+        self,
+        outline_text: str,
+        stats: 'ContentStats',
+        task_id: str
+    ) -> OutlinePlan:
+        """解析 LLM 输出并添加深度建议"""
+        import json
+        
+        # 1. 提取 JSON 部分
+        json_match = re.search(
+            r'\{[\s\S]*?"title_en"[\s\S]*?"title_cn"[\s\S]*?"chapters"[\s\S]*?\}',
+            outline_text
+        )
+        
+        if not json_match:
+            logger.warning(f"任务 {task_id} - 未找到 JSON 格式的大纲元数据，使用降级解析")
+            return self._fallback_parse(outline_text, stats, task_id)
+        
+        try:
+            outline_json = json.loads(json_match.group(0))
+        except json.JSONDecodeError as e:
+            logger.warning(f"任务 {task_id} - JSON 解析失败: {e}，使用降级解析")
+            return self._fallback_parse(outline_text, stats, task_id)
+        
+        # 2. 提取基本信息
+        title_en = outline_json.get('title_en', '')
+        title_cn = outline_json.get('title_cn', '')
+        estimated_total_words = outline_json.get('estimated_total_words', 0)
+        
+        # 3. 解析引言
+        introduction_match = re.search(r"###\s*引言\s*\n(.*?)(?=\n###|$)", outline_text, re.DOTALL)
+        introduction = introduction_match.group(1).strip() if introduction_match else ""
+        
+        # 4. 解析章节并添加深度建议
+        chapters_data = outline_json.get('chapters', [])
+        chapter_plans = []
+        
+        for chapter_data in chapters_data:
+            index = chapter_data.get('index', 0) - 1  # 转换为0-based索引
+            title = chapter_data.get('title', '')
+            estimated_source_length = chapter_data.get('estimated_source_length', 500)
+            source_coverage_percent = chapter_data.get('source_coverage_percent', 0)
+            
+            # 生成深度建议
+            depth_recommendation = self.depth_advisor.recommend_depth(
+                chapter_content_length=estimated_source_length,
+                total_content_length=stats.total_words,
+                chapter_index=index,
+                total_chapters=len(chapters_data)
+            )
+            
+            chapter_plan 
+
 def create_anchor(text: str) -> str:
     """根据给定的标题文本创建一个 Markdown 锚点链接。"""
     # 转换为小写
