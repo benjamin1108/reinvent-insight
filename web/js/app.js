@@ -265,12 +265,8 @@ const app = createApp({
         return 'read';
       }
       
-      // 如果已登录，默认显示最近文章页面
-      if (isAuthenticated.value) {
-        return 'recent';
-      }
-      
-      return 'library';
+      // 默认显示最近文章页面（登录和未登录用户都可以访问）
+      return 'recent';
     };
     
     const currentView = ref(getInitialView());
@@ -492,7 +488,7 @@ const app = createApp({
     // 视图导航方法
     const goHome = () => {
       history.pushState(null, '', '/');
-      currentView.value = isAuthenticated.value ? 'recent' : 'library';
+      currentView.value = 'recent';
       clearReadingState();
       closeVideoPlayer();
     };
@@ -1271,6 +1267,13 @@ const app = createApp({
     const handleArticleClick = (event) => {
       // 处理文章内的链接点击等
     };
+    
+    // 处理笔记库排序变化
+    const handleLibrarySortChange = (sortOrder) => {
+      console.log('笔记库排序方式已更改:', sortOrder);
+      // 可以在这里添加额外的逻辑，如保存用户偏好到localStorage
+      localStorage.setItem('librarySortOrder', sortOrder);
+    };
 
     // 测试Toast
     const testToast = () => {
@@ -1494,6 +1497,7 @@ const app = createApp({
       handleVideoSizeChange,
       downloadPDF,
       handleArticleClick,
+      handleLibrarySortChange,
       testToast,
       showToast,
       clearVersionStorage,

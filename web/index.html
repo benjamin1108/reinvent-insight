@@ -151,9 +151,9 @@
     <main class="app__content flex-1"
       :class="{'overflow-auto': currentView !== 'read', 'overflow-y-hidden': currentView === 'read'}" ref="mainContent">
 
-      <!-- 首页展示区域 - 仅未登录时显示 -->
+      <!-- 首页展示区域 - 在图书馆视图时显示 -->
       <hero-section 
-        v-if="!isAuthenticated && currentView === 'library'" 
+        v-if="currentView === 'library'" 
         :is-authenticated="isAuthenticated" 
         @login-click="handleLoginShow">
       </hero-section>
@@ -181,7 +181,8 @@
       <!-- 笔记库视图 -->
       <div v-if="currentView === 'library' && !isShareView" class="max-w-3xl mx-auto p-6 fade-in">
         <library-view :summaries="summaries" :loading="libraryLoading" :is-guest="!isAuthenticated"
-          @summary-click="handleSummaryClick">
+          @summary-click="handleSummaryClick"
+          @sort-change="handleLibrarySortChange">
         </library-view>
       </div>
 

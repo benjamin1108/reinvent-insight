@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试更改</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .pass { color: green; font-weight: bold; }
+        .fail { color: red; font-weight: bold; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>功能更改测试报告</h1>
+    
+    <div class="test-section">
+        <h2>1. Hero区域显示逻辑</h2>
+        <p><strong>更改前：</strong> 仅在未登录且当前视图为library时显示</p>
+        <p><strong>更改后：</strong> 在当前视图为library时显示（无论登录状态）</p>
+        <p><strong>代码位置：</strong> web/index.html 第155-159行</p>
+        <p class="info">✅ 已修改：移除了 <code>!isAuthenticated</code> 条件</p>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. 最近文章访问权限</h2>
+        <p><strong>更改前：</strong> 仅登录用户可以访问最近文章</p>
+        <p><strong>更改后：</strong> 所有用户都可以访问最近文章</p>
+        <p><strong>代码位置：</strong> web/js/app.js 第259-274行（getInitialView函数）</p>
+        <p class="info">✅ 已修改：移除了登录状态检查，默认返回'recent'</p>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. 导航栏权限</h2>
+        <p><strong>更改前：</strong> 仅登录用户可以看到导航按钮</p>
+        <p><strong>更改后：</strong> 所有用户都可以看到最近文章和笔记库按钮</p>
+        <p><strong>代码位置：</strong> web/components/common/AppHeader/AppHeader.html 第19-38行和第59-81行</p>
+        <p class="info">✅ 已修改：移除了 <code>v-if="isAuthenticated"</code> 条件，仅在新解读按钮保留</p>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. 文章排序功能</h2>
+        <p><strong>新增功能：</strong> 在笔记库和最近文章页面添加排序按钮</p>
+        <p><strong>排序选项：</strong>
+            <ul>
+                <li>最新（按日期倒序）- 默认</li>
+                <li>最早（按日期升序）</li>
+                <li>标题A-Z（按标题升序）</li>
+                <li>标题Z-A（按标题降序）</li>
+            </ul>
+        </p>
+        <p><strong>代码位置：</strong>
+            <ul>
+                <li>LibraryView组件：web/components/views/LibraryView/LibraryView.js</li>
+                <li>RecentView组件：web/components/views/RecentView/RecentView.js</li>
+            </ul>
+        </p>
+        <p class="info">✅ 已实现：添加了排序按钮和相应的排序逻辑</p>
+    </div>
+    
+    <div class="test-section">
+        <h2>5. 用户偏好保存</h2>
+        <p><strong>新增功能：</strong> 自动保存用户的排序偏好到localStorage</p>
+        <p><strong>保存位置：</strong> localStorage.getItem('librarySortOrder')</p>
+        <p class="info">✅ 已实现：排序更改时自动保存，组件加载时自动恢复</p>
+    </div>
+    
+    <div class="test-section">
+        <h2>功能总结</h2>
+        <ul>
+            <li class="pass">✅ 登录用户现在可以看到Hero区域</li>
+            <li class="pass">✅ 未登录用户现在可以访问最近文章</li>
+            <li class="pass">✅ 笔记库和最近文章页面添加了排序功能</li>
+            <li class="pass">✅ 排序偏好会自动保存和恢复</li>
+            <li class="pass">✅ 导航栏对未登录用户更加友好</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>测试建议</h2>
+        <ol>
+            <li>清除浏览器缓存和localStorage</li>
+            <li>以未登录状态访问网站，验证是否可以：</li>
+            <ul>
+                <li>看到Hero区域</li>
+                <li>访问最近文章页面</li>
+                <li>访问笔记库页面</li>
+                <li>使用排序功能</li>
+            </ul>
+            <li>登录后验证所有功能仍然正常工作</li>
+            <li>测试排序功能是否正常工作</li>
+            <li>验证排序偏好是否在页面刷新后保持</li>
+        </ol>
+    </div>
+</body>
+</html>

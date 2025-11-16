@@ -46,6 +46,21 @@
             :available-years="availableYears"
             @change="handleYearChange">
           </year-filter>
+          
+          <!-- 排序按钮 -->
+          <div class="library-view__sort">
+            <button 
+              class="library-view__sort-button"
+              :class="{ 'library-view__sort-button--active': sortOrder !== 'date-desc' }"
+              @click="handleSortButtonClick"
+              title="排序方式">
+              <svg class="library-view__sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                  d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path>
+              </svg>
+              <span class="library-view__sort-text">{{ getSortText }}</span>
+            </button>
+          </div>
         </div>
       </div>
       
@@ -83,7 +98,7 @@
       <!-- 其他精选卡片网格 -->
       <div class="library-view__grid library-view__grid--other">
         <summary-card
-          v-for="summary in otherSummaries"
+          v-for="summary in sortedOtherSummaries"
           :key="summary.filename || summary.hash"
           summary-type="other"
           :title-en="summary.title_en"

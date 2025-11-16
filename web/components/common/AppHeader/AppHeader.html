@@ -16,8 +16,9 @@
         </a>
         
         <!-- 桌面端主导航 -->
-        <div v-if="isAuthenticated" class="app-header__nav">
+        <div class="app-header__nav">
           <tech-button 
+            v-if="isAuthenticated"
             variant="secondary" 
             :class="{ 'active': currentView === 'create' }"
             @click="handleViewChange('create')">
@@ -56,8 +57,9 @@
     </div>
     
     <!-- 移动端导航 -->
-    <div v-if="isAuthenticated" class="app-header__mobile-nav">
+    <div class="app-header__mobile-nav">
       <tech-button 
+        v-if="isAuthenticated"
         variant="secondary" 
         full-width
         :class="{ 'active': currentView === 'create' }"

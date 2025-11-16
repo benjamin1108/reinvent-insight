@@ -50,7 +50,8 @@ export default {
   emits: [
     'summary-click',
     'level-change',
-    'year-change'
+    'year-change',
+    'sort-change'
   ],
   
   setup(props, { emit }) {
@@ -59,6 +60,9 @@ export default {
     // 筛选状态
     const selectedLevel = ref('');
     const selectedYear = ref('');
+    
+    // 排序状态
+    const sortOrder = ref(localStorage.getItem('librarySortOrder') || 'date-desc'); // 'date-desc' | 'date-asc' | 'title-asc' | 'title-desc'
     
     // 数据分类
     const reinventSummaries = computed(() => {
@@ -134,6 +138,9 @@ export default {
         });
       }
       
+      // 排序
+      filtered = sortSummaries(filtered);
+      
       return filtered;
     });
     
@@ -151,6 +158,53 @@ export default {
       return count.toString();
     };
     
+    // 排序函数
+    const sortSummaries = (summaries) => {
+      const sorted = [...summaries];
+      
+      switch (sortOrder.value) {
+        case 'date-desc':
+          // 按修改时间倒序（最新在前）
+          return sorted.sort((a, b) => {
+            const dateA = new Date(a.modified_at || a.upload_date || 0);
+            const dateB = new Date(b.modified_at || b.upload_date || 0);
+            return dateB - dateA;
+          });
+          
+        case 'date-asc':
+          // 按修改时间升序（最早在前）
+          return sorted.sort((a, b) => {
+            const dateA = new Date(a.modified_at || a.upload_date || 0);
+            const dateB = new Date(b.modified_at || b.upload_date || 0);
+            return dateA - dateB;
+          });
+          
+        case 'title-asc':
+          // 按标题升序
+          return sorted.sort((a, b) => {
+            const titleA = (a.title_cn || a.title_en || '').toLowerCase();
+            const titleB = (b.title_cn || b.title_en || '').toLowerCase();
+            return titleA.localeCompare(titleB, 'zh-CN');
+          });
+          
+        case 'title-desc':
+          // 按标题降序
+          return sorted.sort((a, b) => {
+            const titleA = (a.title_cn || a.title_en || '').toLowerCase();
+            const titleB = (b.title_cn || b.title_en || '').toLowerCase();
+            return titleB.localeCompare(titleA, 'zh-CN');
+          });
+          
+        default:
+          return sorted;
+      }
+    };
+    
+    // 其他精选内容也应用排序
+    const sortedOtherSummaries = computed(() => {
+      return sortSummaries(otherSummaries.value);
+    });
+    
     // 事件处理
     const handleSummaryClick = (data) => {
       emit('summary-click', data);
@@ -166,11 +220,36 @@ export default {
       emit('year-change', year);
     };
     
+    const handleSortChange = (order) => {
+      sortOrder.value = order;
+      emit('sort-change', order);
+    };
+    
     // 重置筛选
     const resetFilters = () => {
       selectedLevel.value = '';
       selectedYear.value = '';
     };
+    
+    // 排序按钮点击处理
+    const handleSortButtonClick = () => {
+      // 循环切换排序方式
+      const orders = ['date-desc', 'date-asc', 'title-asc', 'title-desc'];
+      const currentIndex = orders.indexOf(sortOrder.value);
+      const nextIndex = (currentIndex + 1) % orders.length;
+      handleSortChange(orders[nextIndex]);
+    };
+    
+    // 获取排序文本
+    const getSortText = computed(() => {
+      const textMap = {
+        'date-desc': '最新',
+        'date-asc': '最早',
+        'title-asc': '标题A-Z',
+        'title-desc': '标题Z-A'
+      };
+      return textMap[sortOrder.value] || '排序';
+    });
     
     return {
       // 筛选状态
@@ -183,6 +262,9 @@ export default {
       filteredReinventSummaries,
       filteredReinventCount,
       availableYears,
+      sortedOtherSummaries,
+      sortOrder,
+      getSortText,
       
       // 方法
       extractYear,
@@ -190,6 +272,8 @@ export default {
       handleSummaryClick,
       handleLevelChange,
       handleYearChange,
+      handleSortChange,
+      handleSortButtonClick,
       resetFilters
     };
   }
