@@ -237,7 +237,9 @@ export default {
     const visualIframe = ref(null);
     
     // 状态管理
-    const isTocVisible = ref(props.initialShowToc);
+    // 移动端强制隐藏 TOC，不管 props 如何设置
+    const isMobile = window.innerWidth <= 768;
+    const isTocVisible = ref(isMobile ? false : props.initialShowToc);
     const tocWidth = ref(props.initialTocWidth);
     const isDragging = ref(false);
     const dragStartX = ref(0);
@@ -260,9 +262,14 @@ export default {
     
     // 根据显示模式决定是否显示目录
     // 只有"Deep Insight"模式才显示目录（不是 Quick Insight）
+    // 移动端（包括 iPad）强制隐藏 TOC
     const shouldShowToc = computed(() => {
-      const result = displayMode.value !== 'quick' && isTocVisible.value;
+      // 检测是否为移动设备（包括平板）
+      const isMobile = window.innerWidth <= 768;
+      const result = !isMobile && displayMode.value !== 'quick' && isTocVisible.value;
       console.log('🔍 [DEBUG] shouldShowToc 计算:', {
+        isMobile,
+        windowWidth: window.innerWidth,
         displayMode: displayMode.value,
         isTocVisible: isTocVisible.value,
         result
@@ -881,8 +888,14 @@ export default {
     const handleResize = () => {
       // 在移动设备上自动隐藏TOC
       if (window.innerWidth <= 768 && isTocVisible.value) {
-        emit('toc-toggle');
+        isTocVisible.value = false;
+        emit('toc-toggle', false);
       }
+      // 强制触发 shouldShowToc 重新计算
+      // 通过修改一个依赖项来触发
+      nextTick(() => {
+        console.log('📱 [DEBUG] 窗口大小变化，当前宽度:', window.innerWidth);
+      });
     };
     
     // 滚动监听：高亮当前章节
@@ -1025,10 +1038,20 @@ export default {
     
     // 监听 props.initialShowToc 的变化，同步到本地状态
     watch(() => props.initialShowToc, (newVal, oldVal) => {
-      console.log('� [DEBUG]] props.initialShowToc 变化:', oldVal, '->', newVal);
+      console.log('🔄 [DEBUG] props.initialShowToc 变化:', oldVal, '->', newVal);
       console.log('🔍 [DEBUG] 当前本地 isTocVisible:', isTocVisible.value);
       
-      // 同步 prop 到本地状态
+      // 移动端强制隐藏 TOC，不管 props 如何变化
+      const isMobile = window.innerWidth <= 768;
+      if (isMobile) {
+        console.log('📱 [DEBUG] 移动端检测到，强制隐藏 TOC');
+        if (isTocVisible.value !== false) {
+          isTocVisible.value = false;
+        }
+        return;
+      }
+      
+      // 同步 prop 到本地状态（仅桌面端）
       if (newVal !== isTocVisible.value) {
         console.log('✅ [DEBUG] 同步 prop 到本地状态');
         isTocVisible.value = newVal;
