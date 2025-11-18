@@ -272,18 +272,47 @@ OUTLINE_PROMPT_TEMPLATE = """
 
 ## 特殊格式要求
 1. **标题输出**：首先输出JSON格式的标题信息，然后输出Markdown格式的内容
-2. **引言**：激发读者阅读兴趣，准确反映整体内容
+2. **引言**：
+   - 激发读者阅读兴趣，准确反映整体内容
+   - **必须在引言中透出内容来源**：如果原文来自特定的分析报告、研究机构或作者（如 SemiAnalysis、某位专家等），应在引言的开头或适当位置自然地提及来源
+   - 来源信息应该融入引言的叙事中，而不是生硬地添加，例如："根据 SemiAnalysis 最新发布的分析报告..."、"SemiAnalysis 在其深度研究中指出..."
+   - 如果能从原文中识别出具体的报告标题、发布时间或作者信息，也应适当体现
 3. **大纲索引**：最多不超过20个主要章节，每个标题都言之有物，章节之间边界清晰、逻辑连贯
 4. **纯文本限制**：章节标题必须是纯文本，**严禁**包含 Markdown 链接格式或方括号 `[]()【】「」`，避免 TOC 跳转失效
 5. **格式严格性**：不要添加任何额外的解释或章节内容
 
 ## 输出格式
+
+**第一部分：JSON 元数据（必须包含）**
 ```json
 {{
   "title_en": "[提取或生成的英文标题]",
-  "title_cn": "[生成的中文标题]"
+  "title_cn": "[生成的中文标题]",
+  "chapters": [
+    {{
+      "index": 1,
+      "title": "[第一章标题]",
+      "source_content_amount": "[rich/moderate/sparse]",
+      "information_density": "[high/medium/low]",
+      "generation_depth": "[detailed/moderate/brief]",
+      "target_words": "[1200-2000/600-1200/300-600]",
+      "rationale": "[为什么这样建议的简短说明]"
+    }},
+    {{
+      "index": 2,
+      "title": "[第二章标题]",
+      "source_content_amount": "[rich/moderate/sparse]",
+      "information_density": "[high/medium/low]",
+      "generation_depth": "[detailed/moderate/brief]",
+      "target_words": "[1200-2000/600-1200/300-600]",
+      "rationale": "[为什么这样建议的简短说明]"
+    }}
+    // ... 更多章节
+  ]
 }}
 ```
+
+**第二部分：Markdown 内容**
 
 # [中文标题]
 
@@ -298,7 +327,11 @@ OUTLINE_PROMPT_TEMPLATE = """
 {quality_control_rules}
 
 ---
-**请严格遵守上述指令，首先输出JSON格式的标题信息，然后输出标题、引言和大纲索引。**
+**重要提醒**：
+1. 必须首先输出完整的 JSON 格式元数据，包含所有章节的密度信息
+2. JSON 中的 chapters 数组必须包含每个章节的详细元数据
+3. 然后输出 Markdown 格式的标题、引言和大纲索引
+4. 确保 JSON 格式完全合法，可以被标准解析器解析
 """
 
 # 章节深度约束模板
