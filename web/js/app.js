@@ -1266,7 +1266,12 @@ const app = createApp({
 
     // Markdown 下载
     const downloadMarkdown = async () => {
-      if (!readingFilename.value) return;
+      console.log('🟢 [DEBUG] downloadMarkdown 被调用');
+      console.log('🟢 [DEBUG] readingFilename:', readingFilename.value);
+      if (!readingFilename.value) {
+        console.log('❌ [DEBUG] readingFilename 为空，退出');
+        return;
+      }
       
       markdownDownloading.value = true;
       try {
