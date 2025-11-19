@@ -898,6 +898,39 @@ export default {
       });
     };
     
+    // 处理页面可见性变化（应用切换时触发）
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('👁️ [DEBUG] 页面重新可见，检查布局');
+        // 页面重新可见时，强制检查并修复布局
+        nextTick(() => {
+          const isMobile = window.innerWidth <= 768;
+          if (isMobile && isTocVisible.value) {
+            console.log('📱 [DEBUG] 应用切换后检测到移动端，强制隐藏 TOC');
+            isTocVisible.value = false;
+            emit('toc-toggle', false);
+          }
+          // 强制重新计算布局
+          handleResize();
+        });
+      }
+    };
+    
+    // 处理页面获得焦点（从其他应用切换回来）
+    const handlePageFocus = () => {
+      console.log('🔄 [DEBUG] 页面获得焦点');
+      // 延迟执行，确保浏览器完成布局更新
+      setTimeout(() => {
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile && isTocVisible.value) {
+          console.log('📱 [DEBUG] 焦点恢复后检测到移动端，强制隐藏 TOC');
+          isTocVisible.value = false;
+          emit('toc-toggle', false);
+        }
+        handleResize();
+      }, 100); // 100ms 延迟，等待浏览器完成渲染
+    };
+    
     // 滚动监听：高亮当前章节
     const handleScroll = () => {
       if (!cleanContent.value) return;
@@ -1149,6 +1182,11 @@ export default {
       window.addEventListener('resize', handleResize);
       document.addEventListener('keydown', handleKeydown);
       
+      // 添加页面可见性和焦点监听（处理应用切换）
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      window.addEventListener('focus', handlePageFocus);
+      window.addEventListener('pageshow', handlePageFocus); // iOS Safari 特殊处理
+      
       // 添加拖动事件监听
       document.addEventListener('mousemove', handleDrag);
       document.addEventListener('mouseup', endDrag);
@@ -1169,6 +1207,47 @@ export default {
       // 初始响应式检查
       handleResize();
       
+      // 🔧 Chrome iPad 特殊修复：强制刷新布局
+      // 解决 Chrome 在 iPad 上缓存 CSS 变量导致的半屏问题
+      const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+      const isMobile = window.innerWidth <= 768;
+      
+      if (isMobile) {
+        console.log('📱 [CHROME FIX] 检测到移动端，强制刷新布局');
+        console.log('🔍 [CHROME FIX] 浏览器:', isChrome ? 'Chrome' : 'Other');
+        
+        nextTick(() => {
+          // 强制触发重排，清除可能的缓存
+          const layout = document.querySelector('.reading-view__layout');
+          const content = document.querySelector('.reading-view__content');
+          
+          if (layout && content) {
+            // 方法1: 读取 offsetHeight 强制浏览器重新计算布局
+            const _ = layout.offsetHeight;
+            const __ = content.offsetHeight;
+            
+            // 方法2: 如果是 Chrome，使用更激进的修复
+            if (isChrome) {
+              console.log('🔧 [CHROME FIX] 应用 Chrome 特殊修复');
+              
+              // 临时移除并重新添加样式，强制 Chrome 重新渲染
+              const originalLeft = content.style.left;
+              content.style.left = '0px';
+              
+              // 使用 requestAnimationFrame 确保渲染完成
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  content.style.left = originalLeft || '';
+                  console.log('✅ [CHROME FIX] Chrome 特殊修复完成');
+                });
+              });
+            }
+            
+            console.log('📱 [CHROME FIX] 布局已强制刷新');
+          }
+        });
+      }
+      
       // 初始化时解析内容
       if (cleanContent.value) {
         nextTick(() => {
@@ -1185,6 +1264,11 @@ export default {
     onUnmounted(() => {
       window.removeEventListener('resize', handleResize);
       document.removeEventListener('keydown', handleKeydown);
+      
+      // 移除页面可见性和焦点监听
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handlePageFocus);
+      window.removeEventListener('pageshow', handlePageFocus);
       
       // 移除拖动事件监听
       document.removeEventListener('mousemove', handleDrag);

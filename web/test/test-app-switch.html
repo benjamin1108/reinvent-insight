@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>应用切换测试 - ReadingView</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #1a1a1a;
+      color: #fff;
+    }
+    
+    .test-panel {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.9);
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #333;
+      z-index: 9999;
+      max-width: 300px;
+    }
+    
+    .test-panel h3 {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      color: #22d3ee;
+    }
+    
+    .test-panel p {
+      margin: 5px 0;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    
+    .status {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    
+    .status.ok {
+      background: #10b981;
+      color: white;
+    }
+    
+    .status.warning {
+      background: #f59e0b;
+      color: white;
+    }
+    
+    .status.error {
+      background: #ef4444;
+      color: white;
+    }
+    
+    .log {
+      margin-top: 10px;
+      padding: 10px;
+      background: #000;
+      border-radius: 4px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-size: 11px;
+      font-family: monospace;
+    }
+    
+    .log-entry {
+      margin: 2px 0;
+      padding: 2px 0;
+      border-bottom: 1px solid #222;
+    }
+    
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+    
+    .content-box {
+      margin-top: 80px;
+      padding: 20px;
+      background: #2a2a2a;
+      border-radius: 8px;
+    }
+    
+    button {
+      background: #22d3ee;
+      color: #000;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      margin: 5px 5px 5px 0;
+    }
+    
+    button:hover {
+      background: #06b6d4;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-panel">
+    <h3>📱 应用切换测试</h3>
+    <p>
+      <strong>窗口宽度:</strong> <span id="width">-</span>px<br>
+      <strong>设备类型:</strong> <span id="device">-</span><br>
+      <strong>页面状态:</strong> <span id="visibility" class="status ok">可见</span><br>
+      <strong>焦点状态:</strong> <span id="focus" class="status ok">有焦点</span>
+    </p>
+    <div>
+      <button onclick="clearLog()">清除日志</button>
+      <button onclick="testLayout()">测试布局</button>
+    </div>
+    <div class="log" id="log"></div>
+  </div>
+  
+  <div class="content-box">
+    <h1>应用切换测试说明</h1>
+    <p>这个页面用于测试 iPad 应用切换时的布局问题。</p>
+    
+    <h2>测试步骤：</h2>
+    <ol>
+      <li>在 iPad 横屏模式下打开此页面</li>
+      <li>观察右上角的测试面板，确认窗口宽度和设备类型</li>
+      <li>切换到其他应用（如邮件、设置等）</li>
+      <li>等待几秒钟</li>
+      <li>切换回 Safari/Chrome</li>
+      <li>观察日志，查看是否触发了相关事件</li>
+    </ol>
+    
+    <h2>预期行为：</h2>
+    <ul>
+      <li>切换应用时，应该看到 "页面隐藏" 日志</li>
+      <li>切换回来时，应该看到 "页面可见" 和 "页面获得焦点" 日志</li>
+      <li>如果是移动设备（≤768px），应该看到 "移动端检测" 日志</li>
+    </ul>
+    
+    <h2>当前监听的事件：</h2>
+    <ul>
+      <li><code>visibilitychange</code> - 页面可见性变化</li>
+      <li><code>focus</code> - 窗口获得焦点</li>
+      <li><code>blur</code> - 窗口失去焦点</li>
+      <li><code>pageshow</code> - 页面显示（iOS 特殊）</li>
+      <li><code>pagehide</code> - 页面隐藏（iOS 特殊）</li>
+      <li><code>resize</code> - 窗口大小变化</li>
+    </ul>
+  </div>
+  
+  <script>
+    const log = document.getElementById('log');
+    const widthEl = document.getElementById('width');
+    const deviceEl = document.getElementById('device');
+    const visibilityEl = document.getElementById('visibility');
+    const focusEl = document.getElementById('focus');
+    
+    function addLog(message, type = 'info') {
+      const time = new Date().toLocaleTimeString();
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.textContent = `[${time}] ${message}`;
+      log.insertBefore(entry, log.firstChild);
+      
+      // 限制日志条数
+      while (log.children.length > 50) {
+        log.removeChild(log.lastChild);
+      }
+    }
+    
+    function clearLog() {
+      log.innerHTML = '';
+      addLog('日志已清除');
+    }
+    
+    function updateStatus() {
+      const width = window.innerWidth;
+      const isMobile = width <= 768;
+      
+      widthEl.textContent = width;
+      deviceEl.textContent = isMobile ? '移动设备' : '桌面设备';
+      
+      if (document.visibilityState === 'visible') {
+        visibilityEl.textContent = '可见';
+        visibilityEl.className = 'status ok';
+      } else {
+        visibilityEl.textContent = '隐藏';
+        visibilityEl.className = 'status warning';
+      }
+      
+      if (document.hasFocus()) {
+        focusEl.textContent = '有焦点';
+        focusEl.className = 'status ok';
+      } else {
+        focusEl.textContent = '无焦点';
+        focusEl.className = 'status warning';
+      }
+    }
+    
+    function testLayout() {
+      addLog('=== 开始布局测试 ===');
+      addLog(`窗口宽度: ${window.innerWidth}px`);
+      addLog(`窗口高度: ${window.innerHeight}px`);
+      addLog(`设备像素比: ${window.devicePixelRatio}`);
+      addLog(`用户代理: ${navigator.userAgent.substring(0, 50)}...`);
+      addLog('=== 测试完成 ===');
+    }
+    
+    // 监听所有相关事件
+    document.addEventListener('visibilitychange', () => {
+      const state = document.visibilityState;
+      addLog(`📄 visibilitychange: ${state}`);
+      updateStatus();
+      
+      if (state === 'visible') {
+        addLog('✅ 页面重新可见，检查布局...');
+        setTimeout(() => {
+          const isMobile = window.innerWidth <= 768;
+          if (isMobile) {
+            addLog('📱 移动端检测：应该强制隐藏 TOC');
+          }
+        }, 100);
+      } else {
+        addLog('⚠️ 页面隐藏');
+      }
+    });
+    
+    window.addEventListener('focus', () => {
+      addLog('🔍 window focus: 窗口获得焦点');
+      updateStatus();
+    });
+    
+    window.addEventListener('blur', () => {
+      addLog('😴 window blur: 窗口失去焦点');
+      updateStatus();
+    });
+    
+    window.addEventListener('pageshow', (event) => {
+      addLog(`📱 pageshow: persisted=${event.persisted}`);
+      updateStatus();
+    });
+    
+    window.addEventListener('pagehide', (event) => {
+      addLog(`📱 pagehide: persisted=${event.persisted}`);
+    });
+    
+    window.addEventListener('resize', () => {
+      addLog(`📐 resize: ${window.innerWidth}x${window.innerHeight}`);
+      updateStatus();
+    });
+    
+    // 初始化
+    updateStatus();
+    addLog('🚀 测试页面已加载');
+    addLog(`初始窗口大小: ${window.innerWidth}x${window.innerHeight}`);
+    
+    // 定期更新状态
+    setInterval(updateStatus, 1000);
+  </script>
+</body>
+</html>

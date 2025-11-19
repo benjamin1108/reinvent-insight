@@ -25,7 +25,7 @@ default:
   provider: gemini
   
   # 模型名称
-  model_name: gemini-2.5-pro
+  model_name: gemini-3-pro-preview
   
   # API Key 环境变量名称（实际的 API Key 从环境变量读取）
   api_key_env: GEMINI_API_KEY
@@ -68,7 +68,7 @@ tasks:
   # 用于处理 YouTube 视频字幕，生成深度解读文章
   video_summary:
     provider: gemini
-    model_name: gemini-2.5-pro
+    model_name: gemini-3-pro-preview
     api_key_env: GEMINI_API_KEY
     
     generation:
@@ -90,7 +90,7 @@ tasks:
   pdf_processing:
     provider: gemini
     # 使用 flash 模型以获得更快的响应速度
-    model_name: gemini-2.5-pro
+    model_name: gemini-3-pro-preview
     api_key_env: GEMINI_API_KEY
     
     generation:
@@ -111,7 +111,7 @@ tasks:
   # 用于将深度解读文章转换为可视化 HTML 网页
   visual_generation:
     provider: gemini
-    model_name: gemini-2.5-pro
+    model_name: gemini-3-pro-preview
     api_key_env: GEMINI_API_KEY
     
     generation:
@@ -133,7 +133,7 @@ tasks:
   # 用于处理 TXT、MD、DOCX 等文档格式
   document_analysis:
     provider: gemini
-    model_name: gemini-2.5-pro
+    model_name: gemini-3-pro-preview
     api_key_env: GEMINI_API_KEY
     
     generation:
