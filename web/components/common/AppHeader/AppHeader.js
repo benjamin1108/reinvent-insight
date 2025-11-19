@@ -56,6 +56,12 @@ export default {
     pdfDownloading: {
       type: Boolean,
       default: false
+    },
+    
+    // Markdown下载状态
+    markdownDownloading: {
+      type: Boolean,
+      default: false
     }
   },
   
@@ -68,10 +74,16 @@ export default {
     'back-to-library',  // 返回笔记库
     'open-video',       // 打开视频播放器
     'download-pdf',     // 下载PDF
+    'download-markdown', // 下载Markdown
     'toggle-toc'        // 切换目录
   ],
   
   setup(props, { emit }) {
+    const { ref, onMounted, onUnmounted } = Vue;
+    
+    // 下拉菜单状态
+    const showDownloadMenu = ref(false);
+    const downloadDropdown = ref(null);
     // 事件处理方法
     const handleHomeClick = () => {
       emit('home-click');
@@ -102,7 +114,22 @@ export default {
     };
     
     const handleDownloadPDF = () => {
+      showDownloadMenu.value = false;
       emit('download-pdf');
+    };
+    
+    const handleDownloadMarkdown = () => {
+      showDownloadMenu.value = false;
+      emit('download-markdown');
+    };
+    
+    const toggleDownloadMenu = (event) => {
+      // 阻止事件冒泡，避免立即触发外部点击
+      if (event) {
+        event.stopPropagation();
+      }
+      showDownloadMenu.value = !showDownloadMenu.value;
+      console.log('📱 [DEBUG] 下载菜单切换:', showDownloadMenu.value);
     };
     
     const handleToggleToc = () => {
@@ -112,7 +139,44 @@ export default {
       console.log('✅ [HEADER] 已发送 toggle-toc 事件');
     };
     
+    // 点击外部关闭下拉菜单
+    const handleClickOutside = (event) => {
+      if (downloadDropdown.value && !downloadDropdown.value.contains(event.target)) {
+        if (showDownloadMenu.value) {
+          console.log('📱 [DEBUG] 点击外部，关闭菜单');
+          showDownloadMenu.value = false;
+        }
+      }
+    };
+    
+    // 触摸事件处理（移动端）
+    const handleTouchOutside = (event) => {
+      if (downloadDropdown.value && !downloadDropdown.value.contains(event.target)) {
+        if (showDownloadMenu.value) {
+          console.log('📱 [DEBUG] 触摸外部，关闭菜单');
+          showDownloadMenu.value = false;
+        }
+      }
+    };
+    
+    onMounted(() => {
+      // 同时监听点击和触摸事件
+      document.addEventListener('click', handleClickOutside);
+      document.addEventListener('touchstart', handleTouchOutside, { passive: true });
+    });
+    
+    onUnmounted(() => {
+      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('touchstart', handleTouchOutside);
+    });
+    
     return {
+      // 引用
+      downloadDropdown,
+      
+      // 状态
+      showDownloadMenu,
+      
       // 事件处理方法
       handleHomeClick,
       handleViewChange,
@@ -122,6 +186,8 @@ export default {
       handleBackToLibrary,
       handleOpenVideo,
       handleDownloadPDF,
+      handleDownloadMarkdown,
+      toggleDownloadMenu,
       handleToggleToc
     };
   }

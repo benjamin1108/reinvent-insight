@@ -550,3 +550,162 @@
   text-decoration: none;
   color: inherit;
 } 
+
+/* ==
+============================================= */
+/* == 下载下拉菜单样式 == */
+/* =============================================== */
+
+.app-header__download-dropdown {
+  position: relative;
+  display: inline-block;
+  /* 确保在移动端可点击 */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-header__download-menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 180px;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.95));
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), 0 0 20px rgba(34, 211, 238, 0.1);
+  padding: 0.5rem;
+  z-index: 9999; /* 提高 z-index，确保在所有元素之上 */
+  animation: slideDown 0.2s ease;
+  /* 移动端优化 */
+  -webkit-overflow-scrolling: touch;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.app-header__download-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  border-radius: 0.375rem;
+  color: #e5e7eb;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  font-family: 'Inter', 'PingFang SC', 'SF Pro Text', sans-serif;
+  /* 移动端触摸优化 */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(34, 211, 238, 0.2);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.app-header__download-menu-item:hover:not(:disabled) {
+  background: rgba(34, 211, 238, 0.1);
+  color: #22d3ee;
+  transform: translateX(4px);
+}
+
+.app-header__download-menu-item:active:not(:disabled) {
+  background: rgba(34, 211, 238, 0.15);
+  transform: translateX(2px);
+}
+
+.app-header__download-menu-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.app-header__download-menu-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .app-header__download-dropdown {
+    /* 确保下拉容器在移动端有足够的点击区域 */
+    position: relative;
+    z-index: 100;
+  }
+  
+  .app-header__download-menu {
+    min-width: 160px;
+    right: 0; /* 改为右对齐，避免居中可能导致的问题 */
+    left: auto;
+    transform: none;
+    /* 移动端增加更明显的阴影 */
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), 0 0 30px rgba(34, 211, 238, 0.15);
+    /* 确保在最顶层 */
+    z-index: 9999;
+  }
+  
+  .app-header__download-menu-item {
+    /* 增加移动端的点击区域 */
+    padding: 1rem 1.25rem;
+    font-size: 0.875rem;
+    /* 增加最小高度，便于触摸 */
+    min-height: 48px;
+  }
+  
+  .app-header__download-menu-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
+/* 高对比度模式 */
+@media (prefers-contrast: high) {
+  .app-header__download-menu {
+    background: rgba(15, 23, 42, 1);
+    border-color: #22d3ee;
+  }
+  
+  .app-header__download-menu-item {
+    color: #ffffff;
+  }
+  
+  .app-header__download-menu-item:hover:not(:disabled) {
+    background: rgba(34, 211, 238, 0.3);
+    color: #ffffff;
+  }
+}
+
+/* 减少动画模式 */
+@media (prefers-reduced-motion: reduce) {
+  .app-header__download-menu {
+    animation: none;
+  }
+  
+  .app-header__download-menu-item {
+    transition: none;
+  }
+  
+  .app-header__download-menu-item:hover:not(:disabled) {
+    transform: none;
+  }
+  
+  .app-header__download-menu-item:active:not(:disabled) {
+    transform: none;
+  }
+}

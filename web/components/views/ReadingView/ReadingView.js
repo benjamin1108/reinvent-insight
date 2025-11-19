@@ -1293,6 +1293,60 @@ export default {
       }
     });
     
+
+    // 下载 Markdown 原文
+    const downloadMarkdown = () => {
+      try {
+        // 获取清理后的内容（已去除元数据）
+        const content = cleanContent.value;
+        
+        if (!content) {
+          console.warn('没有可下载的内容');
+          return;
+        }
+        
+        // 添加标题到内容开头
+        let fullContent = '';
+        if (props.documentTitleEn) {
+          fullContent += `# ${props.documentTitleEn}\n\n`;
+        }
+        if (props.documentTitle) {
+          fullContent += `${props.documentTitle}\n\n`;
+        }
+        fullContent += content;
+        
+        // 创建 Blob
+        const blob = new Blob([fullContent], { type: 'text/markdown;charset=utf-8' });
+        
+        // 生成文件名（使用英文标题或中文标题）
+        const title = props.documentTitleEn || props.documentTitle || 'document';
+        // 清理文件名中的非法字符
+        const safeTitle = title
+          .replace(/[<>:"/\\|?*]/g, '-')
+          .replace(/\s+/g, '_')
+          .substring(0, 100); // 限制文件名长度
+        const filename = `${safeTitle}.md`;
+        
+        // 创建下载链接
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        
+        // 触发下载
+        document.body.appendChild(link);
+        link.click();
+        
+        // 清理
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        console.log('✅ Markdown 文件下载成功:', filename);
+      } catch (error) {
+        console.error('❌ 下载 Markdown 文件失败:', error);
+      }
+    };
+    
     // 公开方法
     const scrollToElement = (selector) => {
       const element = document.querySelector(selector);
@@ -1341,6 +1395,7 @@ export default {
       resetLayout,
       startDrag,
       scrollToSection,
+      downloadMarkdown,
       
       // props
       tocTitle: props.tocTitle,

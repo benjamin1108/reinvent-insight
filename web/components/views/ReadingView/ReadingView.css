@@ -1529,3 +1529,139 @@
     min-height: 100vh;
   }
 }
+
+/* =============================================== */
+/* == 工具栏样式（版本选择器 + 下载按钮） == */
+/* =============================================== */
+
+.reading-view__toolbar {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* 下载按钮样式 */
+.reading-view__download-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.15), rgba(59, 130, 246, 0.15));
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  border-radius: 0.5rem;
+  color: #22d3ee;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+  font-family: 'Inter', 'PingFang SC', 'SF Pro Text', sans-serif;
+}
+
+.reading-view__download-btn:hover {
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.25), rgba(59, 130, 246, 0.25));
+  border-color: rgba(34, 211, 238, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(34, 211, 238, 0.2);
+}
+
+.reading-view__download-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(34, 211, 238, 0.15);
+}
+
+.reading-view__download-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.reading-view__download-text {
+  white-space: nowrap;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .reading-view__toolbar {
+    position: fixed;
+    top: auto;
+    bottom: 1rem;
+    right: 1rem;
+    left: auto;
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+    z-index: 1000;
+  }
+  
+  .reading-view__download-btn {
+    padding: 0.625rem 1rem;
+    font-size: 0.8125rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+  
+  /* 移动端隐藏文字，只显示图标 */
+  .reading-view__download-text {
+    display: none;
+  }
+  
+  .reading-view__download-btn {
+    padding: 0.625rem;
+    border-radius: 50%;
+    width: 2.75rem;
+    height: 2.75rem;
+    justify-content: center;
+  }
+  
+  .reading-view__download-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
+/* 极小屏幕优化 */
+@media (max-width: 480px) {
+  .reading-view__toolbar {
+    bottom: 0.75rem;
+    right: 0.75rem;
+  }
+  
+  .reading-view__download-btn {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+}
+
+/* 高对比度模式 */
+@media (prefers-contrast: high) {
+  .reading-view__download-btn {
+    background: rgba(34, 211, 238, 0.3);
+    border-color: #22d3ee;
+    color: #ffffff;
+  }
+  
+  .reading-view__download-btn:hover {
+    background: rgba(34, 211, 238, 0.5);
+  }
+}
+
+/* 减少动画模式 */
+@media (prefers-reduced-motion: reduce) {
+  .reading-view__download-btn {
+    transition: none;
+  }
+  
+  .reading-view__download-btn:hover {
+    transform: none;
+  }
+  
+  .reading-view__download-btn:active {
+    transform: none;
+  }
+}

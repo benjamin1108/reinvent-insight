@@ -723,6 +723,78 @@ async def get_visual_status(doc_hash: str, version: Optional[int] = None):
         raise HTTPException(status_code=500, detail="服务器错误")
 
 
+@app.get("/api/public/summaries/{filename}/markdown")
+async def get_summary_markdown(filename: str):
+    """获取指定摘要的原始 Markdown 文件（去除元数据），无需认证。"""
+    try:
+        # 安全性：解码并验证文件名
+        filename = urllib.parse.unquote(filename)
+        if ".." in filename or "/" in filename or "\\" in filename:
+            raise HTTPException(status_code=400, detail="无效的文件名")
+            
+        if not filename.endswith(".md"):
+            filename += ".md"
+            
+        file_path = config.OUTPUT_DIR / filename
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="摘要文件未找到")
+        
+        # 读取原始内容
+        content = file_path.read_text(encoding="utf-8")
+        metadata = parse_metadata_from_md(content)
+        
+        # 获取标题
+        title_cn = metadata.get("title_cn")
+        title_en = metadata.get("title_en", metadata.get("title", ""))
+        
+        if not title_cn:
+            for line in content.splitlines():
+                stripped = line.strip()
+                if stripped.startswith('# '):
+                    title_cn = stripped[2:].strip()
+                    break
+        
+        if not title_cn:
+            title_cn = title_en if title_en else file_path.stem
+        
+        # 清理内容中的元数据
+        cleaned_content = clean_content_metadata(content, title_cn)
+        
+        # 添加标题到内容开头
+        full_content = ''
+        if title_en:
+            full_content += f"# {title_en}\n\n"
+        if title_cn and title_cn != title_en:
+            full_content += f"{title_cn}\n\n"
+        full_content += cleaned_content
+        
+        # 生成安全的文件名
+        safe_title = title_en or title_cn or file_path.stem
+        safe_title = safe_title.replace('/', '-').replace('\\', '-').replace(':', '-')
+        safe_title = re.sub(r'[<>:"/\\|?*]', '-', safe_title)
+        safe_title = re.sub(r'\s+', '_', safe_title)
+        safe_title = safe_title[:100]  # 限制长度
+        download_filename = f"{safe_title}.md"
+        
+        # 对文件名进行 URL 编码
+        encoded_filename = quote(download_filename, safe='')
+        
+        return Response(
+            content=full_content,
+            media_type="text/markdown; charset=utf-8",
+            headers={
+                "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}",
+                "Cache-Control": "no-cache"
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取 Markdown 文件失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"获取 Markdown 文件失败: {str(e)}")
+
+
 @app.get("/api/public/summaries/{filename}/pdf")
 async def get_summary_pdf(filename: str, response: Response):
     """生成并下载指定摘要的PDF文件，无需认证。"""

@@ -231,6 +231,7 @@ const app = createApp({
     const isShareView = ref(false);
     const readingVideoUrl = ref('');
     const pdfDownloading = ref(false);
+    const markdownDownloading = ref(false);
     
     // 阅读视图状态
     const readingContent = ref('');
@@ -1263,6 +1264,47 @@ const app = createApp({
       }
     };
 
+    // Markdown 下载
+    const downloadMarkdown = async () => {
+      if (!readingFilename.value) return;
+      
+      markdownDownloading.value = true;
+      try {
+        const encodedFilename = encodeURIComponent(readingFilename.value);
+        const response = await axios.get(`/api/public/summaries/${encodedFilename}/markdown`, {
+          responseType: 'blob'
+        });
+        
+        const blob = new Blob([response.data], { type: 'text/markdown; charset=utf-8' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        
+        // 从响应头获取文件名，如果没有则使用默认名称
+        const contentDisposition = response.headers['content-disposition'];
+        let filename = `${documentTitle.value || readingFilename.value}.md`;
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename\*=UTF-8''(.+)/);
+          if (filenameMatch) {
+            filename = decodeURIComponent(filenameMatch[1]);
+          }
+        }
+        
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+        showToast('Markdown下载成功', 'success');
+      } catch (error) {
+        console.error('Markdown下载失败:', error);
+        showToast('Markdown下载失败', 'danger');
+      } finally {
+        markdownDownloading.value = false;
+      }
+    };
+
     // 文章点击处理
     const handleArticleClick = (event) => {
       // 处理文章内的链接点击等
@@ -1433,6 +1475,7 @@ const app = createApp({
       isShareView,
       readingVideoUrl,
       pdfDownloading,
+      markdownDownloading,
       readingContent,
       documentTitle,
       documentTitleEn,
@@ -1496,6 +1539,7 @@ const app = createApp({
       handleVideoPositionChange,
       handleVideoSizeChange,
       downloadPDF,
+      downloadMarkdown,
       handleArticleClick,
       handleLibrarySortChange,
       testToast,
