@@ -1,0 +1,9 @@
+<button 
+    class="simple-audio-btn" 
+    @click="togglePlay" 
+    :disabled="isLoading"
+    :title="buttonTooltip" 
+    :aria-label="buttonTooltip">
+    <span class="simple-audio-btn__icon">{{ buttonIcon }}</span>
+    <span v-if="error" class="simple-audio-btn__error">{{ error }}</span>
+</button>

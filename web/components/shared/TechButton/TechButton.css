@@ -144,20 +144,24 @@
   transform: translateY(-1px);
 }
 
-/* 危险按钮 - 红色科技风 - Modifier */
+/* 危险按钮 - 改为中性Ghost风格（用于退出等操作） - Modifier */
 .tech-button--danger {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2));
-  border-color: rgba(239, 68, 68, 0.4);
-  color: #f87171;
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.1);
+  background: transparent;  /* 透明背景 */
+  border-color: transparent;  /* 透明边框 */
+  color: #94a3b8;  /* 中性灰色文字 */
+  box-shadow: none;  /* 移除阴影 */
 }
 
 .tech-button--danger:hover {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.3));
-  border-color: rgba(239, 68, 68, 0.6);
-  color: #ef4444;
-  box-shadow: 0 0 30px rgba(239, 68, 68, 0.2);
+  background: rgba(100, 116, 139, 0.1);  /* 微妙的灰色背景 */
+  border-color: rgba(100, 116, 139, 0.3);  /* 微妙的灰色边框 */
+  color: #cbd5e1;  /* 提亮文字 */
+  box-shadow: none;  /* 不使用阴影 */
   transform: translateY(-1px);
+}
+
+.tech-button--danger:active {
+  background: rgba(100, 116, 139, 0.2);  /* 按下时稍深 */
 }
 
 /* 小尺寸按钮 - Modifier */

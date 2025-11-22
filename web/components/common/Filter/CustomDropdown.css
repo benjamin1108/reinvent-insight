@@ -8,19 +8,18 @@
   display: inline-block;
 }
 
-/* 触发器样式 */
+/* 触发器样式 - 填充风格 */
 .custom-dropdown-trigger {
-  background: linear-gradient(135deg, rgba(251, 146, 60, 0.1), rgba(220, 38, 38, 0.1));
-  border: 1px solid rgba(251, 146, 60, 0.3);
+  background: rgba(51, 65, 85, 0.4);  /* 填充背景替代渐变 */
+  border: 1px solid transparent;  /* 默认透明边框 */
   border-radius: 8px;
-  color: #fb923c;
+  color: #94a3b8;  /* 柔和的灰色文字 */
   padding: 6px 32px 6px 12px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;  /* 缩短过渡时间 */
   backdrop-filter: blur(8px);
-  box-shadow: 0 2px 8px rgba(251, 146, 60, 0.1);
   min-width: 120px;
   display: flex;
   align-items: center;
@@ -41,8 +40,8 @@
   height: 0;
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
-  border-top: 5px solid #fb923c;
-  transition: transform 0.3s ease;
+  border-top: 5px solid #94a3b8;  /* 与文字颜色一致 */
+  transition: transform 0.2s ease;
 }
 
 /* 激活状态的箭头旋转 */
@@ -50,13 +49,23 @@
   transform: translateY(-50%) rotate(180deg);
 }
 
-/* 触发器悬停效果 */
+/* 触发器悬停效果 - 填充风格 */
 .custom-dropdown-trigger:hover {
-  background: linear-gradient(135deg, rgba(251, 146, 60, 0.2), rgba(220, 38, 38, 0.2));
-  border-color: rgba(251, 146, 60, 0.5);
-  box-shadow: 0 4px 12px rgba(251, 146, 60, 0.2);
-  transform: translateY(-1px);
-  animation: pulse 2s infinite;
+  background: rgba(51, 65, 85, 0.6);  /* 增加背景不透明度 */
+  border-color: rgba(100, 116, 139, 0.3);  /* 显示微妙边框 */
+  color: #cbd5e1;  /* 提亮文字 */
+}
+
+.custom-dropdown-trigger:hover::after {
+  border-top-color: #cbd5e1;  /* 提亮箭头 */
+}
+
+/* 触发器焦点状态 */
+.custom-dropdown-trigger:focus,
+.custom-dropdown.active .custom-dropdown-trigger {
+  background: rgba(51, 65, 85, 0.7);
+  border-color: rgba(34, 211, 238, 0.4);  /* 青色边框表示激活 */
+  outline: none;
 }
 
 /* 禁用状态 */
@@ -65,25 +74,23 @@
   opacity: 0.4;
   cursor: not-allowed;
   pointer-events: none;
-  background: rgba(100, 100, 100, 0.1) ;
-  border-color: rgba(150, 150, 150, 0.3) ;
-  color: #666 ;
+  background: rgba(51, 65, 85, 0.2);
+  border-color: transparent;
+  color: #64748b;
 }
 
 /* 禁用状态的悬停效果（不应有任何变化） */
 .custom-dropdown-trigger.disabled:hover,
 .custom-dropdown.disabled .custom-dropdown-trigger:hover {
-  background: linear-gradient(135deg, rgba(251, 146, 60, 0.1), rgba(220, 38, 38, 0.1));
-  border-color: rgba(251, 146, 60, 0.3);
-  box-shadow: 0 2px 8px rgba(251, 146, 60, 0.1);
+  background: rgba(51, 65, 85, 0.2);
+  border-color: transparent;
   transform: none;
-  animation: none;
 }
 
 /* 禁用状态的箭头颜色 */
 .custom-dropdown-trigger.disabled::after,
 .custom-dropdown.disabled .custom-dropdown-trigger::after {
-  border-top-color: rgba(251, 146, 60, 0.5);
+  border-top-color: #64748b;
 }
 
 /* 下拉菜单 */
@@ -210,18 +217,7 @@
   }
 }
 
-/* 脉冲动画 */
-@keyframes pulse {
-  0% {
-    box-shadow: 0 2px 8px rgba(251, 146, 60, 0.1);
-  }
-  50% {
-    box-shadow: 0 2px 16px rgba(251, 146, 60, 0.2);
-  }
-  100% {
-    box-shadow: 0 2px 8px rgba(251, 146, 60, 0.1);
-  }
-}
+
 
 /* 响应式调整 */
 @media (max-width: 768px) {

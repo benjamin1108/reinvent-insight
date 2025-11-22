@@ -334,6 +334,11 @@
   min-width: 80px ;
 }
 
+/* 音频播放按钮样式 */
+.app-header__audio-btn {
+  flex-shrink: 0;
+}
+
 /* 桌面端样式 */
 @media (min-width: 768px) {
   /* header容器在桌面端变为横向布局 */
@@ -707,5 +712,16 @@
   
   .app-header__download-menu-item:active:not(:disabled) {
     transform: none;
+  }
+}
+
+/* 移动端阅读模式音频按钮优化 */
+@media (max-width: 768px) {
+  .app-header--reading .app-header__reading-controls {
+    gap: 0.375rem;
+  }
+  
+  .app-header--reading .app-header__audio-btn {
+    margin-left: 0.25rem;
   }
 }

@@ -175,6 +175,14 @@
           @click="handleToggleToc">
           目录
         </tech-button>
+
+        <!-- 音频播放按钮 -->
+        <simple-audio-button 
+          v-if="articleHash && articleText"
+          :article-hash="articleHash"
+          :article-text="articleText"
+          class="app-header__audio-btn">
+        </simple-audio-button>
       </div>
     </div>
     

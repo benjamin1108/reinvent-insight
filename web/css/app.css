@@ -126,11 +126,43 @@ html, body {
 
 
 
+/* 自定义滚动条样式 - 深色主题 */
+/* Webkit浏览器 (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.3);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(71, 85, 105, 0.5);
+  border-radius: 5px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(71, 85, 105, 0.7);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(71, 85, 105, 0.5) rgba(15, 23, 42, 0.3);
+}
+
 /* 减少动画模式支持 */
 @media (prefers-reduced-motion: reduce) {
   .fade-in,
   .slide-in,
   .dev-env-indicator {
     animation: none;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    transition: none;
   }
 } 

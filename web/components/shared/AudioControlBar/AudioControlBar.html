@@ -1,0 +1,61 @@
+<div class="audio-player" v-if="articleText">
+    <!-- 错误提示 - 顶部弹出 -->
+    <div v-if="error" class="audio-player__toast">
+        <span class="audio-player__toast-icon">⚠️</span>
+        <span class="audio-player__toast-message">{{ error }}</span>
+        <button class="audio-player__toast-close" @click="error = null" aria-label="关闭">✕</button>
+    </div>
+
+    <!-- 主播放器条 -->
+    <div class="audio-player__bar">
+        <!-- 左侧: 播放按钮 -->
+        <button class="audio-player__play-btn" @click="isPlaying ? pause() : play()" :disabled="isLoading"
+            :title="playButtonTooltip" :aria-label="playButtonTooltip">
+            <span class="audio-player__play-icon">{{ playButtonIcon }}</span>
+        </button>
+
+        <!-- 中间: 进度区域 -->
+        <div class="audio-player__progress-section">
+            <!-- 进度条 -->
+            <div class="audio-player__progress-bar" @click="seek" role="slider" :aria-valuenow="currentTime"
+                :aria-valuemin="0" :aria-valuemax="duration" aria-label="播放进度">
+                <!-- 缓冲进度 -->
+                <div class="audio-player__progress-buffered" :style="{ width: bufferedPercentage + '%' }"></div>
+
+                <!-- 当前进度 -->
+                <div class="audio-player__progress-current" :style="{ width: progressPercentage + '%' }"></div>
+
+                <!-- 滑块 -->
+                <div class="audio-player__progress-thumb" :style="{ left: progressPercentage + '%' }"
+                    v-if="duration > 0"></div>
+            </div>
+
+            <!-- 时间显示 -->
+            <div class="audio-player__time">
+                <span class="audio-player__time-current">{{ formattedCurrentTime }}</span>
+                <span class="audio-player__time-separator">/</span>
+                <span class="audio-player__time-total">{{ formattedDuration }}</span>
+            </div>
+        </div>
+
+        <!-- 右侧: 控制按钮 -->
+        <div class="audio-player__controls">
+            <!-- 速度选择 -->
+            <div class="audio-player__speed">
+                <label for="speed-select" class="audio-player__speed-label">⚡</label>
+                <select id="speed-select" class="audio-player__speed-select" v-model.number="playbackRate"
+                    @change="setPlaybackRate" aria-label="播放速度">
+                    <option v-for="rate in playbackRates" :key="rate.value" :value="rate.value">{{ rate.label }}
+                    </option>
+                </select>
+            </div>
+
+            <!-- 下载按钮 -->
+            <button class="audio-player__download-btn" @click="downloadAudio" :disabled="isDownloading || isLoading"
+                title="下载音频" aria-label="下载音频文件">
+                <span v-if="!isDownloading">📥</span>
+                <span v-else class="audio-player__download-loading">⏳</span>
+            </button>
+        </div>
+    </div>
+</div>

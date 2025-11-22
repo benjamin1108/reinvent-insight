@@ -4,7 +4,8 @@
  */
 export default {
   dependencies: [
-    ['tech-button', '/components/shared/TechButton', 'TechButton']
+    ['tech-button', '/components/shared/TechButton', 'TechButton'],
+    ['simple-audio-button', '/components/shared/SimpleAudioButton', 'SimpleAudioButton']
   ],
   props: {
     // Header模式：normal（普通页面）或 reading（阅读页面）
@@ -62,6 +63,20 @@ export default {
     markdownDownloading: {
       type: Boolean,
       default: false
+    },
+    
+    // === 音频播放相关props ===
+    
+    // 文章哈希值（用于TTS）
+    articleHash: {
+      type: String,
+      default: ''
+    },
+    
+    // 文章文本（用于TTS）
+    articleText: {
+      type: String,
+      default: ''
     }
   },
   
@@ -79,6 +94,26 @@ export default {
   ],
   
   setup(props, { emit }) {
+    const { watch } = Vue;
+    
+    // 调试：监听音频相关props
+    watch(() => [props.articleHash, props.articleText], ([hash, text]) => {
+      console.log('🎵 [AppHeader] 音频props变化:');
+      console.log('  - articleHash:', hash);
+      console.log('  - articleTextLength:', text?.length || 0);
+      console.log('  - hasHash:', !!hash);
+      console.log('  - hasText:', !!text);
+      console.log('  - 条件满足:', !!(hash && text));
+      console.log('  - 当前时间:', new Date().toISOString());
+    }, { immediate: true });
+    
+    // 单独监听articleText
+    watch(() => props.articleText, (newText, oldText) => {
+      console.log('📝 [AppHeader] articleText 单独变化:');
+      console.log('  - 旧长度:', oldText?.length || 0);
+      console.log('  - 新长度:', newText?.length || 0);
+    });
+    
     // 事件处理方法
     const handleHomeClick = () => {
       emit('home-click');

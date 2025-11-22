@@ -12,12 +12,12 @@
   
   <!-- Main clickable area -->
   <div class="summary-card__content">
-    <!-- 主标题（英文） -->
+    <!-- 主标题（英文） - 使用处理后的标题显示，完整标题保留在tooltip -->
     <div class="summary-card__title-container">
       <h3 
         class="summary-card__title"
         :title="titleEn">
-        {{ titleEn }}
+        {{ displayTitle }}
       </h3>
     </div>
     
@@ -49,8 +49,7 @@
         </div>
       </div>
       <div class="summary-card__metadata-right">
-        <div class="summary-card__badge">{{ summaryType === 'reinvent' ? 're:Invent' : '精选' }}</div>
-        <div v-if="year" class="summary-card__badge">{{ year }}</div>
+        <div v-if="year" class="summary-card__badge summary-card__badge--year">{{ year }}</div>
         <div 
           v-if="level" 
           class="summary-card__badge summary-card__badge--level">

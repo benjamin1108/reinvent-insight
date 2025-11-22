@@ -687,6 +687,341 @@ class GeminiClient(BaseModelClient):
         except Exception as e:
             logger.error(f"删除文件失败: {e}")
             return False
+    
+    def _split_text_for_streaming(self, text: str, max_chunk_size: int = 100) -> list:
+        """
+        将长文本按句子切分为多个较短的片段，用于模拟流式体验
+        
+        策略：按句子边界（。！？.!? 或换行符）切分，每个片段约 50-100 字
+        
+        Args:
+            text: 要切分的文本
+            max_chunk_size: 每个片段的最大字符数
+            
+        Returns:
+            文本片段列表
+        """
+        import re
+        
+        # 如果文本很短，直接返回
+        if len(text) <= max_chunk_size:
+            return [text]
+        
+        # 按句子边界切分（中英文标点）
+        # 匹配句子结束符号：。！？.!? 后面可能跟引号、括号等
+        sentence_pattern = r'[。！？.!?]+[」』"\'）\)]*'
+        
+        chunks = []
+        current_chunk = ""
+        
+        # 先按句子切分
+        sentences = re.split(f'({sentence_pattern})', text)
+        
+        for i in range(0, len(sentences), 2):
+            sentence = sentences[i]
+            # 如果有标点符号，加上
+            if i + 1 < len(sentences):
+                sentence += sentences[i + 1]
+            
+            # 如果当前块加上这个句子不超过限制，就加入
+            if len(current_chunk) + len(sentence) <= max_chunk_size:
+                current_chunk += sentence
+            else:
+                # 否则，保存当前块，开始新块
+                if current_chunk:
+                    chunks.append(current_chunk.strip())
+                current_chunk = sentence
+        
+        # 添加最后一个块
+        if current_chunk:
+            chunks.append(current_chunk.strip())
+        
+        # 如果没有切分成功（可能没有句子边界），强制按字符数切分
+        if not chunks or (len(chunks) == 1 and len(chunks[0]) > max_chunk_size):
+            logger.debug("没有找到句子边界，强制按字符数切分")
+            chunks = [text[i:i+max_chunk_size] for i in range(0, len(text), max_chunk_size)]
+        
+        # 过滤掉空片段
+        chunks = [chunk for chunk in chunks if chunk.strip()]
+        
+        logger.info(f"📄 文本切分: {len(text)} 字符 → {len(chunks)} 个片段")
+        for i, chunk in enumerate(chunks):
+            logger.debug(f"   片段 {i+1}: {len(chunk)} 字符")
+        
+        return chunks
+    
+    async def generate_tts_stream(
+        self,
+        text: str,
+        voice: str = "kore",
+        language: str = "zh-CN"
+    ):
+        """
+        生成 TTS 音频（使用输入端分片策略实现低延迟流式播放）
+        
+        策略：
+        1. 将长文本切分为多个短片段（50-100字）
+        2. 串行请求每个片段的 TTS
+        3. 一旦收到第一个片段的音频就立即 yield
+        4. 持续处理后续片段，实现连续播放
+        
+        这样可以将首字延迟从 15 秒降低到 3-5 秒！
+        
+        Args:
+            text: 要转换的文本
+            voice: 音色名称（30种可选，如 kore, puck, aoede 等，全小写）
+            language: 语言代码（如 zh-CN, en-US 等，Gemini 会自动检测）
+            
+        Yields:
+            bytes: Base64 编码的 PCM 音频数据
+            
+        Raises:
+            APIError: API 调用失败
+        """
+        await self._apply_rate_limit()
+        
+        try:
+            # 使用新的 google-genai SDK
+            try:
+                from google import genai
+                from google.genai import types
+                import base64
+            except ImportError:
+                logger.warning("google-genai SDK 未安装，TTS 功能不可用")
+                raise ConfigurationError(
+                    "Gemini TTS 需要 google-genai SDK。请安装: pip install google-genai"
+                )
+            
+            # 记录流开始的详细信息
+            start_time = asyncio.get_event_loop().time()
+            logger.info(
+                f"🎤 开始输入端分片流式 TTS: "
+                f"model={self.config.model_name}, "
+                f"voice={voice}, "
+                f"language={language}, "
+                f"text_length={len(text)}"
+            )
+            
+            # 🔥 关键策略：将长文本切分为多个短片段（20-30字，约2-4秒音频）
+            text_chunks = self._split_text_for_streaming(text, max_chunk_size=30)
+            logger.info(f"✂️  文本已切分为 {len(text_chunks)} 个片段")
+            
+            # 创建客户端（在主线程中，避免线程安全问题）
+            try:
+                client = genai.Client(api_key=self.config.api_key)
+                logger.debug("Gemini 客户端创建成功")
+            except Exception as e:
+                logger.error(f"创建 Gemini 客户端失败: {e}", exc_info=True)
+                raise ConfigurationError(f"无法创建 Gemini 客户端: {e}") from e
+            
+            # 处理每个文本片段
+            total_chunk_count = 0
+            total_bytes = 0
+            first_audio_time = None
+            
+            for segment_index, text_segment in enumerate(text_chunks, 1):
+                segment_start_time = asyncio.get_event_loop().time()
+                logger.info(f"🎯 处理片段 {segment_index}/{len(text_chunks)}: {len(text_segment)} 字符")
+                
+                # 为每个片段生成音频
+                async def generate_segment_audio(segment_text):
+                    """为单个文本片段生成音频"""
+                    def _get_stream():
+                        return client.models.generate_content_stream(
+                            model=self.config.model_name,
+                            contents=segment_text,
+                            config=types.GenerateContentConfig(
+                                response_modalities=["AUDIO"],
+                                speech_config=types.SpeechConfig(
+                                    voice_config=types.VoiceConfig(
+                                        prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                                            voice_name=voice
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    
+                    # 在线程池中获取流
+                    stream = await asyncio.to_thread(_get_stream)
+                    
+                    # 收集这个片段的所有音频块
+                    segment_audio_chunks = []
+                    chunk_index = 0
+                    
+                    while True:
+                        try:
+                            chunk = await asyncio.to_thread(lambda: next(stream, None))
+                            if chunk is None:
+                                break
+                            
+                            chunk_index += 1
+                            
+                            # 解析音频数据
+                            if hasattr(chunk, 'candidates') and chunk.candidates:
+                                candidate = chunk.candidates[0]
+                                if hasattr(candidate, 'content') and candidate.content:
+                                    if hasattr(candidate.content, 'parts') and candidate.content.parts:
+                                        for part in candidate.content.parts:
+                                            if hasattr(part, 'inline_data') and part.inline_data:
+                                                if hasattr(part.inline_data, 'data') and part.inline_data.data:
+                                                    audio_data = part.inline_data.data
+                                                    
+                                                    # 解码音频数据
+                                                    if isinstance(audio_data, str):
+                                                        pcm_data = base64.b64decode(audio_data)
+                                                    else:
+                                                        pcm_data = audio_data
+                                                    
+                                                    if pcm_data:
+                                                        segment_audio_chunks.append(pcm_data)
+                        
+                        except StopIteration:
+                            break
+                        except Exception as e:
+                            logger.error(f"读取片段音频块时出错: {e}")
+                            break
+                    
+                    return segment_audio_chunks
+                
+                # 生成这个片段的音频
+                segment_audio_chunks = await generate_segment_audio(text_segment)
+                
+                if not segment_audio_chunks:
+                    logger.warning(f"⚠️  片段 {segment_index} 没有生成音频，跳过")
+                    continue
+                
+                # 记录首个音频片段的延迟
+                if first_audio_time is None:
+                    first_audio_time = asyncio.get_event_loop().time()
+                    first_audio_latency = first_audio_time - start_time
+                    logger.info(f"⚡ 首个音频片段延迟: {first_audio_latency:.2f}s （目标 < 5s）")
+                
+                # 立即 yield 这个片段的所有音频块
+                for pcm_data in segment_audio_chunks:
+                    b64_data = base64.b64encode(pcm_data).decode('utf-8')
+                    total_chunk_count += 1
+                    total_bytes += len(pcm_data)
+                    
+                    logger.info(
+                        f"📦 发送片段 {segment_index} 的音频: "
+                        f"{len(pcm_data)} bytes, "
+                        f"累计 {total_bytes / 1024:.1f}KB"
+                    )
+                    
+                    # ✅ 立即 yield 给前端播放！
+                    yield b64_data.encode('utf-8')
+                
+                segment_time = asyncio.get_event_loop().time() - segment_start_time
+                logger.info(f"✅ 片段 {segment_index} 完成，耗时 {segment_time:.2f}s")
+            
+            # 记录完成统计
+            end_time = asyncio.get_event_loop().time()
+            total_time = end_time - start_time
+            
+            if total_chunk_count == 0:
+                logger.warning("⚠️  流式 TTS 完成但没有生成任何音频")
+            else:
+                avg_chunk_size = total_bytes / total_chunk_count if total_chunk_count > 0 else 0
+                logger.info(
+                    f"🎉 输入端分片流式 TTS 完成: "
+                    f"{len(text_chunks)} 个文本片段, "
+                    f"{total_chunk_count} 个音频块, "
+                    f"{total_bytes / 1024:.1f}KB, "
+                    f"平均块大小 {avg_chunk_size / 1024:.1f}KB, "
+                    f"总时长 {total_time:.2f}s"
+                )
+                
+                if first_audio_time:
+                    first_audio_latency = first_audio_time - start_time
+                    logger.info(f"📊 性能指标: 首音频延迟 {first_audio_latency:.2f}s")
+                    
+                    if first_audio_latency < 5.0:
+                        logger.info("🎯 成功！首音频延迟 < 5 秒")
+                    elif first_audio_latency < 10.0:
+                        logger.info("✅ 良好！首音频延迟 < 10 秒")
+                    else:
+                        logger.warning(f"⚠️  首音频延迟较长: {first_audio_latency:.2f}s")
+            
+        except ConfigurationError:
+            # 配置错误直接抛出
+            raise
+        except Exception as e:
+            # 记录详细的错误上下文
+            error_context = {
+                'model': self.config.model_name,
+                'voice': voice,
+                'language': language,
+                'text_length': len(text),
+                'error_type': type(e).__name__,
+                'error_message': str(e)
+            }
+            
+            logger.error(
+                f"❌ 流式 TTS 失败: {e}\n"
+                f"   上下文: {error_context}",
+                exc_info=True
+            )
+            
+            # 根据错误类型提供更友好的错误消息
+            error_str = str(e).lower()
+            
+            if "api key not valid" in error_str or "invalid api key" in error_str:
+                raise ConfigurationError(
+                    f"Gemini API 密钥无效。请检查 GEMINI_API_KEY 环境变量。"
+                ) from e
+            
+            if "voice name" in error_str and "not supported" in error_str:
+                raise APIError(
+                    f"不支持的音色 '{voice}'。"
+                    f"请使用支持的音色（如 kore, puck, aoede 等）。"
+                ) from e
+            
+            if "quota" in error_str or "rate limit" in error_str:
+                raise APIError(
+                    f"API 配额已用尽或速率限制。请稍后重试。"
+                ) from e
+            
+            if "client has been closed" in error_str:
+                raise APIError(
+                    f"API 客户端连接已关闭。这可能是网络问题或超时。"
+                ) from e
+            
+            # 通用错误
+            raise APIError(
+                f"Gemini TTS 流式生成失败: {e}\n"
+                f"模型: {self.config.model_name}, 音色: {voice}"
+            ) from e
+    
+    async def generate_tts(
+        self,
+        text: str,
+        voice: str = "Kore",
+        language: str = "zh-CN"
+    ) -> bytes:
+        """
+        生成完整的 TTS 音频（非流式）
+        
+        Args:
+            text: 要转换的文本
+            voice: 音色名称
+            language: 语言代码
+            
+        Returns:
+            Base64 编码的 PCM 音频数据
+            
+        Raises:
+            APIError: API 调用失败
+        """
+        audio_data = None
+        async for chunk in self.generate_tts_stream(text, voice, language):
+            audio_data = chunk
+            break  # Gemini TTS 返回完整音频，只有一个块
+        
+        if not audio_data:
+            raise APIError("未收到音频数据")
+        
+        return audio_data
 
 
 
@@ -962,6 +1297,288 @@ class DashScopeClient(BaseModelClient):
         """
         logger.info(f"DashScope 不需要删除文件: {file_id}")
         return True
+    
+    def _split_text_for_streaming(self, text: str, max_chunk_size: int = 100) -> list:
+        """
+        将长文本按句子切分为多个较短的片段，用于流式体验
+        
+        策略：按句子边界（。！？.!? 或换行符）切分，每个片段约 50-100 字
+        
+        Args:
+            text: 要切分的文本
+            max_chunk_size: 每个片段的最大字符数
+            
+        Returns:
+            文本片段列表
+        """
+        import re
+        
+        # 如果文本很短，直接返回
+        if len(text) <= max_chunk_size:
+            return [text]
+        
+        # 按句子边界切分（中英文标点）
+        sentence_pattern = r'[。！？.!?]+[」』"\'）\)]*'
+        
+        chunks = []
+        current_chunk = ""
+        
+        # 先按句子切分
+        sentences = re.split(f'({sentence_pattern})', text)
+        
+        for i in range(0, len(sentences), 2):
+            sentence = sentences[i]
+            # 如果有标点符号，加上
+            if i + 1 < len(sentences):
+                sentence += sentences[i + 1]
+            
+            # 如果当前块加上这个句子不超过限制，就加入
+            if len(current_chunk) + len(sentence) <= max_chunk_size:
+                current_chunk += sentence
+            else:
+                # 否则，保存当前块，开始新块
+                if current_chunk:
+                    chunks.append(current_chunk.strip())
+                current_chunk = sentence
+        
+        # 添加最后一个块
+        if current_chunk:
+            chunks.append(current_chunk.strip())
+        
+        # 如果没有切分成功（可能没有句子边界），强制按字符数切分
+        if not chunks or (len(chunks) == 1 and len(chunks[0]) > max_chunk_size):
+            logger.debug("没有找到句子边界，强制按字符数切分")
+            chunks = [text[i:i+max_chunk_size] for i in range(0, len(text), max_chunk_size)]
+        
+        # 过滤掉空片段
+        chunks = [chunk for chunk in chunks if chunk.strip()]
+        
+        logger.info(f"📄 文本切分: {len(text)} 字符 → {len(chunks)} 个片段")
+        for i, chunk in enumerate(chunks):
+            logger.debug(f"   片段 {i+1}: {len(chunk)} 字符")
+        
+        return chunks
+    
+    async def generate_tts_stream(
+        self,
+        text: str,
+        voice: str = "Cherry",
+        language: str = "Chinese"
+    ):
+        """
+        生成 TTS 音频（使用 MultiModalConversation API + 输入端分片策略）
+        
+        使用输入端分片策略实现低延迟流式播放：
+        1. 将长文本切分为多个短片段（50-100字）
+        2. 使用 MultiModalConversation.call 串行处理每个片段
+        3. 一旦收到音频数据就立即 yield
+        4. 持续处理后续片段，实现连续播放
+        
+        Args:
+            text: 要转换的文本
+            voice: 音色名称
+            language: 语言类型（Chinese, English 等）
+            
+        Yields:
+            bytes: Base64 编码的 PCM 音频数据
+            
+        Raises:
+            APIError: API 调用失败
+        """
+        await self._apply_rate_limit()
+        
+        try:
+            import base64
+            
+            # 记录流开始的详细信息
+            start_time = asyncio.get_event_loop().time()
+            logger.info(
+                f"🎤 开始 Qwen3-TTS 流式 TTS: "
+                f"model={self.config.model_name}, "
+                f"voice={voice}, "
+                f"language={language}, "
+                f"text_length={len(text)}"
+            )
+            
+            # 🔥 关键策略：将长文本切分为多个短片段（50-100字）
+            text_chunks = self._split_text_for_streaming(text, max_chunk_size=100)
+            logger.info(f"✂️  文本已切分为 {len(text_chunks)} 个片段")
+            
+            # 处理每个文本片段
+            total_chunk_count = 0
+            total_bytes = 0
+            first_audio_time = None
+            
+            for segment_index, text_segment in enumerate(text_chunks, 1):
+                segment_start_time = asyncio.get_event_loop().time()
+                logger.info(f"🎯 处理片段 {segment_index}/{len(text_chunks)}: {len(text_segment)} 字符")
+                
+                # 在片段之间添加短暂延迟，避免请求过快导致连接问题
+                if segment_index > 1:
+                    await asyncio.sleep(0.5)
+                
+                # 为每个片段生成音频（使用 MultiModalConversation API）
+                loop = asyncio.get_event_loop()
+                
+                def _call_tts_stream():
+                    """在同步上下文中调用 DashScope MultiModalConversation API"""
+                    response = self.dashscope.MultiModalConversation.call(
+                        model=self.config.model_name,
+                        api_key=self.config.api_key,
+                        text=text_segment,
+                        voice=voice,
+                        language_type=language,
+                        stream=True
+                    )
+                    return response
+                
+                # 在 executor 中执行同步调用
+                response = await loop.run_in_executor(None, _call_tts_stream)
+                
+                # 收集这个片段的所有音频块
+                segment_audio_data = b''
+                audio_url = None
+                chunk_count = 0
+                
+                for chunk in response:
+                    chunk_count += 1
+                    logger.debug(f"收到响应块 {chunk_count}: {type(chunk)}")
+                    
+                    # 检查是否有音频数据
+                    if hasattr(chunk, 'output') and chunk.output:
+                        logger.debug(f"output 存在: {type(chunk.output)}")
+                        
+                        if hasattr(chunk.output, 'audio') and chunk.output.audio:
+                            audio_obj = chunk.output.audio
+                            logger.debug(f"audio 对象: {type(audio_obj)}, data={getattr(audio_obj, 'data', None)[:50] if hasattr(audio_obj, 'data') and audio_obj.data else None}, url={getattr(audio_obj, 'url', None)}")
+                            
+                            # 流式输出：data 字段包含 Base64 音频数据
+                            if hasattr(audio_obj, 'data') and audio_obj.data:
+                                audio_data = audio_obj.data
+                                # 解码 Base64
+                                if isinstance(audio_data, str) and audio_data:
+                                    logger.info(f"收到 Base64 音频数据，长度: {len(audio_data)}")
+                                    audio_bytes = base64.b64decode(audio_data)
+                                    segment_audio_data += audio_bytes
+                            
+                            # 非流式输出：url 字段包含完整音频文件 URL
+                            elif hasattr(audio_obj, 'url') and audio_obj.url:
+                                audio_url = audio_obj.url
+                                logger.info(f"收到音频 URL: {audio_url}")
+                        else:
+                            logger.warning(f"output 没有 audio 属性或 audio 为空")
+                    else:
+                        logger.warning(f"chunk 没有 output 属性或 output 为空")
+                
+                logger.info(f"处理了 {chunk_count} 个响应块")
+                
+                # 如果收到的是 URL，需要下载音频
+                if audio_url and not segment_audio_data:
+                    logger.info(f"从 URL 下载音频: {audio_url}")
+                    import requests
+                    
+                    def _download_audio():
+                        response = requests.get(audio_url, timeout=30)
+                        response.raise_for_status()
+                        return response.content
+                    
+                    segment_audio_data = await loop.run_in_executor(None, _download_audio)
+                
+                if not segment_audio_data:
+                    logger.warning(f"⚠️  片段 {segment_index} 没有生成音频，跳过")
+                    continue
+                
+                # 记录首个音频片段的延迟
+                if first_audio_time is None:
+                    first_audio_time = asyncio.get_event_loop().time()
+                    first_audio_latency = first_audio_time - start_time
+                    logger.info(f"⚡ 首个音频片段延迟: {first_audio_latency:.2f}s （目标 < 5s）")
+                
+                # 编码为 Base64
+                b64_data = base64.b64encode(segment_audio_data).decode('utf-8')
+                total_chunk_count += 1
+                total_bytes += len(segment_audio_data)
+                
+                logger.info(
+                    f"📦 发送片段 {segment_index} 的音频: "
+                    f"{len(segment_audio_data)} bytes, "
+                    f"累计 {total_bytes / 1024:.1f}KB"
+                )
+                
+                # ✅ 立即 yield 给前端播放！
+                yield b64_data.encode('utf-8')
+                
+                segment_time = asyncio.get_event_loop().time() - segment_start_time
+                logger.info(f"✅ 片段 {segment_index} 完成，耗时 {segment_time:.2f}s")
+            
+            # 记录完成统计
+            end_time = asyncio.get_event_loop().time()
+            total_time = end_time - start_time
+            
+            if total_chunk_count == 0:
+                logger.warning("⚠️  流式 TTS 完成但没有生成任何音频")
+            else:
+                avg_chunk_size = total_bytes / total_chunk_count if total_chunk_count > 0 else 0
+                logger.info(
+                    f"🎉 Qwen3-TTS 流式 TTS 完成: "
+                    f"{len(text_chunks)} 个文本片段, "
+                    f"{total_chunk_count} 个音频块, "
+                    f"{total_bytes / 1024:.1f}KB, "
+                    f"平均块大小 {avg_chunk_size / 1024:.1f}KB, "
+                    f"总时长 {total_time:.2f}s"
+                )
+                
+                if first_audio_time:
+                    first_audio_latency = first_audio_time - start_time
+                    logger.info(f"📊 性能指标: 首音频延迟 {first_audio_latency:.2f}s")
+                    
+                    if first_audio_latency < 5.0:
+                        logger.info("🎯 成功！首音频延迟 < 5 秒")
+                    elif first_audio_latency < 10.0:
+                        logger.info("✅ 良好！首音频延迟 < 10 秒")
+                    else:
+                        logger.warning(f"⚠️  首音频延迟较长: {first_audio_latency:.2f}s")
+            
+        except Exception as e:
+            logger.error(f"调用 Qwen3-TTS API 时发生错误: {e}", exc_info=True)
+            if "Invalid API-key" in str(e) or "Unauthorized" in str(e):
+                raise ConfigurationError("DashScope API 密钥无效")
+            raise APIError(f"Qwen3-TTS API 调用失败: {e}") from e
+    
+    async def generate_tts(
+        self,
+        text: str,
+        voice: str = "Cherry",
+        language: str = "Chinese"
+    ) -> bytes:
+        """
+        生成完整的 TTS 音频（非流式）
+        
+        Args:
+            text: 要转换的文本
+            voice: 音色名称
+            language: 语言类型
+            
+        Returns:
+            bytes: 完整的音频数据（Base64 编码的 PCM）
+            
+        Raises:
+            APIError: API 调用失败
+        """
+        logger.info(f"开始使用 {self.config.model_name} 生成完整 TTS 音频...")
+        
+        # 收集所有音频块
+        chunks = []
+        async for chunk in self.generate_tts_stream(text, voice, language):
+            chunks.append(chunk)
+        
+        # 拼接所有块
+        complete_audio = b''.join(chunks)
+        
+        logger.info(f"TTS 音频生成完成，总大小: {len(complete_audio)} bytes")
+        return complete_audio
+
+
 # ============================================================================
 # 模型客户端工厂
 # ============================================================================

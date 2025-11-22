@@ -147,6 +147,57 @@ tasks:
       max_retries: 3
       retry_backoff_base: 2.0
 
+  # --------------------------------------------------------------------------
+  # 文本转语音任务
+  # --------------------------------------------------------------------------
+  # 用于将文章内容转换为语音，使用阿里云 Qwen3-TTS
+  text_to_speech:
+    provider: dashscope
+    model_name: qwen3-tts-flash
+    api_key_env: DASHSCOPE_API_KEY
+    
+    generation:
+      # TTS 不使用这些参数，但保留用于框架兼容性
+      temperature: 0.7
+      top_p: 0.9
+      top_k: 40
+      max_output_tokens: 32000
+    
+    rate_limit:
+      # Qwen TTS API 调用间隔（秒）
+      interval: 1
+      max_retries: 3
+      retry_backoff_base: 2.0
+    
+    # TTS 特定配置
+    tts:
+      # 默认音色（17种可选，见下方列表）
+      # 女声: Cherry(甜美女声), Stella(温柔女声), Luna(知性女声), Bella(活泼女声)
+      # 男声: Alex(沉稳男声), William(磁性男声), Ethan(阳光男声), Oliver(成熟男声)
+      # 儿童: Emily(女童), Tommy(男童)
+      # 方言: Cantonese(粤语女声), Sichuan(四川话女声), Dongbei(东北话女声)
+      # 其他: Robot(机器人), Narrator(旁白), Announcer(播音员), Customer(客服)
+      default_voice: Cherry
+      
+      # 默认语言
+      # 支持: Chinese(中文), English(英文), Cantonese(粤语)
+      default_language: Chinese
+      
+      # 采样率（Hz）- Qwen TTS 支持 8000, 16000, 24000, 48000
+      sample_rate: 24000
+      
+      # 音频格式 - Qwen 返回 PCM，我们组装成 WAV
+      audio_format: wav
+      
+      # 是否启用缓存
+      cache_enabled: true
+      
+      # 缓存最大大小（MB）
+      cache_max_size_mb: 500
+      
+      # 缓存目录
+      cache_dir: downloads/tts_cache
+
 # ============================================================================
 # 配置说明
 # ============================================================================

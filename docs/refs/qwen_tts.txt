@@ -1,0 +1,191 @@
+Speech synthesis (Qwen-TTS)
+Updated at: 2025-11-11 10:18
+Product
+Community
+This topic describes the request and response parameters for the Qwen-TTS model.
+
+For more information about how to use the Qwen-TTS model, see Speech synthesis - Qwen.
+Request body
+Non-streaming outputStreaming output
+PythonJavacurl
+The SpeechSynthesizer interface in the DashScope Python SDK has been consolidated into the MultiModalConversation interface. Its methods and parameters remain the same.
+ 
+# Install the latest version of the DashScope SDK.
+import os
+import dashscope
+
+# The following URL is for the Singapore region. If you use a model in the Beijing region, replace the URL with: https://dashscope.aliyuncs.com/api/v1
+dashscope.base_http_api_url = 'https://dashscope-intl.aliyuncs.com/api/v1'
+
+text = "Let me recommend a T-shirt. It is absolutely gorgeous. The color is very flattering, and it is a perfect piece for any outfit. You cannot go wrong with this one. It is really beautiful and flattering for all body types. It looks great on everyone. I highly recommend this T-shirt."
+# Usage of the SpeechSynthesizer interface: dashscope.audio.qwen_tts.SpeechSynthesizer.call(...)
+response = dashscope.MultiModalConversation.call(
+    # Only Qwen-TTS series models are supported. Do not use other models.
+    model="qwen3-tts-flash",
+    # The API keys for the Singapore and Beijing regions are different. To obtain an API key, visit: https://www.alibabacloud.com/help/en/model-studio/get-api-key
+    # If you have not configured the environment variable, replace the following line with api_key="sk-xxx" using your Model Studio API key.
+    api_key=os.getenv("DASHSCOPE_API_KEY"),
+    text=text,
+    voice="Cherry",
+    language_type="Chinese"
+)
+print(response)
+model string (Required)
+
+The model name. For a list of supported models, see Qwen-TTS.
+
+text string (Required)
+
+The text to synthesize. The model supports text in Chinese, English, or a mix of both. The maximum input for the Qwen-TTS model is 512 tokens. The maximum input for the Qwen3-TTS model is 600 characters.
+
+voice string (Required)
+
+The voice to use. For more information, see Supported voices.
+
+language_type string (Optional)
+
+Specifies the language of the synthesized audio. Defaults to Auto.
+
+Auto: Use this value for scenarios where the language of the text is uncertain or the text contains multiple languages. The model automatically applies the appropriate pronunciation for each language segment. However, pronunciation accuracy is not guaranteed.
+
+Specific language: Use this value for scenarios where the text is in a single language. Specifying the language significantly improves synthesis quality and typically produces better results than Auto. Valid values:
+
+Chinese
+
+English
+
+German
+
+Italian
+
+Portuguese
+
+Spanish
+
+Japanese
+
+Korean
+
+French
+
+Russian
+
+stream boolean (Optional) Defaults to false
+
+Specifies whether to return the response in a stream. Valid values:
+
+false: The URL of the generated audio is returned after generation is complete.
+
+true: The audio data is returned in Base64 encoding as it is generated. You must read these fragments in real time to assemble the complete result. For more information, see Real-time playback.
+
+This parameter is supported only by the Python SDK. To implement streaming output using the Java SDK, call the streamCall interface. To implement streaming output over HTTP, set X-DashScope-SSE to enable in the header.
+Response object (same for streaming and non-streaming outputs)
+ 
+{
+  "status_code": 200,
+  "request_id": "3c88b429-eb67-49de-b708-fe4c994fbfba",
+  "code": "",
+  "message": "",
+  "output": {
+    "text": null,
+    "finish_reason": "stop",
+    "choices": null,
+    "audio": {
+      "data": "",
+      "url": "http://dashscope-result-sh.oss-cn-shanghai.aliyuncs.com/1d/08/20250929/ffcf3aa4/e6cf58c8-33bd-47b9-941b-9a0652868b8c.wav?Expires=1759229218&OSSAccessKeyId=LTAI5xxx&Signature=bSfyEcJ3wjeq15h2ABgSdo1L3Pw%3D",
+      "id": "audio_3c88b429-eb67-49de-b708-fe4c994fbfba",
+      "expires_at": 1759229218
+    }
+  },
+  "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "characters": 195
+  }
+}
+output object
+
+The output of the model.
+
+Properties
+
+finish_reason string
+
+Consider the following two scenarios:
+
+null: The generation is in progress.
+
+stop: The generation is complete because the model finished its output or a stop condition was met.
+
+audio object
+
+The audio information output by the model.
+
+Properties
+
+url string
+
+The URL of the complete audio file output by the model. The URL is valid for 24 hours.
+
+data string
+
+The Base64-encoded audio data for streaming output.
+
+id string
+
+The ID that corresponds to the audio information output by the model.
+
+expires_at integer
+
+The UNIX timestamp when the URL expires.
+
+usage object
+
+The token or character usage information for the request. The Qwen-TTS model returns token usage, and the Qwen3-TTS model returns character usage.
+
+Properties
+
+input_tokens_details object
+
+The token usage information for the input text. This field is returned only by the Qwen-TTS model.
+
+Properties
+
+text_tokens integer
+
+The number of tokens consumed by the input text.
+
+total_tokens integer
+
+The total number of tokens consumed by the request. This field is returned only by the Qwen-TTS model.
+
+output_tokens integer
+
+The number of tokens consumed by the output audio. For the Qwen3-TTS model, this field is fixed at 0.
+
+input_tokens integer
+
+The number of tokens consumed by the input text. For the Qwen3-TTS model, this field is fixed at 0.
+
+output_tokens_details object
+
+The token usage information for the output. This field is returned only by the Qwen-TTS model.
+
+Properties
+
+audio_tokens integer
+
+The number of tokens consumed by the output audio.
+
+text_tokens integer
+
+The number of tokens consumed by the output text. The value is fixed at 0.
+
+characters integer
+
+The number of characters in the input text. This field is returned only by the Qwen3-TTS model.
+
+request_id string
+
+The ID of the request.
+

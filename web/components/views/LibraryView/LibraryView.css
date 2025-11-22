@@ -102,14 +102,15 @@
   gap: 3rem;
 }
 
-/* 区域标题样式 */
+/* 区域标题样式 - 确保垂直居中对齐 */
 .library-view__section-header {
   display: flex;
-  align-items: center;
+  align-items: center;  /* 垂直居中对齐 */
   justify-content: space-between;
   margin-bottom: 1.5rem;
   flex-wrap: wrap;
   gap: 1rem;
+  min-height: 3rem;  /* 确保一致的高度 */
 }
 
 .library-view__section-title-group {
@@ -127,6 +128,7 @@
   font-weight: 700;
   letter-spacing: -0.01em;  /* 收紧字符间距，增强现代感 */
   line-height: 1.2;  /* 收紧行高 */
+  margin: 0;  /* 移除默认margin确保对齐 */
   font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;  /* 启用字体特性 */
   text-rendering: optimizeLegibility;  /* 优化文本渲染 */
 }
@@ -151,13 +153,14 @@
   letter-spacing: -0.02em;  /* 与精选卡片标题保持一致 */
 }
 
-/* 文章计数样式 - 科技感字体优化 */
+/* 文章计数样式 - 提高对比度和可见性 */
 .library-view__article-count {
   font-family: 'Exo 2', 'Inter', sans-serif;  /* 与精选卡片元数据保持一致 */
-  background: rgba(34, 211, 238, 0.1);
+  background: rgba(34, 211, 238, 0.18);  /* 从0.1增加到0.18，提高背景明度 */
   color: #22d3ee;
   padding: 0.25rem 0.75rem;
   border-radius: 9999px;
+  border: 1px solid rgba(34, 211, 238, 0.3);  /* 添加边框增强定义 */
   font-size: 0.875rem;
   font-weight: 600;  /* 与精选卡片元数据保持一致 */
   letter-spacing: 0.05em;  /* 与精选卡片元数据保持一致 */

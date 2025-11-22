@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTS 流式播放测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+        
+        .test-section {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #22d3ee;
+        }
+        
+        h2 {
+            color: #3b82f6;
+            font-size: 1.2em;
+            margin-top: 0;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #22d3ee, #3b82f6);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            opacity: 0.9;
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .log {
+            background: #1a1a1a;
+            border: 1px solid #3a3a3a;
+            border-radius: 4px;
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 0;
+        }
+        
+        .log-info { color: #22d3ee; }
+        .log-error { color: #ef4444; }
+        .log-success { color: #10b981; }
+        .log-warning { color: #f59e0b; }
+        
+        .status {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .status-item {
+            background: #1a1a1a;
+            padding: 10px 15px;
+            border-radius: 4px;
+            border: 1px solid #3a3a3a;
+        }
+        
+        .status-label {
+            color: #888;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+        
+        .status-value {
+            color: #22d3ee;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #3a3a3a;
+            border-radius: 3px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(to right, #22d3ee, #3b82f6);
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            background: #1a1a1a;
+            border: 1px solid #3a3a3a;
+            border-radius: 4px;
+            color: #e0e0e0;
+            padding: 10px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎵 TTS 流式播放测试</h1>
+    
+    <div class="test-section">
+        <h2>测试文本</h2>
+        <textarea id="testText">人工智能技术正在快速发展，深度学习、自然语言处理、计算机视觉等领域取得了突破性进展。大型语言模型的出现，使得机器能够更好地理解和生成人类语言。这些技术的应用范围越来越广，从智能助手到自动驾驶，从医疗诊断到金融分析，人工智能正在改变我们的生活方式。然而，随着技术的发展，我们也需要关注AI的伦理问题、数据隐私和安全性。如何确保AI技术的发展符合人类的利益，是我们需要共同思考的重要课题。</textarea>
+        
+        <div style="margin-top: 10px;">
+            <button id="playBtn">▶️ 播放</button>
+            <button id="pauseBtn" disabled>⏸️ 暂停</button>
+            <button id="stopBtn" disabled>⏹️ 停止</button>
+            <button id="clearLogBtn">🗑️ 清空日志</button>
+        </div>
+        
+        <div class="status">
+            <div class="status-item">
+                <div class="status-label">状态</div>
+                <div class="status-value" id="statusText">就绪</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">当前时间</div>
+                <div class="status-value" id="currentTime">00:00</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">总时长</div>
+                <div class="status-value" id="duration">00:00</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">接收块数</div>
+                <div class="status-value" id="chunkCount">0</div>
+            </div>
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📋 日志</h2>
+        <div class="log" id="logContainer"></div>
+    </div>
+    
+    <script type="module">
+        import { AudioPlayer } from '/utils/AudioPlayer.js';
+        
+        let audioPlayer = null;
+        let chunkCount = 0;
+        
+        const elements = {
+            playBtn: document.getElementById('playBtn'),
+            pauseBtn: document.getElementById('pauseBtn'),
+            stopBtn: document.getElementById('stopBtn'),
+            clearLogBtn: document.getElementById('clearLogBtn'),
+            testText: document.getElementById('testText'),
+            statusText: document.getElementById('statusText'),
+            currentTime: document.getElementById('currentTime'),
+            duration: document.getElementById('duration'),
+            chunkCount: document.getElementById('chunkCount'),
+            progressFill: document.getElementById('progressFill'),
+            logContainer: document.getElementById('logContainer')
+        };
+        
+        function log(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            elements.logContainer.appendChild(entry);
+            elements.logContainer.scrollTop = elements.logContainer.scrollHeight;
+        }
+        
+        function formatTime(seconds) {
+            if (!seconds || isNaN(seconds)) return '00:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+        
+        function updateStatus(status) {
+            elements.statusText.textContent = status;
+        }
+        
+        function updateProgress() {
+            if (!audioPlayer) return;
+            
+            const current = audioPlayer.getCurrentTime();
+            const total = audioPlayer.getDuration();
+            
+            elements.currentTime.textContent = formatTime(current);
+            elements.duration.textContent = formatTime(total);
+            
+            if (total > 0) {
+                const percentage = (current / total) * 100;
+                elements.progressFill.style.width = `${percentage}%`;
+            }
+        }
+        
+        function setupAudioPlayer() {
+            if (audioPlayer) {
+                audioPlayer.destroy();
+            }
+            
+            audioPlayer = new AudioPlayer();
+            chunkCount = 0;
+            elements.chunkCount.textContent = '0';
+            
+            // 监听事件
+            audioPlayer.on('play', () => {
+                log('▶️ 播放开始', 'success');
+                updateStatus('播放中');
+                elements.playBtn.disabled = true;
+                elements.pauseBtn.disabled = false;
+                elements.stopBtn.disabled = false;
+            });
+            
+            audioPlayer.on('pause', () => {
+                log('⏸️ 播放暂停', 'warning');
+                updateStatus('已暂停');
+                elements.playBtn.disabled = false;
+                elements.pauseBtn.disabled = true;
+            });
+            
+            audioPlayer.on('stop', () => {
+                log('⏹️ 播放停止', 'info');
+                updateStatus('已停止');
+                elements.playBtn.disabled = false;
+                elements.pauseBtn.disabled = true;
+                elements.stopBtn.disabled = true;
+                updateProgress();
+            });
+            
+            audioPlayer.on('ended', () => {
+                log('✅ 播放完成', 'success');
+                updateStatus('已完成');
+                elements.playBtn.disabled = false;
+                elements.pauseBtn.disabled = true;
+                elements.stopBtn.disabled = true;
+            });
+            
+            audioPlayer.on('error', (error) => {
+                log(`❌ 错误: ${error.message}`, 'error');
+                updateStatus('错误');
+                elements.playBtn.disabled = false;
+                elements.pauseBtn.disabled = true;
+                elements.stopBtn.disabled = true;
+            });
+            
+            audioPlayer.on('timeupdate', (time) => {
+                updateProgress();
+            });
+            
+            audioPlayer.on('durationchange', (duration) => {
+                log(`⏱️ 时长更新: ${formatTime(duration)}`, 'info');
+                updateProgress();
+            });
+            
+            // 拦截 console.log 来捕获 chunk 接收
+            const originalLog = console.log;
+            console.log = function(...args) {
+                const message = args.join(' ');
+                if (message.includes('📦 收到音频块')) {
+                    chunkCount++;
+                    elements.chunkCount.textContent = chunkCount;
+                    log(`📦 收到第 ${chunkCount} 个音频块`, 'info');
+                } else if (message.includes('🎵 调度音频块')) {
+                    log(message, 'info');
+                }
+                originalLog.apply(console, args);
+            };
+        }
+        
+        // 播放按钮
+        elements.playBtn.addEventListener('click', async () => {
+            try {
+                const text = elements.testText.value.trim();
+                if (!text) {
+                    log('❌ 请输入测试文本', 'error');
+                    return;
+                }
+                
+                log('🚀 开始加载音频...', 'info');
+                updateStatus('加载中');
+                elements.playBtn.disabled = true;
+                
+                setupAudioPlayer();
+                
+                const requestData = {
+                    article_hash: 'test_' + Date.now(),
+                    text: text,
+                    voice: 'kore',  // Gemini TTS 默认音色
+                    language: 'zh-CN',
+                    use_cache: false,  // 测试时不使用缓存
+                    skip_code_blocks: true
+                };
+                
+                await audioPlayer.loadFromStream(requestData);
+                
+                log('✅ 音频加载完成，开始播放', 'success');
+                
+            } catch (error) {
+                log(`❌ 播放失败: ${error.message}`, 'error');
+                updateStatus('错误');
+                elements.playBtn.disabled = false;
+            }
+        });
+        
+        // 暂停按钮
+        elements.pauseBtn.addEventListener('click', () => {
+            if (audioPlayer) {
+                audioPlayer.pause();
+            }
+        });
+        
+        // 停止按钮
+        elements.stopBtn.addEventListener('click', () => {
+            if (audioPlayer) {
+                audioPlayer.stop();
+            }
+        });
+        
+        // 清空日志按钮
+        elements.clearLogBtn.addEventListener('click', () => {
+            elements.logContainer.innerHTML = '';
+            log('日志已清空', 'info');
+        });
+        
+        // 初始化
+        log('🎵 TTS 流式播放测试页面已加载', 'success');
+        log('📝 请输入测试文本，然后点击播放按钮', 'info');
+        
+        // 定期更新进度
+        setInterval(updateProgress, 100);
+    </script>
+</body>
+</html>

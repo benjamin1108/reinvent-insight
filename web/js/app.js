@@ -382,6 +382,78 @@ const app = createApp({
       
       return filtered;
     });
+    
+    // TTS音频文本 - 使用ref而不是computed，以便更好地控制更新
+    const articleTextForTTS = ref('');
+    
+    // 监听readingContent变化，手动更新articleTextForTTS
+    watch([readingContent, currentView], ([content, view]) => {
+      console.log('📝 [DEBUG] readingContent/currentView 变化:', {
+        contentLength: content?.length || 0,
+        hasContent: !!content,
+        currentView: view
+      });
+      
+      if (!content || view !== 'read') {
+        console.log('🎵 [TTS] 清空文本 - 条件不满足');
+        articleTextForTTS.value = '';
+        return;
+      }
+      
+      // 提取文本的函数
+      const extractText = () => {
+        try {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(content, 'text/html');
+          
+          // 移除图片、脚本、样式和代码块
+          doc.querySelectorAll('img, script, style, pre, code').forEach(el => el.remove());
+          
+          // 提取纯文本
+          let text = doc.body.textContent || '';
+          
+          // 清理多余空白
+          text = text.replace(/\s+/g, ' ').trim();
+          
+          // 限制长度（最多6000字符）
+          const maxLength = 6000;
+          if (text.length > maxLength) {
+            text = text.substring(0, maxLength);
+            // 在句子边界截断
+            const lastPeriod = Math.max(
+              text.lastIndexOf('。'),
+              text.lastIndexOf('.'),
+              text.lastIndexOf('！'),
+              text.lastIndexOf('？')
+            );
+            if (lastPeriod > maxLength * 0.8) {
+              text = text.substring(0, lastPeriod + 1);
+            }
+          }
+          
+          console.log('🎵 [TTS] 文本提取成功:', {
+            originalLength: content.length,
+            extractedLength: text.length,
+            readingHash: readingHash.value
+          });
+          
+          articleTextForTTS.value = text;
+          
+          // 强制触发Vue更新
+          nextTick(() => {
+            console.log('🎵 [TTS] nextTick后检查:', {
+              articleTextForTTSLength: articleTextForTTS.value.length,
+              readingHash: readingHash.value
+            });
+          });
+        } catch (error) {
+          console.error('[TTS] 提取文本失败:', error);
+          articleTextForTTS.value = '';
+        }
+      };
+      
+      extractText();
+    });
 
     // ===== 核心业务方法 =====
     
@@ -1494,6 +1566,7 @@ const app = createApp({
       displayMode,
       coreSummary,
       simplifiedText,
+      articleTextForTTS,
       currentView,
       isAuthenticated,
       showLogin,

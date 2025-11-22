@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Header, Request, Response, UploadFile, File
 from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, HttpUrl
 import logging
 import asyncio
@@ -29,11 +30,40 @@ from .worker import summary_task_worker_async # 导入新的异步工作流
 from .utils import generate_doc_hash, is_pdf_document, extract_pdf_hash  # 从 utils 导入
 from .file_watcher import start_watching # 导入文件监控
 from .pdf_processor import PDFProcessor  # 导入PDF处理器
+from .services.tts_service import TTSService
+from .services.audio_cache import AudioCache
+from .model_config import get_model_client as get_model_client_by_task
+from .audio import decode_base64_pcm, assemble_wav, calculate_audio_duration
 
 setup_logger(config.LOG_LEVEL)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Reinvent Insight API", description="YouTube 字幕深度摘要后端服务", version="0.1.0")
+
+# 配置 CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 在生产环境中应该设置具体的域名
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["Content-Length", "Content-Range", "Content-Type"]
+)
+
+# TTS 服务和缓存实例（延迟初始化）
+_tts_service: Optional[TTSService] = None
+_audio_cache: Optional[AudioCache] = None
+
+
+def get_tts_service() -> TTSService:
+    """获取 TTS 服务实例（单例）"""
+    global _tts_service
+    if _tts_service is None:
+        # 使用 TTS 任务类型获取模型客户端
+        model_client = get_model_client_by_task("text_to_speech")
+        _tts_service = TTSService(model_client)
+    return _tts_service
+
 
 async def start_visual_watcher():
     """启动可视化解读文件监测器"""
@@ -1165,6 +1195,11 @@ if web_dir.is_dir():
     if components_dir.is_dir():
         app.mount("/components", StaticFiles(directory=components_dir), name="components")
     
+    # Mount utils directory for utility modules
+    utils_dir = web_dir / "utils"
+    if utils_dir.is_dir():
+        app.mount("/utils", StaticFiles(directory=utils_dir), name="utils")
+    
     # Mount test directory for component testing
     test_dir = web_dir / "test"
     if test_dir.is_dir():
@@ -1389,6 +1424,376 @@ async def analyze_document_endpoint(
             except Exception:
                 pass
         raise HTTPException(status_code=500, detail=f"处理上传文档失败: {str(e)}")
+
+
+# ============================================================================
+# TTS (Text-to-Speech) API 端点
+# ============================================================================
+
+from .services.tts_service import TTSService
+from .services.audio_cache import AudioCache
+from .audio.audio_utils import assemble_wav, decode_base64_pcm, calculate_audio_duration
+from .model_config import get_model_client
+
+# 初始化 TTS 服务和缓存（延迟初始化）
+_tts_service: Optional[TTSService] = None
+_audio_cache: Optional[AudioCache] = None
+
+
+def get_tts_service() -> TTSService:
+    """获取 TTS 服务实例（单例）"""
+    global _tts_service
+    if _tts_service is None:
+        client = get_model_client("text_to_speech")
+        _tts_service = TTSService(client)
+    return _tts_service
+
+
+def get_audio_cache() -> AudioCache:
+    """获取音频缓存实例（单例）"""
+    global _audio_cache
+    if _audio_cache is None:
+        cache_dir = config.PROJECT_ROOT / "downloads" / "tts_cache"
+        _audio_cache = AudioCache(cache_dir, max_size_mb=500)
+    return _audio_cache
+
+
+class TTSRequest(BaseModel):
+    """TTS 生成请求"""
+    article_hash: str
+    text: str
+    voice: str = "Cherry"
+    language: str = "Chinese"
+    use_cache: bool = True
+    skip_code_blocks: bool = True
+
+
+class TTSResponse(BaseModel):
+    """TTS 生成响应"""
+    audio_url: str
+    duration: float
+    cached: bool
+    voice: str
+    language: str
+
+
+@app.post("/api/tts/generate", response_model=TTSResponse)
+async def generate_tts(req: TTSRequest):
+    """
+    生成 TTS 音频（非流式）
+    
+    检查缓存，如果存在则返回缓存 URL，否则生成新音频并缓存
+    """
+    try:
+        tts_service = get_tts_service()
+        audio_cache = get_audio_cache()
+        
+        # 计算哈希
+        audio_hash = tts_service.calculate_hash(req.text, req.voice, req.language)
+        
+        # 检查缓存
+        if req.use_cache:
+            cached_path = audio_cache.get(audio_hash)
+            if cached_path:
+                logger.info(f"TTS 缓存命中: {audio_hash}")
+                # 计算时长
+                file_size = cached_path.stat().st_size
+                duration = calculate_audio_duration(file_size - 44)  # 减去 WAV 头
+                
+                return TTSResponse(
+                    audio_url=f"/api/tts/cache/{audio_hash}",
+                    duration=duration,
+                    cached=True,
+                    voice=req.voice,
+                    language=req.language
+                )
+        
+        # 生成音频
+        logger.info(f"开始生成 TTS 音频: {audio_hash}")
+        audio_chunks = []
+        async for chunk in tts_service.generate_audio_stream(
+            req.text, req.voice, req.language, req.skip_code_blocks
+        ):
+            # 解码 Base64
+            pcm_data = decode_base64_pcm(chunk.decode('utf-8') if isinstance(chunk, bytes) else chunk)
+            audio_chunks.append(pcm_data)
+        
+        # 组装 WAV 文件
+        wav_data = assemble_wav(audio_chunks)
+        duration = calculate_audio_duration(len(wav_data) - 44)
+        
+        # 缓存音频
+        text_hash = tts_service.calculate_hash(req.text, "", "")
+        audio_cache.put(
+            audio_hash=audio_hash,
+            audio_data=wav_data,
+            text_hash=text_hash,
+            voice=req.voice,
+            language=req.language,
+            duration=duration
+        )
+        
+        logger.info(f"TTS 音频生成完成: {audio_hash}, 时长: {duration:.2f}s")
+        
+        return TTSResponse(
+            audio_url=f"/api/tts/cache/{audio_hash}",
+            duration=duration,
+            cached=False,
+            voice=req.voice,
+            language=req.language
+        )
+        
+    except ValueError as e:
+        logger.error(f"TTS 请求参数错误: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"TTS 生成失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"TTS 生成失败: {str(e)}")
+
+
+class TTSStreamRequest(BaseModel):
+    article_hash: str
+    text: str
+    voice: str = "Cherry"
+    language: str = "Chinese"
+    use_cache: bool = True
+    skip_code_blocks: bool = True
+
+
+@app.post("/api/tts/stream")
+async def stream_tts(req: TTSStreamRequest):
+    """
+    流式生成 TTS 音频（SSE）
+    
+    实时返回音频块，支持边生成边播放
+    """
+    article_hash = req.article_hash
+    text = req.text
+    voice = req.voice
+    language = req.language
+    use_cache = req.use_cache
+    skip_code_blocks = req.skip_code_blocks
+    async def event_generator():
+        try:
+            tts_service = get_tts_service()
+            audio_cache = get_audio_cache()
+            
+            # 计算哈希
+            audio_hash = tts_service.calculate_hash(text, voice, language)
+            
+            # 检查缓存
+            if use_cache:
+                cached_path = audio_cache.get(audio_hash)
+                if cached_path:
+                    logger.info(f"TTS 缓存命中（流式）: {audio_hash}")
+                    file_size = cached_path.stat().st_size
+                    duration = calculate_audio_duration(file_size - 44)
+                    
+                    # 读取缓存的 WAV 文件并流式发送
+                    # 跳过 WAV 头（44 字节），只发送 PCM 数据
+                    chunk_size = 48000  # 每块 48KB (约 1 秒音频)
+                    chunk_index = 0
+                    total_bytes = 0
+                    
+                    with open(cached_path, 'rb') as f:
+                        # 跳过 WAV 头
+                        f.seek(44)
+                        
+                        while True:
+                            pcm_chunk = f.read(chunk_size)
+                            if not pcm_chunk:
+                                break
+                            
+                            chunk_index += 1
+                            total_bytes += len(pcm_chunk)
+                            
+                            # 将 PCM 数据编码为 Base64
+                            chunk_b64 = base64.b64encode(pcm_chunk).decode('utf-8')
+                            
+                            # 计算缓冲时长和当前块的时长
+                            buffered_duration = total_bytes / (24000 * 2)
+                            chunk_duration = len(pcm_chunk) / (24000 * 2)
+                            
+                            # 发送音频块
+                            yield f"event: chunk\n"
+                            yield f"data: {json.dumps({
+                                'index': chunk_index,
+                                'data': chunk_b64,
+                                'chunk_size': len(pcm_chunk),
+                                'total_bytes': total_bytes,
+                                'buffered_duration': round(buffered_duration, 2),
+                                'from_cache': True
+                            })}\n\n"
+                            
+                            # 根据音频块的实际时长添加延迟
+                            # 前几个块快速发送以建立缓冲，后续块按实际播放速度发送
+                            if chunk_index <= 3:
+                                await asyncio.sleep(0.05)  # 前3个块快速发送
+                            else:
+                                await asyncio.sleep(chunk_duration * 0.8)  # 后续块按80%的播放速度发送
+                    
+                    # 发送完成事件
+                    yield f"event: complete\n"
+                    yield f"data: {json.dumps({
+                        'audio_url': f'/api/tts/cache/{audio_hash}',
+                        'duration': duration,
+                        'chunk_count': chunk_index,
+                        'total_bytes': total_bytes,
+                        'from_cache': True,
+                        'audio_hash': audio_hash
+                    })}\n\n"
+                    
+                    logger.info(f"缓存音频流式发送完成: {audio_hash}, {chunk_index} 块")
+                    return
+            
+            # 流式生成
+            logger.info(f"开始生成 TTS: {audio_hash}")
+            audio_segments = []
+            chunk_index = 0
+            total_bytes = 0
+            start_time = asyncio.get_event_loop().time()
+            
+            async for chunk in tts_service.generate_audio_stream(
+                text, voice, language, skip_code_blocks
+            ):
+                chunk_str = chunk.decode('utf-8') if isinstance(chunk, bytes) else chunk
+                chunk_index += 1
+                
+                logger.info(f"收到音频数据块 {chunk_index}")
+                
+                try:
+                    # Gemini 返回 Base64 编码的 PCM 数据
+                    # 解码 Base64 得到原始 PCM
+                    pcm_data = base64.b64decode(chunk_str)
+                    audio_segments.append(pcm_data)
+                    
+                    # 更新统计信息
+                    chunk_size = len(pcm_data)
+                    total_bytes += chunk_size
+                    elapsed_time = asyncio.get_event_loop().time() - start_time
+                    
+                    # 计算当前缓冲的音频时长（PCM: 24000Hz, 16bit, mono）
+                    buffered_duration = total_bytes / (24000 * 2)  # 2 bytes per sample
+                    
+                    # 发送带有进度信息的音频块
+                    yield f"event: chunk\n"
+                    yield f"data: {json.dumps({
+                        'index': chunk_index,
+                        'data': chunk_str,
+                        'chunk_size': chunk_size,
+                        'total_bytes': total_bytes,
+                        'buffered_duration': round(buffered_duration, 2),
+                        'elapsed_time': round(elapsed_time, 2)
+                    })}\n\n"
+                    
+                    logger.info(
+                        f"已发送音频片段 {chunk_index}: "
+                        f"{chunk_size} bytes, "
+                        f"累计 {total_bytes / 1024:.1f}KB, "
+                        f"缓冲时长 {buffered_duration:.2f}s"
+                    )
+                    
+                except Exception as e:
+                    logger.error(f"处理音频片段失败: {e}", exc_info=True)
+            
+            if not audio_segments:
+                raise Exception("未生成任何有效音频")
+            
+            # 合并所有 PCM 数据并添加 WAV 头
+            from .audio.audio_utils import assemble_wav
+            wav_data = assemble_wav(audio_segments)
+            duration = calculate_audio_duration(len(wav_data) - 44)
+            total_time = asyncio.get_event_loop().time() - start_time
+            
+            logger.info(
+                f"音频合并完成: "
+                f"共 {len(audio_segments)} 段, "
+                f"总大小 {len(wav_data)} bytes, "
+                f"时长 {duration:.2f}s, "
+                f"生成耗时 {total_time:.2f}s"
+            )
+            
+            # 缓存音频
+            text_hash = tts_service.calculate_hash(text, "", "")
+            audio_cache.put(
+                audio_hash=audio_hash,
+                audio_data=wav_data,
+                text_hash=text_hash,
+                voice=voice,
+                language=language,
+                duration=duration
+            )
+            
+            # 发送完成事件（包含详细统计）
+            yield f"event: complete\n"
+            yield f"data: {json.dumps({
+                'audio_url': f'/api/tts/cache/{audio_hash}',
+                'duration': duration,
+                'chunk_count': chunk_index,
+                'total_bytes': total_bytes,
+                'generation_time': round(total_time, 2),
+                'audio_hash': audio_hash
+            })}\n\n"
+            
+            logger.info(
+                f"TTS 流式生成完成: {audio_hash}, "
+                f"{chunk_index} 块, "
+                f"{total_bytes / 1024:.1f}KB, "
+                f"{total_time:.2f}s"
+            )
+            
+        except Exception as e:
+            logger.error(f"TTS 流式生成失败: {e}", exc_info=True)
+            yield f"event: error\n"
+            yield f"data: {json.dumps({'error': str(e), 'message': '音频生成失败'})}\n\n"
+    
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+
+@app.get("/api/tts/cache/{audio_hash}")
+async def get_cached_audio(audio_hash: str):
+    """
+    获取缓存的音频文件
+    
+    返回 WAV 格式的音频文件
+    """
+    try:
+        audio_cache = get_audio_cache()
+        
+        # 获取缓存文件
+        cached_path = audio_cache.get(audio_hash)
+        
+        if not cached_path:
+            raise HTTPException(status_code=404, detail="音频文件不存在")
+        
+        logger.info(f"返回缓存音频: {audio_hash}")
+        
+        return FileResponse(
+            cached_path,
+            media_type="audio/wav",
+            filename=f"{audio_hash}.wav",
+            headers={
+                "Accept-Ranges": "bytes",
+                "Cache-Control": "public, max-age=31536000",  # 缓存1年
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Expose-Headers": "Content-Length, Content-Range"
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取缓存音频失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"获取音频失败: {str(e)}")
+
 
 def serve(host: str = "0.0.0.0", port: int = 8001, reload: bool = False):
     """使用 uvicorn 启动 Web 服务器。"""

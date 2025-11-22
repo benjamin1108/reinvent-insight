@@ -18,84 +18,64 @@
   </div>
 
   <!-- Quick Insight 模式 (可视化解读) - 独立显示，不受其他容器影响 -->
-  <div
-    v-else-if="displayMode === 'quick' && visualAvailable"
-    class="reading-view__visual-container"
+  <div v-else-if="displayMode === 'quick' && visualAvailable" class="reading-view__visual-container"
     key="quick-insight">
-    
+
     <!-- 模式切换器 - 固定在顶部 -->
     <div class="reading-view__visual-header">
-      <mode-toggle
-        :current-mode="displayMode"
-        :visual-available="visualAvailable"
-        :visual-status="visualStatus"
+      <mode-toggle :current-mode="displayMode" :visual-available="visualAvailable" :visual-status="visualStatus"
         @mode-change="handleDisplayModeChange">
       </mode-toggle>
     </div>
-    
+
     <!-- iframe 容器 -->
     <div class="reading-view__visual-iframe-container">
-      <iframe
-        ref="visualIframe"
-        :src="visualHtmlUrl"
-        class="reading-view__visual-iframe"
-        :style="{ height: iframeHeight + 'px' }"
-        frameborder="0"
-        scrolling="no"
-        sandbox="allow-scripts allow-same-origin"
-        @load="handleIframeLoad">
+      <iframe ref="visualIframe" :src="visualHtmlUrl" class="reading-view__visual-iframe"
+        :style="{ height: iframeHeight + 'px' }" frameborder="0" scrolling="no"
+        sandbox="allow-scripts allow-same-origin" @load="handleIframeLoad">
       </iframe>
     </div>
   </div>
 
   <!-- 主要内容 (Deep Insight 模式) -->
   <div v-else class="reading-view__layout" :style="{ '--toc-width': tocWidth + 'px' }">
-    
+
     <!-- 目录 -->
     <div v-if="shouldShowToc" class="reading-view__toc">
       <!-- 新增：TOC包装器，用于对齐和间距 -->
-      <div class="reading-view__toc-wrapper" 
-           :style="{ width: tocWidth + 'px' }"
-           ref="tocSidebar">
+      <div class="reading-view__toc-wrapper" :style="{ width: tocWidth + 'px' }" ref="tocSidebar">
         <div class="reading-view__toc-sidebar">
-        <div class="reading-view__toc-content">
-          <!-- 目录标题 -->
-          <h3 class="reading-view__toc-title">{{ tocTitle }}</h3>
-          
-          <!-- 目录内容 -->
-          <div v-if="tocHtml" 
-               v-html="tocHtml" 
-               @click="handleTocClick"
-               class="reading-view__toc-list"></div>
-          
-          <!-- 空目录提示 -->
-          <div v-else class="reading-view__toc-empty">
-            {{ tocEmptyText }}
+          <div class="reading-view__toc-content">
+            <!-- 目录标题 -->
+            <h3 class="reading-view__toc-title">{{ tocTitle }}</h3>
+
+            <!-- 目录内容 -->
+            <div v-if="tocHtml" v-html="tocHtml" @click="handleTocClick" class="reading-view__toc-list"></div>
+
+            <!-- 空目录提示 -->
+            <div v-else class="reading-view__toc-empty">
+              {{ tocEmptyText }}
             </div>
           </div>
         </div>
       </div>
-      
+
       <!-- 拖动条 -->
-      <div class="reading-view__toc-dragbar" 
-           @mousedown="startDrag"
-           @touchstart="startDrag"></div>
+      <div class="reading-view__toc-dragbar" @mousedown="startDrag" @touchstart="startDrag"></div>
     </div>
 
     <!-- 文章内容区域 -->
     <div class="reading-view__content" :class="{ 'reading-view__content--no-toc': !shouldShowToc }">
       <div class="reading-view__article-wrapper">
         <div class="reading-view__article">
-          
+
           <!-- 版本选择器（移至滚动容器外部） -->
           <div v-if="hasMultipleVersions && displayMode === 'deep'" class="reading-view__version-selector">
-            <version-selector
-              :versions="versions"
-              :current-version="Number(currentVersion)"
+            <version-selector :versions="versions" :current-version="Number(currentVersion)"
               @change="handleVersionChange">
             </version-selector>
           </div>
-          
+
           <!-- 可滚动的内容容器 -->
           <div class="reading-view__scroll-content">
             <!-- 文章头部，包含标题 -->
@@ -103,18 +83,14 @@
               <h1 v-if="documentTitleEn" class="reading-view__title-en">{{ documentTitleEn }}</h1>
               <h2 v-if="documentTitle" class="reading-view__title-cn">{{ documentTitle }}</h2>
             </div>
-            
+
             <!-- 模式切换器 - 放在标题之后，内容之前 -->
             <div v-if="visualAvailable || visualStatus === 'processing'" class="reading-view__mode-toggle-wrapper">
-              <mode-toggle
-                :current-mode="displayMode"
-                :visual-available="visualAvailable"
-                :visual-status="visualStatus"
-                @mode-change="handleDisplayModeChange"
-                class="reading-view__mode-toggle">
+              <mode-toggle :current-mode="displayMode" :visual-available="visualAvailable" :visual-status="visualStatus"
+                @mode-change="handleDisplayModeChange" class="reading-view__mode-toggle">
               </mode-toggle>
             </div>
-            
+
             <!-- Deep Insight 模式内容 -->
             <div class="reading-view__full-analysis">
               <div @click="handleArticleClick" v-html="cleanContent" class="reading-view__body prose-tech"></div>
@@ -124,4 +100,5 @@
       </div>
     </div>
   </div>
-</div> 
+
+</div>

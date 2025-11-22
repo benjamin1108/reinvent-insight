@@ -1,0 +1,150 @@
+/* SimpleAudioButton - 极简音频播放按钮样式 */
+/* 与TechButton保持一致的科技风格 */
+
+.simple-audio-btn {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px; /* 改为圆角矩形，与TechButton一致 */
+    border: 1px solid rgba(34, 211, 238, 0.3);
+    background: linear-gradient(135deg, rgba(34, 211, 238, 0.15), rgba(59, 130, 246, 0.15));
+    backdrop-filter: blur(10px);
+    color: #22d3ee;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.1);
+    overflow: hidden;
+    
+    /* 科技感字体 */
+    font-family: 'Inter', 'PingFang SC', 'SF Pro Text', sans-serif;
+}
+
+/* 光晕效果 - 与TechButton一致 */
+.simple-audio-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.5s;
+}
+
+.simple-audio-btn:hover::before {
+    left: 100%;
+}
+
+.simple-audio-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgba(34, 211, 238, 0.25), rgba(59, 130, 246, 0.25));
+    border-color: rgba(34, 211, 238, 0.5);
+    box-shadow: 0 0 30px rgba(34, 211, 238, 0.25);
+    transform: translateY(-1px);
+}
+
+.simple-audio-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.simple-audio-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.simple-audio-btn__icon {
+    font-size: 1rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 错误提示 - 悬浮显示 */
+.simple-audio-btn__error {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    padding: 0.5rem 0.75rem;
+    background: rgba(239, 68, 68, 0.95);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    border-radius: 0.5rem;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    animation: fadeIn 0.2s ease;
+    z-index: 100;
+    pointer-events: none;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* 移动端适配 */
+@media (max-width: 1024px) {
+    .simple-audio-btn {
+        width: 36px;
+        height: 36px;
+        min-height: 36px;
+        padding: 0.375rem;
+    }
+
+    .simple-audio-btn__icon {
+        font-size: 0.875rem;
+    }
+
+    .simple-audio-btn__error {
+        font-size: 0.7rem;
+        padding: 0.375rem 0.625rem;
+        max-width: 200px;
+        white-space: normal;
+        text-align: center;
+    }
+}
+
+/* 高对比度模式 */
+@media (prefers-contrast: high) {
+    .simple-audio-btn {
+        border-color: #22d3ee;
+        background: rgba(34, 211, 238, 0.2);
+    }
+
+    .simple-audio-btn:hover:not(:disabled) {
+        background: rgba(34, 211, 238, 0.3);
+    }
+}
+
+/* 减少动画模式 */
+@media (prefers-reduced-motion: reduce) {
+    .simple-audio-btn {
+        transition: none;
+    }
+
+    .simple-audio-btn:hover:not(:disabled) {
+        transform: none;
+    }
+
+    .simple-audio-btn:active:not(:disabled) {
+        transform: none;
+    }
+
+    .simple-audio-btn__error {
+        animation: none;
+    }
+}

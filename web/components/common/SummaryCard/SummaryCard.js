@@ -2,6 +2,10 @@
  * SummaryCard组件
  * 用于展示文章摘要卡片，支持两种类型：re:Invent和其他精选内容
  */
+
+// Import title utilities
+import { processCardTitle } from '/utils/titleUtils.js';
+
 export default {
   props: {
     // 类型：'reinvent' 或 'other'
@@ -45,6 +49,12 @@ export default {
     hash: {
       type: String,
       required: true
+    },
+    
+    // 是否在筛选后的区域中（用于智能标题处理）
+    inFilteredSection: {
+      type: Boolean,
+      default: true  // 默认为true，因为通常在分类区域中显示
     }
   },
   
@@ -53,16 +63,38 @@ export default {
   setup(props, { emit }) {
     const { computed } = Vue;
     
+    // 处理后的显示标题（移除冗余前缀）
+    const displayTitle = computed(() => {
+      try {
+        const processed = processCardTitle(
+          props.titleEn,
+          props.summaryType,
+          props.inFilteredSection
+        );
+        // Fallback: if processed title is empty, use original
+        return processed || props.titleEn || 'Untitled';
+      } catch (error) {
+        console.error('Error processing title:', error);
+        return props.titleEn || 'Untitled';
+      }
+    });
+    
     // 格式化字数显示
     const formattedWordCount = computed(() => {
-      const count = props.wordCount;
-      if (!count) return '0 字';
-      
-      if (count >= 1000) {
-        const k = (count / 1000).toFixed(count >= 10000 ? 0 : 1);
-        return `${k}k 字`;
+      try {
+        const count = props.wordCount;
+        // Handle invalid or zero word count
+        if (!count || count === 0 || isNaN(count)) return '—';
+        
+        if (count >= 1000) {
+          const k = (count / 1000).toFixed(count >= 10000 ? 0 : 1);
+          return `${k}k 字`;
+        }
+        return `${count} 字`;
+      } catch (error) {
+        console.error('Error formatting word count:', error);
+        return '—';
       }
-      return `${count} 字`;
     });
     
     // 处理级别文本（提取级别数字和显示文本）
@@ -92,6 +124,7 @@ export default {
     };
     
     return {
+      displayTitle,
       formattedWordCount,
       levelText,
       contentTypeText,
