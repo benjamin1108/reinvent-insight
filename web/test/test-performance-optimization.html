@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>性能优化测试</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #111827;
+      color: #e5e7eb;
+    }
+    
+    .test-section {
+      background: #1f2937;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      margin-top: 0;
+      color: #22d3ee;
+    }
+    
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px;
+      background: #374151;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+    
+    .metric-label {
+      font-weight: 500;
+    }
+    
+    .metric-value {
+      font-family: 'Courier New', monospace;
+      color: #22d3ee;
+    }
+    
+    .good { color: #10b981; }
+    .warning { color: #f59e0b; }
+    .bad { color: #ef4444; }
+    
+    button {
+      background: #22d3ee;
+      color: #111827;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      margin-right: 10px;
+    }
+    
+    button:hover {
+      background: #06b6d4;
+    }
+    
+    .log {
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 4px;
+      padding: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+    
+    .log-entry {
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🚀 前端性能优化测试</h1>
+  
+  <div class="test-section">
+    <h2>组件配置分析</h2>
+    <div id="component-analysis"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>加载性能测试</h2>
+    <button onclick="runLoadTest()">运行加载测试</button>
+    <button onclick="clearCache()">清除缓存</button>
+    <button onclick="showReport()">显示报告</button>
+    <div id="load-test-results" style="margin-top: 20px;"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>实时日志</h2>
+    <div id="log" class="log"></div>
+  </div>
+
+  <!-- 加载核心模块 -->
+  <script src="/js/core/event-bus.js"></script>
+  <script src="/js/core/cache-manager.js"></script>
+  <script src="/js/core/performance-monitor.js"></script>
+  <script src="/js/core/resource-hints.js"></script>
+  <script src="/js/core/component-loader.js"></script>
+  <script src="/js/core/loading-strategy.js"></script>
+
+  <script>
+    // 日志系统
+    const logContainer = document.getElementById('log');
+    const originalConsoleLog = console.log;
+    const originalConsoleWarn = console.warn;
+    const originalConsoleError = console.error;
+    
+    function addLog(message, type = 'log') {
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.style.color = type === 'error' ? '#ef4444' : type === 'warn' ? '#f59e0b' : '#e5e7eb';
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logContainer.appendChild(entry);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+    
+    console.log = function(...args) {
+      originalConsoleLog.apply(console, args);
+      addLog(args.join(' '), 'log');
+    };
+    
+    console.warn = function(...args) {
+      originalConsoleWarn.apply(console, args);
+      addLog(args.join(' '), 'warn');
+    };
+    
+    console.error = function(...args) {
+      originalConsoleError.apply(console, args);
+      addLog(args.join(' '), 'error');
+    };
+
+    // 组件配置（从app.js复制）
+    const components = [
+      {
+        name: 'app-header',
+        path: '/components/common/AppHeader',
+        fileName: 'AppHeader',
+        critical: true,
+        priority: 1,
+        version: '1.0.0'
+      },
+      {
+        name: 'toast-container',
+        path: '/components/common/ToastContainer',
+        fileName: 'ToastContainer',
+        critical: true,
+        priority: 1,
+        version: '1.0.0'
+      },
+      {
+        name: 'hero-section',
+        path: '/components/views/HeroSection',
+        fileName: 'HeroSection',
+        critical: false,
+        priority: 4,
+        version: '1.0.0'
+      },
+      {
+        name: 'library-view',
+        path: '/components/views/LibraryView',
+        fileName: 'LibraryView',
+        critical: false,
+        priority: 4,
+        version: '1.0.0'
+      },
+      {
+        name: 'recent-view',
+        path: '/components/views/RecentView',
+        fileName: 'RecentView',
+        critical: false,
+        priority: 4,
+        version: '1.0.0'
+      },
+      {
+        name: 'reading-view',
+        path: '/components/views/ReadingView',
+        fileName: 'ReadingView',
+        critical: false,
+        priority: 4,
+        version: '1.0.0'
+      }
+    ];
+
+    // 分析组件配置
+    function analyzeComponents() {
+      const { critical, nonCritical } = window.LoadingStrategy.categorizeComponents(components);
+      
+      const analysisDiv = document.getElementById('component-analysis');
+      analysisDiv.innerHTML = `
+        <div class="metric">
+          <span class="metric-label">总组件数</span>
+          <span class="metric-value">${components.length}</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">关键组件数</span>
+          <span class="metric-value ${critical.length <= 3 ? 'good' : 'warning'}">${critical.length}</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">非关键组件数</span>
+          <span class="metric-value">${nonCritical.length}</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">关键组件占比</span>
+          <span class="metric-value ${critical.length / components.length <= 0.3 ? 'good' : 'warning'}">
+            ${((critical.length / components.length) * 100).toFixed(1)}%
+          </span>
+        </div>
+      `;
+      
+      console.log('✅ 组件配置分析完成');
+      console.log(`关键组件: ${critical.map(c => c.name || c[0]).join(', ')}`);
+      console.log(`非关键组件: ${nonCritical.map(c => c.name || c[0]).join(', ')}`);
+    }
+
+    // 运行加载测试
+    async function runLoadTest() {
+      console.log('🚀 开始加载测试...');
+      
+      // 清除之前的性能数据
+      window.PerformanceMonitor.clear();
+      
+      const startTime = performance.now();
+      
+      try {
+        // 预加载关键组件
+        const criticalComponents = components.filter(c => c.critical);
+        console.log(`🔗 预加载 ${criticalComponents.length} 个关键组件...`);
+        window.ResourceHints.preloadComponents(criticalComponents);
+        
+        // 模拟Vue应用（用于测试）
+        const mockApp = {
+          component: (name, def) => {
+            console.log(`✅ 注册组件: ${name}`);
+          }
+        };
+        
+        // 使用关键组件优先策略加载
+        const results = await window.LoadingStrategy.loadCriticalFirst(mockApp, components, {
+          useCache: false, // 禁用缓存以测试真实加载时间
+          timeout: 5000,
+          onProgress: (loaded, total, name, phase) => {
+            console.log(`📦 [${phase}] 加载进度: ${loaded}/${total} - ${name}`);
+          },
+          onCriticalComplete: (results) => {
+            const criticalTime = performance.now() - startTime;
+            console.log(`✅ 关键组件加载完成，耗时: ${criticalTime.toFixed(2)}ms`);
+          }
+        });
+        
+        const totalTime = performance.now() - startTime;
+        
+        // 显示结果
+        const report = window.PerformanceMonitor.getReport();
+        const resultsDiv = document.getElementById('load-test-results');
+        
+        const successCount = results.filter(r => r.success).length;
+        const failCount = results.filter(r => !r.success).length;
+        
+        resultsDiv.innerHTML = `
+          <div class="metric">
+            <span class="metric-label">总加载时间</span>
+            <span class="metric-value ${totalTime < 5000 ? 'good' : totalTime < 10000 ? 'warning' : 'bad'}">
+              ${totalTime.toFixed(2)}ms
+            </span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">成功加载</span>
+            <span class="metric-value good">${successCount} / ${results.length}</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">加载失败</span>
+            <span class="metric-value ${failCount === 0 ? 'good' : 'bad'}">${failCount}</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">平均加载时间</span>
+            <span class="metric-value">${report.averageLoadTime.toFixed(2)}ms</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">最慢组件</span>
+            <span class="metric-value ${report.slowestComponent?.loadTime < 2000 ? 'good' : 'warning'}">
+              ${report.slowestComponent?.name || 'N/A'} (${report.slowestComponent?.loadTime.toFixed(2) || 0}ms)
+            </span>
+          </div>
+        `;
+        
+        console.log('✅ 加载测试完成');
+        console.log(`📊 总耗时: ${totalTime.toFixed(2)}ms`);
+        console.log(`📊 平均耗时: ${report.averageLoadTime.toFixed(2)}ms`);
+        
+      } catch (error) {
+        console.error('❌ 加载测试失败:', error);
+      }
+    }
+
+    // 清除缓存
+    function clearCache() {
+      window.ComponentLoader.clearCache();
+      window.PerformanceMonitor.clear();
+      window.ResourceHints.clear();
+      console.log('🗑️ 缓存已清除');
+    }
+
+    // 显示详细报告
+    function showReport() {
+      console.log('📊 ===== 性能报告 =====');
+      window.PerformanceMonitor.printReport();
+      
+      const report = window.PerformanceMonitor.getReport();
+      console.log('📊 时间线:');
+      report.timeline.forEach(entry => {
+        console.log(`  ${entry.component}: ${entry.duration.toFixed(2)}ms ${entry.cacheHit ? '(缓存)' : ''}`);
+      });
+    }
+
+    // 页面加载时分析组件
+    window.addEventListener('load', () => {
+      analyzeComponents();
+      console.log('✅ 页面加载完成，可以开始测试');
+    });
+  </script>
+</body>
+</html>

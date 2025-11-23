@@ -11,37 +11,37 @@ class LoadingStrategy {
   static categorizeComponents(components) {
     const critical = [];
     const nonCritical = [];
-    
+
     for (const config of components) {
       // 支持两种配置格式
-      const componentConfig = Array.isArray(config) 
+      const componentConfig = Array.isArray(config)
         ? { name: config[0], path: config[1], fileName: config[2] }
         : config;
-      
+
       // 检查是否为关键组件
-      const isCritical = componentConfig.critical === true || 
-                        componentConfig.priority <= 3; // 优先级1-3视为关键
-      
+      const isCritical = componentConfig.critical === true ||
+        componentConfig.priority <= 3; // 优先级1-3视为关键
+
       if (isCritical) {
         critical.push(config);
       } else {
         nonCritical.push(config);
       }
     }
-    
+
     // 按优先级排序
     const sortByPriority = (a, b) => {
       const priorityA = Array.isArray(a) ? (a[3]?.priority || 10) : (a.priority || 10);
       const priorityB = Array.isArray(b) ? (b[3]?.priority || 10) : (b.priority || 10);
       return priorityA - priorityB;
     };
-    
+
     critical.sort(sortByPriority);
     nonCritical.sort(sortByPriority);
-    
+
     return { critical, nonCritical };
   }
-  
+
   /**
    * 关键组件优先加载策略
    * @param {Object} app - Vue应用实例
@@ -56,23 +56,23 @@ class LoadingStrategy {
       useCache = true,
       timeout = 10000
     } = options;
-    
+
     console.log('🚀 开始关键组件优先加载策略...');
-    
+
     // 分类组件
     const { critical, nonCritical } = this.categorizeComponents(components);
-    
+
     console.log(`📊 关键组件: ${critical.length} 个, 非关键组件: ${nonCritical.length} 个`);
-    
+
     const allResults = [];
-    
+
     // 第一阶段：并行加载所有关键组件
     if (critical.length > 0) {
       console.log('⚡ 阶段1: 加载关键组件...');
-      
+
       const criticalResults = await window.ComponentLoader.registerComponents(
-        app, 
-        critical, 
+        app,
+        critical,
         {
           parallel: true,
           useCache,
@@ -84,21 +84,21 @@ class LoadingStrategy {
           }
         }
       );
-      
+
       allResults.push(...criticalResults);
-      
+
       console.log(`✅ 关键组件加载完成: ${criticalResults.filter(r => r.success).length}/${critical.length}`);
-      
+
       // 通知关键组件加载完成
       if (onCriticalComplete) {
         onCriticalComplete(criticalResults);
       }
     }
-    
+
     // 第二阶段：后台加载非关键组件
     if (nonCritical.length > 0) {
       console.log('🔄 阶段2: 后台加载非关键组件...');
-      
+
       // 使用requestIdleCallback在空闲时加载
       if (window.requestIdleCallback) {
         await new Promise(resolve => {
@@ -122,11 +122,11 @@ class LoadingStrategy {
                 }
               }
             );
-            
+
             allResults.push(...nonCriticalResults);
-            
+
             console.log(`✅ 非关键组件加载完成: ${nonCriticalResults.filter(r => r.success).length}/${nonCritical.length}`);
-            
+
             resolve();
           });
         });
@@ -151,16 +151,16 @@ class LoadingStrategy {
             }
           }
         );
-        
+
         allResults.push(...nonCriticalResults);
-        
+
         console.log(`✅ 非关键组件加载完成: ${nonCriticalResults.filter(r => r.success).length}/${nonCritical.length}`);
       }
     }
-    
+
     return allResults;
   }
-  
+
   /**
    * 懒加载策略
    * @param {Object} app - Vue应用实例
@@ -175,12 +175,12 @@ class LoadingStrategy {
       timeout = 10000,
       delay = 1000 // 延迟加载时间
     } = options;
-    
+
     console.log(`🕐 懒加载策略: ${delay}ms 后开始加载...`);
-    
+
     // 延迟加载
     await new Promise(resolve => setTimeout(resolve, delay));
-    
+
     return await window.ComponentLoader.registerComponents(app, components, {
       parallel: true,
       useCache,
@@ -188,7 +188,7 @@ class LoadingStrategy {
       onProgress
     });
   }
-  
+
   /**
    * 预测性加载策略（基于用户行为）
    * @param {Object} app - Vue应用实例
@@ -202,28 +202,28 @@ class LoadingStrategy {
       isAuthenticated = false,
       onProgress = null
     } = context;
-    
+
     console.log(`🔮 预测性加载策略: 当前视图=${currentView}, 已认证=${isAuthenticated}`);
-    
+
     // 根据当前视图预测需要的组件
     const predictions = this._predictComponents(currentView, isAuthenticated);
-    
+
     // 过滤出预测需要的组件
     const predictedComponents = components.filter(config => {
       const name = Array.isArray(config) ? config[0] : config.name;
       return predictions.includes(name);
     });
-    
+
     if (predictedComponents.length > 0) {
       console.log(`📦 预测需要加载: ${predictedComponents.map(c => Array.isArray(c) ? c[0] : c.name).join(', ')}`);
-      
+
       // 预加载预测的组件
       await window.ComponentLoader.preloadComponents(predictedComponents, {
         useCache: true,
         timeout: 10000
       });
     }
-    
+
     // 加载所有组件
     return await window.ComponentLoader.registerComponents(app, components, {
       parallel: true,
@@ -231,17 +231,17 @@ class LoadingStrategy {
       onProgress
     });
   }
-  
+
   /**
    * 预测需要的组件
    * @private
    */
   static _predictComponents(currentView, isAuthenticated) {
     const predictions = [];
-    
+
     // 基础组件总是需要
     predictions.push('app-header', 'toast-container');
-    
+
     // 根据视图预测
     switch (currentView) {
       case 'library':
@@ -259,15 +259,15 @@ class LoadingStrategy {
         }
         break;
     }
-    
+
     // 认证相关
     if (!isAuthenticated) {
       predictions.push('login-modal');
     }
-    
+
     return predictions;
   }
-  
+
   /**
    * 获取加载策略建议
    * @param {Array} components - 组件配置数组
@@ -275,13 +275,13 @@ class LoadingStrategy {
    */
   static getStrategyRecommendation(components) {
     const { critical, nonCritical } = this.categorizeComponents(components);
-    
+
     const totalComponents = components.length;
     const criticalRatio = critical.length / totalComponents;
-    
+
     let recommendedStrategy = 'parallel';
     let reason = '所有组件同等重要，建议并行加载';
-    
+
     if (criticalRatio > 0 && criticalRatio < 1) {
       recommendedStrategy = 'critical-first';
       reason = `有 ${critical.length} 个关键组件和 ${nonCritical.length} 个非关键组件，建议关键组件优先加载`;
@@ -289,7 +289,7 @@ class LoadingStrategy {
       recommendedStrategy = 'critical-first';
       reason = `组件数量较多 (${totalComponents} 个)，建议关键组件优先加载以提升首屏速度`;
     }
-    
+
     return {
       strategy: recommendedStrategy,
       reason,
