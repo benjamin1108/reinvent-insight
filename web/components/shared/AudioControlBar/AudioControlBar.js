@@ -86,6 +86,16 @@ export default {
         }
     },
 
+    watch: {
+        // 监听文章切换
+        articleHash(newHash, oldHash) {
+            if (newHash !== oldHash) {
+                console.log('📄 文章切换:', oldHash, '→', newHash);
+                this.handleArticleChange();
+            }
+        }
+    },
+
     mounted() {
         // Load user preferences from localStorage
         this.loadPreferences();
@@ -101,6 +111,45 @@ export default {
     },
 
     methods: {
+        handleArticleChange() {
+            // 停止当前播放
+            if (this.audioPlayer) {
+                console.log('🛑 停止当前文章的播放');
+                this.audioPlayer.stop();
+            }
+
+            // 重置状态
+            this.isPlaying = false;
+            this.isPaused = false;
+            this.isLoading = false;
+            this.currentTime = 0;
+            this.duration = 0;
+            this.buffered = 0;
+            this.error = null;
+
+            // 停止进度跟踪
+            this.stopProgressTracking();
+
+            console.log('✅ 已重置播放器状态，准备播放新文章');
+        },
+
+        async togglePlayPause() {
+            // 如果正在播放，暂停
+            if (this.isPlaying) {
+                this.pause();
+                return;
+            }
+
+            // 如果已暂停，恢复播放
+            if (this.isPaused) {
+                this.resume();
+                return;
+            }
+
+            // 否则开始新的播放
+            await this.play();
+        },
+
         async play() {
             try {
                 this.error = null;
@@ -124,16 +173,6 @@ export default {
                     this.setupAudioPlayerEvents();
                 }
 
-                // If paused, just resume
-                if (this.isPaused) {
-                    this.audioPlayer.play();
-                    this.isPlaying = true;
-                    this.isPaused = false;
-                    this.startProgressTracking();
-                    this.isLoading = false;
-                    return;
-                }
-
                 // Load audio from stream
                 const requestData = {
                     article_hash: this.articleHash,
@@ -149,11 +188,8 @@ export default {
                 // Apply user preferences
                 this.audioPlayer.setPlaybackRate(this.playbackRate);
 
-                // Start playback
-                this.audioPlayer.play();
-                this.isPlaying = true;
-                this.isPaused = false;
-                this.startProgressTracking();
+                // 流式播放会自动开始，不需要手动调用 play()
+                // 状态会通过事件监听器更新
 
             } catch (error) {
                 console.error('[TTS] Play error:', error);
@@ -169,6 +205,15 @@ export default {
                 this.isPlaying = false;
                 this.isPaused = true;
                 this.stopProgressTracking();
+            }
+        },
+
+        resume() {
+            if (this.audioPlayer && this.isPaused) {
+                this.audioPlayer.resume();
+                this.isPlaying = true;
+                this.isPaused = false;
+                this.startProgressTracking();
             }
         },
 
@@ -247,6 +292,18 @@ export default {
             if (!this.audioPlayer) return;
 
             // Listen for audio player events
+            this.audioPlayer.on('play', () => {
+                this.isPlaying = true;
+                this.isPaused = false;
+                this.startProgressTracking();
+            });
+
+            this.audioPlayer.on('pause', () => {
+                this.isPlaying = false;
+                this.isPaused = true;
+                this.stopProgressTracking();
+            });
+
             this.audioPlayer.on('timeupdate', (time) => {
                 this.currentTime = time;
             });

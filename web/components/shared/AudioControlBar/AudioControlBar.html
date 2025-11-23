@@ -9,7 +9,7 @@
     <!-- 主播放器条 -->
     <div class="audio-player__bar">
         <!-- 左侧: 播放按钮 -->
-        <button class="audio-player__play-btn" @click="isPlaying ? pause() : play()" :disabled="isLoading"
+        <button class="audio-player__play-btn" @click="togglePlayPause" :disabled="isLoading"
             :title="playButtonTooltip" :aria-label="playButtonTooltip">
             <span class="audio-player__play-icon">{{ playButtonIcon }}</span>
         </button>

@@ -40,6 +40,10 @@ export class AudioPlayer {
     this.streamBuffer = null;
     this.scheduledSources = [];
     this.nextStartTime = 0;
+    this.isTTSComplete = false;      // TTS是否已完成
+    this.shouldScheduleChunks = true; // 是否应该调度新的音频块
+    this.isStreamMode = false;        // 是否为流式播放模式
+    this.streamAbortController = null; // 用于中止流请求
 
     console.log('🎵 AudioPlayer 初始化');
   }
@@ -73,7 +77,7 @@ export class AudioPlayer {
       }
 
       const arrayBuffer = await response.arrayBuffer();
-      
+
       console.log('📦 音频数据已下载:', {
         size: arrayBuffer.byteLength,
         sizeMB: (arrayBuffer.byteLength / 1024 / 1024).toFixed(2)
@@ -121,6 +125,19 @@ export class AudioPlayer {
     try {
       this._initAudioContext();
 
+      // 先停止之前的播放和流（如果有）
+      if (this.isPlaying || this.isPaused) {
+        console.log('🛑 检测到新的播放请求，停止当前播放');
+        this.stop();
+      }
+
+      // 中止之前的流请求（如果有）
+      if (this.streamAbortController) {
+        console.log('🛑 中止之前的流请求');
+        this.streamAbortController.abort();
+        this.streamAbortController = null;
+      }
+
       // 初始化 StreamBuffer
       if (!this.streamBuffer) {
         this.streamBuffer = new StreamBuffer(this.audioContext);
@@ -132,115 +149,155 @@ export class AudioPlayer {
       this.nextStartTime = 0;
       this.scheduledSources = [];
 
+      // 清空旧的 audioBuffer
+      this.audioBuffer = null;
+
+      // 设置流式模式标志
+      this.isStreamMode = true;
+      this.isTTSComplete = false;
+      this.shouldScheduleChunks = true;
+
       console.log('📡 开始流式加载音频');
 
-      return new Promise(async (resolve, reject) => {
-        try {
-          // 使用 fetch 发送 POST 请求
-          const response = await fetch('/api/tts/stream', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'text/event-stream'
-            },
-            body: JSON.stringify(requestData)
-          });
+      // 创建新的 AbortController 用于取消请求
+      this.streamAbortController = new AbortController();
 
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
-
-          // 读取 SSE 流
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          let buffer = '';
-
-          while (true) {
-            const { done, value } = await reader.read();
-
-            if (done) {
-              break;
-            }
-
-            // 解码数据块
-            buffer += decoder.decode(value, { stream: true });
-
-            // 处理完整的事件
-            const lines = buffer.split('\n\n');
-            buffer = lines.pop() || ''; // 保留不完整的部分
-
-            for (const line of lines) {
-              if (!line.trim()) continue;
-
-              // 解析 SSE 事件
-              const eventMatch = line.match(/^event:\s*(.+)$/m);
-              const dataMatch = line.match(/^data:\s*(.+)$/m);
-
-              if (!eventMatch || !dataMatch) continue;
-
-              const eventType = eventMatch[1].trim();
-              const eventData = JSON.parse(dataMatch[1]);
-
-              // 处理不同类型的事件
-              if (eventType === 'cached') {
-                console.log('💾 使用缓存音频:', eventData.audio_url);
-                await this.loadFromUrl(eventData.audio_url);
-                resolve();
-                return;
-              } else if (eventType === 'chunk') {
-                console.log('📦 收到音频块:', eventData.index);
-                if (this.streamBuffer) {
-                  const floatData = this.streamBuffer.appendChunk(eventData.data);
-                  const chunkBuffer = this.streamBuffer.createChunkAudioBuffer(floatData);
-                  this.scheduleChunk(chunkBuffer);
-
-                  // 如果是第一个块，触发播放事件并更新 duration
-                  if (eventData.index === 1) {
-                    this.isPlaying = true;
-                    this.isPaused = false;
-                    this._startProgressTimer();
-                    this._emit('play');
-                    console.log('▶️ 开始流式播放');
-                  }
-                  
-                  // 更新总时长（基于已接收的数据）
-                  const currentDuration = this.streamBuffer.getDuration();
-                  this._emit('durationchange', currentDuration);
-                }
-              } else if (eventType === 'complete') {
-                console.log('✅ 音频生成完成:', eventData.audio_url);
-                
-                // 更新最终的 audioBuffer 以支持 seek 功能
-                this.audioBuffer = this.streamBuffer.getAudioBuffer();
-                const finalDuration = eventData.duration || this.getDuration();
-                this._emit('durationchange', finalDuration);
-                
-                console.log('✅ 流式播放完成，总时长:', finalDuration);
-                resolve();
-                return;
-              } else if (eventType === 'error') {
-                const errorMessage = eventData.message || eventData.error || '音频生成失败';
-                console.error('❌ SSE 错误:', errorMessage);
-                const error = new Error(errorMessage);
-                this._emit('error', error);
-                reject(error);
-                return;
-              }
-            }
-          }
-
-        } catch (error) {
-          console.error('❌ SSE 连接错误:', error);
-          const err = new Error('网络连接失败: ' + error.message);
-          this._emit('error', err);
-          reject(err);
-        }
+      // 使用 fetch 发送 POST 请求
+      const response = await fetch('/api/tts/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream'
+        },
+        body: JSON.stringify(requestData),
+        signal: this.streamAbortController.signal
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      // 启动后台流处理（非阻塞）
+      this._processStream(response).catch(error => {
+        console.error('❌ 流处理错误:', error);
+        this._emit('error', error);
+      });
+
+      // 立即返回，不等待流完成
+      console.log('✅ 流式加载已启动（后台处理）');
 
     } catch (error) {
       console.error('❌ 流式加载音频失败:', error);
       this._emit('error', error);
       throw error;
+    }
+  }
+
+  /**
+   * 后台处理 SSE 流（非阻塞）
+   * @private
+   * @param {Response} response - Fetch Response 对象
+   */
+  async _processStream(response) {
+    try {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        // 检查是否被中止
+        if (this.streamAbortController?.signal.aborted) {
+          console.log('🛑 流处理已被中止');
+          reader.cancel();
+          break;
+        }
+
+        const { done, value } = await reader.read();
+
+        if (done) {
+          console.log('📡 流读取完成');
+          break;
+        }
+
+        // 解码数据块
+        buffer += decoder.decode(value, { stream: true });
+
+        // 处理完整的事件
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || ''; // 保留不完整的部分
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+
+          // 解析 SSE 事件
+          const eventMatch = line.match(/^event:\s*(.+)$/m);
+          const dataMatch = line.match(/^data:\s*(.+)$/m);
+
+          if (!eventMatch || !dataMatch) continue;
+
+          const eventType = eventMatch[1].trim();
+          const eventData = JSON.parse(dataMatch[1]);
+
+          // 处理不同类型的事件
+          if (eventType === 'cached') {
+            console.log('💾 使用缓存音频:', eventData.audio_url);
+            await this.loadFromUrl(eventData.audio_url);
+            return;
+          } else if (eventType === 'chunk') {
+            console.log('📦 收到音频块:', eventData.index, '| shouldSchedule:', this.shouldScheduleChunks);
+            if (this.streamBuffer) {
+              const floatData = this.streamBuffer.appendChunk(eventData.data);
+              const chunkBuffer = this.streamBuffer.createChunkAudioBuffer(floatData);
+
+              // 只在允许调度时才调度播放（支持暂停时继续缓冲）
+              if (this.shouldScheduleChunks) {
+                this.scheduleChunk(chunkBuffer);
+                console.log('✅ 已调度音频块', eventData.index);
+              } else {
+                console.log('⏸️ 暂停中，仅缓存块', eventData.index, '不调度播放');
+              }
+
+              // 如果是第一个块，触发播放事件并更新 duration
+              if (eventData.index === 1 && this.shouldScheduleChunks) {
+                this.isPlaying = true;
+                this.isPaused = false;
+                this._startProgressTimer();
+                this._emit('play');
+                console.log('▶️ 开始流式播放');
+              }
+
+              // 更新总时长（基于已接收的数据）
+              const currentDuration = this.streamBuffer.getDuration();
+              this._emit('durationchange', currentDuration);
+            }
+          } else if (eventType === 'complete') {
+            console.log('✅ 音频生成完成:', eventData.audio_url);
+
+            // 标记TTS已完成
+            this.isTTSComplete = true;
+
+            // 更新最终的 audioBuffer 以支持 seek 功能
+            this.audioBuffer = this.streamBuffer.getAudioBuffer();
+            const finalDuration = eventData.duration || this.getDuration();
+            this._emit('durationchange', finalDuration);
+
+            console.log('✅ 流式播放完成，总时长:', finalDuration);
+            return;
+          } else if (eventType === 'error') {
+            const errorMessage = eventData.message || eventData.error || '音频生成失败';
+            console.error('❌ SSE 错误:', errorMessage);
+            const error = new Error(errorMessage);
+            this._emit('error', error);
+            throw error;
+          }
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ SSE 连接错误:', error);
+      const err = new Error('网络连接失败: ' + error.message);
+      this._emit('error', err);
+      throw err;
     }
   }
 
@@ -263,12 +320,12 @@ export class AudioPlayer {
 
     const startTime = this.nextStartTime;
     source.start(startTime);
-    
+
     // 记录这个块的开始时间，用于计算当前播放位置
     if (this.scheduledSources.length === 0) {
       this.startTime = startTime;
     }
-    
+
     this.nextStartTime += audioBuffer.duration / this.playbackRate;
 
     this.scheduledSources.push(source);
@@ -301,6 +358,18 @@ export class AudioPlayer {
    * 播放音频
    */
   play() {
+    // 如果是流式模式且已在播放，跳过（避免重复播放）
+    if (this.isStreamMode && this.isPlaying && !this.isPaused) {
+      console.log('ℹ️ 流式播放已在进行中，跳过 play() 调用');
+      return;
+    }
+
+    // 流式模式下，如果还没有 audioBuffer，等待第一个块到达
+    if (this.isStreamMode && !this.audioBuffer) {
+      console.log('ℹ️ 流式模式：等待音频数据...');
+      return;
+    }
+
     if (!this.audioBuffer) {
       console.warn('⚠️ 没有可播放的音频');
       return;
@@ -351,11 +420,28 @@ export class AudioPlayer {
    */
   pause() {
     if (!this.isPlaying) {
+      console.log('⚠️ 当前未播放，无需暂停');
       return;
     }
 
+    console.log('⏸️ 开始暂停播放...');
+
+    // 停止所有流式调度的音频块
+    this.scheduledSources.forEach(source => {
+      try {
+        source.stop();
+      } catch (e) {
+        // 忽略已经停止的错误
+      }
+    });
+    this.scheduledSources = [];
+    this.nextStartTime = 0;
+
     // 记录暂停位置
     this.pauseTime = this.getCurrentTime();
+
+    // 停止调度新块，但继续接收数据（关键！）
+    this.shouldScheduleChunks = false;
 
     // 停止播放
     this._stopSource();
@@ -365,16 +451,81 @@ export class AudioPlayer {
     // 停止进度更新
     this._stopProgressTimer();
 
-    console.log('⏸️ 暂停播放:', { pauseTime: this.pauseTime });
+    console.log('⏸️ 暂停播放完成:', { pauseTime: this.pauseTime });
     this._emit('pause');
   }
+
+  /**
+   * 恢复播放
+   */
+  resume() {
+    if (!this.isPaused) {
+      console.warn('⚠️ 当前未暂停，无需恢复');
+      return;
+    }
+
+    console.log('▶️ 恢复播放，位置:', this.pauseTime, {
+      isStreamMode: this.isStreamMode,
+      isTTSComplete: this.isTTSComplete,
+      hasAudioBuffer: !!this.audioBuffer,
+      hasStreamBuffer: !!this.streamBuffer
+    });
+
+    // 将已缓存的数据转换为完整的 AudioBuffer
+    if (this.streamBuffer) {
+      const newBuffer = this.streamBuffer.getAudioBuffer();
+      if (newBuffer) {
+        this.audioBuffer = newBuffer;
+        console.log('📦 从 StreamBuffer 更新 AudioBuffer，时长:', this.audioBuffer.duration.toFixed(2), '秒');
+      }
+    }
+
+    if (!this.audioBuffer) {
+      console.error('❌ 无法恢复播放：没有可用的音频数据');
+      return;
+    }
+
+    // 标记流式模式结束，切换到标准播放模式
+    // 这样可以避免双重播放问题（不再调度新块）
+    if (this.isStreamMode) {
+      console.log('🔄 切换到标准播放模式（避免双重播放）');
+      this.isStreamMode = false;
+      this.shouldScheduleChunks = false; // 关键：不再调度新块
+    }
+
+    // 使用标准 play() 方法从暂停位置播放完整音频
+    this.play();
+
+    console.log('✅ 恢复播放成功，从', this.pauseTime.toFixed(2), '秒开始');
+    
+    // 注意：后台 TTS 请求继续接收数据到 StreamBuffer
+    // 但不会再调度播放，避免双重声音
+  }
+
 
   /**
    * 停止播放
    */
   stop() {
-    if (!this.isPlaying && !this.isPaused) {
+    const wasPlaying = this.isPlaying || this.isPaused;
+    
+    if (!wasPlaying) {
+      // 即使没有播放，也要清理流请求和资源
+      if (this.streamAbortController) {
+        console.log('🛑 清理未播放的流请求');
+        this.streamAbortController.abort();
+        this.streamAbortController = null;
+      }
       return;
+    }
+
+    console.log('⏹️ 停止播放...');
+
+    // 中止流请求
+    if (this.streamAbortController) {
+      this.streamAbortController.abort();
+      this.streamAbortController = null;
+      console.log('🛑 已中止流请求');
     }
 
     // 停止播放
@@ -394,11 +545,14 @@ export class AudioPlayer {
     this.isPaused = false;
     this.pauseTime = 0;
     this.startTime = 0;
+    this.isStreamMode = false;
+    this.isTTSComplete = false;
+    this.shouldScheduleChunks = true;
 
     // 停止进度更新
     this._stopProgressTimer();
 
-    console.log('⏹️ 停止播放');
+    console.log('⏹️ 停止播放完成');
     this._emit('stop');
   }
 
@@ -487,12 +641,12 @@ export class AudioPlayer {
     if (this.audioBuffer) {
       return this.audioBuffer.duration;
     }
-    
+
     // 如果正在流式播放，返回 StreamBuffer 的当前时长
     if (this.streamBuffer) {
       return this.streamBuffer.getDuration();
     }
-    
+
     return 0;
   }
 

@@ -86,9 +86,9 @@ export default {
                     this.setupAudioPlayerEvents();
                 }
 
-                // 如果是暂停状态，直接恢复播放
+                // 如果是暂停状态，恢复播放
                 if (this.isPaused) {
-                    this.audioPlayer.play();
+                    this.audioPlayer.resume();  // 使用 resume() 而不是 play()
                     this.isPlaying = true;
                     this.isPaused = false;
                     this.isLoading = false;
@@ -107,8 +107,14 @@ export default {
 
                 await this.audioPlayer.loadFromStream(requestData);
                 this.audioPlayer.setPlaybackRate(this.playbackRate);
-                this.audioPlayer.play();
-                
+
+                // 只在非流式模式或未播放时调用 play()
+                // 流式模式会在接收第一个块时自动开始播放
+                if (!this.audioPlayer.isStreamMode || !this.audioPlayer.isPlaying) {
+                    this.audioPlayer.play();
+                }
+
+
                 this.isPlaying = true;
                 this.isPaused = false;
 

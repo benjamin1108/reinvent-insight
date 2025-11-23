@@ -139,7 +139,6 @@
         
         <div style="margin-top: 10px;">
             <button id="playBtn">▶️ 播放</button>
-            <button id="pauseBtn" disabled>⏸️ 暂停</button>
             <button id="stopBtn" disabled>⏹️ 停止</button>
             <button id="clearLogBtn">🗑️ 清空日志</button>
         </div>
@@ -181,7 +180,6 @@
         
         const elements = {
             playBtn: document.getElementById('playBtn'),
-            pauseBtn: document.getElementById('pauseBtn'),
             stopBtn: document.getElementById('stopBtn'),
             clearLogBtn: document.getElementById('clearLogBtn'),
             testText: document.getElementById('testText'),
@@ -241,23 +239,23 @@
             audioPlayer.on('play', () => {
                 log('▶️ 播放开始', 'success');
                 updateStatus('播放中');
-                elements.playBtn.disabled = true;
-                elements.pauseBtn.disabled = false;
+                elements.playBtn.textContent = '⏸️ 暂停';
+                elements.playBtn.disabled = false;
                 elements.stopBtn.disabled = false;
             });
             
             audioPlayer.on('pause', () => {
                 log('⏸️ 播放暂停', 'warning');
                 updateStatus('已暂停');
+                elements.playBtn.textContent = '▶️ 继续';
                 elements.playBtn.disabled = false;
-                elements.pauseBtn.disabled = true;
             });
             
             audioPlayer.on('stop', () => {
                 log('⏹️ 播放停止', 'info');
                 updateStatus('已停止');
+                elements.playBtn.textContent = '▶️ 播放';
                 elements.playBtn.disabled = false;
-                elements.pauseBtn.disabled = true;
                 elements.stopBtn.disabled = true;
                 updateProgress();
             });
@@ -265,16 +263,16 @@
             audioPlayer.on('ended', () => {
                 log('✅ 播放完成', 'success');
                 updateStatus('已完成');
+                elements.playBtn.textContent = '▶️ 播放';
                 elements.playBtn.disabled = false;
-                elements.pauseBtn.disabled = true;
                 elements.stopBtn.disabled = true;
             });
             
             audioPlayer.on('error', (error) => {
                 log(`❌ 错误: ${error.message}`, 'error');
                 updateStatus('错误');
+                elements.playBtn.textContent = '▶️ 播放';
                 elements.playBtn.disabled = false;
-                elements.pauseBtn.disabled = true;
                 elements.stopBtn.disabled = true;
             });
             
@@ -302,8 +300,22 @@
             };
         }
         
-        // 播放按钮
+        // 播放/暂停按钮
         elements.playBtn.addEventListener('click', async () => {
+            // 如果正在播放，暂停
+            if (audioPlayer && audioPlayer.isPlaying) {
+                log('⏸️ 请求暂停', 'info');
+                audioPlayer.pause();
+                return;
+            }
+
+            // 如果已暂停，恢复播放
+            if (audioPlayer && audioPlayer.isPaused) {
+                log('▶️ 恢复播放', 'info');
+                audioPlayer.resume();
+                return;
+            }
+
             try {
                 const text = elements.testText.value.trim();
                 if (!text) {
@@ -313,7 +325,6 @@
                 
                 log('🚀 开始加载音频...', 'info');
                 updateStatus('加载中');
-                elements.playBtn.disabled = true;
                 
                 setupAudioPlayer();
                 
@@ -326,21 +337,17 @@
                     skip_code_blocks: true
                 };
                 
+                // loadFromStream 现在是非阻塞的，立即返回
                 await audioPlayer.loadFromStream(requestData);
                 
-                log('✅ 音频加载完成，开始播放', 'success');
+                log('✅ 流式加载已启动', 'success');
                 
             } catch (error) {
                 log(`❌ 播放失败: ${error.message}`, 'error');
                 updateStatus('错误');
+                elements.playBtn.textContent = '▶️ 播放';
                 elements.playBtn.disabled = false;
-            }
-        });
-        
-        // 暂停按钮
-        elements.pauseBtn.addEventListener('click', () => {
-            if (audioPlayer) {
-                audioPlayer.pause();
+                elements.stopBtn.disabled = true;
             }
         });
         

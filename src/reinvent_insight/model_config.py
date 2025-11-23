@@ -1420,8 +1420,13 @@ class DashScopeClient(BaseModelClient):
                 # 为每个片段生成音频（使用 MultiModalConversation API）
                 loop = asyncio.get_event_loop()
                 
-                def _call_tts_stream():
-                    """在同步上下文中调用 DashScope MultiModalConversation API"""
+                def _call_and_collect_tts():
+                    """
+                    在同步上下文中调用 DashScope API 并收集所有音频块
+                    
+                    ⚠️ 关键修复：将整个同步迭代过程放在 executor 中执行
+                    避免阻塞事件循环，确保服务器保持响应
+                    """
                     response = self.dashscope.MultiModalConversation.call(
                         model=self.config.model_name,
                         api_key=self.config.api_key,
@@ -1430,47 +1435,49 @@ class DashScopeClient(BaseModelClient):
                         language_type=language,
                         stream=True
                     )
-                    return response
-                
-                # 在 executor 中执行同步调用
-                response = await loop.run_in_executor(None, _call_tts_stream)
-                
-                # 收集这个片段的所有音频块
-                segment_audio_data = b''
-                audio_url = None
-                chunk_count = 0
-                
-                for chunk in response:
-                    chunk_count += 1
-                    logger.debug(f"收到响应块 {chunk_count}: {type(chunk)}")
                     
-                    # 检查是否有音频数据
-                    if hasattr(chunk, 'output') and chunk.output:
-                        logger.debug(f"output 存在: {type(chunk.output)}")
+                    # ✅ 在 executor 中完成同步迭代
+                    segment_audio_data = b''
+                    audio_url = None
+                    chunk_count = 0
+                    
+                    for chunk in response:  # 同步迭代在这里完成，不阻塞事件循环
+                        chunk_count += 1
+                        logger.debug(f"收到响应块 {chunk_count}: {type(chunk)}")
                         
-                        if hasattr(chunk.output, 'audio') and chunk.output.audio:
-                            audio_obj = chunk.output.audio
-                            logger.debug(f"audio 对象: {type(audio_obj)}, data={getattr(audio_obj, 'data', None)[:50] if hasattr(audio_obj, 'data') and audio_obj.data else None}, url={getattr(audio_obj, 'url', None)}")
+                        # 检查是否有音频数据
+                        if hasattr(chunk, 'output') and chunk.output:
+                            logger.debug(f"output 存在: {type(chunk.output)}")
                             
-                            # 流式输出：data 字段包含 Base64 音频数据
-                            if hasattr(audio_obj, 'data') and audio_obj.data:
-                                audio_data = audio_obj.data
-                                # 解码 Base64
-                                if isinstance(audio_data, str) and audio_data:
-                                    logger.info(f"收到 Base64 音频数据，长度: {len(audio_data)}")
-                                    audio_bytes = base64.b64decode(audio_data)
-                                    segment_audio_data += audio_bytes
-                            
-                            # 非流式输出：url 字段包含完整音频文件 URL
-                            elif hasattr(audio_obj, 'url') and audio_obj.url:
-                                audio_url = audio_obj.url
-                                logger.info(f"收到音频 URL: {audio_url}")
+                            if hasattr(chunk.output, 'audio') and chunk.output.audio:
+                                audio_obj = chunk.output.audio
+                                logger.debug(f"audio 对象: {type(audio_obj)}, data={getattr(audio_obj, 'data', None)[:50] if hasattr(audio_obj, 'data') and audio_obj.data else None}, url={getattr(audio_obj, 'url', None)}")
+                                
+                                # 流式输出：data 字段包含 Base64 音频数据
+                                if hasattr(audio_obj, 'data') and audio_obj.data:
+                                    audio_data = audio_obj.data
+                                    # 解码 Base64
+                                    if isinstance(audio_data, str) and audio_data:
+                                        logger.info(f"收到 Base64 音频数据，长度: {len(audio_data)}")
+                                        audio_bytes = base64.b64decode(audio_data)
+                                        segment_audio_data += audio_bytes
+                                
+                                # 非流式输出：url 字段包含完整音频文件 URL
+                                elif hasattr(audio_obj, 'url') and audio_obj.url:
+                                    audio_url = audio_obj.url
+                                    logger.info(f"收到音频 URL: {audio_url}")
+                            else:
+                                logger.warning(f"output 没有 audio 属性或 audio 为空")
                         else:
-                            logger.warning(f"output 没有 audio 属性或 audio 为空")
-                    else:
-                        logger.warning(f"chunk 没有 output 属性或 output 为空")
+                            logger.warning(f"chunk 没有 output 属性或 output 为空")
+                    
+                    logger.info(f"处理了 {chunk_count} 个响应块")
+                    return segment_audio_data, audio_url
                 
-                logger.info(f"处理了 {chunk_count} 个响应块")
+                # ✅ 整个同步过程在 executor 中执行，不阻塞事件循环
+                segment_audio_data, audio_url = await loop.run_in_executor(
+                    None, _call_and_collect_tts
+                )
                 
                 # 如果收到的是 URL，需要下载音频
                 if audio_url and not segment_audio_data:
