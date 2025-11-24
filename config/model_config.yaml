@@ -148,6 +148,28 @@ tasks:
       retry_backoff_base: 2.0
 
   # --------------------------------------------------------------------------
+  # HTML转Markdown任务
+  # --------------------------------------------------------------------------
+  # 用于将HTML网页转换为格式化的Markdown文档
+  html_to_markdown:
+    provider: gemini
+    model_name: gemini-3-pro-preview
+    api_key_env: GEMINI_API_KEY
+    
+    generation:
+      # 使用较低温度以获得稳定、准确的输出
+      temperature: 0.5
+      top_p: 0.9
+      top_k: 40
+      # 足够大以处理长文章
+      max_output_tokens: 16000
+    
+    rate_limit:
+      interval: 0.5
+      max_retries: 3
+      retry_backoff_base: 2.0
+
+  # --------------------------------------------------------------------------
   # 文本转语音任务
   # --------------------------------------------------------------------------
   # 用于将文章内容转换为语音，使用阿里云 Qwen3-TTS

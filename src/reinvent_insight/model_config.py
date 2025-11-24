@@ -436,26 +436,27 @@ class GeminiClient(BaseModelClient):
             raise ConfigurationError("Gemini API Key 未配置")
         
         try:
-            import google.generativeai as genai
+            from google import genai
+            from google.genai import types
+            
             self.genai = genai
+            self.types = types
             
-            # 配置API Key
-            genai.configure(api_key=config.api_key)
-            
-            # 创建模型实例
-            self.model = genai.GenerativeModel(config.model_name)
+            # 创建客户端
+            self.client = genai.Client(api_key=config.api_key)
             
             logger.info(f"Gemini客户端初始化成功: {config.model_name}")
             
         except ImportError:
-            raise ConfigurationError("google-generativeai 包未安装")
+            raise ConfigurationError("google-genai 包未安装")
         except Exception as e:
             raise ConfigurationError(f"Gemini客户端初始化失败: {e}")
     
     async def generate_content(
         self, 
         prompt: str, 
-        is_json: bool = False
+        is_json: bool = False,
+        thinking_level: str = "low"
     ) -> str:
         """
         生成文本内容
@@ -463,6 +464,7 @@ class GeminiClient(BaseModelClient):
         Args:
             prompt: 提示词
             is_json: 是否返回JSON格式
+            thinking_level: 思考级别 ("low", "medium", "high")，低级别更快
             
         Returns:
             生成的文本内容
@@ -472,35 +474,30 @@ class GeminiClient(BaseModelClient):
         """
         await self._apply_rate_limit()
         
-        logger.info(f"开始使用 {self.config.model_name} 生成内容...")
+        logger.info(f"开始使用 {self.config.model_name} 生成内容 (thinking_level={thinking_level})...")
         
-        generation_config = self.genai.types.GenerationConfig(
+        # 使用新的google.genai SDK
+        config = self.types.GenerateContentConfig(
             temperature=self.config.temperature,
             top_p=self.config.top_p,
             top_k=self.config.top_k,
             max_output_tokens=self.config.max_output_tokens,
             response_mime_type="application/json" if is_json else "text/plain",
+            thinking_config=self.types.ThinkingConfig(thinking_level=thinking_level)
         )
         
         async def _generate():
-            response = await self.model.generate_content_async(
-                prompt,
-                generation_config=generation_config
+            response = await self.client.aio.models.generate_content(
+                model=self.config.model_name,
+                contents=prompt,
+                config=config
             )
-            
-            # 检查是否有候选内容
-            if not response.candidates:
-                raise APIError("API 返回了空的候选内容")
             
             # 提取文本内容
-            content = ''.join(
-                part.text for part in response.candidates[0].content.parts
-            )
-            
-            if not content:
+            if not response.text:
                 raise APIError("API 返回的内容为空文本")
             
-            return content
+            return response.text
         
         try:
             content = await self._retry_with_backoff(_generate)
