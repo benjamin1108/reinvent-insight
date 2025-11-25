@@ -256,9 +256,6 @@ export default {
     const visualStatus = ref('pending');  // 'pending' | 'processing' | 'completed' | 'failed'
     const visualHtmlUrl = ref(null);
     const currentVersion = ref(0);
-    const iframeHeight = ref(800);  // iframe 动态高度，初始值 800px
-    let iframeMessageHandler = null;  // 消息处理器引用
-    let heightUpdateTimer = null;  // 高度更新防抖定时器
     
     // 根据显示模式决定是否显示目录
     // 只有"Deep Insight"模式才显示目录（不是 Quick Insight）
@@ -769,34 +766,119 @@ export default {
               script.textContent = `
 (function() {
   function sendHeight() {
-    const height = Math.max(
-      document.body.scrollHeight,
-      document.body.offsetHeight,
-      document.documentElement.clientHeight,
-      document.documentElement.scrollHeight,
-      document.documentElement.offsetHeight
-    );
+    // 🔧 最优化的高度计算：使用多种方法取最合理值
+    
+    // 方法1: body 的 scrollHeight
+    const bodyScrollHeight = document.body.scrollHeight;
+    
+    // 方法2: documentElement 的 scrollHeight
+    const docScrollHeight = document.documentElement.scrollHeight;
+    
+    // 方法3: body 的 offsetHeight
+    const bodyOffsetHeight = document.body.offsetHeight;
+    
+    // 方法4: 查找最后一个可见元素的底部位置
+    let lastVisibleBottom = 0;
+    const allElements = Array.from(document.body.children);
+    
+    // 只检查 body 的直接子元素，避免过度计算
+    allElements.forEach(el => {
+      const style = window.getComputedStyle(el);
+      
+      // 跳过隐藏和定位元素
+      if (style.display === 'none' || 
+          style.visibility === 'hidden' || 
+          style.position === 'absolute' || 
+          style.position === 'fixed') {
+        return;
+      }
+      
+      const rect = el.getBoundingClientRect();
+      const bottom = rect.bottom + window.pageYOffset;
+      
+      if (bottom > lastVisibleBottom) {
+        lastVisibleBottom = bottom;
+      }
+    });
+    
+    // 取所有方法中的中位数（更稳定的估计）
+    const heights = [
+      bodyScrollHeight,
+      docScrollHeight,
+      bodyOffsetHeight,
+      lastVisibleBottom
+    ].filter(h => h > 0).sort((a, b) => a - b);
+    
+    // 使用中位数或平均值
+    let finalHeight;
+    if (heights.length >= 2) {
+      // 取中间两个值的平均值
+      const mid = Math.floor(heights.length / 2);
+      finalHeight = heights.length % 2 === 0 
+        ? (heights[mid - 1] + heights[mid]) / 2 
+        : heights[mid];
+    } else {
+      finalHeight = heights[0] || bodyScrollHeight;
+    }
+    
+    // 添加适度缓冲（50px）
+    finalHeight = Math.ceil(finalHeight) + 50;
+    
+    console.log('📏 [iframe] 高度计算详情:', {
+      bodyScrollHeight,
+      docScrollHeight,
+      bodyOffsetHeight,
+      lastVisibleBottom,
+      allHeights: heights,
+      finalHeight
+    });
     
     window.parent.postMessage({
       type: 'iframe-height',
-      height: height
+      height: finalHeight
     }, '*');
   }
   
-  // 初始发送
-  sendHeight();
+  // 防抖函数
+  let debounceTimer;
+  function debouncedSendHeight() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(sendHeight, 300);
+  }
   
-  // 监听内容变化
-  window.addEventListener('load', sendHeight);
-  window.addEventListener('resize', sendHeight);
+  // 初始发送（延迟执行，确保渲染完成）
+  if (document.readyState === 'complete') {
+    setTimeout(sendHeight, 500);
+  } else {
+    window.addEventListener('load', () => setTimeout(sendHeight, 500));
+  }
   
-  // 使用 MutationObserver 监听 DOM 变化
-  const observer = new MutationObserver(sendHeight);
+  // 监听窗口大小变化
+  window.addEventListener('resize', debouncedSendHeight);
+  
+  // 使用 MutationObserver 监听 DOM 变化（防抖）
+  const observer = new MutationObserver(debouncedSendHeight);
   observer.observe(document.body, {
     childList: true,
     subtree: true,
     attributes: true,
     characterData: true
+  });
+  
+  // 监听图片加载完成
+  const images = document.querySelectorAll('img');
+  let loadedImages = 0;
+  images.forEach(img => {
+    if (img.complete) {
+      loadedImages++;
+    } else {
+      img.addEventListener('load', () => {
+        loadedImages++;
+        if (loadedImages === images.length) {
+          setTimeout(sendHeight, 200);
+        }
+      });
+    }
   });
 })();
               `;
@@ -805,9 +887,8 @@ export default {
             }
           }
         } catch (crossOriginError) {
-          // 跨域限制，使用固定高度
-          console.warn('⚠️ 跨域限制，无法访问 iframe 内容，使用固定高度');
-          iframeHeight.value = 800;
+          // 跨域限制，iframe将使用CSS定义的高度
+          console.warn('⚠️ 跨域限制，无法访问 iframe 内容');
         }
         
         console.log('✅ iframe 加载成功');
@@ -823,63 +904,15 @@ export default {
       }
     };
     
-    // 设置 iframe 消息监听器
+    // iframe 消息监听器（简化版 - 不再处理高度）
     const setupIframeMessageListener = () => {
-      iframeMessageHandler = (event) => {
-        // 安全验证：验证消息来源
-        // 在生产环境中，应该严格验证 event.origin
-        const allowedOrigins = [
-          window.location.origin,
-          // 可以添加其他允许的源
-        ];
-        
-        // 注意：在开发环境中，如果使用不同端口，可能需要调整
-        // 暂时允许所有同源消息，生产环境应该严格验证
-        if (event.origin !== window.location.origin) {
-          console.warn('⚠️ 拒绝来自未知源的消息:', event.origin);
-          // 在开发环境中，可以注释掉下面的 return 以允许跨域消息
-          // return;
-        }
-        
-        // 验证消息格式
-        if (!event.data || typeof event.data !== 'object') {
-          return;
-        }
-        
-        // 处理高度消息
-        if (event.data.type === 'iframe-height') {
-          const height = parseInt(event.data.height, 10);
-          
-          // 验证高度值有效性
-          if (isNaN(height) || height <= 0 || height > 50000) {
-            console.warn('⚠️ 无效的高度值:', event.data.height);
-            return;
-          }
-          
-          // 防抖：避免频繁更新高度
-          if (heightUpdateTimer) {
-            clearTimeout(heightUpdateTimer);
-          }
-          
-          heightUpdateTimer = setTimeout(() => {
-            // 更新 iframe 高度（添加 20px 缓冲）
-            iframeHeight.value = height;
-            //console.log('📏 [DEBUG] 更新 iframe 高度:', iframeHeight.value);
-          }, 100);  // 100ms 防抖
-        }
-      };
-      
-      window.addEventListener('message', iframeMessageHandler);
-      console.log('✅ iframe 消息监听器已设置');
+      // 预留给未来可能的iframe通信需求
+      console.log('✅ iframe 已准备就绪');
     };
     
     // 清理 iframe 消息监听器
     const cleanupIframeMessageListener = () => {
-      if (iframeMessageHandler) {
-        window.removeEventListener('message', iframeMessageHandler);
-        iframeMessageHandler = null;
-        console.log('✅ iframe 消息监听器已清理');
-      }
+      // 预留清理逻辑
     };
     
     // 全屏相关方法已移除
@@ -1375,7 +1408,6 @@ export default {
       visualStatus,
       visualHtmlUrl,
       currentVersion,
-      iframeHeight,
       
       // 计算属性
       hasMultipleVersions,

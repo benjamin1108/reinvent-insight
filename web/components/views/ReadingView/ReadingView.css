@@ -1475,11 +1475,10 @@
 /* iframe 元素 */
 .reading-view__visual-iframe {
   width: 100%;
-  min-height: 100vh;
+  height: 100%; /* 填充父容器 */
   border: none;
   display: block;
   background: #121212;
-  /* 高度通过内联样式动态设置 */
 }
 
 /* 全屏模式样式已移除 */
