@@ -71,6 +71,13 @@ tasks:
     model_name: gemini-3-pro-preview
     api_key_env: GEMINI_API_KEY
     
+    # 思考模式配置
+    thinking:
+      # 是否启用低思考模式（low thinking）
+      # false: 高思考模式（默认，深度分析）
+      # true: 低思考模式（快速响应）
+      low_thinking: false
+    
     generation:
       temperature: 0.7
       top_p: 0.9
@@ -89,9 +96,12 @@ tasks:
   # 用于处理 PDF 文档，进行多模态分析（文本+图表）
   pdf_processing:
     provider: gemini
-    # 使用 flash 模型以获得更快的响应速度
     model_name: gemini-3-pro-preview
     api_key_env: GEMINI_API_KEY
+    
+    # 思考模式配置
+    thinking:
+      low_thinking: false  # 使用高思考模式
     
     generation:
       # PDF 分析使用稍高的温度以获得更有创造性的解读
@@ -113,6 +123,10 @@ tasks:
     provider: gemini
     model_name: gemini-3-pro-preview
     api_key_env: GEMINI_API_KEY
+    
+    # 思考模式配置
+    thinking:
+      low_thinking: false  # 使用高思考模式
     
     generation:
       # 可视化生成需要更高的创造性
@@ -136,6 +150,10 @@ tasks:
     model_name: gemini-3-pro-preview
     api_key_env: GEMINI_API_KEY
     
+    # 思考模式配置
+    thinking:
+      low_thinking: false  # 使用高思考模式
+    
     generation:
       temperature: 0.7
       top_p: 0.9
@@ -151,10 +169,18 @@ tasks:
   # HTML转Markdown任务
   # --------------------------------------------------------------------------
   # 用于将HTML网页转换为格式化的Markdown文档
+  # 
+  # 思考模式说明：
+  # - low_thinking: true  适合格式转换、翻译等任务（快速响应）
+  # - low_thinking: false 适合需要深度分析、创造性的任务（高质量输出）
   html_to_markdown:
     provider: gemini
     model_name: gemini-3-pro-preview
     api_key_env: GEMINI_API_KEY
+    
+    # 思考模式配置
+    thinking:
+      low_thinking: true  # 使用低思考模式（快速转换，不需要深度分析）
     
     generation:
       # 使用较低温度以获得稳定、准确的输出
@@ -233,13 +259,27 @@ tasks:
 #    - 0.4-0.7: 平衡创造性和准确性，适合大多数任务
 #    - 0.8-1.0: 高创造性，适合内容生成任务
 #
-# 3. 速率限制：
+# 3. 思考模式（thinking）配置：
+#    - low_thinking: true  (低思考模式)
+#      * 适用场景：格式转换、翻译、数据提取等结构化任务
+#      * 优势：响应速度快，成本低
+#      * 示例：HTML转Markdown、JSON解析、简单问答
+#    
+#    - low_thinking: false (高思考模式，默认)
+#      * 适用场景：深度分析、创意生成、复杂推理任务
+#      * 优势：输出质量高，理解更深入
+#      * 示例：视频摘要、PDF分析、可视化生成、文档解读
+#    
+#    注意：如果任务类型未配置 thinking 字段，默认使用高思考模式
+#
+# 4. 速率限制：
 #    - interval: 根据 API 配额调整，避免触发速率限制
 #    - max_retries: 建议 3-5 次，平衡可靠性和响应时间
 #
-# 4. 环境变量覆盖示例：
+# 5. 环境变量覆盖示例：
 #    export MODEL_PDF_PROCESSING_MODEL_NAME=gemini-2.5-pro
 #    export MODEL_VIDEO_SUMMARY_TEMPERATURE=0.8
+#    export MODEL_HTML_TO_MARKDOWN_LOW_THINKING=true
 #    export MODEL_DEFAULT_API_KEY=your-api-key-here
 #
 # ============================================================================

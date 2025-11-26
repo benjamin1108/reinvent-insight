@@ -29,6 +29,9 @@ class ModelConfig:
     model_name: str                   # 具体模型名称
     api_key: str                      # API密钥
     
+    # 思考模式配置
+    low_thinking: bool = False        # 是否启用低思考模式（默认false，使用高思考）
+    
     # 生成参数
     temperature: float = 0.7
     top_p: float = 0.9
@@ -290,6 +293,10 @@ class ModelConfigManager:
         provider = self._get_env_override(task_type, 'provider', config_dict.get('provider', 'gemini'))
         model_name = self._get_env_override(task_type, 'model_name', config_dict.get('model_name', 'gemini-2.0-flash-exp'))
         
+        # 思考模式配置
+        thinking = config_dict.get('thinking', {})
+        low_thinking = bool(self._get_env_override(task_type, 'low_thinking', thinking.get('low_thinking', False)))
+        
         # 生成参数
         generation = config_dict.get('generation', {})
         temperature = float(self._get_env_override(task_type, 'temperature', generation.get('temperature', 0.7)))
@@ -308,6 +315,7 @@ class ModelConfigManager:
             provider=provider,
             model_name=model_name,
             api_key=api_key,
+            low_thinking=low_thinking,
             temperature=temperature,
             top_p=top_p,
             top_k=top_k,
@@ -456,7 +464,7 @@ class GeminiClient(BaseModelClient):
         self, 
         prompt: str, 
         is_json: bool = False,
-        thinking_level: str = "low"
+        thinking_level: Optional[str] = None
     ) -> str:
         """
         生成文本内容
@@ -464,7 +472,7 @@ class GeminiClient(BaseModelClient):
         Args:
             prompt: 提示词
             is_json: 是否返回JSON格式
-            thinking_level: 思考级别 ("low", "medium", "high")，低级别更快
+            thinking_level: 思考级别 ("low", "medium", "high")，如果为None则根据配置自动选择
             
         Returns:
             生成的文本内容
@@ -474,7 +482,11 @@ class GeminiClient(BaseModelClient):
         """
         await self._apply_rate_limit()
         
-        logger.info(f"开始使用 {self.config.model_name} 生成内容 (thinking_level={thinking_level})...")
+        # 如果没有指定thinking_level，根据配置自动选择
+        if thinking_level is None:
+            thinking_level = "low" if self.config.low_thinking else "high"
+        
+        logger.info(f"开始使用 {self.config.model_name} 生成内容 (thinking_level={thinking_level}, from_config={thinking_level is None})...")
         
         # 使用新的google.genai SDK
         config = self.types.GenerateContentConfig(
@@ -514,7 +526,8 @@ class GeminiClient(BaseModelClient):
         self,
         prompt: str,
         file_info: Dict[str, Any],
-        is_json: bool = False
+        is_json: bool = False,
+        thinking_level: Optional[str] = None
     ) -> str:
         """
         使用文件生成内容（多模态）
@@ -523,6 +536,7 @@ class GeminiClient(BaseModelClient):
             prompt: 提示词
             file_info: 文件信息字典，包含name、uri、local_file等字段
             is_json: 是否返回JSON格式
+            thinking_level: 思考级别 ("low", "medium", "high")，如果为None则根据配置自动选择
             
         Returns:
             生成的文本内容
@@ -532,7 +546,11 @@ class GeminiClient(BaseModelClient):
         """
         await self._apply_rate_limit()
         
-        logger.info(f"开始使用 {self.config.model_name} 进行多模态分析...")
+        # 如果没有指定thinking_level，根据配置自动选择
+        if thinking_level is None:
+            thinking_level = "low" if self.config.low_thinking else "high"
+        
+        logger.info(f"开始使用 {self.config.model_name} 进行多模态分析 (thinking_level={thinking_level})...")
         
         generation_config = self.genai.types.GenerationConfig(
             temperature=self.config.temperature,
@@ -540,6 +558,7 @@ class GeminiClient(BaseModelClient):
             top_k=self.config.top_k,
             max_output_tokens=self.config.max_output_tokens,
             response_mime_type="application/json" if is_json else "text/plain",
+            thinking_config=self.genai.types.ThinkingConfig(thinking_level=thinking_level)
         )
         
         async def _generate():

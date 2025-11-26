@@ -120,12 +120,11 @@ class LLMContentExtractor:
         prompt = self._build_prompt(html)
         
         try:
-            # 调用LLM API（使用JSON模式和低思考级别以提高速度）
-            logger.info("Calling LLM API with low thinking level...")
+            # 调用LLM API（使用JSON模式，thinking_level由配置决定）
+            logger.info("Calling LLM API...")
             response = await self.model_client.generate_content(
                 prompt=prompt,
-                is_json=True,
-                thinking_level="low"
+                is_json=True
             )
             
             logger.info("LLM API call successful")
@@ -196,11 +195,10 @@ class LLMContentExtractor:
                 # 为分段创建特殊提示词
                 chunk_prompt = self._build_chunk_prompt(chunk_html, i, len(chunks))
                 
-                # 使用低思考级别以提高翻译速度
+                # thinking_level由配置决定
                 response = await self.model_client.generate_content(
                     prompt=chunk_prompt,
-                    is_json=True,
-                    thinking_level="low"
+                    is_json=True
                 )
                 
                 chunk_content = self._parse_llm_response(response)
