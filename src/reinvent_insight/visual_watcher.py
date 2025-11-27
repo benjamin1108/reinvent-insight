@@ -93,10 +93,10 @@ class VisualInterpretationWatcher:
         while True:
             try:
                 await self._check_new_files()
-                await asyncio.sleep(30)  # 每30秒检查一次
+                await asyncio.sleep(15)  # 每60秒检查一次（增加间隔）
             except Exception as e:
                 logger.error(f"文件监测出错: {e}", exc_info=True)
-                await asyncio.sleep(60)  # 出错后等待更长时间
+                await asyncio.sleep(120)  # 出错后等待更长时间
     
     async def _check_new_files(self):
         """检查新文件或版本更新，带频率控制"""
@@ -106,7 +106,7 @@ class VisualInterpretationWatcher:
         
         checked_count = 0
         triggered_count = 0
-        max_concurrent_tasks = 2  # 最多同时处理 2 个任务，避免 API 超限
+        max_concurrent_tasks = 1  # 每次只处理 1 个任务，避免 API 超限和重复生成
         
         for md_file in self.watch_dir.glob("*.md"):
             checked_count += 1
@@ -131,8 +131,9 @@ class VisualInterpretationWatcher:
                 
                 # 任务间添加延迟，避免短时间内大量请求
                 if triggered_count > 0:
-                    logger.info("等待 5 秒后继续检查下一个文件...")
-                    await asyncio.sleep(5)
+                    logger.info("等待 10 秒后继续检查下一个文件...")
+                    await asyncio.sleep(10)  # 增加延迟到 10 秒
+                    break  # 每次只触发 1 个任务
         
         if checked_count > 0:
             logger.debug(f"检查了 {checked_count} 个文件，触发了 {triggered_count} 个生成任务")
@@ -180,17 +181,30 @@ class VisualInterpretationWatcher:
         if version_match:
             base_name = version_match.group(1)
         
+        # 标准化文件名：空格转为下划线，长破折号转为短破折号
+        normalized_base = base_name.replace(' ', '_').replace('–', '-')
+        
         # 检查是否有相关的可视化任务正在运行
+        logger.debug(f"检查任务状态 - 文件: {md_file.name}, 标准化名称: {normalized_base}")
+        logger.debug(f"当前任务列表: {list(task_manager.tasks.keys())}")
+        
         for task_id, task_state in task_manager.tasks.items():
-            if '_visual' not in task_id:
+            if not task_id.startswith('visual_'):
                 continue
+            
+            logger.debug(f"检查任务: {task_id}, 状态: {task_state.status}")
             
             if task_state.status not in ['pending', 'running']:
                 continue
             
-            # 检查任务 ID 是否与当前文件相关
-            normalized_base = base_name.replace(' ', '_')
-            if normalized_base in task_id or base_name in task_id:
+            # 从任务 ID 中提取文件名部分（移除 visual_ 前缀和时间戳后缀）
+            # 任务 ID 格式: visual_{文件名}_{时间戳}
+            task_file_part = task_id[7:]  # 移除 'visual_' 前缀
+            task_file_part = '_'.join(task_file_part.split('_')[:-1])  # 移除时间戳
+            
+            logger.debug(f"任务文件名部分: {task_file_part}, 对比: {normalized_base}")
+            
+            if task_file_part == normalized_base:
                 logger.info(
                     f"跳过 {md_file.name}，已有可视化任务正在运行: {task_id} (状态: {task_state.status})"
                 )
@@ -198,8 +212,26 @@ class VisualInterpretationWatcher:
         
         # 4. 检查是否已处理过
         if file_key in self.processed_files:
-            # 如果 metadata 中有记录，但 HTML 文件不存在，说明文件被删除了或生成失败
+            # 如果 metadata 中有记录，但 HTML 文件不存在
             if not html_exists:
+                # 再次检查是否有正在运行的任务（可能正在生成中）
+                for task_id, task_state in task_manager.tasks.items():
+                    if not task_id.startswith('visual_'):
+                        continue
+                    if task_state.status not in ['pending', 'running']:
+                        continue
+                    
+                    task_file_part = task_id[7:]
+                    task_file_part = '_'.join(task_file_part.split('_')[:-1])
+                    normalized_base_check = base_name.replace(' ', '_').replace('–', '-')
+                    
+                    if task_file_part == normalized_base_check:
+                        logger.debug(
+                            f"HTML 文件缺失但有任务正在运行 ({task_id})，跳过 {md_file.name}"
+                        )
+                        return False
+                
+                # 确实没有任务在运行，可能是生成失败或文件被删除
                 logger.warning(
                     f"检测到 metadata 记录存在但 HTML 文件缺失: {md_file.name}，"
                     f"将从 metadata 中移除并重新生成"
@@ -289,8 +321,16 @@ class VisualInterpretationWatcher:
             md_file: Markdown 文件路径
         """
         try:
-            # 生成任务ID
-            task_id = f"visual_{md_file.stem}_{int(time.time())}"
+            # 生成任务ID（标准化文件名，避免特殊字符）
+            base_name = md_file.stem
+            # 移除版本号后缀
+            version_match = re.match(r'^(.+)_v(\d+)$', base_name)
+            if version_match:
+                base_name = version_match.group(1)
+            
+            # 标准化文件名：空格转为下划线
+            normalized_name = base_name.replace(' ', '_').replace('–', '-')
+            task_id = f"visual_{normalized_name}_{int(time.time())}"
             
             # 提取版本号
             version = self._extract_version(md_file.stem)

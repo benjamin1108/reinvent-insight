@@ -499,17 +499,29 @@ class GeminiClient(BaseModelClient):
         )
         
         async def _generate():
-            response = await self.client.aio.models.generate_content(
-                model=self.config.model_name,
-                contents=prompt,
-                config=config
-            )
+            # 设置超时时间：根据任务复杂度动态调整
+            # 高思考模式 + 大输出：300秒（5分钟）
+            # 低思考模式：120秒（2分钟）
+            timeout_seconds = 300 if thinking_level == "high" else 120
             
-            # 提取文本内容
-            if not response.text:
-                raise APIError("API 返回的内容为空文本")
-            
-            return response.text
+            try:
+                response = await asyncio.wait_for(
+                    self.client.aio.models.generate_content(
+                        model=self.config.model_name,
+                        contents=prompt,
+                        config=config
+                    ),
+                    timeout=timeout_seconds
+                )
+                
+                # 提取文本内容
+                if not response.text:
+                    raise APIError("API 返回的内容为空文本")
+                
+                return response.text
+                
+            except asyncio.TimeoutError:
+                raise APIError(f"API 调用超时（超过 {timeout_seconds} 秒），请检查网络连接或减少输入长度")
         
         try:
             content = await self._retry_with_backoff(_generate)

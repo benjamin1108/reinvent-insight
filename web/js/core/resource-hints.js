@@ -36,19 +36,16 @@ class ResourceHints {
 
     link.href = href;
 
-    // fetch 类型的预加载通常需要 crossorigin
-    // 仅在跨域 fetch 时添加 crossorigin='anonymous'，同源资源保持默认 (same-origin)
-    if (options.crossorigin) {
-      link.crossOrigin = options.crossorigin;
-    } else if (as === 'fetch') {
-      try {
-        const url = new URL(href, location.href);
-        if (url.origin !== location.origin) {
-          link.crossOrigin = 'anonymous';
-        }
-      } catch (e) {
-        // 若 URL 解析失败，保持默认行为
+    // 🔧 修复 CORS 问题：为同源 fetch 请求设置正确的 crossorigin
+    // fetch() 使用 credentials: 'omit' 时，preload 也必须匹配
+    if (options.crossorigin !== undefined) {
+      if (options.crossorigin) {
+        link.crossOrigin = options.crossorigin;
       }
+      // 如果 crossorigin 为 false，则不设置该属性
+    } else if (as === 'fetch') {
+      // 🔑 关键修复：同源 fetch 也需要设置 crossorigin='anonymous' 以匹配 credentials: 'omit'
+      link.crossOrigin = 'anonymous';
     }
 
     document.head.appendChild(link);
@@ -81,6 +78,7 @@ class ResourceHints {
    * @param {Array} components - 组件配置数组
    */
   static preloadComponents(components) {
+    // 🔧 优化：只预加载 JS 模块，减少未使用的预加载警告
     for (const config of components) {
       const [name, path, fileName] = Array.isArray(config)
         ? config
@@ -88,12 +86,10 @@ class ResourceHints {
 
       const actualFileName = fileName || name;
 
-      // 预加载HTML和JS
-      this.preload(`${path}/${actualFileName}.html`, 'fetch');
+      // 只预加载 JS 模块（最关键）
       this.preload(`${path}/${actualFileName}.js`, 'script', { type: 'module' });
 
-      // CSS是可选的，使用prefetch
-      this.prefetch(`${path}/${actualFileName}.css`);
+      // HTML 和 CSS 让浏览器自然加载，不强制预加载
     }
   }
 

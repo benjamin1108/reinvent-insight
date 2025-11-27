@@ -137,9 +137,9 @@ tasks:
       max_output_tokens: 128000
     
     rate_limit:
-      interval: 0.5
-      max_retries: 3
-      retry_backoff_base: 2.0
+      interval: 1.0  # 增加请求间隔
+      max_retries: 5  # 增加重试次数
+      retry_backoff_base: 2.5  # 增大退避基数
 
   # --------------------------------------------------------------------------
   # 文档分析任务

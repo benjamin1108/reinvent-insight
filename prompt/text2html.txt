@@ -80,7 +80,8 @@
         *   示例结构：`<div class="h-80"><canvas id="myChart"></canvas></div>`
 **技术与动画：**
 1.  **技术栈：**
-    *   HTML5, TailwindCSS 3+ (CDN), 原生 JavaScript (用于 Intersection Observer/图表初始化), Font Awesome (CDN), Chart.js (CDN)。
+    *   HTML5, TailwindCSS 3+ (**使用 script 标签加载 CDN**：`<script src="https://cdn.tailwindcss.com"></script>`), 原生 JavaScript (用于 Intersection Observer/图表初始化), Font Awesome (**使用国内 CDN**：`https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css`), Chart.js (**使用国内 CDN**：`https://cdn.bootcdn.net/ajax/libs/Chart.js/4.4.0/chart.umd.min.js`)。
+    *   **CDN 加载优化**：TailwindCSS 必须使用 `<script>` 标签而非 `<link>` 标签加载；Font Awesome 和 Chart.js 使用 BootCDN (`bootcdn.net`) 国内加速，避免使用 `cdnjs.cloudflare.com`。
     *   **布局最佳实践：** 优先使用 Flexbox（`flex`）和 Grid（`grid`）进行布局，避免使用 `float` 或复杂的绝对定位。确保所有元素有明确的容器和间距控制。
 2.  **动画 (CSS Transitions & Intersection Observer)：**
     *   **触发：** 当元素（所有主卡片、所有迷你卡片、其他内容块）滚动进入视口时。

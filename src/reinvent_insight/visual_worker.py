@@ -76,6 +76,10 @@ class VisualInterpretationWorker:
             生成的 HTML 文件路径，失败返回 None
         """
         try:
+            # 设置任务状态为 running
+            if self.task_id in task_manager.tasks:
+                task_manager.tasks[self.task_id].status = "running"
+            
             logger.info(f"开始生成可视化解读 - 任务: {self.task_id}, 文章: {self.article_path}")
             await self._log("正在生成可视化解读...", progress=10)
             
@@ -200,18 +204,26 @@ class VisualInterpretationWorker:
         """
         try:
             logger.info("调用 AI 生成 HTML")
+            await self._log("正在调用 AI 生成 HTML，预计需要 2-5 分钟...", progress=40)
             
             # 使用新的模型客户端（内置重试机制）
             html = await self.client.generate_content(prompt)
             
             if html and html.strip():
                 logger.success(f"AI 生成成功，HTML 长度: {len(html)} 字符")
+                await self._log(f"AI 生成成功，内容长度: {len(html)} 字符", progress=55)
                 return html
             
             raise ValueError("AI 返回空内容")
             
+        except asyncio.TimeoutError as e:
+            error_msg = "AI 生成 HTML 超时，请稍后重试或检查网络连接"
+            logger.error(error_msg)
+            await self._log(error_msg, progress=0)
+            raise RuntimeError(error_msg) from e
         except Exception as e:
             logger.error(f"生成 HTML 失败: {e}")
+            await self._log(f"生成失败: {str(e)[:100]}", progress=0)
             raise RuntimeError(f"HTML 生成失败: {e}") from e
     
     def _clean_html(self, html: str) -> str:

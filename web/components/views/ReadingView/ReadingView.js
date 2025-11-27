@@ -247,6 +247,7 @@ export default {
     const parsedSections = ref([]);
     const activeSection = ref('');
     let scrollTimer = null;
+    let heightUpdateTimer = null; // 🔧 修复：添加缺失的 heightUpdateTimer 定义
     
     // ========== 显示模式状态管理 ==========
     const displayMode = ref(props.initialDisplayMode);
@@ -404,12 +405,18 @@ export default {
     };
     
     const handleTocClick = (event) => {
+      console.log('📌 [DEBUG] handleTocClick 被触发');
+      console.log('📌 [DEBUG] event.target:', event.target);
+      
       const target = event.target;
       
       if (target.tagName === 'A') {
         event.preventDefault();
+        event.stopPropagation(); // 🔧 阻止冒泡
         
         const targetId = target.getAttribute('data-target');
+        console.log('📌 [DEBUG] targetId:', targetId);
+        
         if (targetId) {
           scrollToSection(targetId);
           emit('toc-click', { targetId, event });
@@ -419,12 +426,15 @@ export default {
     
     // 滚动到指定章节
     const scrollToSection = (sectionId) => {
+      console.log('🎯 [DEBUG] scrollToSection 被调用，目标 ID:', sectionId);
+      
       // 使用nextTick确保DOM已更新
       nextTick(() => {
         // 优先在文章正文中查找元素（.reading-view__body 包含实际的文章内容）
         const bodyContainer = document.querySelector('.reading-view__body');
         
         if (!bodyContainer) {
+          console.warn('⚠️ [DEBUG] 找不到 .reading-view__body');
           return;
         }
         
@@ -516,8 +526,11 @@ export default {
         }
         
         if (!element) {
+          console.warn('⚠️ [DEBUG] 找不到目标元素:', sectionId);
           return;
         }
+        
+        console.log('✅ [DEBUG] 找到目标元素:', element);
         
         // 找到真正的滚动容器
         // 尝试顺序：.reading-view__content -> .reading-view -> window
@@ -633,30 +646,8 @@ export default {
     
     // 文章相关方法
     const handleArticleClick = (event) => {
-      // 处理文档内的锚点链接
-      const target = event.target;
-      if (target.tagName === 'A' && target.getAttribute('href')) {
-        const href = target.getAttribute('href');
-        
-        // 如果是锚点链接（以#开头）
-        if (href.startsWith('#')) {
-          event.preventDefault();
-          let sectionId = href.substring(1);
-          
-          // URL解码处理（文档内的链接可能被编码）
-          try {
-            sectionId = decodeURIComponent(sectionId);
-          } catch (e) {
-            // 使用原始ID
-          }
-          
-          if (sectionId) {
-            scrollToSection(sectionId);
-            return;
-          }
-        }
-      }
-      
+      // 📝 注意：文档内的 TOC 链接已由 rebindInDocumentTocLinks() 处理
+      // 这里只处理其他点击事件
       emit('article-click', event);
     };
     
@@ -1027,6 +1018,8 @@ export default {
           parsedSections.value = parseContent(cleanContent.value);
           // 确保实际DOM中的标题也有ID
           ensureHeadingIds();
+          // 🔧 修复：初始加载时也需要绑定文档内 TOC 链接
+          rebindInDocumentTocLinks();
         });
       }
     });
@@ -1093,6 +1086,56 @@ export default {
           }
         }
       });
+    };
+    
+    // 🔧 修复：重新绑定文档内 TOC 链接的点击事件
+    const rebindInDocumentTocLinks = () => {
+      const bodyContainer = document.querySelector('.reading-view__body');
+      if (!bodyContainer) {
+        console.warn('⚠️ [DEBUG] 找不到 .reading-view__body，无法绑定文档内 TOC 链接');
+        return;
+      }
+      
+      // 查找所有文档内的锚点链接
+      const tocLinks = bodyContainer.querySelectorAll('a[href^="#"]');
+      console.log(`🔗 [DEBUG] 找到 ${tocLinks.length} 个文档内 TOC 链接`);
+      
+      tocLinks.forEach(link => {
+        // 移除旧的事件监听器（如果有）
+        const oldHandler = link._tocClickHandler;
+        if (oldHandler) {
+          link.removeEventListener('click', oldHandler);
+        }
+        
+        // 创建新的事件处理器
+        const newHandler = (event) => {
+          // 🔑 关键修复：阻止默认行为和事件冒泡
+          event.preventDefault();
+          event.stopPropagation(); // 阻止冒泡，避免触发父元素的点击事件
+          
+          const href = link.getAttribute('href');
+          if (href && href.startsWith('#')) {
+            let sectionId = href.substring(1);
+            
+            // URL解码处理
+            try {
+              sectionId = decodeURIComponent(sectionId);
+            } catch (e) {
+              // 使用原始ID
+            }
+            
+            console.log('🔗 [DEBUG] 文档内 TOC 链接点击，目标 ID:', sectionId);
+            scrollToSection(sectionId);
+          }
+        };
+        
+        // 🔑 关键：使用 capture 阶段捕获事件，确保最先执行
+        link.addEventListener('click', newHandler, true);
+        // 保存引用以便后续移除
+        link._tocClickHandler = newHandler;
+      });
+      
+      console.log('✅ [DEBUG] 文档内 TOC 链接绑定完成');
     };
     
     // 监听活动章节变化，触发目录更新
@@ -1171,6 +1214,9 @@ export default {
               parsedSections.value = parseContent(cleanContent.value);
               ensureHeadingIds();
               console.log('✅ [DEBUG] 标题 ID 初始化完成');
+              
+              // 🔧 修复：重新绑定文档内 TOC 链接的点击事件
+              rebindInDocumentTocLinks();
               
               // 验证 DOM 元素是否存在
               const bodyContainer = document.querySelector('.reading-view__body');

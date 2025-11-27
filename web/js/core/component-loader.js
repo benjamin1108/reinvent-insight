@@ -5,7 +5,7 @@
  */
 class ComponentLoader {
   static cache = new Map();
-  static MAX_CONCURRENT = 4; // 降低并发数，避免浏览器连接数限制
+  static MAX_CONCURRENT = 6; // 🚀 增加并发数，加快加载速度 // 降低并发数，避免浏览器连接数限制
   static loadingQueue = []; // 加载队列
   static activeLoads = 0; // 当前活跃的加载数
 
@@ -21,7 +21,7 @@ class ComponentLoader {
     const {
       useCache = true,
       version = null,
-      timeout = 5000  // 降低超时时间到5秒
+      timeout = 8000  // 🔧 将超时时间从 5000ms 增加到 8000ms，减少超时错误
     } = options;
 
     const actualFileName = fileName || name;
@@ -78,10 +78,10 @@ class ComponentLoader {
         setTimeout(() => reject(new Error(`Component load timeout: ${name}`)), timeout);
       });
 
-      // 并行加载HTML和CSS
+      // 并行加载HTML和CSS（使用 credentials: 'same-origin' 以优化缓存）
       const loadPromise = Promise.all([
-        fetch(`${path}/${actualFileName}.html`, { credentials: 'omit' }),
-        fetch(`${path}/${actualFileName}.css`, { credentials: 'omit' }).catch(() => null) // CSS可选
+        fetch(`${path}/${actualFileName}.html`, { credentials: 'same-origin' }),
+        fetch(`${path}/${actualFileName}.css`, { credentials: 'same-origin' }).catch(() => null) // CSS可选
       ]);
 
       const [htmlResponse, cssResponse] = await Promise.race([loadPromise, timeoutPromise]);
