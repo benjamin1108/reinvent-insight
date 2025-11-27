@@ -325,18 +325,46 @@ class VisualInterpretationWorker:
             # 确保目录存在
             html_path.parent.mkdir(parents=True, exist_ok=True)
             
-            # 保存文件
-            logger.info(f"写入 HTML 文件，内容长度: {len(html_content)} 字符")
-            html_path.write_text(html_content, encoding="utf-8")
+            # 使用原子写入机制：先写入临时文件，完成后再重命名
+            temp_path = html_path.with_suffix('.html.tmp')
             
-            # 验证文件是否成功保存
-            if not html_path.exists():
-                raise IOError(f"HTML 文件保存失败，文件不存在: {html_path}")
-            
-            file_size = html_path.stat().st_size
-            logger.success(f"可视化 HTML 已保存: {html_path} (版本: {self.version}, 大小: {file_size} 字节)")
-            
-            return html_path
+            try:
+                # 1. 写入临时文件
+                logger.info(f"写入临时文件，内容长度: {len(html_content)} 字符")
+                temp_path.write_text(html_content, encoding="utf-8")
+                
+                # 2. 验证临时文件完整性
+                if not temp_path.exists():
+                    raise IOError(f"临时文件写入失败: {temp_path}")
+                
+                temp_size = temp_path.stat().st_size
+                if temp_size == 0:
+                    raise IOError(f"临时文件为空: {temp_path}")
+                
+                logger.info(f"临时文件写入成功，大小: {temp_size} 字节")
+                
+                # 3. 原子重命名（如果目标文件存在会被覆盖）
+                temp_path.replace(html_path)
+                logger.info(f"原子重命名完成: {temp_path.name} -> {html_path.name}")
+                
+                # 4. 最终验证
+                if not html_path.exists():
+                    raise IOError(f"HTML 文件保存失败，文件不存在: {html_path}")
+                
+                file_size = html_path.stat().st_size
+                logger.success(f"可视化 HTML 已保存: {html_path} (版本: {self.version}, 大小: {file_size} 字节)")
+                
+                return html_path
+                
+            except Exception as e:
+                # 清理临时文件
+                if temp_path.exists():
+                    try:
+                        temp_path.unlink()
+                        logger.info(f"已清理临时文件: {temp_path}")
+                    except Exception as cleanup_error:
+                        logger.warning(f"清理临时文件失败: {cleanup_error}")
+                raise
             
         except Exception as e:
             logger.error(f"保存 HTML 文件失败: {e}", exc_info=True)

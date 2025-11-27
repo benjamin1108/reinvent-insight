@@ -38,6 +38,7 @@ class VisualInterpretationWatcher:
         self.cache_file = self.watch_dir / ".visual_processed.json"
         
         self._load_processed_files()
+        self._cleanup_temp_files()
         
         logger.info(f"初始化文件监测器 - 目录: {watch_dir}, 模型: {model_name}")
     
@@ -64,6 +65,26 @@ class VisualInterpretationWatcher:
             logger.debug(f"已保存处理文件列表: {len(self.processed_files)} 个文件")
         except Exception as e:
             logger.error(f"保存已处理文件列表失败: {e}")
+    
+    def _cleanup_temp_files(self):
+        """清理残留的临时文件（.html.tmp）"""
+        if not self.watch_dir.exists():
+            return
+        
+        try:
+            temp_files = list(self.watch_dir.glob("*.html.tmp"))
+            if temp_files:
+                logger.info(f"发现 {len(temp_files)} 个残留的临时文件，开始清理...")
+                for temp_file in temp_files:
+                    try:
+                        temp_file.unlink()
+                        logger.info(f"已删除临时文件: {temp_file.name}")
+                    except Exception as e:
+                        logger.warning(f"删除临时文件失败 {temp_file.name}: {e}")
+            else:
+                logger.debug("未发现残留的临时文件")
+        except Exception as e:
+            logger.warning(f"清理临时文件时出错: {e}")
     
     async def start_watching(self):
         """开始监测文件变化"""
@@ -140,11 +161,19 @@ class VisualInterpretationWatcher:
         Returns:
             是否需要生成
         """
-        # 1. 检查是否已处理过
-        if file_key in self.processed_files:
+        # 1. 先检查对应的可视化 HTML 是否存在
+        visual_html = self._get_visual_html_path(md_file)
+        html_exists = visual_html.exists()
+        
+        # 2. 检查是否有临时文件正在生成（.html.tmp）
+        temp_html = visual_html.with_suffix('.html.tmp')
+        if temp_html.exists():
+            logger.info(
+                f"跳过 {md_file.name}，检测到临时文件正在生成: {temp_html.name}"
+            )
             return False
         
-        # 2. 检查是否有正在运行的可视化任务（避免重复生成）
+        # 3. 检查是否有正在运行的可视化任务（避免重复生成）
         base_name = md_file.stem
         # 移除版本号后缀以获取基础名称
         version_match = re.match(r'^(.+)_v(\d+)$', base_name)
@@ -152,19 +181,14 @@ class VisualInterpretationWatcher:
             base_name = version_match.group(1)
         
         # 检查是否有相关的可视化任务正在运行
-        # 遍历所有任务，查找与当前文件相关的可视化任务
         for task_id, task_state in task_manager.tasks.items():
-            # 检查任务 ID 是否包含 _visual 标识
             if '_visual' not in task_id:
                 continue
             
-            # 检查任务状态是否为运行中或待处理
             if task_state.status not in ['pending', 'running']:
                 continue
             
             # 检查任务 ID 是否与当前文件相关
-            # workflow 触发的任务格式：{task_id}_visual
-            # watcher 触发的任务格式：visual_{filename}_{timestamp}
             normalized_base = base_name.replace(' ', '_')
             if normalized_base in task_id or base_name in task_id:
                 logger.info(
@@ -172,13 +196,42 @@ class VisualInterpretationWatcher:
                 )
                 return False
         
-        # 3. 检查对应的可视化 HTML 是否存在
-        visual_html = self._get_visual_html_path(md_file)
-        if not visual_html.exists():
+        # 4. 检查是否已处理过
+        if file_key in self.processed_files:
+            # 如果 metadata 中有记录，但 HTML 文件不存在，说明文件被删除了或生成失败
+            if not html_exists:
+                logger.warning(
+                    f"检测到 metadata 记录存在但 HTML 文件缺失: {md_file.name}，"
+                    f"将从 metadata 中移除并重新生成"
+                )
+                self.processed_files.discard(file_key)
+                self._save_processed_files()
+                return True
+            
+            # 如果 HTML 文件存在但大小为 0，说明生成失败
+            if html_exists and visual_html.stat().st_size == 0:
+                logger.warning(
+                    f"检测到 HTML 文件为空: {md_file.name}，"
+                    f"将从 metadata 中移除并重新生成"
+                )
+                self.processed_files.discard(file_key)
+                self._save_processed_files()
+                # 删除空文件
+                try:
+                    visual_html.unlink()
+                    logger.info(f"已删除空 HTML 文件: {visual_html.name}")
+                except Exception as e:
+                    logger.warning(f"删除空文件失败: {e}")
+                return True
+            
+            return False
+        
+        # 5. 如果 HTML 文件不存在，需要生成
+        if not html_exists:
             logger.info(f"发现新文件需要生成可视化: {md_file.name}")
             return True
         
-        # 4. 检查版本是否匹配
+        # 6. 检查版本是否匹配
         md_version = self._extract_version(md_file.stem)
         html_version = self._extract_version(visual_html.stem)
         
