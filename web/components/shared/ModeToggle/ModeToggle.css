@@ -149,3 +149,47 @@
         padding: 8px 16px;
     }
 }
+
+/* 可视化模式下的紧凑样式 - 更沉浸 */
+.reading-view__visual-header .mode-toggle {
+    padding: 0; /* 移除padding */
+    gap: 12px; /* 适当间距 */
+}
+
+.reading-view__visual-header .mode-button {
+    padding: 10px 20px; /* 紧凑但不过小 */
+    font-size: 14px;
+    border-radius: 10px;
+    background: rgba(17, 24, 39, 0.85); /* 半透明深色背景 */
+    backdrop-filter: blur(12px); /* 添加模糊效果 */
+    border-color: rgba(34, 211, 238, 0.25);
+    box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.4),
+        0 0 20px rgba(34, 211, 238, 0.1); /* 轻微光晕 */
+}
+
+.reading-view__visual-header .mode-button:hover:not(.disabled) {
+    background: rgba(17, 24, 39, 0.95);
+    border-color: rgba(34, 211, 238, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 
+        0 6px 16px rgba(0, 0, 0, 0.5),
+        0 0 30px rgba(34, 211, 238, 0.2);
+}
+
+.reading-view__visual-header .mode-button.active {
+    background: linear-gradient(135deg, rgba(34, 211, 238, 0.25), rgba(168, 85, 247, 0.25));
+    backdrop-filter: blur(12px);
+    border-color: rgba(34, 211, 238, 0.6);
+    box-shadow: 
+        0 6px 20px rgba(34, 211, 238, 0.35),
+        0 0 40px rgba(34, 211, 238, 0.25);
+}
+
+.reading-view__visual-header .mode-icon {
+    font-size: 18px;
+}
+
+.reading-view__visual-header .mode-label {
+    font-size: 13px;
+}

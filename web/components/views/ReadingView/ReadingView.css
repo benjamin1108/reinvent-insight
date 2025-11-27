@@ -203,6 +203,14 @@
   top: 1rem;
   right: 1rem;
   z-index: 20;
+  /* 移动端隐藏版本选择器，避免遮挡标题 */
+}
+
+/* 移动端隐藏版本选择器 */
+@media (max-width: 768px) {
+  .reading-view__version-selector {
+    display: none !important;
+  }
 }
 
 .reading-view__body {
@@ -740,6 +748,7 @@
     position: relative !important;
     /* 关键：在移动端重置 CSS 变量，防止 Chrome 缓存 */
     --toc-width: 0px !important;
+    /* 移除 padding-top，改为调整 content 的 top 位置 */
   }
   
   .reading-view__toc {
@@ -754,68 +763,75 @@
     width: 100vw !important;
     max-width: 100vw !important;
     position: fixed !important;
-    top: 0 !important;
+    top: 80px !important; /* 从 AppHeader 下方开始 */
     left: 0 !important; /* 不使用 var(--toc-width)，直接 0 */
     right: 0 !important;
     bottom: 0 !important;
     margin: 0 !important;
-    height: 100vh !important;
+    height: calc(100vh - 80px) !important; /* 减去 AppHeader 的高度 */
     transform: none !important;
     /* 额外保险：明确覆盖可能的 calc() 计算 */
     margin-left: 0 !important;
     margin-right: 0 !important;
+    /* 确保内容从顶部开始滚动 */
+    padding-top: 0 !important;
   }
   
   .reading-view__content--no-toc {
     width: 100vw !important;
     max-width: 100vw !important;
     position: fixed !important;
-    top: 0 !important;
+    top: 80px !important; /* 从 AppHeader 下方开始 */
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
     margin: 0 !important;
-    height: 100vh !important;
+    height: calc(100vh - 80px) !important; /* 减去 AppHeader 的高度 */
   }
   
   .reading-view__article-wrapper {
-    padding: 0 0 2rem !important; /* 完全移除左右边距 */
-    max-width: 100% !important; /* 确保不限制宽度 */
+    padding: 2rem 0 2rem;
+    max-width: 100%;
   }
   
   .reading-view__article {
-    padding: 0.75rem 25px !important; /* 上下保留一点，左右16px */
-    background: none !important;
-    border: none !important;
-    box-shadow: none !important;
-    margin-bottom: 1.5rem !important;
-    border-radius: 0 !important; /* 移除圆角 */
-    max-width: 100% !important; /* 覆盖 no-toc 的 max-width */
-    margin-left: 0 !important;
-    margin-right: 0 !important;
+    padding: 1rem 16px;
+    background: none;
+    border: none;
+    box-shadow: none;
+    margin-bottom: 1.5rem;
+    border-radius: 0;
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
   }
   
   /* 确保覆盖 no-toc 的样式 */
   .reading-view__content--no-toc .reading-view__article {
-    padding: 0.75rem 16px !important;
-    max-width: 100% !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
+    padding: 1rem 16px;
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
   }
   
   .reading-view__article-header {
-    padding: 0;
+    padding-bottom: 1rem;
     margin-bottom: 1rem;
+  }
+  
+  /* 移动端滚动容器样式 */
+  .reading-view__scroll-content {
+    padding: 0;
   }
   
   .reading-view__title-en {
     font-size: 1.5rem;
-    margin: 0 0 0.25rem 0; /* 减少标题间距 */
+    margin: 0 0 0.5rem 0;
   }
   
   .reading-view__title-cn {
     font-size: 1.125rem;
-    margin: 0 0 0.5rem 0; /* 减少标题底部间距 */
+    margin: 0 0 0.75rem 0;
   }
   
   /* 移动端样式 */
@@ -855,30 +871,35 @@
 /* 极小屏幕优化 */
 @media (max-width: 480px) {
   .reading-view__article-wrapper {
-    padding: 0 0 2rem !important;
-    max-width: 100% !important;
+    padding: 2rem 0 2rem;
+    max-width: 100%;
   }
   
   .reading-view__article {
-    padding: 0.5rem 12px !important; /* 极小屏幕，左右12px */
-    margin-bottom: 1.5rem !important;
-    border-radius: 0 !important;
-    max-width: 100% !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
+    padding: 0.75rem 12px;
+    margin-bottom: 1.5rem;
+    border-radius: 0;
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
   }
   
   /* 确保覆盖 no-toc 的样式 */
   .reading-view__content--no-toc .reading-view__article {
-    padding: 0.5rem 12px !important;
+    padding: 0 12px 0.75rem 12px !important;
     max-width: 100% !important;
     margin-left: 0 !important;
     margin-right: 0 !important;
   }
   
   .reading-view__article-header {
-    padding: 0;
+    padding-bottom: 0.75rem;
     margin-bottom: 0.75rem;
+  }
+  
+  /* 极小屏幕滚动容器样式 */
+  .reading-view__scroll-content {
+    padding: 0;
   }
   
   .reading-view__title-en {
@@ -1433,12 +1454,12 @@
 /* 可视化容器 - 直接在 reading-view 下，占据整个视口 */
 .reading-view__visual-container {
   position: fixed;
-  top: 0;
+  top: 80px; /* 从 AppHeader 下方开始 */
   left: 0;
   right: 0;
   bottom: 0;
   width: 100vw;
-  height: 100vh;
+  height: calc(100vh - 80px); /* 减去 AppHeader 高度 */
   background: #121212;
   overflow-y: auto;
   overflow-x: hidden;
@@ -1447,19 +1468,34 @@
   z-index: 100; /* 确保在所有内容之上 */
 }
 
-/* 可视化头部 - 固定在顶部 */
+/* 可视化头部 - 透明悬浮，更沉浸 */
 .reading-view__visual-header {
-  position: sticky;
-  top: 0;
-  width: 100%;
-  background: rgba(17, 24, 39, 0.95);
-  backdrop-filter: blur(10px);
+  position: fixed; /* 改为 fixed 悬浮 */
+  top: 90px; /* 在 AppHeader 下方一点点 */
+  left: 50%;
+  transform: translateX(-50%); /* 水平居中 */
+  width: auto;
+  background: transparent; /* 完全透明 */
+  backdrop-filter: none; /* 移除模糊效果 */
   z-index: 101; /* 确保在可视化内容之上 */
-  padding: 16px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 0;
+  border-bottom: none; /* 移除底部边框 */
   display: flex;
   justify-content: center;
   flex-shrink: 0;
+  pointer-events: none; /* 让容器本身不阻挡鼠标事件 */
+  opacity: 0.15; /* 默认几乎透明，极少遮挡 */
+  transition: opacity 0.3s ease; /* 平滑过渡 */
+}
+
+/* 鼠标悬停时完全显示 */
+.reading-view__visual-header:hover {
+  opacity: 1;
+}
+
+/* 让按钮可以点击 */
+.reading-view__visual-header .mode-toggle {
+  pointer-events: auto;
 }
 
 /* iframe 容器 */
