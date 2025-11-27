@@ -147,6 +147,8 @@ def init_hash_mappings():
         return
 
     video_url_to_files = {}
+    skipped_count = 0
+    error_count = 0
     
     # 第一遍：基于video_url对所有文件进行分组
     for md_file in config.OUTPUT_DIR.glob("*.md"):
@@ -162,7 +164,11 @@ def init_hash_mappings():
                     'filename': md_file.name,
                     'version': metadata.get('version', 0)
                 })
+            else:
+                skipped_count += 1
+                logger.debug(f"跳过文件 {md_file.name}（无 video_url）")
         except Exception as e:
+            error_count += 1
             logger.error(f"解析文件 {md_file.name} 时出错，已跳过: {e}")
     
     # 第二遍：为每个分组生成和注册唯一的统一hash
@@ -180,7 +186,13 @@ def init_hash_mappings():
         for file_info in files:
             filename_to_hash[file_info['filename']] = doc_hash
 
-    logger.info(f"--- [重构] 统一Hash映射初始化完成，共处理 {len(hash_to_filename)} 个独立视频。 ---")
+    log_msg = f"--- [重构] 统一Hash映射初始化完成，共处理 {len(hash_to_filename)} 个独立视频"
+    if skipped_count > 0:
+        log_msg += f"，跳过 {skipped_count} 个文件（无video_url）"
+    if error_count > 0:
+        log_msg += f"，{error_count} 个文件解析失败"
+    log_msg += "。 ---"
+    logger.info(log_msg)
 
 # 启动时初始化映射
 init_hash_mappings()
