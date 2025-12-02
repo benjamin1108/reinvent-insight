@@ -64,6 +64,41 @@
     justify-content: center;
 }
 
+/* 生成进度文字 */
+.simple-audio-btn__text {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    padding: 0.25rem 0.5rem;
+    background: rgba(34, 211, 238, 0.95);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(34, 211, 238, 0.5);
+    border-radius: 0.375rem;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(34, 211, 238, 0.3);
+    animation: fadeIn 0.2s ease;
+    z-index: 100;
+    pointer-events: none;
+}
+
+/* 生成中状态动画 */
+.simple-audio-btn--generating {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        box-shadow: 0 0 20px rgba(34, 211, 238, 0.1);
+    }
+    50% {
+        box-shadow: 0 0 30px rgba(34, 211, 238, 0.4);
+    }
+}
+
 /* 错误提示 - 悬浮显示 */
 .simple-audio-btn__error {
     position: absolute;

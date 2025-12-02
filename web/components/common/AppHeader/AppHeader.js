@@ -94,7 +94,26 @@ export default {
   ],
   
   setup(props, { emit }) {
-    const { watch } = Vue;
+    const { watch, ref, onMounted } = Vue;
+    
+    // 配置状态
+    const audioButtonEnabled = ref(true); // 默认显示
+    
+    // 加载配置
+    onMounted(async () => {
+      try {
+        const response = await fetch('/api/config');
+        if (response.ok) {
+          const config = await response.json();
+          audioButtonEnabled.value = config.tts_audio_button_enabled;
+          console.log('🔊 [AppHeader] 音频按钮配置:', audioButtonEnabled.value);
+        }
+      } catch (error) {
+        console.error('加载配置失败:', error);
+        // 加载失败时默认显示
+        audioButtonEnabled.value = true;
+      }
+    });
     
     // 调试：监听音频相关props
     watch(() => [props.articleHash, props.articleText], ([hash, text]) => {
@@ -160,6 +179,8 @@ export default {
     };
     
     return {
+      // 配置状态
+      audioButtonEnabled,
       // 事件处理方法
       handleHomeClick,
       handleViewChange,

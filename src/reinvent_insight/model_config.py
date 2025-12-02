@@ -42,6 +42,8 @@ class ModelConfig:
     rate_limit_interval: float = 0.5  # API调用间隔（秒）
     max_retries: int = 3              # 最大重试次数
     retry_backoff_base: float = 2.0   # 重试退避基数
+    timeout: int = 120                # API超时时间（秒）
+    concurrent_delay: float = 0.5     # 并发处理时每个任务的启动间隔（秒）
 
 
 # ============================================================================
@@ -309,8 +311,11 @@ class ModelConfigManager:
         rate_limit_interval = float(self._get_env_override(task_type, 'rate_limit_interval', rate_limit.get('interval', 0.5)))
         max_retries = int(self._get_env_override(task_type, 'max_retries', rate_limit.get('max_retries', 3)))
         retry_backoff_base = float(self._get_env_override(task_type, 'retry_backoff_base', rate_limit.get('retry_backoff_base', 2.0)))
+        timeout = int(self._get_env_override(task_type, 'timeout', rate_limit.get('timeout', 120)))
+        concurrent_delay = float(self._get_env_override(task_type, 'concurrent_delay', rate_limit.get('concurrent_delay', 0.5)))
         
-        return ModelConfig(
+        # 创建 ModelConfig 实例
+        mc = ModelConfig(
             task_type=task_type,
             provider=provider,
             model_name=model_name,
@@ -322,8 +327,19 @@ class ModelConfigManager:
             max_output_tokens=max_output_tokens,
             rate_limit_interval=rate_limit_interval,
             max_retries=max_retries,
-            retry_backoff_base=retry_backoff_base
+            retry_backoff_base=retry_backoff_base,
+            timeout=timeout,
+            concurrent_delay=concurrent_delay
         )
+        
+        # 解析 TTS 专用配置（仅在 text_to_speech 任务类型时）
+        if task_type == 'text_to_speech':
+            tts_cfg = config_dict.get('tts', {})
+            setattr(mc, 'tts_default_voice', tts_cfg.get('default_voice', 'Kai'))
+            setattr(mc, 'tts_default_language', tts_cfg.get('default_language', 'Chinese'))
+            setattr(mc, 'tts_sample_rate', tts_cfg.get('sample_rate', 24000))
+        
+        return mc
     
     def _get_env_override(self, task_type: str, param_name: str, default_value: Any) -> Any:
         """
@@ -499,10 +515,14 @@ class GeminiClient(BaseModelClient):
         )
         
         async def _generate():
-            # 设置超时时间：根据任务复杂度动态调整
-            # 高思考模式 + 大输出：300秒（5分钟）
-            # 低思考模式：120秒（2分钟）
-            timeout_seconds = 300 if thinking_level == "high" else 120
+            # 设置超时时间：使用配置中的timeout，如果是高思考模式且配置超时较短，则自动增加
+            # 高思考模式需要更长的思考时间
+            base_timeout = self.config.timeout
+            if thinking_level == "high" and base_timeout < 300:
+                timeout_seconds = max(base_timeout * 1.5, 300)  # 高思考模式至少300秒
+                logger.debug(f"高思考模式，超时时间从 {base_timeout}秒 增加到 {timeout_seconds}秒")
+            else:
+                timeout_seconds = base_timeout
             
             try:
                 response = await asyncio.wait_for(

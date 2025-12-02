@@ -19,7 +19,7 @@ VALID_QWEN_VOICES = {
     # 女声
     'cherry', 'stella', 'luna', 'bella',
     # 男声
-    'alex', 'william', 'ethan', 'oliver',
+    'kai', 'alex', 'william', 'ethan', 'oliver',
     # 儿童
     'emily', 'tommy',
     # 方言
@@ -27,9 +27,6 @@ VALID_QWEN_VOICES = {
     # 其他
     'robot', 'narrator', 'announcer', 'customer'
 }
-
-# 默认音色
-DEFAULT_VOICE = 'Cherry'
 
 
 class TTSService:
@@ -47,19 +44,22 @@ class TTSService:
         
         logger.info(f"TTSService 初始化成功，使用模型: {self.config.model_name}")
     
-    def validate_voice(self, voice: str) -> str:
+    def validate_voice(self, voice: Optional[str] = None) -> str:
         """
         验证并规范化音色名称
         
         Args:
-            voice: 音色名称
+            voice: 音色名称，None 则使用配置默认值
             
         Returns:
             规范化后的音色名称（首字母大写）
         """
+        # 从配置获取默认音色
+        default_voice = getattr(self.config, 'tts_default_voice', 'Kai')
+        
         if not voice:
-            logger.warning(f"音色为空，使用默认音色: {DEFAULT_VOICE}")
-            return DEFAULT_VOICE
+            logger.warning(f"音色为空，使用默认音色: {default_voice}")
+            return default_voice
         
         # 转换为小写进行检查
         voice_lower = voice.lower()
@@ -67,10 +67,10 @@ class TTSService:
         # 检查是否在支持列表中
         if voice_lower not in VALID_QWEN_VOICES:
             logger.warning(
-                f"不支持的音色 '{voice}'，使用默认音色: {DEFAULT_VOICE}。"
+                f"不支持的音色 '{voice}'，使用默认音色: {default_voice}。"
                 f"支持的音色: {', '.join(sorted(VALID_QWEN_VOICES))}"
             )
-            return DEFAULT_VOICE
+            return default_voice
         
         # Qwen TTS 使用首字母大写的格式
         return voice.capitalize()
@@ -232,8 +232,8 @@ class TTSService:
     async def generate_audio_stream(
         self,
         text: str,
-        voice: str = "kore",
-        language: str = "zh-CN",
+        voice: Optional[str] = None,
+        language: Optional[str] = None,
         skip_code_blocks: bool = True
     ) -> AsyncGenerator[bytes, None]:
         """
@@ -241,8 +241,8 @@ class TTSService:
         
         Args:
             text: 原始文本
-            voice: 音色名称（Gemini TTS 支持的音色）
-            language: 语言类型（如 zh-CN, en-US）
+            voice: 音色名称，None 则使用配置默认值
+            language: 语言类型，None 则使用配置默认值
             skip_code_blocks: 是否跳过代码块
             
         Yields:
@@ -252,6 +252,10 @@ class TTSService:
             ValueError: 文本为空或无效
             APIError: API 调用失败
         """
+        # 从配置获取默认值
+        voice = voice or getattr(self.config, 'tts_default_voice', 'Kai')
+        language = language or getattr(self.config, 'tts_default_language', 'Chinese')
+        
         # 验证并规范化音色
         voice = self.validate_voice(voice)
         
@@ -285,8 +289,8 @@ class TTSService:
     async def generate_audio(
         self,
         text: str,
-        voice: str = "Cherry",
-        language: str = "Chinese",
+        voice: Optional[str] = None,
+        language: Optional[str] = None,
         skip_code_blocks: bool = True
     ) -> bytes:
         """
@@ -294,8 +298,8 @@ class TTSService:
         
         Args:
             text: 原始文本
-            voice: 音色名称
-            language: 语言类型
+            voice: 音色名称，None 则使用配置默认值
+            language: 语言类型，None 则使用配置默认值
             skip_code_blocks: 是否跳过代码块
             
         Returns:

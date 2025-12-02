@@ -1,6 +1,6 @@
 /**
  * SimpleAudioButton - 极简音频播放按钮
- * 只有播放/暂停功能，集成到AppHeader中
+ * 支持预生成音频和移动端熄屏播放
  */
 export default {
     name: 'SimpleAudioButton',
@@ -10,9 +10,21 @@ export default {
             type: String,
             required: true
         },
+        articleTitle: {
+            type: String,
+            default: '文章音频'
+        },
         articleText: {
             type: String,
-            required: true
+            default: ''
+        },
+        autoCheck: {
+            type: Boolean,
+            default: true
+        },
+        showIfReady: {
+            type: Boolean,
+            default: false  // 默认总是显示按钮
         }
     },
 
@@ -21,132 +33,521 @@ export default {
             isPlaying: false,
             isPaused: false,
             isLoading: false,
-            audioPlayer: null,
+            audioElement: null,
             error: null,
-            selectedVoice: 'Cherry',
-            playbackRate: 1.0
+            audioUrl: null,
+            hasAudio: false,
+            audioStatus: 'none', // 'none', 'pending', 'processing', 'ready'
+            isVisible: true,  // 总是显示按钮
+            isGenerating: false,  // 是否正在生成中
+            generationProgress: 0,  // 生成进度 (0-100)
+            pollInterval: null,  // 轮询定时器
+            taskId: null,  // 生成任务 ID
+            waitingForPartial: false  // 是否正在等待部分音频
         };
     },
 
     computed: {
         buttonIcon() {
-            if (this.isLoading) return '⏳';
-            if (this.isPlaying) return '⏸';
-            return '▶';
+            if (this.isLoading) return '⏳';  // 加载中
+            if (this.isPlaying) return '⏸';  // 暂停
+            // 生成中也显示播放图标，表明可以点击
+            return '▶';  // 播放
         },
 
         buttonTooltip() {
+            if (this.waitingForPartial) {
+                return '正在准备音频，马上开始...';
+            }
+            if (this.isGenerating) {
+                return `音频生成中 ${this.generationProgress}%，点击播放已生成部分`;
+            }
+            if (this.audioStatus === 'processing') return '音频生成中...（点击播放）';
             if (this.isLoading) return '加载中...';
             if (this.isPlaying) return '暂停';
             if (this.isPaused) return '继续播放';
-            return '播放音频';
+            if (this.audioStatus === 'ready') return '播放音频';
+            return '播放音频（首次需生成）';
+        },
+
+        buttonText() {
+            if (this.isGenerating) {
+                return `${this.generationProgress}%`;
+            }
+            return '';
         }
     },
 
-    mounted() {
+    async mounted() {
         console.log('🎵 [SimpleAudioButton] 组件已挂载:', {
             articleHash: this.articleHash,
-            articleTextLength: this.articleText?.length || 0
+            articleTitle: this.articleTitle
         });
+
+        // 自动检查音频状态
+        if (this.autoCheck) {
+            await this.checkAudioStatus();
+        }
+
+        // 初始化 MediaSession API
+        this.setupMediaSession();
     },
 
     beforeUnmount() {
         console.log('🎵 [SimpleAudioButton] 组件卸载');
-        if (this.audioPlayer) {
-            this.audioPlayer.stop();
-            this.audioPlayer = null;
+        this.cleanup();
+        // 清理轮询定时器
+        if (this.pollInterval) {
+            clearInterval(this.pollInterval);
+            this.pollInterval = null;
         }
+        // 清理等待状态
+        this.waitingForPartial = false;
     },
 
     methods: {
+        async checkAudioStatus() {
+            try {
+                const response = await fetch(`/api/tts/status/${this.articleHash}`);
+                if (!response.ok) {
+                    console.log('🔊 音频状态查询失败，可能还未生成');
+                    this.audioStatus = 'none';
+                    this.isVisible = true;
+                    return;
+                }
+
+                const data = await response.json();
+                this.hasAudio = data.has_audio;
+                this.audioStatus = data.status;
+                this.audioUrl = data.audio_url;
+
+                // 总是显示按钮
+                this.isVisible = true;
+
+                console.log('🔊 音频状态:', data);
+
+                // 如果正在生成中，启动轮询
+                if (data.status === 'processing' || data.status === 'pending') {
+                    this.isGenerating = true;
+                    this.startPolling();
+                }
+            } catch (error) {
+                console.error('查询音频状态失败:', error);
+                this.audioStatus = 'none';
+                this.isVisible = true;
+            }
+        },
+
         async togglePlay() {
+            // 如果正在播放，暂停
             if (this.isPlaying) {
                 this.pause();
-            } else {
-                await this.play();
+                return;
             }
+
+            // 其他情况都尝试播放
+            await this.play();
         },
 
         async play() {
             try {
                 this.error = null;
 
-                if (!this.articleText || this.articleText.trim().length === 0) {
-                    this.showError('无法播放：文章内容为空');
-                    return;
-                }
+                // 如果音频已准备好，直接播放
+                if (this.audioUrl && this.audioStatus === 'ready') {
+                    this.isLoading = true;
 
-                this.isLoading = true;
+                    // 初始化音频元素
+                    if (!this.audioElement) {
+                        this.audioElement = new Audio();
+                        this.setupAudioEvents();
+                    }
 
-                // 初始化音频播放器
-                if (!this.audioPlayer) {
-                    const AudioPlayerModule = await import('/utils/AudioPlayer.js');
-                    const AudioPlayer = AudioPlayerModule.AudioPlayer || AudioPlayerModule.default;
-                    this.audioPlayer = new AudioPlayer();
-                    this.setupAudioPlayerEvents();
-                }
+                    // 如果是暂停状态，恢复播放
+                    if (this.isPaused) {
+                        this.audioElement.play();
+                        this.isPlaying = true;
+                        this.isPaused = false;
+                        this.isLoading = false;
+                        return;
+                    }
 
-                // 如果是暂停状态，恢复播放
-                if (this.isPaused) {
-                    this.audioPlayer.resume();  // 使用 resume() 而不是 play()
+                    // 加载音频
+                    this.audioElement.src = this.audioUrl;
+                    await this.audioElement.play();
+
                     this.isPlaying = true;
                     this.isPaused = false;
+
+                    // 更新 MediaSession 元数据
+                    this.updateMediaSessionMetadata();
                     this.isLoading = false;
                     return;
                 }
 
-                // 加载音频
-                const requestData = {
-                    article_hash: this.articleHash,
-                    text: this.articleText,
-                    voice: this.selectedVoice,
-                    language: 'Chinese',
-                    use_cache: true,
-                    skip_code_blocks: true
-                };
-
-                await this.audioPlayer.loadFromStream(requestData);
-                this.audioPlayer.setPlaybackRate(this.playbackRate);
-
-                // 只在非流式模式或未播放时调用 play()
-                // 流式模式会在接收第一个块时自动开始播放
-                if (!this.audioPlayer.isStreamMode || !this.audioPlayer.isPlaying) {
-                    this.audioPlayer.play();
+                // 如果正在生成中，检查是否有部分音频
+                if (this.isGenerating) {
+                    // 先查询最新状态
+                    const status = await this.fetchAudioStatus();
+                    
+                    if (status && status.has_partial && status.partial_url) {
+                        // 有部分音频，播放它
+                        console.log('🎵 播放部分音频:', status.partial_url);
+                        await this.playPartialAudio(status.partial_url);
+                        return;
+                    } else {
+                        // 没有部分音频，启动等待模式
+                        console.log('🎵 还没有部分音频，等待生成...');
+                        const chunksGenerated = status?.chunks_generated || 0;
+                        this.showInfo(`准备中... ${chunksGenerated}/10 片段`);
+                        
+                        // 启动快速轮询，等待部分音频
+                        this.waitingForPartial = true;
+                        this.startWaitingForPartial();
+                        return;
+                    }
                 }
 
+                // 否则触发生成
+                console.log('🎵 没有缓存，触发生成...');
+                await this.triggerGeneration();
+
+            } catch (error) {
+                console.error('[TTS] Play error:', error);
+                this.showError('播放失败：' + error.message);
+                this.isLoading = false;
+            }
+        },
+
+        pause() {
+            if (this.audioElement && this.isPlaying) {
+                this.audioElement.pause();
+                this.isPlaying = false;
+                this.isPaused = true;
+            }
+            // 注意：不停止后台缓存生成
+        },
+
+        async fetchAudioStatus() {
+            try {
+                const response = await fetch(`/api/tts/status/${this.articleHash}`);
+                if (!response.ok) return null;
+                return await response.json();
+            } catch (error) {
+                console.error('查询音频状态失败:', error);
+                return null;
+            }
+        },
+
+        async playPartialAudio(partialUrl) {
+            try {
+                this.isLoading = true;
+
+                // 初始化音频元素
+                if (!this.audioElement) {
+                    this.audioElement = new Audio();
+                    this.setupAudioEvents();
+                }
+
+                // 加载部分音频
+                this.audioElement.src = partialUrl;
+                await this.audioElement.play();
 
                 this.isPlaying = true;
                 this.isPaused = false;
 
+                // 更新 MediaSession 元数据
+                this.updateMediaSessionMetadata();
+
+                console.log('✅ 开始播放部分音频');
+
             } catch (error) {
-                console.error('[TTS] Play error:', error);
+                console.error('播放部分音频失败:', error);
                 this.showError('播放失败：' + error.message);
             } finally {
                 this.isLoading = false;
             }
         },
 
-        pause() {
-            if (this.audioPlayer && this.isPlaying) {
-                this.audioPlayer.pause();
-                this.isPlaying = false;
-                this.isPaused = true;
+        async triggerGeneration() {
+            try {
+                console.log('🔊 触发音频生成...');
+                this.isGenerating = true;
+                this.generationProgress = 0;
+
+                const response = await fetch('/api/tts/pregenerate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        article_hash: this.articleHash,
+                        text: this.articleText || ''
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('触发生成失败');
+                }
+
+                const data = await response.json();
+                this.taskId = data.task_id;
+
+                console.log('🔊 音频生成任务已启动:', data);
+
+                // 开始轮询进度
+                this.startPolling();
+
+            } catch (error) {
+                console.error('触发音频生成失败:', error);
+                this.showError('生成失败：' + error.message);
+                this.isGenerating = false;
             }
         },
 
-        setupAudioPlayerEvents() {
-            if (!this.audioPlayer) return;
+        startPolling() {
+            // 清除旧的轮询
+            if (this.pollInterval) {
+                clearInterval(this.pollInterval);
+            }
 
-            this.audioPlayer.on('ended', () => {
+            // 每 2 秒轮询一次
+            this.pollInterval = setInterval(async () => {
+                await this.checkGenerationProgress();
+            }, 2000);
+
+            // 立即执行一次
+            this.checkGenerationProgress();
+        },
+
+        startWaitingForPartial() {
+            console.log('🔍 启动快速轮询，等待部分音频...');
+            
+            // 清除旧的轮询
+            if (this.pollInterval) {
+                clearInterval(this.pollInterval);
+            }
+
+            // 快速轮询：每 1 秒检查一次
+            this.pollInterval = setInterval(async () => {
+                await this.checkPartialAudio();
+            }, 1000);
+
+            // 立即执行一次
+            this.checkPartialAudio();
+        },
+
+        async checkPartialAudio() {
+            try {
+                const status = await this.fetchAudioStatus();
+                
+                if (!status) return;
+
+                const chunksGenerated = status.chunks_generated || 0;
+                console.log(`📊 等待中: ${chunksGenerated}/10 片段`);
+
+                // 更新提示信息
+                this.showInfo(`准备中... ${chunksGenerated}/10 片段`);
+
+                // 检查是否有部分音频
+                if (status.has_partial && status.partial_url) {
+                    // 找到部分音频！
+                    console.log('✅ 部分音频已准备好，开始播放！');
+                    
+                    // 停止快速轮询
+                    if (this.pollInterval) {
+                        clearInterval(this.pollInterval);
+                        this.pollInterval = null;
+                    }
+                    
+                    this.waitingForPartial = false;
+                    
+                    // 播放部分音频
+                    await this.playPartialAudio(status.partial_url);
+                    
+                    // 恢复正常轮询，继续监控进度
+                    this.startPolling();
+                } else if (status.status === 'ready') {
+                    // 已经完成了！直接播放完整音频
+                    console.log('✅ 完整音频已准备好！');
+                    
+                    if (this.pollInterval) {
+                        clearInterval(this.pollInterval);
+                        this.pollInterval = null;
+                    }
+                    
+                    this.waitingForPartial = false;
+                    this.audioStatus = 'ready';
+                    this.audioUrl = status.audio_url;
+                    this.isGenerating = false;
+                    
+                    // 播放完整音频
+                    await this.play();
+                }
+            } catch (error) {
+                console.error('检查部分音频失败:', error);
+            }
+        },
+
+        async checkGenerationProgress() {
+            try {
+                const response = await fetch(`/api/tts/status/${this.articleHash}`);
+                if (!response.ok) {
+                    return;
+                }
+
+                const data = await response.json();
+                
+                console.log('📊 生成进度:', data);
+
+                // 使用后端计算的进度
+                if (data.progress_percent > 0) {
+                    this.generationProgress = data.progress_percent;
+                } else if (data.status === 'pending') {
+                    this.generationProgress = 10;
+                } else if (data.status === 'processing') {
+                    // 根据时间估算进度，最多 90%
+                    this.generationProgress = Math.min(90, this.generationProgress + 5);
+                } else if (data.status === 'ready') {
+                    this.generationProgress = 100;
+                    this.audioStatus = 'ready';
+                    this.audioUrl = data.audio_url;
+                    this.isGenerating = false;
+                    
+                    // 停止轮询
+                    if (this.pollInterval) {
+                        clearInterval(this.pollInterval);
+                        this.pollInterval = null;
+                    }
+
+                    console.log('✅ 音频生成完成！');
+                    
+                    // 如果正在播放部分音频，替换为完整音频
+                    if (this.isPlaying && this.audioElement) {
+                        const currentTime = this.audioElement.currentTime;
+                        this.audioElement.src = data.audio_url;
+                        this.audioElement.currentTime = currentTime;
+                        await this.audioElement.play();
+                        console.log('🔄 切换到完整音频');
+                    } else {
+                        // 自动开始播放
+                        setTimeout(() => {
+                            this.play();
+                        }, 500);
+                    }
+                }
+            } catch (error) {
+                console.error('检查生成进度失败:', error);
+            }
+        },
+
+        stop() {
+            if (this.audioElement) {
+                this.audioElement.pause();
+                this.audioElement.currentTime = 0;
                 this.isPlaying = false;
                 this.isPaused = false;
+            }
+        },
+
+        setupAudioEvents() {
+            if (!this.audioElement) return;
+
+            this.audioElement.addEventListener('ended', () => {
+                this.isPlaying = false;
+                this.isPaused = false;
+                console.log('🎵 播放完毕');
             });
 
-            this.audioPlayer.on('error', (error) => {
+            this.audioElement.addEventListener('error', (error) => {
                 this.showError('播放出错：' + error.message);
                 this.isPlaying = false;
                 this.isLoading = false;
             });
+
+            this.audioElement.addEventListener('pause', () => {
+                console.log('🎵 已暂停');
+            });
+
+            this.audioElement.addEventListener('play', () => {
+                console.log('🎵 开始播放');
+            });
+        },
+
+        setupMediaSession() {
+            if (!('mediaSession' in navigator)) {
+                console.log('📱 当前浏览器不支持 MediaSession API');
+                return;
+            }
+
+            console.log('📱 初始化 MediaSession API');
+
+            // 设置控制器
+            navigator.mediaSession.setActionHandler('play', () => {
+                console.log('📱 MediaSession: play');
+                this.play();
+            });
+
+            navigator.mediaSession.setActionHandler('pause', () => {
+                console.log('📱 MediaSession: pause');
+                this.pause();
+            });
+
+            navigator.mediaSession.setActionHandler('stop', () => {
+                console.log('📱 MediaSession: stop');
+                this.stop();
+            });
+
+            // 快进/快退
+            navigator.mediaSession.setActionHandler('seekbackward', () => {
+                console.log('📱 MediaSession: seekbackward');
+                if (this.audioElement) {
+                    this.audioElement.currentTime = Math.max(0, this.audioElement.currentTime - 10);
+                }
+            });
+
+            navigator.mediaSession.setActionHandler('seekforward', () => {
+                console.log('📱 MediaSession: seekforward');
+                if (this.audioElement) {
+                    this.audioElement.currentTime = Math.min(
+                        this.audioElement.duration,
+                        this.audioElement.currentTime + 10
+                    );
+                }
+            });
+        },
+
+        updateMediaSessionMetadata() {
+            if (!('mediaSession' in navigator)) return;
+
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: this.articleTitle,
+                artist: 'ReInvent Insight',
+                album: '深度解读',
+                // artwork: [
+                //     { src: '/path/to/cover.png', sizes: '512x512', type: 'image/png' }
+                // ]
+            });
+
+            console.log('📱 MediaSession 元数据已更新');
+        },
+
+        cleanup() {
+            if (this.audioElement) {
+                this.audioElement.pause();
+                this.audioElement.src = '';
+                this.audioElement = null;
+            }
+
+            // 清理 MediaSession
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.metadata = null;
+                navigator.mediaSession.setActionHandler('play', null);
+                navigator.mediaSession.setActionHandler('pause', null);
+                navigator.mediaSession.setActionHandler('stop', null);
+                navigator.mediaSession.setActionHandler('seekbackward', null);
+                navigator.mediaSession.setActionHandler('seekforward', null);
+            }
         },
 
         showError(message) {
@@ -154,6 +555,11 @@ export default {
             setTimeout(() => {
                 this.error = null;
             }, 3000);
+        },
+
+        showInfo(message) {
+            console.log('ℹ️', message);
+            // 可以在这里添加 toast 提示
         }
     }
 };

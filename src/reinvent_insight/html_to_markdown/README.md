@@ -247,10 +247,30 @@ async def main():
 
 ## 限制
 
-- HTML长度限制：约50KB（超出部分会被截断）
-- 需要有效的Gemini API密钥
-- 最适合处理文章类网页（新闻、博客、技术文档等）
-- 对于JavaScript动态加载的内容，需要提供完整渲染后的HTML
+- **原始 HTML 大小**：支持处理 5MB+ 的大型 HTML 文件
+  - 预处理阶段会去除 JavaScript、CSS、注释等冗余内容，通常可将文件缩减 80%-90%
+  - 清洗后的 HTML > 150KB 时，自动启用智能分段处理
+  - 分段按语义边界（段落、标题）切分，保证内容连贯性
+- **API 要求**：需要有效的 Gemini API 密钥（支持长上下文模型）
+- **最佳场景**：文章类网页（新闻、博客、技术文档等）
+- **动态内容**：JavaScript 动态加载的内容需要提供完整渲染后的 HTML
+
+### 调试模式
+
+处理大文件时，可以启用调试模式查看分段详情：
+
+```python
+converter = HTMLToMarkdownConverter(debug=True)
+result = await converter.convert_from_file(
+    "large_article.html",
+    output_path="article.md"
+)
+# 会在 article.md 同级目录生成 debug 文件夹，包含：
+# - 原始 HTML
+# - 预处理后的 HTML
+# - 每个分段的 HTML、提取结果、Markdown
+# - 合并后的最终内容
+```
 
 ## 示例
 

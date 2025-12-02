@@ -178,7 +178,7 @@
 
         <!-- 音频播放按钮 -->
         <simple-audio-button 
-          v-if="articleHash && articleText"
+          v-if="audioButtonEnabled && articleHash && articleText"
           :article-hash="articleHash"
           :article-text="articleText"
           class="app-header__audio-btn">

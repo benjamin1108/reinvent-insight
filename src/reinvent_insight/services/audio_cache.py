@@ -28,6 +28,11 @@ class AudioMetadata:
     created_at: str             # 创建时间（ISO 8601）
     last_accessed: str          # 最后访问时间（ISO 8601）
     access_count: int           # 访问次数
+    # 预生成相关字段
+    article_hash: str = ""      # 关联的文章标识
+    source_file: str = ""       # 原始文章文件名
+    preprocessing_version: str = ""  # 预处理规则版本号
+    is_pregenerated: bool = False   # 是否为预生成（true）
 
 
 class AudioCache:
@@ -117,6 +122,18 @@ class AudioCache:
         
         logger.info(f"缓存命中: {audio_hash}, 访问次数: {metadata.access_count}")
         return file_path
+    
+    def get_metadata(self, audio_hash: str) -> Optional[AudioMetadata]:
+        """
+        获取缓存元数据（不更新访问计数）
+        
+        Args:
+            audio_hash: 音频哈希值
+            
+        Returns:
+            元数据对象，如果不存在则返回 None
+        """
+        return self.metadata.get(audio_hash)
 
     def put(
         self,
@@ -125,7 +142,11 @@ class AudioCache:
         text_hash: str,
         voice: str,
         language: str,
-        duration: float = 0.0
+        duration: float = 0.0,
+        article_hash: str = "",
+        source_file: str = "",
+        preprocessing_version: str = "",
+        is_pregenerated: bool = False
     ) -> Path:
         """
         存储音频到缓存
@@ -167,7 +188,11 @@ class AudioCache:
                 file_path=str(file_path),
                 created_at=now,
                 last_accessed=now,
-                access_count=0
+                access_count=0,
+                article_hash=article_hash,
+                source_file=source_file,
+                preprocessing_version=preprocessing_version,
+                is_pregenerated=is_pregenerated
             )
             
             self.metadata[audio_hash] = metadata
@@ -274,3 +299,22 @@ class AudioCache:
             "usage_percent": (total_size / self.max_size_bytes * 100) if self.max_size_bytes > 0 else 0,
             "cache_dir": str(self.cache_dir)
         }
+    
+    def find_by_article_hash(self, article_hash: str) -> Optional[AudioMetadata]:
+        """
+        根据文章哈希查找音频元数据
+        
+        Args:
+            article_hash: 文章哈希值
+            
+        Returns:
+            音频元数据，如果不存在则返回 None
+        """
+        for metadata in self.metadata.values():
+            if metadata.article_hash == article_hash:
+                # 验证文件是否存在
+                file_path = Path(metadata.file_path)
+                if file_path.exists():
+                    return metadata
+        
+        return None

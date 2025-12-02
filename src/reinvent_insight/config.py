@@ -63,6 +63,8 @@ SUBTITLE_DIR = DOWNLOAD_DIR / "subtitles"
 SUBTITLE_DIR.mkdir(exist_ok=True) # 确保字幕目录存在
 OUTPUT_DIR = DOWNLOAD_DIR / "summaries"
 OUTPUT_DIR.mkdir(exist_ok=True) # 确保输出目录存在
+TTS_TEXT_DIR = DOWNLOAD_DIR / "tts_texts"
+TTS_TEXT_DIR.mkdir(exist_ok=True) # 确保 TTS 文本目录存在
 
 # --- 认证配置 ---
 # 优先读取 .env 中的 ADMIN_USERNAME / ADMIN_PASSWORD，避免被系统级 USERNAME / PASSWORD 覆盖
@@ -182,3 +184,25 @@ TEXT2HTML_PROMPT_PATH = PROJECT_ROOT / "prompt" / "text2html.txt"
 
 # 可视化 HTML 存储目录（与深度解读同目录）
 VISUAL_HTML_DIR = OUTPUT_DIR
+
+# --- TTS 预生成配置 ---
+# 是否启用 TTS 预生成服务（已禁用，改为按需生成）
+TTS_PREGENERATE_ENABLED = os.getenv("TTS_PREGENERATE_ENABLED", "false").lower() == "true"
+
+# 是否显示音频播放按钮（默认显示）
+TTS_AUDIO_BUTTON_ENABLED = os.getenv("TTS_AUDIO_BUTTON_ENABLED", "true").lower() == "true"
+
+# 任务队列最大长度
+TTS_QUEUE_MAX_SIZE = int(os.getenv("TTS_QUEUE_MAX_SIZE", "100"))
+
+# 任务间隔（秒）
+TTS_WORKER_DELAY = float(os.getenv("TTS_WORKER_DELAY", "1.0"))
+
+# 最大重试次数
+TTS_MAX_RETRIES = int(os.getenv("TTS_MAX_RETRIES", "3"))
+
+# 单任务超时（秒）
+TTS_TASK_TIMEOUT = int(os.getenv("TTS_TASK_TIMEOUT", "600"))
+
+# TTS 预处理规则版本
+TTS_PREPROCESSING_VERSION = "1.0.0"

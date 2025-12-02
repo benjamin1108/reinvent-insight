@@ -90,6 +90,42 @@ async def start_visual_watcher():
         logger.error(f"启动可视化解读监测器失败: {e}", exc_info=True)
 
 
+async def start_tts_pregeneration():
+    """启动 TTS 预生成服务"""
+    # 检查配置开关
+    if not config.TTS_PREGENERATE_ENABLED:
+        logger.info("TTS 预生成服务已禁用（TTS_PREGENERATE_ENABLED=false）")
+        return
+    
+    try:
+        # 获取预生成服务
+        pregeneration_service = get_tts_pregeneration_service()
+        
+        # 启动服务
+        await pregeneration_service.start()
+        logger.info("TTS 预生成服务已启动")
+        
+        # 启动文件监控
+        from .file_watcher import start_tts_watching
+        
+        # 获取当前事件循环，以便在回调中使用
+        loop = asyncio.get_running_loop()
+        
+        def tts_callback(file_path, article_hash, source_file):
+            """TTS 预生成回调函数"""
+            # 在事件循环中调度异步任务
+            asyncio.run_coroutine_threadsafe(
+                pregeneration_service.add_task(article_hash, source_file),
+                loop
+            )
+        
+        start_tts_watching(config.OUTPUT_DIR, tts_callback)
+        logger.info("TTS 预生成文件监控器已启动")
+        
+    except Exception as e:
+        logger.error(f"启动 TTS 预生成服务失败: {e}", exc_info=True)
+
+
 @app.on_event("startup")
 async def startup_event():
     """
@@ -98,6 +134,7 @@ async def startup_event():
     2. 启动文件系统监控。
     3. 检查 Cookie 健康状态。
     4. 启动可视化解读文件监测器。
+    5. 启动 TTS 预生成服务（仅处理手动触发，不监控文件）。
     """
     logger.info("应用启动，开始初始化...")
     # 1. 初始化缓存
@@ -112,6 +149,14 @@ async def startup_event():
     
     # 4. 启动可视化解读文件监测器
     await start_visual_watcher()
+    
+    # 5. 启动 TTS 预生成服务（仅处理手动任务，不启动文件监控）
+    try:
+        pregeneration_service = get_tts_pregeneration_service()
+        await pregeneration_service.start()
+        logger.info("TTS 预生成服务已启动（按需生成模式，未启动文件监控）")
+    except Exception as e:
+        logger.error(f"启动 TTS 预生成服务失败: {e}", exc_info=True)
 
 # --- 简易认证实现 ---
 session_tokens: Set[str] = set()
@@ -1167,6 +1212,16 @@ async def health_check():
             "error": str(e)
         }
 
+@app.get("/api/config")
+async def get_config():
+    """
+    获取前端配置（公开访问）
+    返回前端需要的配置项
+    """
+    return {
+        "tts_audio_button_enabled": config.TTS_AUDIO_BUTTON_ENABLED
+    }
+
 @app.get("/api/admin/cookie-status")
 async def get_cookie_status(authorization: str = Header(None)):
     """
@@ -1191,6 +1246,127 @@ async def get_cookie_status(authorization: str = Header(None)):
 
 class DeleteSummaryRequest(BaseModel):
     filename: str
+
+# ============================================================================
+# TTS Queue Management API 端点
+# ============================================================================
+
+class TTSQueueStatsResponse(BaseModel):
+    """TTS 队列统计信息响应"""
+    queue_size: int  # 队列中待处理任务数
+    total_tasks: int  # 总任务数
+    pending: int  # 待处理任务数
+    processing: int  # 处理中任务数
+    completed: int  # 已完成任务数
+    failed: int  # 失败任务数
+    skipped: int  # 跳过任务数
+    is_running: bool  # 服务是否运行中
+
+
+@app.get("/api/tts/queue/stats", response_model=TTSQueueStatsResponse)
+async def get_tts_queue_stats():
+    """
+    获取 TTS 预生成队列统计信息
+    
+    Returns:
+        队列统计信息
+    """
+    try:
+        pregeneration_service = get_tts_pregeneration_service()
+        stats = pregeneration_service.get_queue_stats()
+        
+        return TTSQueueStatsResponse(**stats)
+        
+    except Exception as e:
+        logger.error(f"获取队列统计失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"获取统计失败: {str(e)}")
+
+
+class TTSTaskInfo(BaseModel):
+    """TTS 任务信息"""
+    task_id: str
+    article_hash: str
+    source_file: str
+    status: str
+    created_at: str
+    started_at: Optional[str] = None
+    completed_at: Optional[str] = None
+    retry_count: int = 0
+    error_message: Optional[str] = None
+    audio_hash: Optional[str] = None
+
+
+class TTSTaskListResponse(BaseModel):
+    """TTS 任务列表响应"""
+    tasks: List[TTSTaskInfo]
+    total: int
+
+
+@app.get("/api/tts/queue/tasks", response_model=TTSTaskListResponse)
+async def get_tts_tasks(
+    status: Optional[str] = None,
+    limit: int = 50
+):
+    """
+    获取 TTS 任务列表
+    
+    Args:
+        status: 可选，按状态筛选 (pending, processing, completed, failed, skipped)
+        limit: 返回数量限制，默认 50
+        
+    Returns:
+        任务列表
+    """
+    try:
+        from .services.tts_pregeneration_service import TaskStatus
+        
+        pregeneration_service = get_tts_pregeneration_service()
+        
+        # 获取所有任务
+        all_tasks = list(pregeneration_service.tasks.values())
+        
+        # 按状态筛选
+        if status:
+            try:
+                status_enum = TaskStatus(status)
+                all_tasks = [t for t in all_tasks if t.status == status_enum]
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"无效的状态值: {status}")
+        
+        # 按创建时间倒序排列
+        all_tasks.sort(key=lambda x: x.created_at, reverse=True)
+        
+        # 限制数量
+        tasks = all_tasks[:limit]
+        
+        # 转换为响应格式
+        task_infos = [
+            TTSTaskInfo(
+                task_id=t.task_id,
+                article_hash=t.article_hash,
+                source_file=t.source_file,
+                status=t.status.value,
+                created_at=t.created_at,
+                started_at=t.started_at,
+                completed_at=t.completed_at,
+                retry_count=t.retry_count,
+                error_message=t.error_message,
+                audio_hash=t.audio_hash
+            )
+            for t in tasks
+        ]
+        
+        return TTSTaskListResponse(
+            tasks=task_infos,
+            total=len(all_tasks)
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取任务列表失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"获取任务列表失败: {str(e)}")
+
 
 # --- Frontend Serving ---
 web_dir = config.PROJECT_ROOT / "web"
@@ -1221,95 +1397,6 @@ if web_dir.is_dir():
     fonts_dir = web_dir / "fonts"
     if fonts_dir.is_dir():
         app.mount("/fonts", StaticFiles(directory=fonts_dir), name="fonts")
-
-    # This catch-all route must be defined *after* all other API routes and mounts.
-    # It serves the main index.html for any other path, enabling client-side routing.
-    @app.get("/{full_path:path}", response_class=FileResponse, include_in_schema=False)
-    async def serve_vue_app(request: Request, full_path: str):
-        """
-        Serve the Vue.js application.
-        This allows the client-side router to handle all non-API, non-static-file paths.
-        """
-        # 检查是否是文档URL
-        if full_path.startswith("d/"):
-            # 提取hash
-            doc_hash = full_path[2:].split('/')[0] if '/' in full_path[2:] else full_path[2:]
-            
-            # 查找对应的文档
-            filename = hash_to_filename.get(doc_hash)
-            if filename:
-                try:
-                    # 读取文档内容以获取标题和描述
-                    file_path = config.OUTPUT_DIR / filename
-                    content = file_path.read_text(encoding="utf-8")
-                    metadata = parse_metadata_from_md(content)
-                    
-                    # 获取标题
-                    title_cn = metadata.get("title_cn")
-                    title_en = metadata.get("title_en", metadata.get("title", ""))
-                    
-                    if not title_cn:
-                        for line in content.splitlines():
-                            stripped = line.strip()
-                            if stripped.startswith('# '):
-                                title_cn = stripped[2:].strip()
-                                break
-                    
-                    if not title_cn:
-                        title_cn = title_en if title_en else file_path.stem
-                    
-                    # 提取摘要作为描述（前200个字符）
-                    pure_text = extract_text_from_markdown(content)
-                    description = pure_text[:200] + "..." if len(pure_text) > 200 else pure_text
-                    
-                    # 生成带有meta标签的HTML
-                    index_path = web_dir / "index.html"
-                    if index_path.is_file():
-                        html_content = index_path.read_text(encoding="utf-8")
-                        
-                        # 构建meta标签
-                        meta_tags = f'''
-  <!-- Open Graph / Facebook -->
-  <meta property="og:type" content="article">
-  <meta property="og:url" content="{request.url}">
-  <meta property="og:title" content="{title_cn} - reinvent Insight">
-  <meta property="og:description" content="{description}">
-  <meta property="og:site_name" content="reinvent Insight">
-  
-  <!-- Twitter -->
-  <meta property="twitter:card" content="summary_large_image">
-  <meta property="twitter:url" content="{request.url}">
-  <meta property="twitter:title" content="{title_cn} - reinvent Insight">
-  <meta property="twitter:description" content="{description}">
-  
-  <!-- 基础meta标签 -->
-  <meta name="description" content="{description}">
-  <title>{title_cn} - reinvent Insight</title>'''
-                        
-                        # 替换原有的title标签和插入meta标签
-                        import re
-                        # 替换title
-                        html_content = re.sub(
-                            r'<title>.*?</title>',
-                            '',
-                            html_content,
-                            flags=re.IGNORECASE | re.DOTALL
-                        )
-                        # 在</head>前插入meta标签
-                        html_content = html_content.replace('</head>', meta_tags + '\n</head>')
-                        
-                        from fastapi.responses import HTMLResponse
-                        return HTMLResponse(content=html_content)
-                except Exception as e:
-                    logger.error(f"生成文档meta标签失败: {e}")
-        
-        # 默认返回index.html
-        index_path = web_dir / "index.html"
-        if index_path.is_file():
-            return FileResponse(index_path)
-        else:
-            logger.error(f"Frontend entry point not found at: {index_path}")
-            raise HTTPException(status_code=404, detail="Web application not found.")
 else:
     logger.warning(f"Frontend directory 'web' not found at {web_dir}, will only serve API.")
 
@@ -1444,12 +1531,16 @@ async def analyze_document_endpoint(
 
 from .services.tts_service import TTSService
 from .services.audio_cache import AudioCache
+from .services.tts_text_preprocessor import TTSTextPreprocessor
+from .services.tts_pregeneration_service import TTSPregenerationService
 from .audio.audio_utils import assemble_wav, decode_base64_pcm, calculate_audio_duration
 from .model_config import get_model_client
 
 # 初始化 TTS 服务和缓存（延迟初始化）
 _tts_service: Optional[TTSService] = None
 _audio_cache: Optional[AudioCache] = None
+_tts_preprocessor: Optional[TTSTextPreprocessor] = None
+_tts_pregeneration_service: Optional[TTSPregenerationService] = None
 
 
 def get_tts_service() -> TTSService:
@@ -1470,12 +1561,33 @@ def get_audio_cache() -> AudioCache:
     return _audio_cache
 
 
+def get_tts_preprocessor() -> TTSTextPreprocessor:
+    """获取 TTS 文本预处理器实例（单例）"""
+    global _tts_preprocessor
+    if _tts_preprocessor is None:
+        _tts_preprocessor = TTSTextPreprocessor()
+    return _tts_preprocessor
+
+
+def get_tts_pregeneration_service() -> TTSPregenerationService:
+    """获取 TTS 预生成服务实例（单例）"""
+    global _tts_pregeneration_service
+    if _tts_pregeneration_service is None:
+        tts_service = get_tts_service()
+        audio_cache = get_audio_cache()
+        preprocessor = get_tts_preprocessor()
+        _tts_pregeneration_service = TTSPregenerationService(
+            tts_service, audio_cache, preprocessor
+        )
+    return _tts_pregeneration_service
+
+
 class TTSRequest(BaseModel):
     """TTS 生成请求"""
     article_hash: str
     text: str
-    voice: str = "Cherry"
-    language: str = "Chinese"
+    voice: Optional[str] = None
+    language: Optional[str] = None
     use_cache: bool = True
     skip_code_blocks: bool = True
 
@@ -1500,8 +1612,12 @@ async def generate_tts(req: TTSRequest):
         tts_service = get_tts_service()
         audio_cache = get_audio_cache()
         
+        # 从配置获取默认值
+        voice = req.voice or getattr(tts_service.config, 'tts_default_voice', 'Kai')
+        language = req.language or getattr(tts_service.config, 'tts_default_language', 'Chinese')
+        
         # 计算哈希
-        audio_hash = tts_service.calculate_hash(req.text, req.voice, req.language)
+        audio_hash = tts_service.calculate_hash(req.text, voice, language)
         
         # 检查缓存
         if req.use_cache:
@@ -1516,15 +1632,15 @@ async def generate_tts(req: TTSRequest):
                     audio_url=f"/api/tts/cache/{audio_hash}",
                     duration=duration,
                     cached=True,
-                    voice=req.voice,
-                    language=req.language
+                    voice=voice,
+                    language=language
                 )
         
         # 生成音频
         logger.info(f"开始生成 TTS 音频: {audio_hash}")
         audio_chunks = []
         async for chunk in tts_service.generate_audio_stream(
-            req.text, req.voice, req.language, req.skip_code_blocks
+            req.text, voice, language, req.skip_code_blocks
         ):
             # 解码 Base64
             pcm_data = decode_base64_pcm(chunk.decode('utf-8') if isinstance(chunk, bytes) else chunk)
@@ -1540,8 +1656,8 @@ async def generate_tts(req: TTSRequest):
             audio_hash=audio_hash,
             audio_data=wav_data,
             text_hash=text_hash,
-            voice=req.voice,
-            language=req.language,
+            voice=voice,
+            language=language,
             duration=duration
         )
         
@@ -1551,8 +1667,8 @@ async def generate_tts(req: TTSRequest):
             audio_url=f"/api/tts/cache/{audio_hash}",
             duration=duration,
             cached=False,
-            voice=req.voice,
-            language=req.language
+            voice=voice,
+            language=language
         )
         
     except ValueError as e:
@@ -1566,8 +1682,8 @@ async def generate_tts(req: TTSRequest):
 class TTSStreamRequest(BaseModel):
     article_hash: str
     text: str
-    voice: str = "Cherry"
-    language: str = "Chinese"
+    voice: Optional[str] = None
+    language: Optional[str] = None
     use_cache: bool = True
     skip_code_blocks: bool = True
 
@@ -1581,14 +1697,17 @@ async def stream_tts(req: TTSStreamRequest):
     """
     article_hash = req.article_hash
     text = req.text
-    voice = req.voice
-    language = req.language
     use_cache = req.use_cache
     skip_code_blocks = req.skip_code_blocks
+    
     async def event_generator():
         try:
             tts_service = get_tts_service()
             audio_cache = get_audio_cache()
+            
+            # 从配置获取默认值
+            voice = req.voice or getattr(tts_service.config, 'tts_default_voice', 'Kai')
+            language = req.language or getattr(tts_service.config, 'tts_default_language', 'Chinese')
             
             # 计算哈希
             audio_hash = tts_service.calculate_hash(text, voice, language)
@@ -1805,6 +1924,325 @@ async def get_cached_audio(audio_hash: str):
     except Exception as e:
         logger.error(f"获取缓存音频失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"获取音频失败: {str(e)}")
+
+
+class TTSStatusResponse(BaseModel):
+    """音频状态查询响应"""
+    has_audio: bool
+    audio_url: Optional[str] = None
+    duration: Optional[float] = None
+    status: str  # "ready", "processing", "none"
+    voice: Optional[str] = None
+    generated_at: Optional[str] = None
+    # 渐进式播放相关
+    has_partial: bool = False  # 是否有部分音频
+    partial_url: Optional[str] = None  # 部分音频URL
+    partial_duration: Optional[float] = None  # 部分音频时长
+    chunks_generated: int = 0  # 已生成片段数
+    total_chunks: int = 0  # 总片段数
+    progress_percent: int = 0  # 进度百分比
+
+
+@app.get("/api/tts/status/{article_hash}", response_model=TTSStatusResponse)
+async def get_tts_status(article_hash: str):
+    """
+    查询文章的 TTS 音频状态
+    
+    Args:
+        article_hash: 文章哈希值
+        
+    Returns:
+        音频状态信息
+    """
+    try:
+        audio_cache = get_audio_cache()
+        
+        # 查找音频缓存
+        audio_metadata = audio_cache.find_by_article_hash(article_hash)
+        
+        if audio_metadata:
+            # 有完整音频
+            return TTSStatusResponse(
+                has_audio=True,
+                audio_url=f"/api/tts/cache/{audio_metadata.hash}",
+                duration=audio_metadata.duration,
+                status="ready",
+                voice=audio_metadata.voice,
+                generated_at=audio_metadata.created_at
+            )
+        
+        # 检查是否有处理中的任务
+        try:
+            pregeneration_service = get_tts_pregeneration_service()
+            # 检查服务是否运行中
+            if pregeneration_service.is_running:
+                for task in pregeneration_service.tasks.values():
+                    if task.article_hash == article_hash:
+                        from .services.tts_pregeneration_service import TaskStatus
+                        if task.status in [TaskStatus.PENDING, TaskStatus.PROCESSING]:
+                            # 计算进度
+                            progress = 0
+                            if task.total_chunks > 0:
+                                progress = int((task.chunks_generated / task.total_chunks) * 100)
+                            elif task.chunks_generated > 0:
+                                # 如果还不知道总数，估算进度
+                                progress = min(90, 10 + task.chunks_generated)
+                            
+                            # 检查是否有部分音频
+                            partial_info = {}
+                            if task.partial_audio_hash:
+                                partial_metadata = audio_cache.get_metadata(task.partial_audio_hash)
+                                if partial_metadata:
+                                    partial_info = {
+                                        "has_partial": True,
+                                        "partial_url": f"/api/tts/cache/{task.partial_audio_hash}",
+                                        "partial_duration": partial_metadata.duration
+                                    }
+                            
+                            return TTSStatusResponse(
+                                has_audio=False,
+                                status="processing",
+                                chunks_generated=task.chunks_generated,
+                                total_chunks=task.total_chunks,
+                                progress_percent=progress,
+                                **partial_info
+                            )
+        except Exception as e:
+            logger.debug(f"检查预生成任务失败: {e}")
+        
+        # 没有音频
+        return TTSStatusResponse(
+            has_audio=False,
+            status="none"
+        )
+        
+    except Exception as e:
+        logger.error(f"查询 TTS 状态失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"查询状态失败: {str(e)}")
+
+
+@app.get("/api/tts/text/{article_hash}")
+async def get_tts_text(article_hash: str):
+    """
+    获取文章的 TTS 预处理文本
+    
+    Args:
+        article_hash: 文章哈希值
+        
+    Returns:
+        纯文本内容
+    """
+    try:
+        text_file = config.TTS_TEXT_DIR / f"{article_hash}.txt"
+        
+        if not text_file.exists():
+            raise HTTPException(status_code=404, detail="TTS 文本不存在")
+        
+        with open(text_file, 'r', encoding='utf-8') as f:
+            text = f.read()
+        
+        return Response(
+            content=text,
+            media_type="text/plain; charset=utf-8"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取 TTS 文本失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"获取文本失败: {str(e)}")
+
+
+class TTSPregenerateRequest(BaseModel):
+    """手动触发预生成请求"""
+    filename: Optional[str] = None
+    article_hash: Optional[str] = None
+    text: Optional[str] = None
+
+
+class TTSPregenerateResponse(BaseModel):
+    """手动触发预生成响应"""
+    task_id: Optional[str] = None
+    status: str
+    message: str
+
+
+@app.post("/api/tts/pregenerate", response_model=TTSPregenerateResponse)
+async def trigger_tts_pregeneration(req: TTSPregenerateRequest):
+    """
+    手动触发 TTS 预生成
+    
+    Args:
+        req: 请求对象，可以包含 filename 或 article_hash
+        
+    Returns:
+        任务信息
+    """
+    try:
+        # 通过 article_hash 查找文件
+        if req.article_hash:
+            # 直接使用 hash_to_filename 映射
+            found_file = hash_to_filename.get(req.article_hash)
+            
+            if not found_file:
+                raise HTTPException(status_code=404, detail=f"找不到 article_hash 对应的文件: {req.article_hash}")
+            
+            # 添加任务
+            pregeneration_service = get_tts_pregeneration_service()
+            task_id = await pregeneration_service.add_task(req.article_hash, found_file)
+            
+            if task_id:
+                return TTSPregenerateResponse(
+                    task_id=task_id,
+                    status="queued",
+                    message=f"任务已添加到队列: {task_id}"
+                )
+            else:
+                return TTSPregenerateResponse(
+                    status="skipped",
+                    message="任务已存在或音频已缓存"
+                )
+        
+        # 通过 filename 查找文件（兼容旧的方式）
+        elif req.filename:
+            # 验证文件是否存在
+            file_path = config.OUTPUT_DIR / req.filename
+            if not file_path.exists():
+                raise HTTPException(status_code=404, detail=f"文件不存在: {req.filename}")
+            
+            # 读取文件元数据
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # 提取元数据
+            preprocessor = get_tts_preprocessor()
+            metadata, _ = preprocessor.extract_yaml_metadata(content)
+            
+            video_url = metadata.get('video_url', '')
+            title = metadata.get('title', '')
+            upload_date = metadata.get('upload_date', '')
+            
+            if not any([video_url, title]):
+                raise HTTPException(status_code=400, detail="文件缺少必要的元数据")
+            
+            # 计算 article_hash
+            article_hash = preprocessor.calculate_article_hash(video_url, title, upload_date)
+            
+            # 添加任务
+            pregeneration_service = get_tts_pregeneration_service()
+            task_id = await pregeneration_service.add_task(article_hash, req.filename)
+            
+            if task_id:
+                return TTSPregenerateResponse(
+                    task_id=task_id,
+                    status="queued",
+                    message=f"任务已添加到队列: {task_id}"
+                )
+            else:
+                return TTSPregenerateResponse(
+                    status="skipped",
+                    message="任务已存在或音频已缓存"
+                )
+        else:
+            raise HTTPException(status_code=400, detail="必须提供 filename 或 article_hash")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"触发 TTS 预生成失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"触发预生成失败: {str(e)}")
+
+
+# --- Frontend Catch-All Route (MUST be last) ---
+# This catch-all route MUST be defined *after* all other API routes.
+# It serves the main index.html for any other path, enabling client-side routing.
+if web_dir.is_dir():
+    @app.get("/{full_path:path}", response_class=FileResponse, include_in_schema=False)
+    async def serve_vue_app(request: Request, full_path: str):
+        """
+        Serve the Vue.js application.
+        This allows the client-side router to handle all non-API, non-static-file paths.
+        """
+        # 检查是否是文档URL
+        if full_path.startswith("d/"):
+            # 提取hash
+            doc_hash = full_path[2:].split('/')[0] if '/' in full_path[2:] else full_path[2:]
+            
+            # 查找对应的文档
+            filename = hash_to_filename.get(doc_hash)
+            if filename:
+                try:
+                    # 读取文档内容以获取标题和描述
+                    file_path = config.OUTPUT_DIR / filename
+                    content = file_path.read_text(encoding="utf-8")
+                    metadata = parse_metadata_from_md(content)
+                    
+                    # 获取标题
+                    title_cn = metadata.get("title_cn")
+                    title_en = metadata.get("title_en", metadata.get("title", ""))
+                    
+                    if not title_cn:
+                        for line in content.splitlines():
+                            stripped = line.strip()
+                            if stripped.startswith('# '):
+                                title_cn = stripped[2:].strip()
+                                break
+                    
+                    if not title_cn:
+                        title_cn = title_en if title_en else file_path.stem
+                    
+                    # 提取摘要作为描述（前200个字符）
+                    pure_text = extract_text_from_markdown(content)
+                    description = pure_text[:200] + "..." if len(pure_text) > 200 else pure_text
+                    
+                    # 生成带有meta标签的HTML
+                    index_path = web_dir / "index.html"
+                    if index_path.is_file():
+                        html_content = index_path.read_text(encoding="utf-8")
+                        
+                        # 构建meta标签
+                        meta_tags = f'''
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="{request.url}">
+  <meta property="og:title" content="{title_cn} - reinvent Insight">
+  <meta property="og:description" content="{description}">
+  <meta property="og:site_name" content="reinvent Insight">
+  
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="{request.url}">
+  <meta property="twitter:title" content="{title_cn} - reinvent Insight">
+  <meta property="twitter:description" content="{description}">
+  
+  <!-- 基础meta标签 -->
+  <meta name="description" content="{description}">
+  <title>{title_cn} - reinvent Insight</title>'''
+                        
+                        # 替换原有的title标签和插入meta标签
+                        import re
+                        # 替换title
+                        html_content = re.sub(
+                            r'<title>.*?</title>',
+                            '',
+                            html_content,
+                            flags=re.IGNORECASE | re.DOTALL
+                        )
+                        # 在</head>前插入meta标签
+                        html_content = html_content.replace('</head>', meta_tags + '\n</head>')
+                        
+                        from fastapi.responses import HTMLResponse
+                        return HTMLResponse(content=html_content)
+                except Exception as e:
+                    logger.error(f"生成文档meta标签失败: {e}")
+        
+        # 默认返回index.html
+        index_path = web_dir / "index.html"
+        if index_path.is_file():
+            return FileResponse(index_path)
+        else:
+            logger.error(f"Frontend entry point not found at: {index_path}")
+            raise HTTPException(status_code=404, detail="Web application not found.")
 
 
 def serve(host: str = "0.0.0.0", port: int = 8001, reload: bool = False):
