@@ -1,7 +1,7 @@
 # Reinvent Insight API 接口文档
 
 > 版本: 0.1.0  
-> 更新时间: 2025-12-04  
+> 更新时间: 2025-12-05  
 > 基于 FastAPI 构建的高性能异步 API 服务
 
 ---
@@ -216,6 +216,108 @@ Authorization: Bearer {token}
 }
 ```
 
+### 9. 软删除文章（管理员）
+**端点**: `DELETE /api/summaries/{doc_hash}`  
+**描述**: 软删除文章，移动到回收站（可恢复）  
+**认证**: 需要 Token  
+
+**移动内容**:
+- 所有版本的 Markdown 文件
+- 对应的 PDF 文件
+- 可视化解读 HTML 文件
+
+**响应**:
+```json
+{
+  "success": true,
+  "message": "已移动 3 个文件到回收站",
+  "deleted_files": [
+    "/path/to/trash/hash_timestamp_article.md",
+    "/path/to/trash/pdfs/hash_timestamp_article.pdf"
+  ],
+  "errors": null
+}
+```
+
+**错误响应**:
+- `401 Unauthorized`: 未登录或 Token 无效
+- `404 Not Found`: 文档未找到
+- `500 Internal Server Error`: 移动失败
+
+### 10. 获取回收站列表
+**端点**: `GET /api/admin/trash`  
+**描述**: 获取回收站中的文章列表  
+**认证**: 需要 Token  
+
+**响应**:
+```json
+{
+  "items": [
+    {
+      "doc_hash": "abc123",
+      "original_filename": "article.md",
+      "trash_filename": "abc123_20241102_120000_article.md",
+      "title_cn": "中文标题",
+      "title_en": "English Title",
+      "deleted_at": "2024-11-02T12:00:00",
+      "size": 12345
+    }
+  ]
+}
+```
+
+### 11. 恢复文章
+**端点**: `POST /api/admin/trash/{doc_hash}/restore`  
+**描述**: 从回收站恢复文章  
+**认证**: 需要 Token  
+
+**响应**:
+```json
+{
+  "success": true,
+  "message": "已恢复 3 个文件",
+  "restored_files": ["article.md", "article_visual.html"],
+  "errors": null
+}
+```
+
+**错误响应**:
+- `401 Unauthorized`: 未登录或 Token 无效
+- `404 Not Found`: 回收站中未找到该文档
+
+### 12. 永久删除文章
+**端点**: `DELETE /api/admin/trash/{doc_hash}`  
+**描述**: 从回收站永久删除文章（不可恢复）  
+**认证**: 需要 Token  
+
+**删除内容**:
+- 回收站中的 Markdown/HTML 文件
+- 回收站中的 PDF 文件
+- TTS 音频缓存
+
+**响应**:
+```json
+{
+  "success": true,
+  "message": "已永久删除 3 个文件",
+  "deleted_files": ["hash_timestamp_article.md", "tts_cache/abc123"],
+  "errors": null
+}
+```
+
+### 13. 清空回收站
+**端点**: `DELETE /api/admin/trash`  
+**描述**: 清空整个回收站  
+**认证**: 需要 Token  
+
+**响应**:
+```json
+{
+  "success": true,
+  "message": "已清空回收站，删除了 5 篇文章的相关文件"
+}
+```
+
 ---
 
 ## TTS 语音合成 API
@@ -417,7 +519,87 @@ Authorization: Bearer {token}
 
 ## 任务管理 API
 
-### 1. SSE 流式任务更新
+### 1. 获取任务队列统计
+**端点**: `GET /api/queue/stats`  
+**描述**: 获取主任务队列的统计信息（YouTube/PDF 解析）  
+**认证**: 无需认证  
+
+**响应**:
+```json
+{
+  "total_processed": 150,
+  "total_success": 142,
+  "total_failed": 5,
+  "total_timeout": 3,
+  "current_processing": 2,
+  "queue_size": 8,
+  "max_workers": 3,
+  "max_queue_size": 100,
+  "is_running": true
+}
+```
+
+**字段说明**:
+- `total_processed`: 总处理任务数
+- `total_success`: 成功任务数
+- `total_failed`: 失败任务数
+- `total_timeout`: 超时任务数
+- `current_processing`: 当前正在处理的任务数
+- `queue_size`: 队列中等待的任务数
+- `max_workers`: 最大并发数
+- `max_queue_size`: 队列最大容量
+- `is_running`: 服务是否运行中
+
+### 2. 获取任务队列详情
+**端点**: `GET /api/queue/tasks`  
+**描述**: 获取正在处理和排队中的任务详细列表  
+**认证**: 无需认证  
+
+**响应**:
+```json
+{
+  "processing": [
+    {
+      "task_id": "uuid-123",
+      "status": "running",
+      "progress": 45,
+      "url": "开始处理 YouTube 视频: https://youtube.com/watch?v=xxx",
+      "doc_hash": null
+    }
+  ],
+  "queued": [
+    {
+      "task_id": "uuid-456",
+      "task_type": "youtube",
+      "url": "https://youtube.com/watch?v=yyy",
+      "priority": "NORMAL",
+      "status": "queued",
+      "created_at": "2024-12-04T20:00:00",
+      "queue_position": 1,
+      "doc_hash": null
+    }
+  ],
+  "total_processing": 1,
+  "total_queued": 1
+}
+```
+
+**字段说明**:
+- `processing`: 正在处理的任务列表
+  - `task_id`: 任务ID
+  - `status`: 任务状态（running）
+  - `progress`: 进度百分比（0-100）
+  - `url`: 任务URL或日志信息
+  - `doc_hash`: 文档哈希（处理中为null，完成后才生成）
+- `queued`: 排队中的任务列表
+  - `task_type`: 任务类型（youtube/pdf/document）
+  - `priority`: 优先级（LOW/NORMAL/HIGH/URGENT）
+  - `queue_position`: 在队列中的位置
+  - `created_at`: 创建时间
+
+**注意**: `doc_hash` 只有在任务完成后才会生成（基于 video_url）
+
+### 3. SSE 流式任务更新
 **端点**: `GET /api/tasks/{task_id}/stream`  
 **描述**: 通过 SSE 实时接收任务进度更新  
 **认证**: 需要 Token（支持查询参数 `?token=xxx`）  
@@ -445,7 +627,7 @@ Authorization: Bearer {token}
 }
 ```
 
-### 2. 获取任务结果（管理员）
+### 4. 获取任务结果（管理员）
 **端点**: `GET /api/admin/tasks/{task_id}/result`  
 **描述**: 获取已完成任务的结果文件  
 **认证**: 需要 Token  

@@ -78,7 +78,9 @@
           :hash="summary.hash"
           :content-type="summary.content_type"
           :is-pdf="summary.is_pdf"
-          @click="handleSummaryClick">
+          :is-authenticated="isAuthenticated"
+          @click="handleSummaryClick"
+          @delete="handleSummaryDelete">
         </summary-card>
       </div>
     </div>
@@ -108,7 +110,9 @@
           :hash="summary.hash"
           :content-type="summary.content_type"
           :is-pdf="summary.is_pdf"
-          @click="handleSummaryClick">
+          :is-authenticated="isAuthenticated"
+          @click="handleSummaryClick"
+          @delete="handleSummaryDelete">
         </summary-card>
       </div>
     </div>

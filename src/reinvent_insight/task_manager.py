@@ -234,6 +234,22 @@ class TaskManager:
     def cleanup_task(self, task_id: str):
         pass
 
+    async def set_task_completed(self, task_id: str, result_path: str = None):
+        """
+        设置任务为完成状态
+        
+        Args:
+            task_id: 任务ID
+            result_path: 结果文件路径（可选）
+        """
+        if task_id in self.tasks:
+            task_state = self.tasks[task_id]
+            task_state.status = "completed"
+            task_state.progress = 100
+            if result_path:
+                task_state.result_path = result_path
+            logger.info(f"任务 {task_id} 已标记为完成")
+
     async def update_progress(self, task_id: str, progress: int, message: Optional[str] = None):
         """
         更新任务进度并发送到队列

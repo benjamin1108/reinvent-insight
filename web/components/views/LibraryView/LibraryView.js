@@ -44,11 +44,18 @@ export default {
     isGuest: {
       type: Boolean,
       default: false
+    },
+    
+    // 是否已认证（用于显示删除按钮）
+    isAuthenticated: {
+      type: Boolean,
+      default: false
     }
   },
   
   emits: [
     'summary-click',
+    'summary-delete',
     'level-change',
     'year-change',
     'sort-change'
@@ -210,6 +217,11 @@ export default {
       emit('summary-click', data);
     };
     
+    // 处理删除事件
+    const handleSummaryDelete = (data) => {
+      emit('summary-delete', data);
+    };
+    
     const handleLevelChange = (level) => {
       selectedLevel.value = level;
       emit('level-change', level);
@@ -270,6 +282,7 @@ export default {
       extractYear,
       formatWordCount,
       handleSummaryClick,
+      handleSummaryDelete,
       handleLevelChange,
       handleYearChange,
       handleSortChange,

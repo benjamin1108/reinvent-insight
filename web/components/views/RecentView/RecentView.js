@@ -32,13 +32,18 @@ export default {
   ],
   
   setup(props, { emit }) {
-    const { computed, ref } = Vue;
+    const { computed, ref, onMounted, onUnmounted, watch } = Vue;
     
     // 排序状态
     const sortOrder = ref('date-desc'); // 'date-desc' | 'date-asc' | 'title-asc' | 'title-desc'
     
-    // 最近文章列表（根据排序方式排序，取前10篇）
-    const recentArticles = computed(() => {
+    // 分页状态
+    const pageSize = 15;
+    const displayCount = ref(pageSize);
+    const loadingMore = ref(false);
+    
+    // 排序后的完整文章列表
+    const sortedArticles = computed(() => {
       let filtered = props.articles
         .filter(article => article && article.hash && (article.title_cn || article.title_en));
       
@@ -74,7 +79,52 @@ export default {
           break;
       }
       
-      return filtered.slice(0, 10);
+      return filtered;
+    });
+    
+    // 当前显示的文章列表（无限滚动）
+    const recentArticles = computed(() => {
+      return sortedArticles.value.slice(0, displayCount.value);
+    });
+    
+    // 是否还有更多
+    const hasMore = computed(() => {
+      return displayCount.value < sortedArticles.value.length;
+    });
+    
+    // 加载更多
+    const loadMore = () => {
+      if (loadingMore.value || !hasMore.value) return;
+      loadingMore.value = true;
+      setTimeout(() => {
+        displayCount.value += pageSize;
+        loadingMore.value = false;
+      }, 100);
+    };
+    
+    // 滚动监听
+    const handleScroll = () => {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const windowHeight = window.innerHeight;
+      const docHeight = document.documentElement.scrollHeight;
+      
+      // 距离底部 200px 时加载更多
+      if (scrollTop + windowHeight >= docHeight - 200) {
+        loadMore();
+      }
+    };
+    
+    // 排序变化时重置显示数量
+    watch(sortOrder, () => {
+      displayCount.value = pageSize;
+    });
+    
+    onMounted(() => {
+      window.addEventListener('scroll', handleScroll);
+    });
+    
+    onUnmounted(() => {
+      window.removeEventListener('scroll', handleScroll);
     });
     
     // 处理文章点击
@@ -111,7 +161,9 @@ export default {
       handleArticleClick,
       handleSortButtonClick,
       sortOrder,
-      getSortText
+      getSortText,
+      hasMore,
+      loadingMore
     };
   }
 };

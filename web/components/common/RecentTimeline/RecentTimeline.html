@@ -51,6 +51,9 @@
         <h3 class="timeline-item__title">
           {{ article.title_cn || article.title_en }}
         </h3>
+        <p v-if="article.title_cn && article.title_en" class="timeline-item__subtitle">
+          {{ article.title_en }}
+        </p>
 
         <!-- 文章元信息 -->
         <div class="timeline-item__meta">

@@ -2,7 +2,7 @@
 
 > 版本: v1.0  
 > 更新时间: 2025-12-04  
-> 基础 URL: `http://your-server:8001`
+> 基础 URL: `http://ri.mindfree.top`
 
 ---
 
@@ -35,9 +35,9 @@ import requests
 import json
 
 # 基础配置
-BASE_URL = "http://localhost:8001"
+BASE_URL = "http://ri.mindfree.top"
 USERNAME = "admin"
-PASSWORD = "your_password"
+PASSWORD = "network"
 
 # 1. 登录获取 Token
 login_response = requests.post(

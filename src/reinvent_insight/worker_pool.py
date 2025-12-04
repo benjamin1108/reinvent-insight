@@ -401,6 +401,62 @@ class WorkerPool:
             'is_running': self.is_running
         }
     
+    def get_task_list(self) -> dict:
+        """获取任务详细列表
+        
+        Returns:
+            包含正在处理和排队中的任务详情
+        """
+        processing_tasks = []
+        queued_tasks = []
+        
+        # 获取正在处理的任务（从 task_manager 中获取状态为 running 的任务）
+        for task_id, task_state in manager.tasks.items():
+            if task_state.status == "running":
+                # 尝试从日志中提取URL信息
+                url = None
+                for log in task_state.logs:
+                    if "URL" in log or "http" in log:
+                        url = log
+                        break
+                
+                processing_tasks.append({
+                    "task_id": task_id,
+                    "status": "running",
+                    "progress": task_state.progress,
+                    "url": url,
+                    "doc_hash": None  # 运行中的任务还没有hash
+                })
+        
+        # 获取队列中的任务（需要访问队列内部，但PriorityQueue不直接支持遍历）
+        # 使用 _queue 属性访问内部列表
+        queue_position = 1
+        try:
+            # 复制队列内容以避免修改原队列
+            queue_items = list(self.queue._queue)
+            # 按优先级排序（已经是按优先级排序的堆）
+            for task in queue_items:
+                queued_tasks.append({
+                    "task_id": task.task_id,
+                    "task_type": task.task_type,
+                    "url": task.url_or_path,
+                    "priority": TaskPriority(-task.priority).name,  # 转回正优先级
+                    "status": "queued",
+                    "created_at": task.created_at,
+                    "queue_position": queue_position,
+                    "doc_hash": None  # 排队中的任务还没有hash
+                })
+                queue_position += 1
+        except Exception as e:
+            logger.warning(f"获取队列任务列表失败: {e}")
+        
+        return {
+            "processing": processing_tasks,
+            "queued": queued_tasks,
+            "total_processing": len(processing_tasks),
+            "total_queued": len(queued_tasks)
+        }
+    
     def is_queue_full(self) -> bool:
         """检查队列是否已满"""
         return self.queue.qsize() >= self.max_queue_size

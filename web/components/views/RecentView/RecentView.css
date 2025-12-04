@@ -147,6 +147,26 @@
   margin-top: 1.5rem;
 }
 
+/* 加载更多样式 */
+.recent-view__loading-more {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 0;
+}
+
+.recent-view__loading-more .recent-view__loading-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* 已到底部样式 */
+.recent-view__end {
+  text-align: center;
+  padding: 2rem 0;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
 /* 空状态样式 */
 .recent-view__empty {
   text-align: center;

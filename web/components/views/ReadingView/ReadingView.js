@@ -663,9 +663,17 @@ export default {
       try {
         if (mode === displayMode.value) return;
         
+        // 切换到 quick 模式时，确保 URL 已设置并强制刷新
+        if (mode === 'quick' && visualAvailable.value) {
+          const newUrl = `/api/article/${props.currentHash}/visual?version=${currentVersion.value}&t=${Date.now()}`;
+          visualHtmlUrl.value = newUrl;
+          console.log('🔄 [DEBUG] 切换到 quick 模式，刷新 URL:', newUrl);
+        }
+        
         displayMode.value = mode;
         
-        // 不再自动全屏，用户可以手动使用浏览器的全屏功能
+        // 使用 nextTick 确保视图更新
+        await nextTick();
         
         emit('display-mode-change', mode);
       } catch (error) {

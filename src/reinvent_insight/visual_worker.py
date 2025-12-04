@@ -124,6 +124,9 @@ class VisualInterpretationWorker:
             await self._update_article_metadata(html_path)
             await self._log("可视化解读生成完成！", progress=100)
             
+            # 8. 标记任务为完成
+            await task_manager.set_task_completed(self.task_id, str(html_path))
+            
             logger.success(f"可视化解读生成成功: {html_path}")
             return str(html_path)
             

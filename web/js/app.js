@@ -265,6 +265,11 @@ const app = createApp({
       if (hashMatch || docMatch) {
         return 'read';
       }
+      
+      // 支持回收站页面
+      if (path === '/trash') {
+        return 'trash';
+      }
 
       // 默认显示最近文章页面（登录和未登录用户都可以访问）
       return 'recent';
@@ -309,6 +314,10 @@ const app = createApp({
     const selectedYear = ref('');
     const showLevelDropdown = ref(false);
     const showYearDropdown = ref(false);
+
+    // 回收站状态
+    const trashItems = ref([]);
+    const trashLoading = ref(false);
 
     // ===== 计算属性 =====
 
@@ -469,6 +478,9 @@ const app = createApp({
       } else if (docMatch) {
         const filename = decodeURIComponent(docMatch[1]);
         loadSummary(filename, false);
+      } else if (path === '/trash') {
+        // 回收站页面
+        currentView.value = 'trash';
       } else {
         currentView.value = 'library';
         if (isAuthenticated.value && summaries.value.length === 0) {
@@ -581,7 +593,16 @@ const app = createApp({
     };
 
     const handleViewChange = (view) => {
+      const prevPath = window.location.pathname;
       currentView.value = view;
+      // 更新 URL，避免停留在特殊页面路径
+      if (prevPath !== '/') {
+        history.pushState(null, '', '/');
+      }
+      // 切换到列表视图时加载数据（从特殊页面切换时强制刷新）
+      if (view === 'library' || view === 'recent') {
+        loadSummaries();
+      }
     };
 
     const handleLoginShow = () => {
@@ -657,7 +678,6 @@ const app = createApp({
         createdFilename.value = '';
         createdDocHash.value = '';
         loading.value = true;
-        progressPercent.value = 0;
 
         try {
           let res;
@@ -685,10 +705,6 @@ const app = createApp({
                 'Content-Type': 'multipart/form-data'
               },
               onUploadProgress: (progressEvent) => {
-                // 计算上传进度（0-20%用于上传）
-                const uploadPercent = Math.round((progressEvent.loaded * 20) / progressEvent.total);
-                progressPercent.value = uploadPercent;
-
                 // 更新上传进度日志
                 const uploadMB = (progressEvent.loaded / 1024 / 1024).toFixed(2);
                 const totalMB = (progressEvent.total / 1024 / 1024).toFixed(2);
@@ -702,7 +718,6 @@ const app = createApp({
 
             // 上传完成
             logs.value.push(`${fileTypeName}上传成功，服务器正在处理...`);
-            progressPercent.value = 20;
           } else {
             // 处理URL分析（保持原有逻辑）
             res = await axios.post('/summarize', { url: analysisData.url });
@@ -781,7 +796,6 @@ const app = createApp({
             }
 
             loading.value = false;
-            progressPercent.value = 100;
             clearActiveTask();
             connectionState.value = 'disconnected';
             eventSource.close();
@@ -792,9 +806,8 @@ const app = createApp({
               displayedLogs.add(data.message);
             }
           } else if (data.type === 'progress') {
-            // 处理进度消息
-            progressPercent.value = data.progress || 0;
-            console.log(`📊 进度更新: ${progressPercent.value}%`);
+            // 处理进度消息（仅记录日志，不显示进度条）
+            console.log(`📊 进度更新: ${data.progress}%`);
           } else if (data.type === 'error') {
             // 处理结构化错误消息
             console.log('📛 收到错误消息:', data);
@@ -895,6 +908,123 @@ const app = createApp({
         showToast('加载笔记库失败', 'danger');
       } finally {
         libraryLoading.value = false;
+      }
+    };
+
+    // 删除文章
+    const deleteSummary = async (data) => {
+      if (!data || !data.hash) {
+        console.error('❌ 无效的删除数据:', data);
+        showToast('删除失败：无效的文章数据', 'danger');
+        return;
+      }
+
+      try {
+        console.log('🗑️ 正在删除文章:', data.hash);
+        const res = await axios.delete(`/api/summaries/${data.hash}`);
+        
+        if (res.data.success) {
+          // 从本地列表中移除
+          summaries.value = summaries.value.filter(s => s.hash !== data.hash);
+          
+          const title = data.titleCn || data.titleEn || '文章';
+          showToast(`已删除「${title.substring(0, 20)}${title.length > 20 ? '...' : ''}」`, 'success');
+          console.log('✅ 文章删除成功:', res.data);
+        } else {
+          throw new Error(res.data.message || '删除失败');
+        }
+      } catch (error) {
+        console.error('❌ 删除文章失败:', error);
+        const errorMsg = error.response?.data?.detail || error.message || '删除失败';
+        showToast(`删除失败：${errorMsg}`, 'danger');
+      }
+    };
+
+    // ===== 回收站管理方法 =====
+    
+    // 加载回收站列表
+    const loadTrashItems = async () => {
+      if (!isAuthenticated.value) {
+        showToast('请先登录', 'warning');
+        return;
+      }
+      
+      trashLoading.value = true;
+      try {
+        const res = await axios.get('/api/admin/trash');
+        trashItems.value = res.data.items || [];
+        console.log('🗑️ 加载回收站:', trashItems.value.length, '条记录');
+      } catch (error) {
+        console.error('✖ 加载回收站失败:', error);
+        showToast('加载回收站失败', 'danger');
+      } finally {
+        trashLoading.value = false;
+      }
+    };
+
+    // 恢复文章
+    const restoreFromTrash = async (docHash, title) => {
+      try {
+        console.log('🔄 正在恢复文章:', docHash);
+        const res = await axios.post(`/api/admin/trash/${docHash}/restore`);
+        
+        if (res.data.success) {
+          // 从回收站列表中移除
+          trashItems.value = trashItems.value.filter(item => item.doc_hash !== docHash);
+          // 刷新主列表
+          fetchSummaries();
+          
+          const displayTitle = title ? (title.length > 20 ? title.substring(0, 20) + '...' : title) : '文章';
+          showToast(`已恢复「${displayTitle}」`, 'success');
+          console.log('✔ 文章恢复成功:', res.data);
+        }
+      } catch (error) {
+        console.error('✖ 恢复文章失败:', error);
+        const errorMsg = error.response?.data?.detail || error.message || '恢复失败';
+        showToast(`恢复失败：${errorMsg}`, 'danger');
+      }
+    };
+
+    // 永久删除文章
+    const permanentlyDelete = async (docHash, title) => {
+      try {
+        console.log('🗑️ 正在永久删除:', docHash);
+        const res = await axios.delete(`/api/admin/trash/${docHash}`);
+        
+        if (res.data.success) {
+          trashItems.value = trashItems.value.filter(item => item.doc_hash !== docHash);
+          
+          const displayTitle = title ? (title.length > 20 ? title.substring(0, 20) + '...' : title) : '文章';
+          showToast(`已永久删除「${displayTitle}」`, 'success');
+          console.log('✔ 永久删除成功:', res.data);
+        }
+      } catch (error) {
+        console.error('✖ 永久删除失败:', error);
+        const errorMsg = error.response?.data?.detail || error.message || '删除失败';
+        showToast(`删除失败：${errorMsg}`, 'danger');
+      }
+    };
+
+    // 清空回收站
+    const emptyTrash = async () => {
+      if (trashItems.value.length === 0) {
+        showToast('回收站已为空', 'info');
+        return;
+      }
+      
+      try {
+        console.log('🗑️ 正在清空回收站...');
+        const res = await axios.delete('/api/admin/trash');
+        
+        if (res.data.success) {
+          trashItems.value = [];
+          showToast('已清空回收站', 'success');
+          console.log('✔ 回收站已清空:', res.data);
+        }
+      } catch (error) {
+        console.error('✖ 清空回收站失败:', error);
+        const errorMsg = error.response?.data?.detail || error.message || '清空失败';
+        showToast(`清空回收站失败：${errorMsg}`, 'danger');
       }
     };
 
@@ -1545,6 +1675,8 @@ const app = createApp({
       progressPercent,
       createdFilename,
       createdDocHash,
+      currentError,
+      showErrorDetails,
       connectionState,
       reconnectAttempts,
       summaries,
@@ -1589,6 +1721,10 @@ const app = createApp({
       showLevelDropdown,
       showYearDropdown,
 
+      // 回收站状态
+      trashItems,
+      trashLoading,
+
       // 计算属性
       showHeroSection,
       finalizedLogs,
@@ -1604,6 +1740,11 @@ const app = createApp({
       handleViewChange,
       handleLoginShow,
       handleSummaryClick,
+      deleteSummary,
+      loadTrashItems,
+      restoreFromTrash,
+      permanentlyDelete,
+      emptyTrash,
       toggleToc,
       handleTocResize,
       startSummarize,
@@ -1711,8 +1852,8 @@ const components = [
     name: 'login-modal',
     path: '/components/common/LoginModal',
     fileName: 'LoginModal',
-    critical: false,
-    priority: 5,
+    critical: true,
+    priority: 1,
     version: '1.0.0'
   },
   {
@@ -1721,6 +1862,14 @@ const components = [
     fileName: 'ConnectionStatus',
     critical: false,
     priority: 8,
+    version: '1.0.0'
+  },
+  {
+    name: 'trash-view',
+    path: '/components/views/TrashView',
+    fileName: 'TrashView',
+    critical: false,
+    priority: 9,
     version: '1.0.0'
   }
 ];
@@ -1768,6 +1917,9 @@ let extraCriticalComponents = [];
 if (currentPath.match(/^\/d\/|^\/documents\//)) {
   // 阅读页
   extraCriticalComponents = ['reading-view', 'video-player'];
+} else if (currentPath === '/trash') {
+  // 回收站页面
+  extraCriticalComponents = ['trash-view'];
 } else {
   // 首页/列表页 (同时加载 library 和 recent 以确保切换流畅)
   extraCriticalComponents = ['library-view', 'hero-section', 'recent-view'];
