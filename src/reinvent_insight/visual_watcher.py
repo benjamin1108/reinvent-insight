@@ -135,8 +135,9 @@ class VisualInterpretationWatcher:
                     await asyncio.sleep(10)  # 增加延迟到 10 秒
                     break  # 每次只触发 1 个任务
         
-        if checked_count > 0:
-            logger.debug(f"检查了 {checked_count} 个文件，触发了 {triggered_count} 个生成任务")
+        # 只在有触发任务时才记录日志
+        if triggered_count > 0:
+            logger.info(f"检查了 {checked_count} 个文件，触发了 {triggered_count} 个生成任务")
     
     def _get_file_key(self, md_file: Path) -> str:
         """
@@ -185,14 +186,9 @@ class VisualInterpretationWatcher:
         normalized_base = base_name.replace(' ', '_').replace('–', '-')
         
         # 检查是否有相关的可视化任务正在运行
-        logger.debug(f"检查任务状态 - 文件: {md_file.name}, 标准化名称: {normalized_base}")
-        logger.debug(f"当前任务列表: {list(task_manager.tasks.keys())}")
-        
         for task_id, task_state in task_manager.tasks.items():
             if not task_id.startswith('visual_'):
                 continue
-            
-            logger.debug(f"检查任务: {task_id}, 状态: {task_state.status}")
             
             if task_state.status not in ['pending', 'running']:
                 continue
@@ -201,8 +197,6 @@ class VisualInterpretationWatcher:
             # 任务 ID 格式: visual_{文件名}_{时间戳}
             task_file_part = task_id[7:]  # 移除 'visual_' 前缀
             task_file_part = '_'.join(task_file_part.split('_')[:-1])  # 移除时间戳
-            
-            logger.debug(f"任务文件名部分: {task_file_part}, 对比: {normalized_base}")
             
             if task_file_part == normalized_base:
                 logger.info(
@@ -226,9 +220,7 @@ class VisualInterpretationWatcher:
                     normalized_base_check = base_name.replace(' ', '_').replace('–', '-')
                     
                     if task_file_part == normalized_base_check:
-                        logger.debug(
-                            f"HTML 文件缺失但有任务正在运行 ({task_id})，跳过 {md_file.name}"
-                        )
+                        # HTML 文件缺失但有任务正在运行，跳过
                         return False
                 
                 # 确实没有任务在运行，可能是生成失败或文件被删除

@@ -100,6 +100,16 @@ DOWNLOAD_TIMEOUT = 60
 # 在并行生成章节时，每个API调用之间的延迟（秒）
 CHAPTER_GENERATION_DELAY_SECONDS = 0.5
 
+# --- 任务队列配置 ---
+# 最大并发分析任务数（同时运行的 worker 数量）
+MAX_CONCURRENT_ANALYSIS_TASKS = int(os.getenv("MAX_CONCURRENT_ANALYSIS_TASKS", "3"))
+
+# 任务队列最大长度（等待中的任务数量限制）
+ANALYSIS_QUEUE_MAX_SIZE = int(os.getenv("ANALYSIS_QUEUE_MAX_SIZE", "100"))
+
+# 任务超时时间（秒）- 单个分析任务的最大执行时间
+ANALYSIS_TASK_TIMEOUT = int(os.getenv("ANALYSIS_TASK_TIMEOUT", "3600"))  # 默认 1 小时
+
 # --- Cookie Manager 配置 ---
 # Cookie 刷新间隔（小时）
 COOKIE_REFRESH_INTERVAL = int(os.getenv("COOKIE_REFRESH_INTERVAL", "6"))

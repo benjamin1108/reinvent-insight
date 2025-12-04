@@ -562,8 +562,10 @@ class DeepSummaryWorkflow:
             # 生成带链接的目录
             toc_md = generate_toc_with_links(chapters)
 
-            # 步骤 2: 并行生成章节内容
-            success = await self._generate_chapters_parallel(chapters, title, outline_content)
+            # 步骤 2: 并发生成章节内容（传入 outline_plan 以使用 rationale）
+            # 注意：如果使用了增强的大纲生成器，需要将 outline_plan 传入
+            # 目前为向后兼容，如果没有 outline_plan，也能正常运行
+            success = await self._generate_chapters_parallel(chapters, title, outline_content, outline_plan=None)
             if not success:
                 raise Exception("部分或全部章节内容生成失败")
             
@@ -599,58 +601,103 @@ class DeepSummaryWorkflow:
             logger.error(f"任务 {self.task_id} - {error_message}", exc_info=True)
             await task_manager.set_task_error(self.task_id, "分析过程中出现错误，请稍后重试")
 
-    async def _generate_chapters_parallel(self, chapters: List[str], title: str, outline_content: str) -> bool:
-        """步骤2：顺序生成所有章节的内容（每个章节都能看到前面已生成的章节，避免冗余）"""
-        await self._log(f"步骤 2/4: 正在深度分析 {len(chapters)} 个核心章节...")
-
-        generated_chapters = []  # 存储已生成的章节内容
-        successful_chapters = 0
+    async def _generate_chapters_parallel(self, chapters: List[str], title: str, outline_content: str, outline_plan: 'OutlinePlan' = None) -> bool:
+        """步骤2：并发生成所有章节的内容（利用 rationale 防止重复）
         
-        # 顺序生成每个章节
+        Args:
+            chapters: 章节标题列表
+            title: 文章总标题
+            outline_content: 大纲内容
+            outline_plan: 结构化的大纲规划（包含 rationale）
+        """
+        await self._log(f"步骤 2/4: 正在并发生成 {len(chapters)} 个核心章节...")
+
+        # 从配置中读取并发延迟，默认 1.0 秒
+        concurrent_delay = getattr(self.client.config, 'concurrent_delay', 1.0)
+        logger.info(f"使用章节并发生成间隔: {concurrent_delay} 秒")
+
+        # 创建所有章节的生成任务
+        tasks = []
         for i, chapter_title in enumerate(chapters):
-            try:
-                # 传入已生成的所有章节
-                chapter_content = await self._generate_single_chapter(
-                    i, 
-                    chapter_title, 
-                    outline_content,
-                    generated_chapters.copy()  # 传入已生成的章节
-                )
-                
-                if chapter_content and isinstance(chapter_content, str):
-                    logger.info(f"任务 {self.task_id} - 章节 '{chapter_title}' 已成功生成。")
-                    generated_chapters.append({
-                        'index': i,
-                        'title': chapter_title,
-                        'content': chapter_content
-                    })
-                    successful_chapters += 1
-                else:
-                    logger.error(f"任务 {self.task_id} - 生成章节 '{chapter_title}' 返回空内容")
-                
-            except Exception as e:
-                logger.error(f"任务 {self.task_id} - 生成章节 '{chapter_title}' 失败: {e}", exc_info=e)
+            # 延迟启动，防止 API 频繁调用
+            delay = i * concurrent_delay  # 从配置读取间隔时间
             
-            # 更新进度
-            progress = 25 + int(50 * ((i + 1) / len(chapters)))
-            await self._log(f"章节分析进度（{i + 1}/{len(chapters)}）", progress=progress)
-            
-            # 章节间添加小延迟，避免API限流
-            if i < len(chapters) - 1:
-                await asyncio.sleep(config.CHAPTER_GENERATION_DELAY_SECONDS)
+            # 从 outline_plan 中获取 rationale
+            rationale = ""
+            if outline_plan and i < len(outline_plan.chapters):
+                chapter_plan = outline_plan.chapters[i]
+                rationale = f"""
+原文内容量: {chapter_plan.depth_recommendation.source_content_amount}
+信息密度: {chapter_plan.depth_recommendation.information_density}
+生成深度: {chapter_plan.depth_recommendation.generation_depth}
 
+内容范围指导：
+{chapter_plan.depth_recommendation.rationale}
+"""
+            
+            task = self._generate_single_chapter_with_delay(
+                i, chapter_title, outline_content, delay, rationale
+            )
+            tasks.append(task)
+        
+        # 并发执行所有任务
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # 统计成功率
+        successful_chapters = 0
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                logger.error(f"任务 {self.task_id} - 生成章节 '{chapters[i]}' 失败: {result}")
+            elif result:
+                successful_chapters += 1
+                logger.info(f"任务 {self.task_id} - 章节 '{chapters[i]}' 已成功生成。")
+        
         await self._log(f"章节分析完成（{successful_chapters}/{len(chapters)}）", progress=75)
-
+        
         return successful_chapters == len(chapters)
+    
+    async def _generate_single_chapter_with_delay(self, index: int, chapter_title: str, outline_content: str, delay: float, rationale: str = "") -> bool:
+        """带延迟的章节生成
+        
+        Args:
+            index: 章节索引
+            chapter_title: 章节标题
+            outline_content: 完整大纲内容
+            delay: 启动延迟（秒）
+            rationale: 该章节的详细生成指导
+        
+        Returns:
+            bool: 是否成功
+        """
+        # 等待延迟时间
+        if delay > 0:
+            await asyncio.sleep(delay)
+        
+        try:
+            # 生成章节内容（不传入 previous_chapters，因为是并发生成）
+            chapter_content = await self._generate_single_chapter(
+                index, chapter_title, outline_content, previous_chapters=None, rationale=rationale
+            )
+            
+            # 更新进度（安全的进度计算）
+            progress = 25 + int(50 * ((index + 1) / (index + 10)))  # 简化计算，避免并发冲突
+            await self._log(f"章节 {index + 1} 生成完成", progress=progress)
+            
+            return bool(chapter_content)
+        
+        except Exception as e:
+            logger.error(f"任务 {self.task_id} - 生成章节 '{chapter_title}' 失败: {e}", exc_info=e)
+            return False
 
-    async def _generate_single_chapter(self, index: int, chapter_title: str, outline_content: str, previous_chapters: List[Dict] = None) -> str:
+    async def _generate_single_chapter(self, index: int, chapter_title: str, outline_content: str, previous_chapters: List[Dict] = None, rationale: str = "") -> str:
         """为单个章节生成内容，包含重试和标题校验修复逻辑
         
         Args:
             index: 章节索引
             chapter_title: 章节标题
             outline_content: 完整大纲内容
-            previous_chapters: 已生成的章节列表，每个元素包含 {'index', 'title', 'content'}
+            previous_chapters: 已生成的章节列表（串行模式使用）
+            rationale: 该章节的详细生成指导（并发模式使用）
         """
         # 根据内容类型设置提示词参数
         if self.content_type == "text":
@@ -672,7 +719,7 @@ class DeepSummaryWorkflow:
             full_content = self.transcript
             multimodal_guide = ""
         
-        # 构建已生成章节的上下文
+        # 构建已生成章节的上下文（只在串行模式下使用）
         if previous_chapters and len(previous_chapters) > 0:
             # 传入上一个章节的完整内容
             last_chapter = previous_chapters[-1]
@@ -686,6 +733,13 @@ class DeepSummaryWorkflow:
             previous_chapters_context = ""
             deduplication_instruction = prompts.DEDUPLICATION_INSTRUCTION_FIRST
         
+        # 如果有 rationale，使用新的章节深度约束模板（并发模式）
+        if rationale:
+            chapter_depth_constraint = rationale
+        else:
+            # 否则使用默认指导（向后兼容）
+            chapter_depth_constraint = ""
+        
         prompt = prompts.CHAPTER_PROMPT_TEMPLATE.format(
             role_and_style=prompts.ROLE_AND_STYLE_GUIDE,
             base_prompt=self.base_prompt + multimodal_guide,
@@ -697,6 +751,7 @@ class DeepSummaryWorkflow:
             current_chapter_title=chapter_title,
             previous_chapters_context=previous_chapters_context,
             deduplication_instruction=deduplication_instruction,
+            chapter_depth_constraint=chapter_depth_constraint,  # 新增：rationale 指导
             quality_control_rules=prompts.QUALITY_CONTROL_RULES
         )
 

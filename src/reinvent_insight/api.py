@@ -157,6 +157,18 @@ async def startup_event():
         logger.info("TTS 预生成服务已启动（按需生成模式，未启动文件监控）")
     except Exception as e:
         logger.error(f"启动 TTS 预生成服务失败: {e}", exc_info=True)
+    
+    # 6. 启动 Worker Pool（任务队列系统）
+    try:
+        from .worker_pool import worker_pool
+        await worker_pool.start()
+        logger.info(
+            f"✅ Worker Pool 已启动: "
+            f"并发数={config.MAX_CONCURRENT_ANALYSIS_TASKS}, "
+            f"队列容量={config.ANALYSIS_QUEUE_MAX_SIZE}"
+        )
+    except Exception as e:
+        logger.error(f"启动 Worker Pool 失败: {e}", exc_info=True)
 
 # --- 简易认证实现 ---
 session_tokens: Set[str] = set()
@@ -411,23 +423,71 @@ def discover_versions(video_url: str) -> List[Dict[str, any]]:
     return versions
 
 @app.post("/summarize", response_model=SummarizeResponse)
-async def summarize_endpoint(req: SummarizeRequest, authorization: str = Header(None)):
+async def summarize_endpoint(
+    req: SummarizeRequest, 
+    priority: int = 0,  # 新增优先级参数（0=LOW, 1=NORMAL, 2=HIGH, 3=URGENT）
+    authorization: str = Header(None)
+):
     """
     接收 URL，创建或重新连接到后台任务。
+    
+    现在使用任务队列系统，支持：
+    - 优先级排序（priority: 0-3）
+    - 并发控制（最大 {config.MAX_CONCURRENT_ANALYSIS_TASKS} 个并发）
+    - 队列管理（最大 {config.ANALYSIS_QUEUE_MAX_SIZE} 个等待任务）
     """
     verify_token(authorization)
     
+    # 如果提供了 task_id，检查是否已存在
     if req.task_id and manager.get_task_state(req.task_id):
         task_id = req.task_id
         logger.info(f"客户端正在尝试重新连接到任务: {task_id}")
-        return SummarizeResponse(task_id=task_id, message="任务恢复中，请连接 WebSocket。", status="reconnected")
+        return SummarizeResponse(
+            task_id=task_id, 
+            message="任务恢复中，请连接 WebSocket。", 
+            status="reconnected"
+        )
 
     task_id = str(uuid.uuid4())
-    # 直接创建并运行新的异步 worker
-    task = asyncio.create_task(summary_task_worker_async(str(req.url), task_id))
-    manager.create_task(task_id, task)
     
-    return SummarizeResponse(task_id=task_id, message="任务已创建，请连接 WebSocket。", status="created")
+    # 先在 manager 中创建占位状态
+    from .task_manager import TaskState
+    state = TaskState(task_id=task_id, status="queued", task=None)
+    manager.tasks[task_id] = state
+    
+    # 映射优先级值
+    from .worker_pool import worker_pool, TaskPriority
+    priority_map = {
+        0: TaskPriority.LOW,
+        1: TaskPriority.NORMAL,
+        2: TaskPriority.HIGH,
+        3: TaskPriority.URGENT
+    }
+    task_priority = priority_map.get(priority, TaskPriority.NORMAL)
+    
+    # 添加到队列
+    success = await worker_pool.add_task(
+        task_id=task_id,
+        task_type="youtube",
+        url_or_path=str(req.url),
+        priority=task_priority
+    )
+    
+    if not success:
+        # 队列已满，返回错误
+        del manager.tasks[task_id]
+        raise HTTPException(
+            status_code=503, 
+            detail=f"任务队列已满（{config.ANALYSIS_QUEUE_MAX_SIZE} 个任务），请稍后重试"
+        )
+    
+    # 返回队列信息
+    queue_size = worker_pool.get_queue_size()
+    return SummarizeResponse(
+        task_id=task_id, 
+        message=f"任务已加入队列（优先级: {task_priority.name}，排队: {queue_size} 个任务），请连接 WebSocket。", 
+        status="created"
+    )
 
 @app.get("/api/env")
 async def get_environment_info():
@@ -1222,6 +1282,16 @@ async def get_config():
         "tts_audio_button_enabled": config.TTS_AUDIO_BUTTON_ENABLED
     }
 
+@app.get("/api/queue/stats")
+async def get_queue_stats():
+    """
+    获取任务队列统计信息（公开访问）
+    
+    返回当前队列状态、并发数、等待任务数等
+    """
+    from .worker_pool import worker_pool
+    return worker_pool.get_stats()
+
 @app.get("/api/admin/cookie-status")
 async def get_cookie_status(authorization: str = Header(None)):
     """
@@ -1413,6 +1483,7 @@ class DocumentAnalysisRequest(BaseModel):
 async def analyze_pdf_endpoint(
     file: UploadFile = File(...),
     title: Optional[str] = None,
+    priority: int = 0,  # 新增优先级参数
     authorization: str = Header(None)
 ):
     """
@@ -1428,31 +1499,61 @@ async def analyze_pdf_endpoint(
             tmp_file.write(await file.read())
             tmp_file_path = tmp_file.name
         
-        # 创建异步任务处理PDF分析
-        from .pdf_worker import pdf_analysis_worker_async
-        
-        # 处理标题：如果没有提供或只是文件名，让AI自动生成
+        # 处理标题
         display_title = title or file.filename or "未命名文档"
         if display_title.lower().endswith('.pdf'):
             display_title = display_title[:-4]
         
-        # 构造请求对象
-        req = PDFAnalysisRequest(title=display_title)
+        # 先在 manager 中创建占位状态
+        from .task_manager import TaskState
+        state = TaskState(task_id=task_id, status="queued", task=None)
+        manager.tasks[task_id] = state
         
-        task = asyncio.create_task(pdf_analysis_worker_async(req, task_id, tmp_file_path))
-        manager.create_task(task_id, task)
+        # 映射优先级
+        from .worker_pool import worker_pool, TaskPriority
+        priority_map = {
+            0: TaskPriority.LOW,
+            1: TaskPriority.NORMAL,
+            2: TaskPriority.HIGH,
+            3: TaskPriority.URGENT
+        }
+        task_priority = priority_map.get(priority, TaskPriority.NORMAL)
         
-        return SummarizeResponse(task_id=task_id, message="PDF分析任务已创建，请连接 WebSocket。", status="created")
+        # 添加到队列
+        success = await worker_pool.add_task(
+            task_id=task_id,
+            task_type="pdf",
+            url_or_path=tmp_file_path,
+            title=display_title,
+            priority=task_priority
+        )
+        
+        if not success:
+            # 清理临时文件
+            os.unlink(tmp_file_path)
+            del manager.tasks[task_id]
+            raise HTTPException(
+                status_code=503, 
+                detail=f"任务队列已满（{config.ANALYSIS_QUEUE_MAX_SIZE} 个任务），请稍后重试"
+            )
+        
+        queue_size = worker_pool.get_queue_size()
+        return SummarizeResponse(
+            task_id=task_id, 
+            message=f"PDF分析任务已加入队列（排队: {queue_size} 个任务），请连接 WebSocket。", 
+            status="created"
+        )
         
     except Exception as e:
-        logger.error(f"处理上传PDF失败: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"处理上传PDF失败: {str(e)}")
+        logger.error(f"处理上PDF失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"处理上PDF失败: {str(e)}")
 
 
 @app.post("/analyze-document")
 async def analyze_document_endpoint(
     file: UploadFile = File(...),
     title: Optional[str] = None,
+    priority: int = 0,  # 新增优先级参数
     authorization: str = Header(None)
 ):
     """
@@ -1492,23 +1593,48 @@ async def analyze_document_endpoint(
             tmp_file.write(content)
             tmp_file_path = tmp_file.name
         
-        # 创建异步任务处理文档分析
-        from .document_worker import document_analysis_worker_async
-        
         # 处理标题
         display_title = title or file.filename or "未命名文档"
-        # 移除文件扩展名
         if display_title.lower().endswith(file_ext):
             display_title = display_title[:-len(file_ext)]
         
-        task = asyncio.create_task(
-            document_analysis_worker_async(task_id, tmp_file_path, display_title)
-        )
-        manager.create_task(task_id, task)
+        # 先在 manager 中创建占位状态
+        from .task_manager import TaskState
+        state = TaskState(task_id=task_id, status="queued", task=None)
+        manager.tasks[task_id] = state
         
+        # 映射优先级
+        from .worker_pool import worker_pool, TaskPriority
+        priority_map = {
+            0: TaskPriority.LOW,
+            1: TaskPriority.NORMAL,
+            2: TaskPriority.HIGH,
+            3: TaskPriority.URGENT
+        }
+        task_priority = priority_map.get(priority, TaskPriority.NORMAL)
+        
+        # 添加到队列
+        success = await worker_pool.add_task(
+            task_id=task_id,
+            task_type="document",
+            url_or_path=tmp_file_path,
+            title=display_title,
+            priority=task_priority
+        )
+        
+        if not success:
+            # 清理临时文件
+            os.unlink(tmp_file_path)
+            del manager.tasks[task_id]
+            raise HTTPException(
+                status_code=503, 
+                detail=f"任务队列已满（{config.ANALYSIS_QUEUE_MAX_SIZE} 个任务），请稍后重试"
+            )
+        
+        queue_size = worker_pool.get_queue_size()
         return SummarizeResponse(
             task_id=task_id, 
-            message=f"文档分析任务已创建（{file_ext[1:].upper()}），请连接 WebSocket。", 
+            message=f"文档分析任务已加入队列（{file_ext[1:].upper()}，排队: {queue_size} 个任务），请连接 WebSocket。", 
             status="created"
         )
         
