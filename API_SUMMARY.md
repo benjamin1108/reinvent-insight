@@ -563,7 +563,8 @@ Authorization: Bearer {token}
       "task_id": "uuid-123",
       "status": "running",
       "progress": 45,
-      "url": "开始处理 YouTube 视频: https://youtube.com/watch?v=xxx",
+      "url": "https://youtube.com/watch?v=abc123xyz_-",
+      "video_id": "abc123xyz_-",
       "doc_hash": null
     }
   ],
@@ -571,7 +572,8 @@ Authorization: Bearer {token}
     {
       "task_id": "uuid-456",
       "task_type": "youtube",
-      "url": "https://youtube.com/watch?v=yyy",
+      "url": "https://youtu.be/def456uvw_-",
+      "video_id": "def456uvw_-",
       "priority": "NORMAL",
       "status": "queued",
       "created_at": "2024-12-04T20:00:00",
@@ -589,15 +591,19 @@ Authorization: Bearer {token}
   - `task_id`: 任务ID
   - `status`: 任务状态（running）
   - `progress`: 进度百分比（0-100）
-  - `url`: 任务URL或日志信息
-  - `doc_hash`: 文档哈希（处理中为null，完成后才生成）
+  - `url`: 任务原始 URL
+  - `video_id`: YouTube 视频 ID（11位唯一标识，用于准确比对，非 YouTube 任务为 null）
+  - `doc_hash`: 文档哈希（处理中为 null，完成后才生成）
 - `queued`: 排队中的任务列表
   - `task_type`: 任务类型（youtube/pdf/document）
+  - `video_id`: YouTube 视频 ID（用于准确比对）
   - `priority`: 优先级（LOW/NORMAL/HIGH/URGENT）
   - `queue_position`: 在队列中的位置
   - `created_at`: 创建时间
 
-**注意**: `doc_hash` 只有在任务完成后才会生成（基于 video_url）
+**注意**: 
+- `video_id` 从 URL 中提取，可用于准确匹配任务，避免 URL 格式差异导致对比失败
+- `doc_hash` 只有在任务完成后才会生成
 
 ### 3. SSE 流式任务更新
 **端点**: `GET /api/tasks/{task_id}/stream`  

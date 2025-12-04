@@ -88,6 +88,9 @@ class WorkerPool:
         # 优先级队列
         self.queue: asyncio.PriorityQueue = asyncio.PriorityQueue(maxsize=self.max_queue_size)
         
+        # 正在处理的任务映射 {task_id: WorkerTask}
+        self.processing_tasks: dict = {}
+        
         # Worker 运行状态
         self.is_running = False
         self.workers = []
@@ -100,6 +103,9 @@ class WorkerPool:
             'total_timeout': 0,
             'current_processing': 0
         }
+        
+        # 正在处理的任务信息（用于查询）
+        self.processing_tasks: dict = {}  # task_id -> WorkerTask
         
         logger.info(
             f"Worker Pool 初始化: "
@@ -305,6 +311,9 @@ class WorkerPool:
                 self.stats['current_processing'] += 1
                 self.stats['total_processed'] += 1
                 
+                # 将任务加入正在处理的映射
+                self.processing_tasks[task.task_id] = task
+                
                 logger.info(
                     f"Worker {worker_id} 获取任务: {task.task_id}, "
                     f"优先级: {-task.priority}, "
@@ -315,6 +324,9 @@ class WorkerPool:
                 success = await self._execute_task(task)
                 
                 self.stats['current_processing'] -= 1
+                
+                # 从正在处理的映射中移除
+                self.processing_tasks.pop(task.task_id, None)
                 
                 # 标记任务完成
                 self.queue.task_done()
@@ -334,6 +346,7 @@ class WorkerPool:
                 # 如果任务获取成功但执行失败，也要标记完成
                 if task:
                     self.stats['current_processing'] -= 1
+                    self.processing_tasks.pop(task.task_id, None)
                     self.queue.task_done()
                 
                 # 短暂休息后继续
@@ -407,24 +420,45 @@ class WorkerPool:
         Returns:
             包含正在处理和排队中的任务详情
         """
+        from .downloader import normalize_youtube_url
+        
+        def extract_video_id(url: str) -> str:
+            """从 URL 中提取 video_id"""
+            if not url:
+                return None
+            try:
+                _, metadata = normalize_youtube_url(url)
+                return metadata.get('video_id')
+            except:
+                return None
+        
         processing_tasks = []
         queued_tasks = []
         
-        # 获取正在处理的任务（从 task_manager 中获取状态为 running 的任务）
+        # 获取正在处理的任务（优先从 processing_tasks 获取 URL）
         for task_id, task_state in manager.tasks.items():
             if task_state.status == "running":
-                # 尝试从日志中提取URL信息
+                # 优先从 processing_tasks 获取原始 URL
                 url = None
-                for log in task_state.logs:
-                    if "URL" in log or "http" in log:
-                        url = log
-                        break
+                video_id = None
+                worker_task = self.processing_tasks.get(task_id)
+                if worker_task:
+                    url = worker_task.url_or_path
+                    if worker_task.task_type == "youtube":
+                        video_id = extract_video_id(url)
+                else:
+                    # 回退到从日志中提取
+                    for log in task_state.logs:
+                        if "URL" in log or "http" in log:
+                            url = log
+                            break
                 
                 processing_tasks.append({
                     "task_id": task_id,
                     "status": "running",
                     "progress": task_state.progress,
                     "url": url,
+                    "video_id": video_id,
                     "doc_hash": None  # 运行中的任务还没有hash
                 })
         
@@ -436,10 +470,15 @@ class WorkerPool:
             queue_items = list(self.queue._queue)
             # 按优先级排序（已经是按优先级排序的堆）
             for task in queue_items:
+                video_id = None
+                if task.task_type == "youtube":
+                    video_id = extract_video_id(task.url_or_path)
+                
                 queued_tasks.append({
                     "task_id": task.task_id,
                     "task_type": task.task_type,
                     "url": task.url_or_path,
+                    "video_id": video_id,
                     "priority": TaskPriority(-task.priority).name,  # 转回正优先级
                     "status": "queued",
                     "created_at": task.created_at,
