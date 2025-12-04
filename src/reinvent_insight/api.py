@@ -625,6 +625,77 @@ async def list_public_summaries():
         logger.error(f"获取公共摘要列表失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="获取公共摘要列表失败")
 
+
+@app.get("/api/public/summary/{video_id}")
+async def check_summary_by_video_id(video_id: str):
+    """
+    根据 YouTube video_id 查询是否存在已解析的深度解读。
+    
+    Args:
+        video_id: YouTube 视频 ID（11位字符）
+        
+    Returns:
+        {
+            "exists": true/false,
+            "hash": "doc_hash" | null,
+            "title": "视频标题" | null
+        }
+    """
+    import re
+    
+    # 验证 video_id 格式（11位字母数字、下划线、连字符）
+    if not video_id or not re.match(r'^[a-zA-Z0-9_-]{11}$', video_id):
+        return {
+            "exists": False,
+            "hash": None,
+            "title": None,
+            "error": "无效的 video_id 格式"
+        }
+    
+    # 根据 video_id 构建标准化 URL
+    video_url = f"https://www.youtube.com/watch?v={video_id}"
+    
+    # 生成 doc_hash
+    doc_hash = generate_doc_hash(video_url)
+    
+    if not doc_hash:
+        return {
+            "exists": False,
+            "hash": None,
+            "title": None
+        }
+    
+    # 检查文档是否存在
+    filename = hash_to_filename.get(doc_hash)
+    if not filename:
+        return {
+            "exists": False,
+            "hash": None,
+            "title": None
+        }
+    
+    # 获取标题
+    try:
+        file_path = config.OUTPUT_DIR / filename
+        if file_path.exists():
+            content = file_path.read_text(encoding="utf-8")
+            metadata = parse_metadata_from_md(content)
+            title = metadata.get("title_cn") or metadata.get("title_en") or metadata.get("title", "")
+            
+            return {
+                "exists": True,
+                "hash": doc_hash,
+                "title": title
+            }
+    except Exception as e:
+        logger.warning(f"读取文档 {filename} 失败: {e}")
+    
+    return {
+        "exists": False,
+        "hash": None,
+        "title": None
+    }
+
 @app.get("/api/public/summaries/{filename}")
 async def get_public_summary(filename: str):
     """获取指定摘要文件的公开内容，无需认证。"""

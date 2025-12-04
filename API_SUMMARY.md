@@ -133,7 +133,39 @@ Authorization: Bearer {token}
 }
 ```
 
-### 2. 获取文档内容（按文件名）
+### 2. 检查视频是否已解析
+**端点**: `GET /api/public/summary/{video_id}`  
+**描述**: 根据 YouTube video_id 查询是否存在已解析的深度解读  
+**认证**: 无需认证  
+
+**参数**:
+- `video_id`: YouTube 视频 ID（11位字符，如 `abc123xyz_-`）
+
+**响应**:
+```json
+{
+  "exists": true,
+  "hash": "abc123def456",
+  "title": "视频标题"
+}
+```
+
+**字段说明**:
+- `exists`: 是否存在已解析的内容
+- `hash`: 文档哈希（不存在时为 null）
+- `title`: 文档标题（不存在时为 null）
+
+**错误响应**:
+```json
+{
+  "exists": false,
+  "hash": null,
+  "title": null,
+  "error": "无效的 video_id 格式"
+}
+```
+
+### 3. 获取文档内容（按文件名）
 **端点**: `GET /api/public/summaries/{filename}`  
 **描述**: 获取指定文档的完整内容  
 **认证**: 无需认证  
@@ -159,14 +191,14 @@ Authorization: Bearer {token}
 }
 ```
 
-### 3. 获取文档内容（按 Hash）
+### 4. 获取文档内容（按 Hash）
 **端点**: `GET /api/public/doc/{doc_hash}`  
 **描述**: 通过文档 Hash 获取最新版本内容  
 **认证**: 无需认证  
 
 **响应**: 同按文件名获取
 
-### 4. 获取文档特定版本
+### 5. 获取文档特定版本
 **端点**: `GET /api/public/doc/{doc_hash}/{version}`  
 **描述**: 获取文档的指定版本  
 **认证**: 无需认证  
@@ -177,21 +209,21 @@ Authorization: Bearer {token}
 
 **响应**: 同按文件名获取
 
-### 5. 下载 Markdown 文件
+### 6. 下载 Markdown 文件
 **端点**: `GET /api/public/summaries/{filename}/markdown`  
 **描述**: 下载去除元数据的 Markdown 文件  
 **认证**: 无需认证  
 
 **响应**: `text/markdown` 文件下载
 
-### 6. 下载 PDF 文件
+### 7. 下载 PDF 文件
 **端点**: `GET /api/public/summaries/{filename}/pdf`  
 **描述**: 生成并下载 PDF 格式文档  
 **认证**: 无需认证  
 
 **响应**: `application/pdf` 文件下载
 
-### 7. 获取可视化解读
+### 8. 获取可视化解读
 **端点**: `GET /api/article/{doc_hash}/visual`  
 **描述**: 获取文章的可视化 HTML 解读  
 **认证**: 无需认证  
@@ -201,7 +233,7 @@ Authorization: Bearer {token}
 
 **响应**: HTML 内容
 
-### 8. 获取可视化解读状态
+### 9. 获取可视化解读状态
 **端点**: `GET /api/article/{doc_hash}/visual/status`  
 **描述**: 查询可视化解读的生成状态  
 **认证**: 无需认证  
@@ -216,7 +248,7 @@ Authorization: Bearer {token}
 }
 ```
 
-### 9. 软删除文章（管理员）
+### 10. 软删除文章（管理员）
 **端点**: `DELETE /api/summaries/{doc_hash}`  
 **描述**: 软删除文章，移动到回收站（可恢复）  
 **认证**: 需要 Token  
@@ -244,7 +276,7 @@ Authorization: Bearer {token}
 - `404 Not Found`: 文档未找到
 - `500 Internal Server Error`: 移动失败
 
-### 10. 获取回收站列表
+### 11. 获取回收站列表
 **端点**: `GET /api/admin/trash`  
 **描述**: 获取回收站中的文章列表  
 **认证**: 需要 Token  
@@ -266,7 +298,7 @@ Authorization: Bearer {token}
 }
 ```
 
-### 11. 恢复文章
+### 12. 恢复文章
 **端点**: `POST /api/admin/trash/{doc_hash}/restore`  
 **描述**: 从回收站恢复文章  
 **认证**: 需要 Token  
@@ -285,7 +317,7 @@ Authorization: Bearer {token}
 - `401 Unauthorized`: 未登录或 Token 无效
 - `404 Not Found`: 回收站中未找到该文档
 
-### 12. 永久删除文章
+### 13. 永久删除文章
 **端点**: `DELETE /api/admin/trash/{doc_hash}`  
 **描述**: 从回收站永久删除文章（不可恢复）  
 **认证**: 需要 Token  
@@ -305,7 +337,7 @@ Authorization: Bearer {token}
 }
 ```
 
-### 13. 清空回收站
+### 14. 清空回收站
 **端点**: `DELETE /api/admin/trash`  
 **描述**: 清空整个回收站  
 **认证**: 需要 Token  
