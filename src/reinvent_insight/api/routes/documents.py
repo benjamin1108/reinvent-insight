@@ -164,11 +164,11 @@ async def check_summary_by_video_id(video_id: str):
             metadata = parse_metadata_from_md(content)
             title = metadata.get("title_cn") or metadata.get("title_en") or metadata.get("title", "")
             
-            return {"exists": True, "hash": doc_hash, "title": title}
+            return {"exists": True, "hash": doc_hash, "title": title, "filename": filename}
     except Exception as e:
         logger.warning(f"读取文档 {filename} 失败: {e}")
     
-    return {"exists": False, "hash": None, "title": None}
+    return {"exists": False, "hash": None, "title": None, "filename": None}
 
 
 @router.get("/public/summaries/{filename}")
@@ -227,9 +227,9 @@ async def get_public_summary(filename: str):
 
 @router.get("/public/doc/{doc_hash}")
 async def get_public_summary_by_hash(doc_hash: str):
-    """通过统一hash获取指定摘要文件的公开内容。"""
+    """通过统一hash获取文档信息。"""
     filename = hash_to_filename.get(doc_hash)
     if not filename:
         raise HTTPException(status_code=404, detail="文档未找到")
     
-    return await get_public_summary(filename)
+    return {"filename": filename}
