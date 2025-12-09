@@ -7,7 +7,7 @@
 import asyncio
 import logging
 from pathlib import Path
-from reinvent_insight.html_to_markdown import HTMLToMarkdownConverter
+from reinvent_insight.infrastructure.html import HTMLToMarkdownConverter
 
 # 配置日志
 logging.basicConfig(

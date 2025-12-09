@@ -29,7 +29,7 @@ SIMPLE_HTML = """
 
 def test_imports():
     """测试模块导入"""
-    from reinvent_insight.html_to_markdown import (
+    from reinvent_insight.infrastructure.html import (
         HTMLToMarkdownConverter,
         ExtractedContent,
         ImageInfo,
@@ -44,7 +44,7 @@ def test_imports():
 
 def test_preprocessor():
     """测试HTML预处理器"""
-    from reinvent_insight.html_to_markdown.preprocessor import HTMLPreprocessor
+    from reinvent_insight.infrastructure.html.preprocessor import HTMLPreprocessor
     
     preprocessor = HTMLPreprocessor()
     cleaned = preprocessor.preprocess(SIMPLE_HTML)
@@ -62,7 +62,7 @@ def test_preprocessor():
 
 def test_url_processor():
     """测试URL处理器"""
-    from reinvent_insight.html_to_markdown.url_processor import URLProcessor
+    from reinvent_insight.infrastructure.html.url_processor import URLProcessor
     
     processor = URLProcessor(base_url="https://example.com")
     
@@ -82,7 +82,7 @@ def test_url_processor():
 
 def test_image_info_to_markdown():
     """测试ImageInfo转Markdown"""
-    from reinvent_insight.html_to_markdown.models import ImageInfo
+    from reinvent_insight.infrastructure.html.models import ImageInfo
     
     image = ImageInfo(
         url="https://example.com/image.jpg",
@@ -97,7 +97,7 @@ def test_image_info_to_markdown():
 
 def test_extracted_content_to_dict():
     """测试ExtractedContent序列化"""
-    from reinvent_insight.html_to_markdown.models import ExtractedContent, ImageInfo
+    from reinvent_insight.infrastructure.html.models import ExtractedContent, ImageInfo
     
     content = ExtractedContent(
         title="测试标题",

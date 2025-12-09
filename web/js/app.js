@@ -897,35 +897,15 @@ const app = createApp({
     const loadSummaries = async () => {
       libraryLoading.value = true;
       try {
-        // 根据认证状态使用不同的API端点
-        const endpoint = isAuthenticated.value ? '/summaries' : '/api/public/summaries';
+        // 统一使用公开API端点
+        const endpoint = '/api/public/summaries';
         console.log(`📚 正在加载笔记库，认证状态: ${isAuthenticated.value}, 端点: ${endpoint}`);
 
-        let res;
-        try {
-          res = await axios.get(endpoint);
-        } catch (error) {
-          // 如果认证端点返回401，自动切换到公开端点
-          if (error.response?.status === 401 && isAuthenticated.value) {
-            console.log('🔄 认证失效，切换到公开端点');
-            isAuthenticated.value = false;
-            res = await axios.get('/api/public/summaries');
-          } else {
-            throw error;
-          }
-        }
-
+        const res = await axios.get(endpoint);
         console.log('📚 API响应:', res.data);
 
-        // 统一处理API响应格式
-        let dataArray;
-        if (isAuthenticated.value) {
-          // 已认证用户：直接使用res.data，如果是数组则直接用，否则尝试res.data.summaries
-          dataArray = Array.isArray(res.data) ? res.data : (res.data.summaries || []);
-        } else {
-          // 访客用户：使用res.data.summaries
-          dataArray = res.data.summaries || [];
-        }
+        // 统一使用res.data.summaries格式
+        const dataArray = res.data.summaries || [];
 
         summaries.value = dataArray;
         console.log(`📚 设置summaries数组，长度: ${summaries.value.length}`);
@@ -1059,7 +1039,7 @@ const app = createApp({
       readingError.value = '';
 
       try {
-        const res = await axios.get(`/summary/${encodeURIComponent(filename)}`);
+        const res = await axios.get(`/api/public/summaries/${encodeURIComponent(filename)}`);
         const data = res.data;
 
         viewSummary(
@@ -1621,8 +1601,33 @@ const app = createApp({
       const taskUrl = localStorage.getItem('active_task_url');
 
       if (taskId && taskUrl) {
-        url.value = taskUrl;
-        connectSSE(taskId);
+        console.log('🔄 尝试恢复任务:', taskId);
+        
+        try {
+          // 先检查任务是否存在
+          const token = localStorage.getItem('authToken');
+          const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+          
+          const response = await axios.get(`/api/tasks/${taskId}/status`, { headers });
+          
+          if (response.data && response.data.status) {
+            console.log('✅ 任务存在，状态:', response.data.status);
+            
+            // 只有进行中的任务才恢复SSE连接
+            if (['queued', 'processing', 'running'].includes(response.data.status)) {
+              url.value = taskUrl;
+              loading.value = true;
+              connectSSE(taskId);
+            } else {
+              console.log('ℹ️ 任务已完成或失败，清理本地状态');
+              clearActiveTask();
+            }
+          }
+        } catch (error) {
+          console.warn('⚠️ 任务不存在或已过期，清理本地状态:', error.response?.status);
+          // 404或其他错误表示任务不存在，清理localStorage
+          clearActiveTask();
+        }
       }
     };
 

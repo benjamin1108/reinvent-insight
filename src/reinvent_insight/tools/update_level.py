@@ -11,7 +11,7 @@ from pathlib import Path
 import yaml
 import logging
 from pydantic import BaseModel
-from reinvent_insight.downloader import VideoMetadata
+from reinvent_insight.infrastructure.media.youtube_downloader import VideoMetadata
 
 # 添加src目录到Python路径
 script_dir = Path(__file__).parent

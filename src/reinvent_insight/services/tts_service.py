@@ -10,7 +10,7 @@ import logging
 from typing import AsyncGenerator, Optional
 from pathlib import Path
 
-from ..model_config import BaseModelClient, ModelConfig
+from reinvent_insight.infrastructure.ai.model_config import BaseModelClient, ModelConfig
 
 logger = logging.getLogger(__name__)
 

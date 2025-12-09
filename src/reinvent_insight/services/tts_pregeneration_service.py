@@ -14,7 +14,7 @@ from dataclasses import dataclass, asdict
 from datetime import datetime
 from enum import Enum
 
-from ..config import (
+from reinvent_insight.core.config import (
     TTS_TEXT_DIR,
     TTS_QUEUE_MAX_SIZE,
     TTS_WORKER_DELAY,
@@ -26,7 +26,7 @@ from ..config import (
 from .tts_text_preprocessor import TTSTextPreprocessor
 from .tts_service import TTSService
 from .audio_cache import AudioCache
-from ..audio.audio_utils import assemble_wav, decode_base64_pcm, calculate_audio_duration
+from reinvent_insight.infrastructure.audio.audio_utils import assemble_wav, decode_base64_pcm, calculate_audio_duration
 
 logger = logging.getLogger(__name__)
 
@@ -487,3 +487,44 @@ class TTSPregenerationService:
             "skipped": status_counts[TaskStatus.SKIPPED.value],
             "is_running": self.is_running
         }
+
+
+# ==================== 全局单例 ====================
+
+_service_instance: Optional[TTSPregenerationService] = None
+
+
+def get_tts_pregeneration_service() -> TTSPregenerationService:
+    """获取TTS预生成服务单例
+    
+    Returns:
+        TTSPregenerationService实例
+    """
+    global _service_instance
+    
+    if _service_instance is None:
+        from reinvent_insight.services.tts_service import TTSService
+        from reinvent_insight.services.audio_cache import AudioCache
+        from reinvent_insight.services.tts_text_preprocessor import TTSTextPreprocessor
+        from reinvent_insight.infrastructure.ai.model_config import get_model_client
+        from pathlib import Path
+        
+        # 初始化依赖
+        model_client = get_model_client("text_to_speech")
+        tts_service = TTSService(model_client)
+        
+        # 创建 audio cache 目录
+        audio_cache_dir = Path(TTS_TEXT_DIR) / "audio_cache"
+        audio_cache = AudioCache(cache_dir=audio_cache_dir)
+        
+        text_preprocessor = TTSTextPreprocessor()
+        
+        _service_instance = TTSPregenerationService(
+            tts_service=tts_service,
+            audio_cache=audio_cache,
+            text_preprocessor=text_preprocessor
+        )
+        
+        logger.info("TTS预生成服务单例已创建")
+    
+    return _service_instance
