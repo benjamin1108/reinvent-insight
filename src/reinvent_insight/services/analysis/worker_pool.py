@@ -237,7 +237,7 @@ class WorkerPool:
                 worker_func = pdf_analysis_worker_async(req, task_id, task.url_or_path)
                 
             elif task.task_type == "document":
-                from .document_worker import document_analysis_worker_async
+                from reinvent_insight.services.document.document_worker import document_analysis_worker_async
                 worker_func = document_analysis_worker_async(
                     task_id, task.url_or_path, task.title or "未命名文档"
                 )

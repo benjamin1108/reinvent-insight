@@ -12,7 +12,7 @@ from loguru import logger
 
 from reinvent_insight.core import config
 from reinvent_insight.domain.models import DocumentContent
-from .utils import generate_pdf_identifier
+from reinvent_insight.core.utils.file_utils import generate_pdf_identifier
 
 logger = logger.bind(name=__name__)
 

@@ -12,7 +12,7 @@ from reinvent_insight.domain.workflows import run_deep_summary_workflow
 from reinvent_insight.services.analysis.task_manager import manager
 from .document_processor import DocumentProcessor
 from reinvent_insight.infrastructure.media.youtube_downloader import VideoMetadata
-from .utils import generate_document_identifier
+from reinvent_insight.core.utils.file_utils import generate_document_identifier
 
 logger = logging.getLogger(__name__)
 
