@@ -590,62 +590,144 @@ Response:
 ## 🔧 开发指南
 
 ### 项目结构
+
+项目采用 **分层架构** 设计，遵循关注点分离原则：
+
 ```
 reinvent-insight/
-├── src/reinvent_insight/      # 核心后端代码 (Python)
-│   ├── api.py                  # FastAPI 服务与接口
-│   ├── config.py               # 应用配置管理
-│   ├── downloader.py           # 字幕下载
-│   ├── __init__.py             # 包初始化
-│   ├── logger.py               # 日志系统
-│   ├── main.py                 # CLI 入口与主程序
-│   ├── markdown_processor.py   # Markdown处理
-│   ├── pdf_generator.py        # PDF生成
-│   ├── prompts.py              # 提示词模板
-│   ├── summarizer.py           # AI摘要器
-│   ├── task_manager.py         # 任务管理
-│   ├── worker.py               # 异步工作器
-│   └── workflow.py             # 核心AI工作流引擎
-│   └── tools/                  # 辅助工具脚本
-│       ├── __init__.py         # 包初始化
-│       ├── generate_pdfs.py    # PDF生成脚本
-│       ├── update_level.py     # 级别更新脚本
-│       └── update_metadata.py  # 元数据更新脚本
-├── web/                        # 核心前端代码 (Vanilla JS + Vue 3)
-│   ├── index.html              # 应用主入口HTML
-│   ├── components/             # 可复用的UI组件
-│   │   ├── common/             # 页面级通用组件 (AppHeader, Toast)
-│   │   ├── shared/             # 跨项目通用组件 (TechButton, ProgressBar)
-│   │   └── views/              # 应用视图级组件 (CreateView, LibraryView)
-│   ├── css/                    # 全局样式
-│   ├── js/                     # JavaScript 核心逻辑
-│   │   ├── core/               # 核心模块 (ComponentLoader, EventBus)
-│   │   └── vendor/             # 第三方库 (Vue, Axios)
-│   └── test/                   # 组件独立测试页面
-├── prompt/                     # AI 提示词模板
-├── downloads/                  # 数据存储 (字幕, 摘要, 任务缓存)
-├── pyproject.toml              # 项目配置与依赖 (uv)
-└── .env                        # 环境变量
+├── src/reinvent_insight/           # 核心后端代码 (Python)
+│   ├── main.py                     # CLI 入口与主程序
+│   │
+│   ├── api/                        # API 层 - HTTP 接口与路由
+│   │   ├── app.py                  # FastAPI 应用入口
+│   │   ├── dependencies.py         # 依赖注入
+│   │   ├── routes/                 # 路由模块
+│   │   │   ├── analysis.py         # 视频分析接口
+│   │   │   ├── documents.py        # 文档处理接口
+│   │   │   ├── downloads.py        # 下载与PDF导出
+│   │   │   ├── tasks.py            # 任务状态SSE推送
+│   │   │   ├── tts_*.py            # TTS语音合成接口
+│   │   │   ├── ultra_deep.py       # 深度分析接口
+│   │   │   └── visual.py           # 可视化生成接口
+│   │   └── schemas/                # 请求/响应模型
+│   │
+│   ├── core/                       # 核心层 - 配置与基础设施
+│   │   ├── config.py               # 应用配置管理
+│   │   ├── logger.py               # 日志系统
+│   │   ├── error_recovery.py       # 错误恢复机制
+│   │   └── utils/                  # 通用工具函数
+│   │
+│   ├── domain/                     # 领域层 - 业务逻辑核心
+│   │   ├── models/                 # 领域模型
+│   │   │   ├── document.py         # 文档模型
+│   │   │   └── outline.py          # 大纲模型
+│   │   ├── prompts/                # AI提示词模板
+│   │   │   ├── common.py           # 通用提示词
+│   │   │   ├── outline.py          # 大纲生成提示词
+│   │   │   ├── chapter.py          # 章节生成提示词
+│   │   │   ├── conclusion.py       # 结论生成提示词
+│   │   │   └── ultra.py            # 深度分析提示词
+│   │   └── workflows/              # 业务工作流
+│   │       └── youtube_workflow.py # YouTube分析工作流
+│   │
+│   ├── infrastructure/             # 基础设施层 - 外部服务集成
+│   │   ├── ai/                     # AI 模型客户端
+│   │   │   ├── base_client.py      # 抽象基类
+│   │   │   ├── gemini_client.py    # Google Gemini 客户端
+│   │   │   ├── dashscope_client.py # 阿里云 DashScope 客户端
+│   │   │   ├── client_factory.py   # 客户端工厂
+│   │   │   └── config_manager.py   # 模型配置管理
+│   │   ├── media/                  # 媒体处理
+│   │   │   ├── youtube_downloader.py # YouTube字幕下载
+│   │   │   ├── pdf_processor.py    # PDF文档处理
+│   │   │   └── pdf_generator.py    # PDF生成
+│   │   ├── html/                   # HTML转Markdown
+│   │   ├── audio/                  # 音频处理
+│   │   └── file_system/            # 文件系统监控
+│   │
+│   ├── services/                   # 服务层 - 业务服务
+│   │   ├── analysis/               # 分析服务
+│   │   │   ├── task_manager.py     # 任务管理器
+│   │   │   ├── worker.py           # 异步工作器
+│   │   │   ├── worker_pool.py      # 工作线程池
+│   │   │   ├── summarizer.py       # AI摘要器
+│   │   │   ├── visual_worker.py    # 可视化生成器
+│   │   │   └── visual_watcher.py   # 可视化监控
+│   │   ├── document/               # 文档服务
+│   │   │   ├── document_processor.py   # 文档处理
+│   │   │   ├── document_service.py     # 文档业务逻辑
+│   │   │   ├── metadata_service.py     # 元数据管理
+│   │   │   └── hash_registry.py        # 哈希注册表
+│   │   ├── cookie/                 # Cookie管理服务
+│   │   │   ├── manager_cli.py      # CLI管理工具
+│   │   │   ├── manager_service.py  # 管理服务
+│   │   │   └── health_checker.py   # 健康检查
+│   │   ├── tts_service.py          # TTS语音服务
+│   │   └── startup_service.py      # 启动服务
+│   │
+│   └── tools/                      # 辅助工具脚本
+│       ├── generate_pdfs.py        # PDF批量生成
+│       ├── update_level.py         # 级别更新
+│       └── update_metadata.py      # 元数据更新
+│
+├── web/                            # 前端代码 (免构建 Vue 3)
+│   ├── index.html                  # 应用主入口
+│   ├── components/                 # UI组件
+│   │   ├── common/                 # 通用组件 (AppHeader, Toast)
+│   │   ├── shared/                 # 共享组件 (TechButton, ProgressBar)
+│   │   └── views/                  # 视图组件 (CreateView, LibraryView)
+│   ├── css/                        # 全局样式
+│   └── js/                         # JavaScript 核心
+│       ├── core/                   # 核心模块 (ComponentLoader, EventBus)
+│       └── vendor/                 # 第三方库 (Vue, Axios)
+│
+├── downloads/                      # 数据存储
+│   ├── subtitles/                  # 字幕文件
+│   ├── summaries/                  # 分析报告
+│   └── tasks/                      # 任务缓存
+│
+├── pyproject.toml                  # 项目配置与依赖
+└── .env                            # 环境变量
 ```
+
+### 架构分层说明
+
+| 层次 | 目录 | 职责 |
+|------|------|------|
+| **API层** | `api/` | HTTP路由、请求验证、响应序列化 |
+| **核心层** | `core/` | 配置管理、日志、通用工具 |
+| **领域层** | `domain/` | 业务模型、提示词、工作流定义 |
+| **基础设施层** | `infrastructure/` | AI客户端、媒体处理、外部服务 |
+| **服务层** | `services/` | 业务逻辑、任务调度、文档处理 |
 
 ### 添加新的 AI 模型
 
-1. 在 `summarizer.py` 中创建新的摘要器类：
+1. 在 `infrastructure/ai/` 目录创建新的客户端类：
 ```python
-class NewModelSummarizer(Summarizer):
-    async def generate_content(self, prompt: str, is_json: bool = False) -> str | None:
+# infrastructure/ai/newmodel_client.py
+from .base_client import BaseAIClient
+
+class NewModelClient(BaseAIClient):
+    async def generate_content(self, prompt: str, **kwargs) -> str | None:
         # 实现你的模型调用逻辑
+        pass
+    
+    async def generate_content_with_file(self, prompt: str, file_path: str, **kwargs) -> str | None:
+        # 实现多模态调用（如果支持）
         pass
 ```
 
-2. 在 `MODEL_MAP` 中注册：
+2. 在 `infrastructure/ai/client_factory.py` 中注册：
 ```python
-MODEL_MAP = {
-    "NewModel": (NewModelSummarizer, config.NEWMODEL_API_KEY),
+from .newmodel_client import NewModelClient
+
+CLIENT_MAP = {
+    "NewModel": NewModelClient,
+    # ... 其他模型
 }
 ```
 
-3. 在 `config.py` 中添加配置：
+3. 在 `core/config.py` 中添加配置：
 ```python
 NEWMODEL_API_KEY = os.getenv("NEWMODEL_API_KEY")
 ```
