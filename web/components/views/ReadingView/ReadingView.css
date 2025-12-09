@@ -993,22 +993,67 @@
 
 /* 打印样式 */
 @media print {
-  /* 重置所有限制高度和溢出的属性 */
+  /* 页面边距设置 - 不强制方向，让用户自己选择 */
+  @page {
+    margin: 1.5cm;
+  }
+  
+  /* 最高优先级 - 彻底移除所有可能阻止分页的属性 */
+  * {
+    position: static !important;
+    float: none !important;
+  }
+  
+  /* 核心重置 - 使用通配符确保所有元素都被重置 */
+  .reading-view,
+  .reading-view *,
+  .reading-view *::before,
+  .reading-view *::after {
+    position: static !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    transform: none !important;
+    -webkit-transform: none !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* 关键容器重置 - 彻底移除 flex 和定位 */
   .reading-view,
   .reading-view__layout,
   .reading-view__content,
-  .reading-view__content:not(.reading-view__content--no-toc),
   .reading-view__content--no-toc,
   .reading-view__article-wrapper,
-  .reading-view__article {
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
+  .reading-view__article,
+  .reading-view__article-header,
+  .reading-view__scroll-content,
+  .reading-view__full-analysis,
+  .reading-view__body,
+  .reading-view .prose-tech {
+    display: block !important;
     position: static !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    left: 0 !important;
-    top: 0 !important;
+    float: none !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    left: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    flex: none !important;
+    flex-grow: 0 !important;
+    flex-shrink: 0 !important;
+    flex-basis: auto !important;
+    overflow: visible !important;
+    /* 关键：允许内容自然分页 */
+    page-break-inside: auto !important;
+    break-inside: auto !important;
   }
   
   /* 隐藏不需要打印的元素 */

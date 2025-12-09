@@ -1672,11 +1672,52 @@ export default {
           checkUltraStatus();
         });
       }
+      
+      // 添加打印前处理 - 修复分页问题
+      const beforePrintHandler = () => {
+        console.log('🖨️ [打印] 准备打印，强制移除flex布局...');
+        const elements = document.querySelectorAll('.reading-view, .reading-view *, .reading-view__article, .reading-view__article-wrapper');
+        elements.forEach(el => {
+          // 跳过需要隐藏的元素
+          if (el.matches('.reading-view__toc, .reading-view__version-selector, .reading-view__mode-toggle-wrapper, .reading-view__mode-toggle, .reading-view__ultra-button-wrapper, .reading-view__ultra-generating')) {
+            return;
+          }
+          el.style.setProperty('position', 'static', 'important');
+          el.style.setProperty('height', 'auto', 'important');
+          el.style.setProperty('min-height', '0', 'important');
+          el.style.setProperty('max-height', 'none', 'important');
+          el.style.setProperty('overflow', 'visible', 'important');
+          el.style.setProperty('flex', 'none', 'important');
+        });
+      };
+      
+      const afterPrintHandler = () => {
+        console.log('🖨️ [打印] 打印完成，恢复样式');
+        // 移除内联样式，恢复CSS控制
+        const elements = document.querySelectorAll('.reading-view, .reading-view *, .reading-view__article, .reading-view__article-wrapper');
+        elements.forEach(el => {
+          el.style.removeProperty('position');
+          el.style.removeProperty('height');
+          el.style.removeProperty('min-height');
+          el.style.removeProperty('max-height');
+          el.style.removeProperty('overflow');
+          el.style.removeProperty('flex');
+        });
+      };
+      
+      window.addEventListener('beforeprint', beforePrintHandler);
+      window.addEventListener('afterprint', afterPrintHandler);
     });
     
     onUnmounted(() => {
       window.removeEventListener('resize', handleResize);
       document.removeEventListener('keydown', handleKeydown);
+      
+      // 移除打印监听
+      if (typeof beforePrintHandler !== 'undefined') {
+        window.removeEventListener('beforeprint', beforePrintHandler);
+        window.removeEventListener('afterprint', afterPrintHandler);
+      }
       
       // 移除页面可见性和焦点监听
       document.removeEventListener('visibilitychange', handleVisibilityChange);
