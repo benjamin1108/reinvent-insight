@@ -165,7 +165,7 @@ start_dev_server() {
     if [ "$RELOAD" = true ]; then
         print_info "热重载已启用，代码修改将自动重启服务器"
         # 使用 uvicorn 的 reload 功能
-        ENVIRONMENT=development ENV=dev exec python -m uvicorn reinvent_insight.api:app \
+        ENVIRONMENT=development ENV=dev exec python -m uvicorn reinvent_insight.api.app:app \
             --host "$HOST" \
             --port "$PORT" \
             --reload \
@@ -173,7 +173,7 @@ start_dev_server() {
             --reload-dir web
     else
         # 不使用 reload
-        ENVIRONMENT=development ENV=dev exec python -m uvicorn reinvent_insight.api:app \
+        ENVIRONMENT=development ENV=dev exec python -m uvicorn reinvent_insight.api.app:app \
             --host "$HOST" \
             --port "$PORT"
     fi

@@ -9,11 +9,15 @@ from rich.panel import Panel
 from rich.text import Text
 from rich.markup import escape
 
-from . import config
-from .api import serve as serve_web
-from .logger import setup_logger
-from .task_manager import manager as task_manager
-from .workflow import reassemble_from_task_id
+from .core import config
+from .api.app import serve as serve_web
+from .core.logger import setup_logger
+from .services.analysis.task_manager import manager as task_manager
+
+# TODO: reassemble_from_task_id 函数待迁移
+async def reassemble_from_task_id(task_id: str):
+    """[Placeholder] 重新组装报告功能 - 待迁移"""
+    raise NotImplementedError("重新组装功能待迁移，请使用 Web UI 操作")
 
 console = Console()
 logger = logging.getLogger(__name__)
@@ -34,7 +38,7 @@ async def process_single_video(url: str, show_status: bool = True):
     model_name = config.PREFERRED_MODEL
     
     # 创建异步任务（与Web API保持一致）
-    from .worker import summary_task_worker_async
+    from .services.analysis.worker import summary_task_worker_async
     task = asyncio.create_task(summary_task_worker_async(url, task_id))
     task_manager.create_task(task_id, task)
     
@@ -121,7 +125,7 @@ def cli():
     
     # 检查是否是 cookie-manager 命令，如果是则直接调用 Click
     if len(sys.argv) > 1 and sys.argv[1] == 'cookie-manager':
-        from .cookie_manager_cli import cookie_manager
+        from .services.cookie.manager_cli import cookie_manager
         # 移除程序名和 'cookie-manager'，保留其余参数给 Click
         sys.argv = ['reinvent-insight cookie-manager'] + sys.argv[2:]
         cookie_manager()

@@ -441,7 +441,7 @@ deploy_new_version() {
     fi
     
     # 最后验证PDF处理模块
-    if $VENV_NAME/bin/python -c "from reinvent_insight.pdf_processor import PDFProcessor" 2>/dev/null; then
+    if $VENV_NAME/bin/python -c "from reinvent_insight.infrastructure.media.pdf_processor import PDFProcessor" 2>/dev/null; then
         print_success "PDF处理功能已正确安装"
     else
         if [ "$deps_ok" = true ]; then
