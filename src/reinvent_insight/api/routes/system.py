@@ -4,7 +4,9 @@ import logging
 import os
 import sys
 from datetime import datetime
-from fastapi import APIRouter, Header
+from pathlib import Path
+from fastapi import APIRouter, Header, HTTPException
+from fastapi.responses import FileResponse
 
 from reinvent_insight.core import config
 from reinvent_insight.api.routes.auth import verify_token
@@ -161,3 +163,47 @@ def refresh_cache(authorization: str = Header(None)):
         logger.error(f"手动刷新缓存时发生错误: {e}", exc_info=True)
         from fastapi import HTTPException
         raise HTTPException(status_code=500, detail=f"刷新缓存时发生内部错误: {e}")
+
+
+@router.get("/admin/tasks/{task_id}/result")
+async def get_task_result(
+    task_id: str,
+    authorization: str = Header(None)
+):
+    """
+    获取已完成任务的结果文件
+    
+    Args:
+        task_id: 任务ID
+        authorization: 认证令牌
+        
+    Returns:
+        Markdown 文件下载
+    """
+    verify_token(authorization)
+    
+    from reinvent_insight.services.analysis.task_manager import manager
+    
+    task_state = manager.get_task_state(task_id)
+    if not task_state:
+        raise HTTPException(status_code=404, detail=f"任务未找到: {task_id}")
+    
+    if task_state.status != 'completed':
+        raise HTTPException(
+            status_code=400, 
+            detail=f"任务尚未完成，当前状态: {task_state.status}"
+        )
+    
+    result_path = getattr(task_state, 'result_path', None)
+    if not result_path:
+        raise HTTPException(status_code=404, detail="任务结果文件路径未找到")
+    
+    file_path = Path(result_path)
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="结果文件不存在")
+    
+    return FileResponse(
+        path=str(file_path),
+        media_type="text/markdown",
+        filename=file_path.name
+    )

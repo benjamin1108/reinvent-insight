@@ -487,6 +487,45 @@ class TTSPregenerationService:
             "skipped": status_counts[TaskStatus.SKIPPED.value],
             "is_running": self.is_running
         }
+    
+    def get_task_list(self, status: Optional[str] = None, limit: int = 50) -> Dict:
+        """获取任务列表
+        
+        Args:
+            status: 可选，按状态筛选
+            limit: 返回数量限制
+            
+        Returns:
+            任务列表字典
+        """
+        tasks_list = []
+        for task in self.tasks.values():
+            task_status = task.status.value if isinstance(task.status, TaskStatus) else task.status
+            
+            # 筛选状态
+            if status and task_status != status:
+                continue
+            
+            tasks_list.append({
+                "task_id": task.task_id,
+                "article_hash": task.article_hash,
+                "source_file": task.source_file,
+                "status": task_status,
+                "created_at": task.created_at.isoformat() if task.created_at else None,
+                "started_at": task.started_at.isoformat() if task.started_at else None,
+                "completed_at": task.completed_at.isoformat() if task.completed_at else None,
+                "retry_count": task.retry_count,
+                "error_message": task.error_message,
+                "audio_hash": task.audio_hash
+            })
+        
+        # 按创建时间倒序排列
+        tasks_list.sort(key=lambda x: x["created_at"] or "", reverse=True)
+        
+        return {
+            "tasks": tasks_list[:limit],
+            "total": len(tasks_list)
+        }
 
 
 # ==================== 全局单例 ====================

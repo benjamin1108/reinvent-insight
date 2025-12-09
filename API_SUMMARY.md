@@ -1,7 +1,7 @@
 # Reinvent Insight API 接口文档
 
-> 版本: 0.1.0  
-> 更新时间: 2025-12-05  
+> 版本: 0.1.1  
+> 更新时间: 2025-12-10  
 > 基于 FastAPI 构建的高性能异步 API 服务
 
 ---
@@ -665,12 +665,71 @@ Authorization: Bearer {token}
 }
 ```
 
-### 4. 获取任务结果（管理员）
+### 4. 获取任务状态
+**端点**: `GET /api/tasks/{task_id}/status`  
+**描述**: 获取任务状态（不使用流式传输）  
+**认证**: 无需认证  
+
+**响应**:
+```json
+{
+  "task_id": "uuid-string",
+  "status": "pending|running|completed|error",
+  "progress": 50,
+  "logs": ["最近登录消息..."],
+  "completed": false,
+  "failed": false
+}
+```
+
+### 5. 获取任务结果（管理员）
 **端点**: `GET /api/admin/tasks/{task_id}/result`  
 **描述**: 获取已完成任务的结果文件  
 **认证**: 需要 Token  
 
 **响应**: Markdown 文件下载
+
+---
+
+## Ultra Deep 深度分析 API
+
+### 1. 获取 Ultra Deep 状态
+**端点**: `GET /api/article/{doc_hash}/ultra-deep/status`  
+**描述**: 查询文章的 Ultra 深度分析状态  
+**认证**: 无需认证  
+
+**查询参数**:
+- `version`: 可选版本号
+
+**响应**:
+```json
+{
+  "exists": true,
+  "status": "pending|processing|completed|failed",
+  "task_id": "uuid-string",
+  "version": 1,
+  "result": {
+    "generated_at": "2024-11-02T10:00:00"
+  }
+}
+```
+
+### 2. 触发 Ultra Deep 分析
+**端点**: `POST /api/article/{doc_hash}/ultra-deep`  
+**描述**: 触发文章的 Ultra 深度分析任务  
+**认证**: 需要 Token  
+
+**查询参数**:
+- `version`: 可选版本号
+
+**响应**:
+```json
+{
+  "task_id": "uuid-string",
+  "message": "Ultra 深度分析任务已创建",
+  "status": "queued"
+}
+```
 
 ---
 
@@ -1034,6 +1093,12 @@ LOG_LEVEL=INFO
 ---
 
 ## 版本历史
+
+- **v0.1.1** (2025-12-10): 架构重构版本
+  - 新增 Ultra Deep 深度分析 API
+  - 新增任务状态查询 API
+  - 补全 TTS 队列统计和任务列表 API
+  - 分层架构重构
 
 - **v0.1.0** (2024-11-02): 初始版本
   - YouTube 视频分析

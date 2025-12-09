@@ -1,7 +1,8 @@
 """TTS预生成管理路由"""
 
+from typing import Optional
 import logging
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from reinvent_insight.core import config
 from reinvent_insight.api.schemas.tts import (
@@ -134,3 +135,42 @@ async def trigger_tts_pregeneration(req: TTSPregenerateRequest):
     except Exception as e:
         logger.error(f"触发TTS预生成失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"触发预生成失败: {str(e)}")
+
+
+@router.get("/queue/stats")
+async def get_tts_queue_stats():
+    """
+    获取TTS预生成队列统计信息
+    
+    Returns:
+        统计信息包括队列大小、各状态任务数等
+    """
+    try:
+        service = get_tts_pregeneration_service()
+        return service.get_queue_stats()
+    except Exception as e:
+        logger.error(f"获取TTS队列统计失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"获取统计信息失败: {str(e)}")
+
+
+@router.get("/queue/tasks")
+async def get_tts_queue_tasks(
+    status: Optional[str] = Query(None, description="按状态筛选: pending|processing|completed|failed|skipped"),
+    limit: int = Query(50, ge=1, le=200, description="返回数量限制")
+):
+    """
+    获取TTS预生成任务列表
+    
+    Args:
+        status: 可选，按状态筛选
+        limit: 返回数量限制，默认50
+    
+    Returns:
+        任务列表
+    """
+    try:
+        service = get_tts_pregeneration_service()
+        return service.get_task_list(status=status, limit=limit)
+    except Exception as e:
+        logger.error(f"获取TTS任务列表失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"获取任务列表失败: {str(e)}")

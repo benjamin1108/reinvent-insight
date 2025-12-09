@@ -4,8 +4,8 @@ import logging
 import uuid
 import base64
 import hashlib
-from typing import Set
-from fastapi import APIRouter, HTTPException
+from typing import Set, Optional
+from fastapi import APIRouter, HTTPException, Header
 
 from reinvent_insight.core import config
 from reinvent_insight.api.schemas.auth import LoginRequest, LoginResponse
@@ -26,6 +26,16 @@ def verify_token(authorization: str = None):
     if token not in session_tokens:
         raise HTTPException(status_code=401, detail="令牌无效，请重新登录")
     return True
+
+
+def get_current_user(authorization: Optional[str] = Header(None)):
+    """依赖注入: 验证并返回当前用户"""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="未登录或令牌缺失")
+    token = authorization.split(" ", 1)[1]
+    if token not in session_tokens:
+        raise HTTPException(status_code=401, detail="令牌无效，请重新登录")
+    return {"username": config.ADMIN_USERNAME}
 
 
 @router.post("/login", response_model=LoginResponse)
