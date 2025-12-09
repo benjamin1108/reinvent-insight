@@ -143,7 +143,7 @@ class TaskManager:
             # 设置 result_path
             if filename:
                 from reinvent_insight.core import config
-                task_state.result_path = str(config.SUMMARIES_DIR / filename)
+                task_state.result_path = str(config.OUTPUT_DIR / filename)
             
             await self._send_result_to_queue(task_id, filename, doc_hash)
     
