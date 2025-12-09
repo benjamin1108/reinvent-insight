@@ -165,4 +165,31 @@ html, body {
   ::-webkit-scrollbar-thumb {
     transition: none;
   }
+}
+
+/* 打印样式 */
+@media print {
+  /* 重置全局高度和溢出限制 */
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+  
+  .app {
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+    display: block !important;
+  }
+  
+  .app__content {
+    overflow: visible !important;
+    height: auto !important;
+  }
+  
+  /* 隐藏开发环境标识 */
+  .dev-env-indicator {
+    display: none !important;
+  }
 } 

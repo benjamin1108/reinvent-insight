@@ -993,22 +993,47 @@
 
 /* 打印样式 */
 @media print {
-  .reading-view__toc,
-  .reading-view__version-selector {
-    display: none;
+  /* 重置所有限制高度和溢出的属性 */
+  .reading-view,
+  .reading-view__layout,
+  .reading-view__content,
+  .reading-view__content:not(.reading-view__content--no-toc),
+  .reading-view__content--no-toc,
+  .reading-view__article-wrapper,
+  .reading-view__article {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    left: 0 !important;
+    top: 0 !important;
   }
   
-  .reading-view__content {
-    overflow: visible;
+  /* 隐藏不需要打印的元素 */
+  .reading-view__toc,
+  .reading-view__version-selector,
+  .reading-view__mode-toggle-wrapper,
+  .reading-view__ultra-button-wrapper,
+  .reading-view__ultra-generating {
+    display: none !important;
+  }
+  
+  /* 重置背景和边框 */
+  .reading-view {
+    background: white !important;
   }
   
   .reading-view__article {
-    background: white;
-    border: none;
-    box-shadow: none;
-    padding: 0;
+    background: white !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
   
+  /* 文本颜色设为黑色 */
   .reading-view .prose-tech,
   .reading-view .prose-tech h1,
   .reading-view .prose-tech h2,
@@ -1017,9 +1042,74 @@
   .reading-view .prose-tech h5,
   .reading-view .prose-tech h6,
   .reading-view .prose-tech p,
+  .reading-view .prose-tech li,
+  .reading-view .prose-tech strong,
+  .reading-view .prose-tech a {
+    color: black !important;
+    background: none !important;
+    -webkit-background-clip: unset !important;
+    background-clip: unset !important;
+    text-shadow: none !important;
+  }
+  
+  .reading-view__title-en,
+  .reading-view__title-cn {
+    color: black !important;
+    background: none !important;
+    -webkit-background-clip: unset !important;
+    background-clip: unset !important;
+  }
+  
+  /* 代码块样式 */
+  .reading-view .prose-tech code {
+    background: #f5f5f5 !important;
+    color: #333 !important;
+    border: 1px solid #ddd !important;
+  }
+  
+  .reading-view .prose-tech pre {
+    background: #f5f5f5 !important;
+    border: 1px solid #ddd !important;
+  }
+  
+  .reading-view .prose-tech pre code {
+    background: none !important;
+    border: none !important;
+    color: #333 !important;
+  }
+  
+  /* 分页控制 */
+  .reading-view .prose-tech h1,
+  .reading-view .prose-tech h2,
+  .reading-view .prose-tech h3 {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+  
+  .reading-view .prose-tech p,
   .reading-view .prose-tech li {
-    color: black;
-    background: none;
+    orphans: 3;
+    widows: 3;
+  }
+  
+  .reading-view .prose-tech pre,
+  .reading-view .prose-tech blockquote {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  
+  /* 移除h3的小蓝竖杠伪元素 */
+  .reading-view .prose-tech h3::before {
+    display: none !important;
+  }
+  
+  .reading-view .prose-tech h3 {
+    padding-left: 0 !important;
+  }
+  
+  /* 移除h2的下划线伪元素 */
+  .reading-view .prose-tech h2::after {
+    display: none !important;
   }
 }
 

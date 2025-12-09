@@ -725,3 +725,10 @@
     margin-left: 0.25rem;
   }
 }
+
+/* 打印时隐藏 AppHeader */
+@media print {
+  .app-header {
+    display: none !important;
+  }
+}
