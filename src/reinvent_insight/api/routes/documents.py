@@ -227,9 +227,19 @@ async def get_public_summary(filename: str):
 
 @router.get("/public/doc/{doc_hash}")
 async def get_public_summary_by_hash(doc_hash: str):
-    """通过统一hash获取文档信息。"""
+    """通过统一hash获取指定摘要文件的公开内容。
+    
+    返回完整文档信息包括:
+    - filename: 文件名
+    - content: 文档内容
+    - title_cn/title_en: 标题
+    - video_url: 视频链接
+    - versions: 版本列表
+    
+    外部系统可只使用 filename 字段。
+    """
     filename = hash_to_filename.get(doc_hash)
     if not filename:
         raise HTTPException(status_code=404, detail="文档未找到")
     
-    return {"filename": filename}
+    return await get_public_summary(filename)
