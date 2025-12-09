@@ -255,6 +255,7 @@ const app = createApp({
     // 认证状态 - 必须在 getInitialView 之前声明
     const isAuthenticated = ref(false);
     const showLogin = ref(false);
+    const loginSuccessCallback = ref(null); // 存储登录成功后的回调函数
 
     // 视图控制
     const getInitialView = () => {
@@ -502,10 +503,19 @@ const app = createApp({
         isAuthenticated.value = true;
         showLogin.value = false;
 
-        currentView.value = 'recent';
-        await nextTick();
-        console.log('🔐 登录成功，正在重新加载笔记库...');
-        await loadSummaries();
+        // 如果有登录回调（如Ultra触发），则不切换视图，直接执行回调
+        if (loginSuccessCallback.value) {
+          console.log('🔄 [认证] 执行登录成功回调，保持当前页面');
+          const callback = loginSuccessCallback.value;
+          loginSuccessCallback.value = null; // 清空回调
+          await callback();
+        } else {
+          // 无回调时，正常跳转到主页
+          currentView.value = 'recent';
+          await nextTick();
+          console.log('🔐 登录成功，正在重新加载笔记库...');
+          await loadSummaries();
+        }
       } catch (error) {
         console.error('登录失败:', error);
         if (window.eventBus && window.eventBus.emit) {
@@ -720,7 +730,23 @@ const app = createApp({
             logs.value.push(`${fileTypeName}上传成功，服务器正在处理...`);
           } else {
             // 处理URL分析（保持原有逻辑）
-            res = await axios.post('/summarize', { url: analysisData.url });
+            const requestUrl = analysisData.force ? '/summarize?force=true' : '/summarize';
+            res = await axios.post(requestUrl, { url: analysisData.url });
+            
+            // 检查是否返回了重复视频信息
+            if (res.data.exists) {
+              // 视频已存在，停止分析
+              loading.value = false;
+              
+              if (res.data.in_queue) {
+                showToast('该视频已在队列中，请稍候', 'info');
+              } else if (res.data.in_progress) {
+                showToast('该视频正在分析中', 'info');
+              } else {
+                showToast('该视频已有解读', 'info');
+              }
+              return;
+            }
           }
 
           const taskId = res.data.task_id;
@@ -1644,6 +1670,44 @@ const app = createApp({
 
       // 添加点击外部关闭下拉菜单的监听器
       document.addEventListener('click', handleClickOutside);
+      
+      // 监听 require-login 事件（用于Ultra DeepInsight等功能）
+      if (window.eventBus) {
+        window.eventBus.on('require-login', ({ reason, callback }) => {
+          console.log('🔑 [认证] 收到登录请求:', reason);
+          
+          // 保存回调函数
+          if (callback && typeof callback === 'function') {
+            loginSuccessCallback.value = callback;
+          }
+          
+          // 显示登录弹窗
+          showLogin.value = true;
+          
+          // 显示提示
+          if (reason) {
+            showToast(reason, 'warning');
+          }
+        });
+        
+        // 监听 session-expired 事件
+        window.eventBus.on('session-expired', () => {
+          console.log('⚠️ [认证] 会话已过期');
+          logout();
+        });
+        
+        // 监听 reload-document 事件（用于Ultra完成后刷新）
+        window.eventBus.on('reload-document', async ({ hash, reason }) => {
+          console.log('🔄 [文档] 收到重新加载请求:', hash, reason);
+          if (hash && currentView.value === 'read') {
+            // 重新加载文档
+            await loadSummaryByHash(hash);
+            
+            // 通知 ReadingView 刷新状态（因为 hash 没变，watch 不会触发）
+            window.eventBus.emit('refresh-reading-status');
+          }
+        });
+      }
     });
 
     watch(currentView, (newView, oldView) => {

@@ -1700,3 +1700,183 @@
     transform: none;
   }
 }
+
+/* ========================================
+ * Ultra DeepInsight 按钮样式
+ * ======================================== */
+
+.reading-view__ultra-button-wrapper {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(168, 85, 247, 0.05));
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 0.75rem;
+  text-align: center;
+}
+
+.reading-view__ultra-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.75rem;
+  background: linear-gradient(135deg, #8b5cf6, #a855f7);
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(139, 92, 246, 0.3), 0 2px 4px rgba(139, 92, 246, 0.2);
+}
+
+.reading-view__ultra-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #7c3aed, #9333ea);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(139, 92, 246, 0.4), 0 4px 6px rgba(139, 92, 246, 0.3);
+}
+
+.reading-view__ultra-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);
+}
+
+.reading-view__ultra-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: linear-gradient(135deg, #6b7280, #9ca3af);
+}
+
+.reading-view__ultra-button-icon {
+  font-size: 1.25rem;
+  display: inline-block;
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+@keyframes sparkle {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+}
+
+.reading-view__ultra-button:disabled .reading-view__ultra-button-icon {
+  animation: none;
+}
+
+.reading-view__ultra-button-text {
+  font-size: 1rem;
+  letter-spacing: 0.025em;
+}
+
+.reading-view__ultra-button-hint {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  color: #a78bfa;
+  line-height: 1.5;
+}
+
+.reading-view__ultra-button-progress {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  color: #c4b5fd;
+  line-height: 1.5;
+  font-weight: 500;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .reading-view__ultra-button-wrapper {
+    margin: 1.5rem 0;
+    padding: 1rem;
+  }
+  
+  .reading-view__ultra-button {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9375rem;
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .reading-view__ultra-button-icon {
+    font-size: 1.125rem;
+  }
+  
+  .reading-view__ultra-button-hint,
+  .reading-view__ultra-button-progress {
+    font-size: 0.8125rem;
+  }
+}
+
+/* Ultra生成中状态样式 */
+.reading-view__ultra-generating {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(168, 85, 247, 0.04));
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 0.75rem;
+  text-align: center;
+}
+
+.reading-view__ultra-generating-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.reading-view__ultra-spinner {
+  width: 32px;
+  height: 32px;
+  color: #a78bfa;
+  animation: spin 1s linear infinite;
+}
+
+.reading-view__ultra-generating-text {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #c4b5fd;
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.reading-view__ultra-generating-hint {
+  font-size: 0.875rem;
+  color: #a78bfa;
+  opacity: 0.8;
+  line-height: 1.5;
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .reading-view__ultra-generating {
+    margin: 1.5rem 0;
+    padding: 1rem;
+  }
+  
+  .reading-view__ultra-spinner {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .reading-view__ultra-generating-text {
+    font-size: 0.9375rem;
+  }
+  
+  .reading-view__ultra-generating-hint {
+    font-size: 0.8125rem;
+  }
+}

@@ -80,7 +80,7 @@ export default {
   ],
   
   setup(props, { emit }) {
-    const { computed, ref } = Vue;
+    const { computed, ref, watch } = Vue;
     
     // 错误处理辅助函数（从全局获取）
     const getErrorIcon = window.getErrorIcon || ((type) => '⚠️');
@@ -95,6 +95,11 @@ export default {
     
     // 输入模式管理
     const inputMode = ref('url'); // 'url' 或 'file'
+    
+    // 重复检测相关状态
+    const showDuplicateWarning = ref(false);
+    const existingVideo = ref(null);
+    const isCheckingDuplicate = ref(false);
     
     // URL双向绑定
     const url = computed({
@@ -186,7 +191,103 @@ export default {
       }
     };
     
-    // 处理开始分析
+    // 提取YouTube video_id
+    const extractVideoId = (url) => {
+      if (!url) return null;
+      
+      // 匹配各种 YouTube URL 格式
+      const patterns = [
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+        /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+        /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/
+      ];
+      
+      for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match && match[1]) {
+          return match[1];
+        }
+      }
+      
+      return null;
+    };
+    
+    // 检查视频是否已存在
+    const checkVideoExists = async (url) => {
+      try {
+        const videoId = extractVideoId(url);
+        if (!videoId) {
+          showDuplicateWarning.value = false;
+          return { exists: false };
+        }
+        
+        isCheckingDuplicate.value = true;
+        
+        // 调用检查API
+        const response = await fetch(`/api/public/summary/${videoId}`);
+        const data = await response.json();
+        
+        if (data.exists) {
+          // 视频已存在
+          existingVideo.value = {
+            hash: data.hash,
+            title: data.title
+          };
+          
+          showDuplicateWarning.value = true;
+          return data;
+        } else {
+          showDuplicateWarning.value = false;
+          existingVideo.value = null;
+        }
+        
+        return { exists: false };
+      } catch (error) {
+        console.error('检查视频失败:', error);
+        showDuplicateWarning.value = false;
+        return { exists: false };
+      } finally {
+        isCheckingDuplicate.value = false;
+      }
+    };
+    
+    // 防抖函数
+    let debounceTimer = null;
+    const debouncedCheckVideo = (url) => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        checkVideoExists(url);
+      }, 500);
+    };
+    
+    // 监听URL变化
+    watch(() => props.url, (newUrl) => {
+      if (newUrl && isValidUrl.value && inputMode.value === 'url') {
+        debouncedCheckVideo(newUrl);
+      } else {
+        showDuplicateWarning.value = false;
+      }
+    });
+    
+    // 查看已有版本
+    const viewExistingAnalysis = () => {
+      if (existingVideo.value && existingVideo.value.hash) {
+        emit('view-summary', {
+          hash: existingVideo.value.hash
+        });
+      }
+    };
+    
+    // 强制重新解读
+    const forceReanalyze = () => {
+      showDuplicateWarning.value = false;
+      // 发起分析，带上force标记
+      const analysisData = {
+        url: props.url,
+        force: true
+      };
+      emit('start-analysis', analysisData);
+    };
     const handleStartAnalysis = () => {
       if (!canStartAnalysis.value) return;
       
@@ -333,7 +434,13 @@ export default {
       // 错误处理方法
       getErrorIcon,
       getErrorColor,
-      getErrorTitle
+      getErrorTitle,
+      // 重复检测相关
+      showDuplicateWarning,
+      existingVideo,
+      isCheckingDuplicate,
+      viewExistingAnalysis,
+      forceReanalyze
     };
   }
 };

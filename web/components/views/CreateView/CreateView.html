@@ -51,6 +51,29 @@
             </svg>
           </button>
         </div>
+        
+        <!-- 重复视频提示 -->
+        <div v-if="showDuplicateWarning" class="create-view__duplicate-warning">
+          <div class="create-view__duplicate-icon">ℹ️</div>
+          <div class="create-view__duplicate-content">
+            <h3 class="create-view__duplicate-title">该视频已有解读</h3>
+            <p class="create-view__duplicate-video-title">{{ existingVideo.title }}</p>
+            <div class="create-view__duplicate-actions">
+              <tech-button 
+                variant="primary"
+                size="md"
+                @click="viewExistingAnalysis">
+                查看已有版本
+              </tech-button>
+              <tech-button 
+                variant="secondary"
+                size="md"
+                @click="forceReanalyze">
+                重新解读
+              </tech-button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 文件上传模式 -->

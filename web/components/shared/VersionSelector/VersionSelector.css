@@ -153,3 +153,31 @@
   cursor: not-allowed;
   pointer-events: none;
 }
+
+/* ========================================
+ * Ultra DeepInsight 版本样式
+ * ======================================== */
+
+/* Ultra版本项特殊样式 */
+.version-selector__item--ultra {
+  background: linear-gradient(90deg, rgba(139, 92, 246, 0.1), rgba(168, 85, 247, 0.05));
+  color: #a78bfa !important;
+  font-weight: 500;
+}
+
+.version-selector__item--ultra:hover {
+  background: linear-gradient(90deg, rgba(139, 92, 246, 0.15), rgba(168, 85, 247, 0.1));
+  color: #c4b5fd !important;
+}
+
+/* Ultra版本选中时 */
+.version-selector__item--ultra.version-selector__item--current {
+  background: linear-gradient(90deg, rgba(139, 92, 246, 0.2), rgba(168, 85, 247, 0.15));
+  color: #e9d5ff !important;
+}
+
+/* 触发器显示Ultra版本时的样式 */
+.version-selector__trigger:has(span:first-child:contains("Ultra")) {
+  border-color: rgba(139, 92, 246, 0.3);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(168, 85, 247, 0.03));
+}

@@ -43,7 +43,7 @@ class WorkerTask:
     task_id: str = field(compare=False)
     
     # 任务类型
-    task_type: str = field(default="youtube", compare=False)  # "youtube", "pdf", "document"
+    task_type: str = field(default="youtube", compare=False)  # "youtube", "pdf", "document", "ultra_deep_insight"
     
     # YouTube URL 或文件路径
     url_or_path: str = field(default="", compare=False)
@@ -56,6 +56,11 @@ class WorkerTask:
     
     # 回调函数（可选）
     callback: Optional[Callable] = field(default=None, compare=False, repr=False)
+    
+    # Ultra DeepInsight 相关参数
+    doc_hash: Optional[str] = field(default=None, compare=False)  # 文档哈希
+    base_version: Optional[int] = field(default=None, compare=False)  # 基础版本号
+    next_version: Optional[int] = field(default=None, compare=False)  # 目标版本号
 
 
 class WorkerPool:
@@ -121,17 +126,19 @@ class WorkerPool:
         url_or_path: str,
         priority: TaskPriority = TaskPriority.NORMAL,
         title: Optional[str] = None,
-        callback: Optional[Callable] = None
+        callback: Optional[Callable] = None,
+        **kwargs  # 支持额外参数
     ) -> bool:
         """添加任务到队列
         
         Args:
             task_id: 任务 ID
-            task_type: 任务类型 ("youtube", "pdf", "document")
+            task_type: 任务类型 ("youtube", "pdf", "document", "ultra_deep_insight")
             url_or_path: URL 或文件路径
             priority: 任务优先级
             title: 可选标题
             callback: 可选回调函数
+            **kwargs: 额外参数 (doc_hash, base_version, next_version 等)
             
         Returns:
             bool: 是否成功加入队列
@@ -144,7 +151,10 @@ class WorkerPool:
                 task_type=task_type,
                 url_or_path=url_or_path,
                 title=title,
-                callback=callback
+                callback=callback,
+                doc_hash=kwargs.get('doc_hash'),
+                base_version=kwargs.get('base_version'),
+                next_version=kwargs.get('next_version')
             )
             
             # 非阻塞加入队列
@@ -230,6 +240,16 @@ class WorkerPool:
                 from .document_worker import document_analysis_worker_async
                 worker_func = document_analysis_worker_async(
                     task_id, task.url_or_path, task.title or "未命名文档"
+                )
+                
+            elif task.task_type == "ultra_deep_insight":
+                # Ultra DeepInsight 任务使用特殊的worker
+                from .worker import ultra_deep_insight_worker_async
+                worker_func = ultra_deep_insight_worker_async(
+                    task.url_or_path,
+                    task_id,
+                    task.doc_hash,
+                    task.next_version
                 )
             else:
                 raise ValueError(f"未知的任务类型: {task.task_type}")

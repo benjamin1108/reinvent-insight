@@ -10,7 +10,10 @@
   ]"
 >
   <div @click="toggleDropdown" class="version-selector__trigger">
-    <span>v{{ currentVersion }}</span>
+    <span v-if="normalizedVersions.find(v => v.version === currentVersion)?.isUltra">
+      v{{ currentVersion }} ✨ Ultra
+    </span>
+    <span v-else>v{{ currentVersion }}</span>
   </div>
   <transition name="version-selector__dropdown">
     <div v-if="isOpen" class="version-selector__dropdown">
@@ -19,9 +22,17 @@
         :key="item.version"
         @click="selectVersion(item.version)"
         class="version-selector__item"
-        :class="{ 'version-selector__item--current': item.version === currentVersion }"
+        :class="{ 
+          'version-selector__item--current': item.version === currentVersion,
+          'version-selector__item--ultra': item.isUltra
+        }"
       >
-        v{{ item.version }}
+        <span v-if="item.isUltra">
+          v{{ item.version }} ✨ Ultra
+        </span>
+        <span v-else>
+          v{{ item.version }}
+        </span>
       </div>
     </div>
   </transition>

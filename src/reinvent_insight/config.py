@@ -195,6 +195,19 @@ TEXT2HTML_PROMPT_PATH = PROJECT_ROOT / "prompt" / "text2html.txt"
 # 可视化 HTML 存储目录（与深度解读同目录）
 VISUAL_HTML_DIR = OUTPUT_DIR
 
+# --- 版本控制配置 ---
+# 是否启用版本选择器
+ENABLE_VERSION_SELECTOR = os.getenv("ENABLE_VERSION_SELECTOR", "false").lower() == "true"
+
+# 版本显示策略: 'all' | 'latest_only' | 'latest_per_type'
+VERSION_DISPLAY_STRATEGY = os.getenv("VERSION_DISPLAY_STRATEGY", "latest_only")
+
+# 是否自动清理旧版本（Ultra模式下自动清理）
+AUTO_CLEANUP_OLD_VERSIONS = os.getenv("AUTO_CLEANUP_OLD_VERSIONS", "true").lower() == "true"
+
+# 保留的最大版本数
+MAX_VERSIONS_TO_KEEP = int(os.getenv("MAX_VERSIONS_TO_KEEP", "1"))
+
 # --- TTS 预生成配置 ---
 # 是否启用 TTS 预生成服务（已禁用，改为按需生成）
 TTS_PREGENERATE_ENABLED = os.getenv("TTS_PREGENERATE_ENABLED", "false").lower() == "true"

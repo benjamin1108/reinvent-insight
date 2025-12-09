@@ -22,6 +22,81 @@ logger = logger.bind(name=__name__)
 TASKS_ROOT_DIR = "./downloads/tasks"
 BASE_PROMPT_PATH = "./prompt/youtbe-deep-summary.txt"
 
+
+def cleanup_non_ultra_versions(video_url: str, ultra_version: int) -> List[str]:
+    """
+    清理同一视频的非Ultra版本
+    
+    Args:
+        video_url: 视频URL
+        ultra_version: Ultra版本号
+        
+    Returns:
+        List[str]: 已删除的文件名列表
+    """
+    deleted_files = []
+    
+    try:
+        # 扫描所有MD文件
+        if not config.OUTPUT_DIR.exists():
+            logger.warning(f"输出目录不存在: {config.OUTPUT_DIR}")
+            return deleted_files
+            
+        for md_file in config.OUTPUT_DIR.glob("*.md"):
+            try:
+                content = md_file.read_text(encoding="utf-8")
+                
+                # 解析metadata
+                match = re.match(r'^---\s*\n(.*?)\n---\s*\n', content, re.DOTALL)
+                if not match:
+                    continue
+                    
+                metadata = yaml.safe_load(match.group(1))
+                
+                # 检查是否是同一视频的非Ultra版本
+                if (metadata.get('video_url') == video_url and 
+                    not metadata.get('is_ultra_deep', False)):
+                    
+                    logger.info(f"删除非Ultra版本: {md_file.name}")
+                    
+                    # 删除MD文件
+                    md_file.unlink()
+                    deleted_files.append(md_file.name)
+                    
+                    # 删除关联的PDF文件（如果存在）
+                    pdf_file = md_file.with_suffix('.pdf')
+                    if pdf_file.exists():
+                        pdf_file.unlink()
+                        logger.info(f"删除关联PDF: {pdf_file.name}")
+                    
+                    # 删除关联的Visual HTML（如果存在）
+                    doc_hash = metadata.get('hash')
+                    if doc_hash:
+                        visual_dir = config.OUTPUT_DIR / 'visual'
+                        if visual_dir.exists():
+                            # 删除所有版本的visual文件
+                            for visual_file in visual_dir.glob(f"{doc_hash}*_visual.html"):
+                                visual_file.unlink()
+                                logger.info(f"删除关联Visual: {visual_file.name}")
+            
+            except Exception as e:
+                logger.warning(f"清理文件 {md_file.name} 时出错: {e}")
+        
+        # 触发文档列表重新扫描
+        try:
+            from .api import load_hash_mapping
+            load_hash_mapping()
+            logger.info("已重新加载hash映射")
+        except ImportError:
+            logger.warning("API模块未导入，跳过hash映射更新")
+        
+        logger.info(f"已清理 {len(deleted_files)} 个非Ultra版本文件: {deleted_files}")
+        
+    except Exception as e:
+        logger.error(f"清理非Ultra版本时出错: {e}", exc_info=True)
+    
+    return deleted_files
+
 # ---- Document Content Data Model ----
 @dataclass
 class DocumentContent:
@@ -488,10 +563,24 @@ def parse_outline(content: str) -> Tuple[Optional[str], Optional[List[str]], Opt
 
 # ---- Main Workflow Class ----
 class DeepSummaryWorkflow:
-    def __init__(self, task_id: str, model_name: str, content: Union[str, DocumentContent], video_metadata: VideoMetadata):
+    def __init__(
+        self, 
+        task_id: str, 
+        model_name: str, 
+        content: Union[str, DocumentContent], 
+        video_metadata: VideoMetadata,
+        is_ultra_mode: bool = False,
+        target_version: Optional[int] = None,
+        doc_hash: Optional[str] = None
+    ):
         self.task_id = task_id
         self.model_name = model_name
         self.content = content
+        
+        # Ultra模式相关参数
+        self.is_ultra_mode = is_ultra_mode
+        self.target_version = target_version
+        self.doc_hash = doc_hash
         
         # 判断内容类型
         if isinstance(content, str):
@@ -740,6 +829,16 @@ class DeepSummaryWorkflow:
             # 否则使用默认指导（向后兼容）
             chapter_depth_constraint = ""
         
+        # Ultra模式特殊指令：强制要求5000字
+        if self.is_ultra_mode:
+            ultra_chapter_instructions = prompts.ULTRA_CHAPTER_INSTRUCTIONS
+            # 在Ultra模式下，如果没有rationale，直接使用Ultra指令
+            # 如果有rationale，则追加Ultra指令
+            if not chapter_depth_constraint:
+                chapter_depth_constraint = ultra_chapter_instructions
+            else:
+                chapter_depth_constraint = chapter_depth_constraint + "\n\n" + ultra_chapter_instructions
+        
         prompt = prompts.CHAPTER_PROMPT_TEMPLATE.format(
             role_and_style=prompts.ROLE_AND_STYLE_GUIDE,
             base_prompt=self.base_prompt + multimodal_guide,
@@ -846,9 +945,14 @@ class DeepSummaryWorkflow:
             full_content = self.transcript
             multimodal_guide = ""
         
+        # Ultra模式特殊指令
+        ultra_instructions = ""
+        if self.is_ultra_mode:
+            ultra_instructions = prompts.ULTRA_OUTLINE_INSTRUCTIONS
+        
         prompt = prompts.OUTLINE_PROMPT_TEMPLATE.format(
             role_and_style=prompts.ROLE_AND_STYLE_GUIDE,
-            base_prompt=self.base_prompt + multimodal_guide,
+            base_prompt=self.base_prompt + multimodal_guide + ultra_instructions,
             content_type=content_type,
             content_description=content_description,
             full_content=full_content,
@@ -1008,57 +1112,86 @@ class DeepSummaryWorkflow:
                 f.write(final_report)
             
             # === 版本管理逻辑开始 ===
-            # 查找是否已存在相同视频URL的文件
-            existing_files = []
-            base_filename = f"{metadata.sanitized_title}.md"
-            video_url = metadata.video_url
-            
-            if config.OUTPUT_DIR.exists() and video_url:
-                # 扫描所有现有文件，查找相同视频URL的文件
-                for md_file in config.OUTPUT_DIR.glob("*.md"):
-                    try:
-                        content = md_file.read_text(encoding="utf-8")
-                        # 解析metadata
-                        import yaml
-                        match = re.match(r'^---\s*\n(.*?)\n---\s*\n', content, re.DOTALL)
-                        if match:
-                            existing_metadata = yaml.safe_load(match.group(1))
-                            if existing_metadata.get('video_url') == video_url:
-                                existing_files.append(md_file.name)
-                    except Exception as e:
-                        logger.warning(f"检查文件 {md_file.name} 时出错: {e}")
-            
-            # 确定最终文件名
-            if existing_files:
-                # 找出最大版本号
-                max_version = 0
+            # Ultra模式特殊处理：使用目标版本号
+            if self.is_ultra_mode and self.target_version is not None:
+                # Ultra模式直接使用指定的版本号
+                new_version = self.target_version
                 base_name_without_ext = metadata.sanitized_title
-                
-                for filename in existing_files:
-                    # 检查是否是带版本号的文件名
-                    version_match = re.match(rf'^{re.escape(base_name_without_ext)}_v(\d+)\.md$', filename)
-                    if version_match:
-                        version = int(version_match.group(1))
-                        max_version = max(max_version, version)
-                    elif filename == base_filename:
-                        # 原始文件存在，相当于v0
-                        max_version = max(max_version, 0)
-                
-                # 新版本号
-                new_version = max_version + 1
                 final_filename = f"{base_name_without_ext}_v{new_version}.md"
                 
-                # 在metadata中添加版本号
-                metadata_dict = yaml.safe_load(match.group(1)) if match else {}
-                metadata_dict['version'] = new_version
-                
-                # 重新生成带版本号的报告
-                final_report = _perform_assembly(title, introduction, toc_md, conclusion_md, chapter_contents, metadata, version=new_version)
+                # 生成带Ultra标识的报告
+                final_report = _perform_assembly(
+                    title, introduction, toc_md, conclusion_md, chapter_contents, 
+                    metadata, 
+                    version=new_version,
+                    is_ultra_deep=True,
+                    base_version=new_version - 1,
+                    chapter_count=chapter_count
+                )
                 with open(temp_report_path, "w", encoding="utf-8") as f:
                     f.write(final_report)
+                
+                # 移动到最终目录前，清理非Ultra版本
+                logger.info(f"Ultra版本生成完成，开始清理非Ultra版本...")
+                deleted_files = cleanup_non_ultra_versions(
+                    video_url=metadata.video_url,
+                    ultra_version=new_version
+                )
+                if deleted_files:
+                    logger.info(f"已清理 {len(deleted_files)} 个非Ultra版本文件")
             else:
-                # 第一次生成，使用原始文件名
-                final_filename = base_filename
+                # 标准模式：原有逻辑
+                # 查找是否已存在相同视频URL的文件
+                existing_files = []
+                base_filename = f"{metadata.sanitized_title}.md"
+                video_url = metadata.video_url
+                
+                if config.OUTPUT_DIR.exists() and video_url:
+                    # 扫描所有现有文件，查找相同视频URL的文件
+                    for md_file in config.OUTPUT_DIR.glob("*.md"):
+                        try:
+                            content = md_file.read_text(encoding="utf-8")
+                            # 解析metadata
+                            import yaml
+                            match = re.match(r'^---\s*\n(.*?)\n---\s*\n', content, re.DOTALL)
+                            if match:
+                                existing_metadata = yaml.safe_load(match.group(1))
+                                if existing_metadata.get('video_url') == video_url:
+                                    existing_files.append(md_file.name)
+                        except Exception as e:
+                            logger.warning(f"检查文件 {md_file.name} 时出错: {e}")
+                
+                # 确定最终文件名
+                if existing_files:
+                    # 找出最大版本号
+                    max_version = 0
+                    base_name_without_ext = metadata.sanitized_title
+                    
+                    for filename in existing_files:
+                        # 检查是否是带版本号的文件名
+                        version_match = re.match(rf'^{re.escape(base_name_without_ext)}_v(\d+)\.md$', filename)
+                        if version_match:
+                            version = int(version_match.group(1))
+                            max_version = max(max_version, version)
+                        elif filename == base_filename:
+                            # 原始文件存在，相当于v0
+                            max_version = max(max_version, 0)
+                    
+                    # 新版本号
+                    new_version = max_version + 1
+                    final_filename = f"{base_name_without_ext}_v{new_version}.md"
+                    
+                    # 在metadata中添加版本号
+                    metadata_dict = yaml.safe_load(match.group(1)) if match else {}
+                    metadata_dict['version'] = new_version
+                    
+                    # 重新生成带版本号的报告
+                    final_report = _perform_assembly(title, introduction, toc_md, conclusion_md, chapter_contents, metadata, version=new_version)
+                    with open(temp_report_path, "w", encoding="utf-8") as f:
+                        f.write(final_report)
+                else:
+                    # 第一次生成，使用原始文件名
+                    final_filename = base_filename
             # === 版本管理逻辑结束 ===
             
             # 移动并重命名到最终的输出目录
@@ -1100,7 +1233,11 @@ class DeepSummaryWorkflow:
             task_manager.set_task_result(self.task_id, str(final_path))
             
             # 启动可视化解读生成任务（后台异步，不阻塞）
-            version_for_visual = new_version if existing_files else 0
+            # Ultra模式使用target_version，标准模式检查existing_files
+            if self.is_ultra_mode and self.target_version is not None:
+                version_for_visual = new_version
+            else:
+                version_for_visual = new_version if existing_files else 0
             await self._start_visual_interpretation_task(str(final_path), version_for_visual)
             
             return final_report, final_filename, doc_hash
@@ -1160,10 +1297,33 @@ class DeepSummaryWorkflow:
         if error:
              await task_manager.set_task_error(self.task_id, message)
 
-def _perform_assembly(title: str, introduction: str, toc_md: str, conclusion_md: str, chapter_contents: List[str], metadata: Optional[VideoMetadata] = None, version: int = 0) -> str:
+def _perform_assembly(
+    title: str, 
+    introduction: str, 
+    toc_md: str, 
+    conclusion_md: str, 
+    chapter_contents: List[str], 
+    metadata: Optional[VideoMetadata] = None, 
+    version: int = 0,
+    is_ultra_deep: bool = False,
+    base_version: Optional[int] = None,
+    chapter_count: Optional[int] = None
+) -> str:
     """
     可复用的核心拼接逻辑。
     接收所有内容的字符串，返回最终的报告字符串。
+    
+    Args:
+        title: 标题
+        introduction: 引言
+        toc_md: 目录
+        conclusion_md: 结论
+        chapter_contents: 章节内容列表
+        metadata: 元数据
+        version: 版本号
+        is_ultra_deep: 是否为Ultra DeepInsight版本
+        base_version: Ultra版本的基础版本号
+        chapter_count: 章节数量
     """
     # 1. 生成 YAML Front Matter
     metadata_yaml = ""
@@ -1189,6 +1349,14 @@ def _perform_assembly(title: str, introduction: str, toc_md: str, conclusion_md:
             # 只在版本号大于0时添加version字段
             if version > 0:
                 metadata_dict['version'] = version
+            
+            # Ultra DeepInsight相关元数据
+            if is_ultra_deep:
+                metadata_dict['is_ultra_deep'] = True
+                if base_version is not None:
+                    metadata_dict['base_version'] = base_version
+                if chapter_count is not None:
+                    metadata_dict['chapter_count'] = chapter_count
                 
             # allow_unicode=True 保证中文字符正确显示
             # 使用 rstrip() 去掉 yaml.dump() 自动添加的末尾换行符
@@ -1336,7 +1504,33 @@ async def reassemble_from_task_id(task_id: str):
     except Exception as e:
         logger.error(f"重新组装时发生未知错误: {e}", exc_info=True)
 
-async def run_deep_summary_workflow(task_id: str, model_name: str, content: Union[str, PDFContent], video_metadata: VideoMetadata):
-    """工作流的入口函数"""
-    workflow = DeepSummaryWorkflow(task_id, model_name, content, video_metadata=video_metadata)
+async def run_deep_summary_workflow(
+    task_id: str, 
+    model_name: str, 
+    content: Union[str, PDFContent], 
+    video_metadata: VideoMetadata,
+    is_ultra_mode: bool = False,
+    target_version: Optional[int] = None,
+    doc_hash: Optional[str] = None
+):
+    """工作流的入口函数
+    
+    Args:
+        task_id: 任务ID
+        model_name: 模型名称
+        content: 内容(字符串或PDFContent)
+        video_metadata: 视频元数据
+        is_ultra_mode: 是否为Ultra模式
+        target_version: 目标版本号(仅Ultra模式使用)
+        doc_hash: 文档哈希(仅Ultra模式使用)
+    """
+    workflow = DeepSummaryWorkflow(
+        task_id, 
+        model_name, 
+        content, 
+        video_metadata=video_metadata,
+        is_ultra_mode=is_ultra_mode,
+        target_version=target_version,
+        doc_hash=doc_hash
+    )
     await workflow.run() 

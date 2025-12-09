@@ -62,10 +62,15 @@ export default {
             console.error('版本号必须是有效数字:', v.version);
             return { ...v, version: 0 };
           }
-          return { ...v, version: numVersion };
+          // 保留is_ultra_deep元数据
+          return { 
+            ...v, 
+            version: numVersion,
+            isUltra: v.is_ultra_deep === true || v.isUltra === true
+          };
         } else {
           console.error('版本数据格式错误，必须是包含version字段的对象:', v);
-          return { version: 0, title: '无效版本' };
+          return { version: 0, title: '无效版本', isUltra: false };
         }
       });
     });

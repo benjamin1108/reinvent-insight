@@ -256,7 +256,17 @@ export default {
     const visualAvailable = ref(false);
     const visualStatus = ref('pending');  // 'pending' | 'processing' | 'completed' | 'failed'
     const visualHtmlUrl = ref(null);
-    const currentVersion = ref(0);
+    const currentVersion = ref(props.currentVersion || 0);  // 从 props 初始化
+    
+    // ========== Ultra DeepInsight 状态管理 ==========
+    const ultraAvailable = ref(false);      // Ultra版本是否可用
+    const ultraStatus = ref('checking');    // 'checking' | 'not_exists' | 'generating' | 'completed' | 'failed'
+    const isGeneratingUltra = ref(false);   // 是否正在生成Ultra
+    const ultraVersion = ref(null);         // Ultra版本号
+    const ultraWordCount = ref(0);          // Ultra版本字数
+    const ultraTaskInfo = ref(null);        // Ultra任务信息（进度、阶段等）
+    let ultraPollingTimer = null;           // Ultra状态轮询定时器
+    let unsubscribeRefreshStatus = null;    // 取消订阅刷新状态事件
     
     // 根据显示模式决定是否显示目录
     // 只有"Deep Insight"模式才显示目录（不是 Quick Insight）
@@ -717,6 +727,250 @@ export default {
         }
       } catch (error) {
         console.error('❌ [DEBUG] 检查可视化状态失败:', error);
+      }
+    };
+    
+    // ========== Ultra DeepInsight 相关方法 ==========
+    
+    // 检查Ultra DeepInsight状态
+    const checkUltraStatus = async () => {
+      console.log('🔍 [Ultra] checkUltraStatus 开始');
+      console.log('🔍 [Ultra] currentHash:', props.currentHash);
+      
+      if (!props.currentHash) {
+        console.log('⚠️ [Ultra] 没有 currentHash，跳过检查');
+        return 'not_exists';
+      }
+      
+      try {
+        const url = `/api/article/${props.currentHash}/ultra-deep/status`;
+        console.log('🔍 [Ultra] 请求 URL:', url);
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        console.log('🔍 [Ultra] API 响应:', data);
+        
+        const status = data.status || 'not_exists';
+        ultraStatus.value = status;
+        ultraAvailable.value = data.exists && status === 'completed';
+        
+        // 保存任务信息（用于进度显示）
+        if (status === 'generating' && data.task_info) {
+          ultraTaskInfo.value = data.task_info;
+          console.log('🔄 [Ultra] 任务进行中，进度信息:', ultraTaskInfo.value);
+          
+          // 启动轮询
+          startUltraPolling();
+        } else {
+          ultraTaskInfo.value = null;
+        }
+        
+        if (ultraAvailable.value) {
+          ultraVersion.value = data.version;
+          ultraWordCount.value = data.word_count || 0;
+          console.log('✅ [Ultra] Ultra版本可用，版本:', ultraVersion.value, '字数:', ultraWordCount.value);
+          
+          // 停止轮询
+          stopUltraPolling();
+        } else if (status === 'failed') {
+          console.log('❌ [Ultra] Ultra生成失败');
+          stopUltraPolling();
+        } else {
+          console.log('🔴 [Ultra] Ultra版本不可用，状态:', ultraStatus.value);
+        }
+        
+        return status;
+      } catch (error) {
+        console.error('❌ [Ultra] 检查Ultra状态失败:', error);
+        ultraStatus.value = 'not_exists';
+        ultraAvailable.value = false;
+        ultraTaskInfo.value = null;
+        return 'not_exists';
+      }
+    };
+    
+    // 启动Ultra状态轮询
+    const startUltraPolling = () => {
+      if (ultraPollingTimer) {
+        console.log('🔄 [Ultra] 轮询已在运行中');
+        return; // 避免重复轮询
+      }
+      
+      console.log('🔄 [Ultra] 启动状态轮询（每10秒）');
+      
+      ultraPollingTimer = setInterval(async () => {
+        console.log('🔄 [Ultra] 执行轮询检查...');
+        const status = await checkUltraStatus();
+        
+        if (status === 'completed') {
+          console.log('✅ [Ultra] 检测到生成完成，停止轮询');
+          stopUltraPolling();
+          
+          // 触发自动切换到Ultra版本（问题3）
+          await handleUltraCompleted();
+        } else if (status === 'failed') {
+          console.log('❌ [Ultra] 检测到生成失败，停止轮询');
+          stopUltraPolling();
+        }
+      }, 10000); // 每10秒检查一次
+    };
+    
+    // 停止Ultra状态轮询
+    const stopUltraPolling = () => {
+      if (ultraPollingTimer) {
+        console.log('🛑 [Ultra] 停止状态轮询');
+        clearInterval(ultraPollingTimer);
+        ultraPollingTimer = null;
+      }
+    };
+    
+    // 处理Ultra生成完成（自动切换）
+    const handleUltraCompleted = async () => {
+      console.log('✅ [Ultra] Ultra生成完成，准备自动切换');
+      
+      try {
+        // 显示完成提示
+        if (window.eventBus) {
+          window.eventBus.emit('show-toast', {
+            message: 'Ultra DeepInsight 已生成完成！正在自动加载...',
+            type: 'success'
+          });
+        }
+        
+        // 自动刷新页面以加载新的Ultra版本
+        // 通过触发事件让父组件重新加载文档
+        if (props.currentHash && window.eventBus) {
+          console.log('🔄 [Ultra] 触发重新加载文档');
+          window.eventBus.emit('reload-document', {
+            hash: props.currentHash,
+            reason: 'ultra_completed'
+          });
+        }
+        
+        isGeneratingUltra.value = false;
+      } catch (error) {
+        console.error('❌ [Ultra] 自动切换失败:', error);
+      }
+    };
+    
+    // 触发Ultra DeepInsight生成
+    const triggerUltraGeneration = async () => {
+      console.log('🚀 [Ultra] 触发Ultra生成');
+      
+      if (!props.currentHash) {
+        console.error('❌ [Ultra] 没有 currentHash');
+        return;
+      }
+      
+      // 检查认证状态
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.log('🔑 [Ultra] 未登录，触发登录请求');
+        
+        // 触发登录请求事件
+        if (window.eventBus) {
+          window.eventBus.emit('require-login', {
+            reason: 'Ultra DeepInsight功能需要登录',
+            callback: () => {
+              // 登录成功后自动重试
+              console.log('✅ [Ultra] 登录成功，重试Ultra生成');
+              triggerUltraGeneration();
+            }
+          });
+        }
+        return;
+      }
+      
+      // 先检查当前状态，防止重复生成
+      const currentStatus = await checkUltraStatus();
+      
+      if (currentStatus === 'generating') {
+        console.warn('⚠️ [Ultra] Ultra生成任务已在进行中');
+        if (window.eventBus) {
+          window.eventBus.emit('show-toast', {
+            message: 'Ultra DeepInsight 正在生成中，请稍候...',
+            type: 'info'
+          });
+        }
+        return;
+      }
+      
+      if (currentStatus === 'completed') {
+        console.warn('⚠️ [Ultra] Ultra版本已存在');
+        if (window.eventBus) {
+          window.eventBus.emit('show-toast', {
+            message: 'Ultra DeepInsight 版本已存在',
+            type: 'info'
+          });
+        }
+        return;
+      }
+      
+      if (isGeneratingUltra.value) {
+        console.warn('⚠️ [Ultra] 已在生成中');
+        return;
+      }
+      
+      try {
+        isGeneratingUltra.value = true;
+        ultraStatus.value = 'generating';
+        
+        const url = `/api/article/${props.currentHash}/ultra-deep`;
+        console.log('🔍 [Ultra] POST 请求 URL:', url);
+        
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const data = await response.json();
+        console.log('🔍 [Ultra] 响应:', data);
+        
+        // 处理01错误（会话过期）
+        if (response.status === 401) {
+          console.log('⚠️ [Ultra] 会话已过期');
+          localStorage.removeItem('authToken');
+          if (window.eventBus) {
+            window.eventBus.emit('session-expired');
+          }
+          isGeneratingUltra.value = false;
+          return;
+        }
+        
+        if (!response.ok) {
+          throw new Error(data.detail || data.message || 'Ultra生成失败');
+        }
+        
+        if (data.success) {
+          console.log('✅ [Ultra] 生成任务已启动，task_id:', data.task_id);
+          
+          // 显示提示
+          if (window.eventBus) {
+            window.eventBus.emit('show-toast', {
+              message: 'Ultra DeepInsight 生成中，预计15-20分钟',
+              type: 'info'
+            });
+          }
+          
+          // 启动轮询
+          startUltraPolling();
+        }
+      } catch (error) {
+        console.error('❌ [Ultra] 生成失败:', error);
+        ultraStatus.value = 'failed';
+        isGeneratingUltra.value = false;
+        
+        // 显示错误提示
+        if (window.eventBus) {
+          window.eventBus.emit('show-toast', {
+            message: error.message || 'Ultra DeepInsight 生成失败',
+            type: 'danger'
+          });
+        }
       }
     };
     
@@ -1247,7 +1501,18 @@ export default {
     watch(() => props.currentHash, (newVal, oldVal) => {
       console.log('🔄 [DEBUG] currentHash 变化:', oldVal, '->', newVal);
       if (newVal) {
-        console.log('🔍 [DEBUG] currentHash 变化，重新检查可视化状态');
+        console.log('🔍 [DEBUG] currentHash 变化，重新检查状态');
+        checkVisualStatus();
+        checkUltraStatus();  // 同时检查Ultra状态
+      }
+    });
+    
+    // 同步 props.currentVersion 到内部变量
+    watch(() => props.currentVersion, (newVal, oldVal) => {
+      console.log('🔄 [DEBUG] props.currentVersion 变化:', oldVal, '->', newVal);
+      if (newVal !== undefined && newVal !== null) {
+        currentVersion.value = newVal;
+        // 版本变化后重新检查可视化状态
         checkVisualStatus();
       }
     });
@@ -1346,6 +1611,19 @@ export default {
       // 检查可视化状态
       console.log('🔍 [DEBUG] 准备检查可视化状态...');
       checkVisualStatus();
+      
+      // 检查Ultra DeepInsight状态
+      console.log('🔍 [Ultra] 准备检查Ultra状态...');
+      checkUltraStatus();
+      
+      // 监听刷新状态事件（用于Ultra完成后刷新）
+      if (window.eventBus) {
+        unsubscribeRefreshStatus = window.eventBus.on('refresh-reading-status', () => {
+          console.log('🔄 [刷新] 收到刷新状态事件');
+          checkVisualStatus();
+          checkUltraStatus();
+        });
+      }
     });
     
     onUnmounted(() => {
@@ -1377,6 +1655,14 @@ export default {
       // 清理定时器
       if (scrollTimer) {
         clearTimeout(scrollTimer);
+      }
+      
+      // 清理Ultra轮询定时器
+      stopUltraPolling();
+      
+      // 清理刷新状态事件监听
+      if (unsubscribeRefreshStatus) {
+        unsubscribeRefreshStatus();
       }
     });
     
@@ -1463,6 +1749,14 @@ export default {
       visualHtmlUrl,
       currentVersion,
       
+      // Ultra DeepInsight 状态
+      ultraAvailable,
+      ultraStatus,
+      isGeneratingUltra,
+      ultraVersion,
+      ultraWordCount,
+      ultraTaskInfo,
+      
       // 计算属性
       hasMultipleVersions,
       tocHtml,
@@ -1476,6 +1770,8 @@ export default {
       handleVersionChange: handleVersionChangeWithVisual,
       handleDisplayModeChange,
       checkVisualStatus,
+      checkUltraStatus,
+      triggerUltraGeneration,
       handleIframeLoad,
       scrollToElement,
       resetLayout,
