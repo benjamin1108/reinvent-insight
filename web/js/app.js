@@ -1700,6 +1700,12 @@ const app = createApp({
         window.eventBus.on('reload-document', async ({ hash, reason }) => {
           console.log('🔄 [文档] 收到重新加载请求:', hash, reason);
           if (hash && currentView.value === 'read') {
+            // Ultra完成后，清除保存的版本号，强制使用最新版本
+            if (reason === 'ultra_completed') {
+              localStorage.removeItem(`document_version_${hash}`);
+              console.log('🔄 [文档] Ultra完成，已清除保存的版本号');
+            }
+            
             // 重新加载文档
             await loadSummaryByHash(hash);
             

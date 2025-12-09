@@ -645,6 +645,22 @@ class DeepSummaryWorkflow:
             
             # 清理章节标题，移除所有方括号，作为保险措施
             chapters = [re.sub(r'[\[\]]', '', c).strip() for c in chapters_raw]
+            
+            # Ultra模式章节数量限制：必须在18-20章，否则重新生成
+            if self.is_ultra_mode and len(chapters) > 20:
+                logger.warning(f"任务 {self.task_id} - Ultra模式章节数超出限制（{len(chapters)}章），重新生成大纲")
+                await self._log(f"章节数过多（{len(chapters)}章），正在重新分析内容结构...")
+                # 重新生成大纲
+                outline_content = await self._generate_outline()
+                if not outline_content:
+                    raise Exception("重新生成大纲失败")
+                title, chapters_raw, introduction = parse_outline(outline_content)
+                if not title or not chapters_raw:
+                    raise Exception("解析大纲失败")
+                chapters = [re.sub(r'[\[\]]', '', c).strip() for c in chapters_raw]
+                # 如果还是超过20章，报错
+                if len(chapters) > 20:
+                    raise Exception(f"Ultra模式章节数仍超过20（{len(chapters)}章），请检查内容结构")
 
             await self._log(f"成功生成标题和 {len(chapters)} 个章节的分析框架")
             
@@ -1225,6 +1241,14 @@ class DeepSummaryWorkflow:
                 
                 filename_to_hash[final_filename] = doc_hash
                 logger.info(f"文档 {final_filename} 的hash已生成: {doc_hash}")
+                
+                # 刷新文档映射，确保 hash_to_filename 指向最新版本
+                try:
+                    from .api import refresh_doc_hash_mapping
+                    if metadata and metadata.video_url:
+                        refresh_doc_hash_mapping(metadata.video_url)
+                except Exception as refresh_err:
+                    logger.warning(f"刷新文档映射失败: {refresh_err}")
             except ImportError:
                 pass  # API模块未运行，跳过hash映射更新
 

@@ -254,6 +254,44 @@ def init_hash_mappings():
 # 启动时初始化映射
 init_hash_mappings()
 
+def refresh_doc_hash_mapping(video_url: str):
+    """刷新指定文档的hash映射（Ultra完成后调用）"""
+    if not video_url or not config.OUTPUT_DIR.exists():
+        return
+    
+    doc_hash = generate_doc_hash(video_url)
+    if not doc_hash:
+        return
+    
+    # 重新扫描该video_url对应的所有版本
+    files = []
+    for md_file in config.OUTPUT_DIR.glob("*.md"):
+        try:
+            content = md_file.read_text(encoding="utf-8")
+            metadata = parse_metadata_from_md(content)
+            if metadata.get("video_url") == video_url:
+                files.append({
+                    'filename': md_file.name,
+                    'version': metadata.get('version', 0)
+                })
+        except Exception as e:
+            logger.warning(f"刷新映射时解析文件 {md_file.name} 失败: {e}")
+    
+    if not files:
+        return
+    
+    # 按版本号排序，最新版本在前
+    files.sort(key=lambda x: x['version'], reverse=True)
+    latest_file = files[0]['filename']
+    
+    # 更新映射
+    hash_to_filename[doc_hash] = latest_file
+    hash_to_versions[doc_hash] = [f['filename'] for f in files]
+    for file_info in files:
+        filename_to_hash[file_info['filename']] = doc_hash
+    
+    logger.info(f"已刷新文档映射: {doc_hash} -> {latest_file} (共 {len(files)} 个版本)")
+
 def extract_text_from_markdown(content: str) -> str:
     """从 Markdown 内容中提取纯文本，用于准确计算字数"""
     # 移除代码块

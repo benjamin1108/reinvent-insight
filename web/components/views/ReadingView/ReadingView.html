@@ -92,8 +92,8 @@
               </mode-toggle>
             </div>
             
-            <!-- Ultra DeepInsight 生成按钮 - 仅当Ultra版本不存在时显示 -->
-            <div v-if="!ultraAvailable && ultraStatus === 'not_exists'" class="reading-view__ultra-button-wrapper">
+            <!-- Ultra DeepInsight 生成按钮 - 仅登录用户且Ultra版本不存在时显示 -->
+            <div v-if="isAuthenticated && !ultraAvailable && ultraStatus === 'not_exists'" class="reading-view__ultra-button-wrapper">
               <button 
                 @click="triggerUltraGeneration" 
                 class="reading-view__ultra-button"

@@ -266,6 +266,7 @@ export default {
     const ultraWordCount = ref(0);          // Ultra版本字数
     const ultraTaskInfo = ref(null);        // Ultra任务信息（进度、阶段等）
     let ultraPollingTimer = null;           // Ultra状态轮询定时器
+    let visualPollingTimer = null;           // 可视化状态轮询定时器
     let unsubscribeRefreshStatus = null;    // 取消订阅刷新状态事件
     
     // 根据显示模式决定是否显示目录
@@ -387,6 +388,11 @@ export default {
     // 计算属性
     const hasMultipleVersions = computed(() => {
       return props.versions && props.versions.length > 1;
+    });
+    
+    // 检查是否已登录
+    const isAuthenticated = computed(() => {
+      return !!localStorage.getItem('authToken');
     });
 
     const tocHtml = computed(() => {
@@ -695,38 +701,80 @@ export default {
     
     // 检查可视化状态
     const checkVisualStatus = async () => {
-      console.log('🔍 [DEBUG] checkVisualStatus 开始');
-      console.log('🔍 [DEBUG] currentHash:', props.currentHash);
-      console.log('🔍 [DEBUG] currentVersion:', currentVersion.value);
+      console.log('🔍 [Visual] checkVisualStatus 开始');
+      console.log('🔍 [Visual] currentHash:', props.currentHash);
+      console.log('🔍 [Visual] currentVersion:', currentVersion.value);
       
       if (!props.currentHash) {
-        console.log('⚠️ [DEBUG] 没有 currentHash，跳过检查');
-        return;
+        console.log('⚠️ [Visual] 没有 currentHash，跳过检查');
+        return 'not_exists';
       }
       
       try {
         const url = `/api/article/${props.currentHash}/visual/status?version=${currentVersion.value}`;
-        console.log('🔍 [DEBUG] 请求 URL:', url);
         
         const response = await fetch(url);
         const data = await response.json();
         
-        console.log('🔍 [DEBUG] API 响应:', data);
+        console.log('🔍 [Visual] API 响应:', data);
         
-        visualStatus.value = data.status;
-        visualAvailable.value = data.status === 'completed';
-        
-        console.log('🔍 [DEBUG] visualStatus:', visualStatus.value);
-        console.log('🔍 [DEBUG] visualAvailable:', visualAvailable.value);
+        const status = data.status || 'not_exists';
+        visualStatus.value = status;
+        visualAvailable.value = status === 'completed';
         
         if (visualAvailable.value) {
           visualHtmlUrl.value = `/api/article/${props.currentHash}/visual?version=${currentVersion.value}`;
-          console.log('✅ [DEBUG] 可视化可用，URL:', visualHtmlUrl.value);
+          console.log('✅ [Visual] 可视化可用，URL:', visualHtmlUrl.value);
+          stopVisualPolling();
+        } else if (status === 'processing') {
+          console.log('🔄 [Visual] 可视化正在生成中，启动轮询');
+          startVisualPolling();
         } else {
-          console.log('⚠️ [DEBUG] 可视化不可用，状态:', data.status);
+          console.log('⚠️ [Visual] 可视化不可用，状态:', status);
         }
+        
+        return status;
       } catch (error) {
-        console.error('❌ [DEBUG] 检查可视化状态失败:', error);
+        console.error('❌ [Visual] 检查可视化状态失败:', error);
+        return 'error';
+      }
+    };
+    
+    // 启动可视化状态轮询
+    const startVisualPolling = () => {
+      if (visualPollingTimer) {
+        return; // 避免重复轮询
+      }
+      
+      console.log('🔄 [Visual] 启动状态轮询（每5秒）');
+      
+      visualPollingTimer = setInterval(async () => {
+        const status = await checkVisualStatus();
+        
+        if (status === 'completed') {
+          console.log('✅ [Visual] 检测到可视化完成，停止轮询');
+          stopVisualPolling();
+          
+          // 显示提示
+          if (window.eventBus) {
+            window.eventBus.emit('show-toast', {
+              message: '可视化解读已完成，可切换查看',
+              type: 'success'
+            });
+          }
+        } else if (status === 'failed' || status === 'error') {
+          console.log('❌ [Visual] 检测到可视化失败，停止轮询');
+          stopVisualPolling();
+        }
+      }, 5000); // 每5秒检查一次
+    };
+    
+    // 停止可视化状态轮询
+    const stopVisualPolling = () => {
+      if (visualPollingTimer) {
+        console.log('🛑 [Visual] 停止状态轮询');
+        clearInterval(visualPollingTimer);
+        visualPollingTimer = null;
       }
     };
     
@@ -1660,6 +1708,9 @@ export default {
       // 清理Ultra轮询定时器
       stopUltraPolling();
       
+      // 清理可视化轮询定时器
+      stopVisualPolling();
+      
       // 清理刷新状态事件监听
       if (unsubscribeRefreshStatus) {
         unsubscribeRefreshStatus();
@@ -1759,6 +1810,7 @@ export default {
       
       // 计算属性
       hasMultipleVersions,
+      isAuthenticated,
       tocHtml,
       cleanContent,
       shouldShowToc,
