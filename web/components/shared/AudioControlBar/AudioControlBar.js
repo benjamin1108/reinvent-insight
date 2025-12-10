@@ -90,7 +90,6 @@ export default {
         // 监听文章切换
         articleHash(newHash, oldHash) {
             if (newHash !== oldHash) {
-                console.log('📄 文章切换:', oldHash, '→', newHash);
                 this.handleArticleChange();
             }
         }
@@ -114,7 +113,6 @@ export default {
         handleArticleChange() {
             // 停止当前播放
             if (this.audioPlayer) {
-                console.log('🛑 停止当前文章的播放');
                 this.audioPlayer.stop();
             }
 
@@ -129,8 +127,6 @@ export default {
 
             // 停止进度跟踪
             this.stopProgressTracking();
-
-            console.log('✅ 已重置播放器状态，准备播放新文章');
         },
 
         async togglePlayPause() {

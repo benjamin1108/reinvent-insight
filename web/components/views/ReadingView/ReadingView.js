@@ -256,6 +256,7 @@ export default {
     const visualAvailable = ref(false);
     const visualStatus = ref('pending');  // 'pending' | 'processing' | 'completed' | 'failed'
     const visualHtmlUrl = ref(null);
+    const iframeLoading = ref(false);  // iframe 加载状态
     const currentVersion = ref(props.currentVersion || 0);  // 从 props 初始化
     
     // ========== Ultra DeepInsight 状态管理 ==========
@@ -276,13 +277,6 @@ export default {
       // 检测是否为移动设备（包括平板）
       const isMobile = window.innerWidth <= 768;
       const result = !isMobile && displayMode.value !== 'quick' && isTocVisible.value;
-      console.log('🔍 [DEBUG] shouldShowToc 计算:', {
-        isMobile,
-        windowWidth: window.innerWidth,
-        displayMode: displayMode.value,
-        isTocVisible: isTocVisible.value,
-        result
-      });
       return result;
     });
     
@@ -408,21 +402,14 @@ export default {
     
     // TOC相关方法
     const toggleToc = () => {
-      console.log('🔄 [DEBUG] toggleToc 被调用');
-      console.log('🔍 [DEBUG] 当前 isTocVisible:', isTocVisible.value);
-      console.log('🔍 [DEBUG] 当前 displayMode:', displayMode.value);
       
       isTocVisible.value = !isTocVisible.value;
       
-      console.log('✅ [DEBUG] 切换后 isTocVisible:', isTocVisible.value);
-      console.log('✅ [DEBUG] shouldShowToc:', shouldShowToc.value);
       
       emit('toc-toggle', isTocVisible.value);
     };
     
     const handleTocClick = (event) => {
-      console.log('📌 [DEBUG] handleTocClick 被触发');
-      console.log('📌 [DEBUG] event.target:', event.target);
       
       const target = event.target;
       
@@ -431,7 +418,6 @@ export default {
         event.stopPropagation(); // 🔧 阻止冒泡
         
         const targetId = target.getAttribute('data-target');
-        console.log('📌 [DEBUG] targetId:', targetId);
         
         if (targetId) {
           scrollToSection(targetId);
@@ -442,7 +428,6 @@ export default {
     
     // 滚动到指定章节
     const scrollToSection = (sectionId) => {
-      console.log('🎯 [DEBUG] scrollToSection 被调用，目标 ID:', sectionId);
       
       // 使用nextTick确保DOM已更新
       nextTick(() => {
@@ -450,7 +435,6 @@ export default {
         const bodyContainer = document.querySelector('.reading-view__body');
         
         if (!bodyContainer) {
-          console.warn('⚠️ [DEBUG] 找不到 .reading-view__body');
           return;
         }
         
@@ -542,11 +526,9 @@ export default {
         }
         
         if (!element) {
-          console.warn('⚠️ [DEBUG] 找不到目标元素:', sectionId);
           return;
         }
         
-        console.log('✅ [DEBUG] 找到目标元素:', element);
         
         // 找到真正的滚动容器
         // 尝试顺序：.reading-view__content -> .reading-view -> window
@@ -679,11 +661,13 @@ export default {
       try {
         if (mode === displayMode.value) return;
         
-        // 切换到 quick 模式时，确保 URL 已设置并强制刷新
+        // 切换到 quick 模式时，确保 URL 已设置并显示加载状态
         if (mode === 'quick' && visualAvailable.value) {
+          // 先显示加载状态
+          iframeLoading.value = true;
+          
           const newUrl = `/api/article/${props.currentHash}/visual?version=${currentVersion.value}&t=${Date.now()}`;
           visualHtmlUrl.value = newUrl;
-          console.log('🔄 [DEBUG] 切换到 quick 模式，刷新 URL:', newUrl);
         }
         
         displayMode.value = mode;
@@ -694,6 +678,7 @@ export default {
         emit('display-mode-change', mode);
       } catch (error) {
         console.error('模式切换失败:', error);
+        iframeLoading.value = false;
       }
     };
     
@@ -701,12 +686,8 @@ export default {
     
     // 检查可视化状态
     const checkVisualStatus = async () => {
-      console.log('🔍 [Visual] checkVisualStatus 开始');
-      console.log('🔍 [Visual] currentHash:', props.currentHash);
-      console.log('🔍 [Visual] currentVersion:', currentVersion.value);
       
       if (!props.currentHash) {
-        console.log('⚠️ [Visual] 没有 currentHash，跳过检查');
         return 'not_exists';
       }
       
@@ -716,7 +697,6 @@ export default {
         const response = await fetch(url);
         const data = await response.json();
         
-        console.log('🔍 [Visual] API 响应:', data);
         
         const status = data.status || 'not_exists';
         visualStatus.value = status;
@@ -724,13 +704,10 @@ export default {
         
         if (visualAvailable.value) {
           visualHtmlUrl.value = `/api/article/${props.currentHash}/visual?version=${currentVersion.value}`;
-          console.log('✅ [Visual] 可视化可用，URL:', visualHtmlUrl.value);
           stopVisualPolling();
         } else if (status === 'processing') {
-          console.log('🔄 [Visual] 可视化正在生成中，启动轮询');
           startVisualPolling();
         } else {
-          console.log('⚠️ [Visual] 可视化不可用，状态:', status);
         }
         
         return status;
@@ -746,13 +723,11 @@ export default {
         return; // 避免重复轮询
       }
       
-      console.log('🔄 [Visual] 启动状态轮询（每5秒）');
       
       visualPollingTimer = setInterval(async () => {
         const status = await checkVisualStatus();
         
         if (status === 'completed') {
-          console.log('✅ [Visual] 检测到可视化完成，停止轮询');
           stopVisualPolling();
           
           // 显示提示
@@ -763,7 +738,6 @@ export default {
             });
           }
         } else if (status === 'failed' || status === 'error') {
-          console.log('❌ [Visual] 检测到可视化失败，停止轮询');
           stopVisualPolling();
         }
       }, 5000); // 每5秒检查一次
@@ -772,7 +746,6 @@ export default {
     // 停止可视化状态轮询
     const stopVisualPolling = () => {
       if (visualPollingTimer) {
-        console.log('🛑 [Visual] 停止状态轮询');
         clearInterval(visualPollingTimer);
         visualPollingTimer = null;
       }
@@ -782,22 +755,17 @@ export default {
     
     // 检查Ultra DeepInsight状态
     const checkUltraStatus = async () => {
-      console.log('🔍 [Ultra] checkUltraStatus 开始');
-      console.log('🔍 [Ultra] currentHash:', props.currentHash);
       
       if (!props.currentHash) {
-        console.log('⚠️ [Ultra] 没有 currentHash，跳过检查');
         return 'not_exists';
       }
       
       try {
         const url = `/api/article/${props.currentHash}/ultra-deep/status`;
-        console.log('🔍 [Ultra] 请求 URL:', url);
         
         const response = await fetch(url);
         const data = await response.json();
         
-        console.log('🔍 [Ultra] API 响应:', data);
         
         const status = data.status || 'not_exists';
         ultraStatus.value = status;
@@ -806,7 +774,6 @@ export default {
         // 保存任务信息（用于进度显示）
         if (status === 'generating' && data.task_info) {
           ultraTaskInfo.value = data.task_info;
-          console.log('🔄 [Ultra] 任务进行中，进度信息:', ultraTaskInfo.value);
           
           // 启动轮询
           startUltraPolling();
@@ -817,15 +784,12 @@ export default {
         if (ultraAvailable.value) {
           ultraVersion.value = data.version;
           ultraWordCount.value = data.word_count || 0;
-          console.log('✅ [Ultra] Ultra版本可用，版本:', ultraVersion.value, '字数:', ultraWordCount.value);
           
           // 停止轮询
           stopUltraPolling();
         } else if (status === 'failed') {
-          console.log('❌ [Ultra] Ultra生成失败');
           stopUltraPolling();
         } else {
-          console.log('🔴 [Ultra] Ultra版本不可用，状态:', ultraStatus.value);
         }
         
         return status;
@@ -841,24 +805,19 @@ export default {
     // 启动Ultra状态轮询
     const startUltraPolling = () => {
       if (ultraPollingTimer) {
-        console.log('🔄 [Ultra] 轮询已在运行中');
         return; // 避免重复轮询
       }
       
-      console.log('🔄 [Ultra] 启动状态轮询（每10秒）');
       
       ultraPollingTimer = setInterval(async () => {
-        console.log('🔄 [Ultra] 执行轮询检查...');
         const status = await checkUltraStatus();
         
         if (status === 'completed') {
-          console.log('✅ [Ultra] 检测到生成完成，停止轮询');
           stopUltraPolling();
           
           // 触发自动切换到Ultra版本（问题3）
           await handleUltraCompleted();
         } else if (status === 'failed') {
-          console.log('❌ [Ultra] 检测到生成失败，停止轮询');
           stopUltraPolling();
         }
       }, 10000); // 每10秒检查一次
@@ -867,7 +826,6 @@ export default {
     // 停止Ultra状态轮询
     const stopUltraPolling = () => {
       if (ultraPollingTimer) {
-        console.log('🛑 [Ultra] 停止状态轮询');
         clearInterval(ultraPollingTimer);
         ultraPollingTimer = null;
       }
@@ -875,7 +833,6 @@ export default {
     
     // 处理Ultra生成完成（自动切换）
     const handleUltraCompleted = async () => {
-      console.log('✅ [Ultra] Ultra生成完成，准备自动切换');
       
       try {
         // 显示完成提示
@@ -889,7 +846,6 @@ export default {
         // 自动刷新页面以加载新的Ultra版本
         // 通过触发事件让父组件重新加载文档
         if (props.currentHash && window.eventBus) {
-          console.log('🔄 [Ultra] 触发重新加载文档');
           window.eventBus.emit('reload-document', {
             hash: props.currentHash,
             reason: 'ultra_completed'
@@ -904,7 +860,6 @@ export default {
     
     // 触发Ultra DeepInsight生成
     const triggerUltraGeneration = async () => {
-      console.log('🚀 [Ultra] 触发Ultra生成');
       
       if (!props.currentHash) {
         console.error('❌ [Ultra] 没有 currentHash');
@@ -914,7 +869,6 @@ export default {
       // 检查认证状态
       const token = localStorage.getItem('authToken');
       if (!token) {
-        console.log('🔑 [Ultra] 未登录，触发登录请求');
         
         // 触发登录请求事件
         if (window.eventBus) {
@@ -922,7 +876,6 @@ export default {
             reason: 'Ultra DeepInsight功能需要登录',
             callback: () => {
               // 登录成功后自动重试
-              console.log('✅ [Ultra] 登录成功，重试Ultra生成');
               triggerUltraGeneration();
             }
           });
@@ -965,7 +918,6 @@ export default {
         ultraStatus.value = 'generating';
         
         const url = `/api/article/${props.currentHash}/ultra-deep`;
-        console.log('🔍 [Ultra] POST 请求 URL:', url);
         
         const response = await fetch(url, {
           method: 'POST',
@@ -976,11 +928,9 @@ export default {
         });
         
         const data = await response.json();
-        console.log('🔍 [Ultra] 响应:', data);
         
         // 处理01错误（会话过期）
         if (response.status === 401) {
-          console.log('⚠️ [Ultra] 会话已过期');
           localStorage.removeItem('authToken');
           if (window.eventBus) {
             window.eventBus.emit('session-expired');
@@ -994,7 +944,6 @@ export default {
         }
         
         if (data.success) {
-          console.log('✅ [Ultra] 生成任务已启动，task_id:', data.task_id);
           
           // 显示提示
           if (window.eventBus) {
@@ -1041,6 +990,9 @@ export default {
     const handleIframeLoad = () => {
       const iframe = visualIframe.value;
       
+      // iframe 加载完成，隐藏加载状态
+      iframeLoading.value = false;
+      
       try {
         if (!iframe || !iframe.contentWindow) {
           throw new Error('无法访问 iframe');
@@ -1061,7 +1013,6 @@ export default {
             const hasScript = doc.body.innerHTML.includes('iframe-height');
             
             if (!hasScript) {
-              console.log('🔧 [DEBUG] 检测到旧的可视化 HTML，手动注入通信脚本');
               
               const script = doc.createElement('script');
               script.textContent = `
@@ -1125,7 +1076,6 @@ export default {
     // 添加适度缓冲（50px）
     finalHeight = Math.ceil(finalHeight) + 50;
     
-    console.log('📏 [iframe] 高度计算详情:', {
       bodyScrollHeight,
       docScrollHeight,
       bodyOffsetHeight,
@@ -1184,7 +1134,6 @@ export default {
 })();
               `;
               doc.body.appendChild(script);
-              console.log('✅ [DEBUG] 通信脚本注入成功');
             }
           }
         } catch (crossOriginError) {
@@ -1192,13 +1141,13 @@ export default {
           console.warn('⚠️ 跨域限制，无法访问 iframe 内容');
         }
         
-        console.log('✅ iframe 加载成功');
       } catch (error) {
         console.error('❌ iframe 加载错误:', error);
         
         // 更新状态为失败
         visualStatus.value = 'failed';
         visualAvailable.value = false;
+        iframeLoading.value = false;
         
         // 可选：自动切换回 Deep Insight 模式
         // displayMode.value = 'deep';
@@ -1208,7 +1157,6 @@ export default {
     // iframe 消息监听器（简化版 - 不再处理高度）
     const setupIframeMessageListener = () => {
       // 预留给未来可能的iframe通信需求
-      console.log('✅ iframe 已准备就绪');
     };
     
     // 清理 iframe 消息监听器
@@ -1228,19 +1176,16 @@ export default {
       // 强制触发 shouldShowToc 重新计算
       // 通过修改一个依赖项来触发
       nextTick(() => {
-        console.log('📱 [DEBUG] 窗口大小变化，当前宽度:', window.innerWidth);
       });
     };
     
     // 处理页面可见性变化（应用切换时触发）
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('👁️ [DEBUG] 页面重新可见，检查布局');
         // 页面重新可见时，强制检查并修复布局
         nextTick(() => {
           const isMobile = window.innerWidth <= 768;
           if (isMobile && isTocVisible.value) {
-            console.log('📱 [DEBUG] 应用切换后检测到移动端，强制隐藏 TOC');
             isTocVisible.value = false;
             emit('toc-toggle', false);
           }
@@ -1252,12 +1197,10 @@ export default {
     
     // 处理页面获得焦点（从其他应用切换回来）
     const handlePageFocus = () => {
-      console.log('🔄 [DEBUG] 页面获得焦点');
       // 延迟执行，确保浏览器完成布局更新
       setTimeout(() => {
         const isMobile = window.innerWidth <= 768;
         if (isMobile && isTocVisible.value) {
-          console.log('📱 [DEBUG] 焦点恢复后检测到移动端，强制隐藏 TOC');
           isTocVisible.value = false;
           emit('toc-toggle', false);
         }
@@ -1402,13 +1345,11 @@ export default {
     const rebindInDocumentTocLinks = () => {
       const bodyContainer = document.querySelector('.reading-view__body');
       if (!bodyContainer) {
-        console.warn('⚠️ [DEBUG] 找不到 .reading-view__body，无法绑定文档内 TOC 链接');
         return;
       }
       
       // 查找所有文档内的锚点链接
       const tocLinks = bodyContainer.querySelectorAll('a[href^="#"]');
-      console.log(`🔗 [DEBUG] 找到 ${tocLinks.length} 个文档内 TOC 链接`);
       
       tocLinks.forEach(link => {
         // 移除旧的事件监听器（如果有）
@@ -1434,7 +1375,6 @@ export default {
               // 使用原始ID
             }
             
-            console.log('🔗 [DEBUG] 文档内 TOC 链接点击，目标 ID:', sectionId);
             scrollToSection(sectionId);
           }
         };
@@ -1445,7 +1385,6 @@ export default {
         link._tocClickHandler = newHandler;
       });
       
-      console.log('✅ [DEBUG] 文档内 TOC 链接绑定完成');
     };
     
     // 监听活动章节变化，触发目录更新
@@ -1457,13 +1396,10 @@ export default {
     
     // 监听 props.initialShowToc 的变化，同步到本地状态
     watch(() => props.initialShowToc, (newVal, oldVal) => {
-      console.log('🔄 [DEBUG] props.initialShowToc 变化:', oldVal, '->', newVal);
-      console.log('🔍 [DEBUG] 当前本地 isTocVisible:', isTocVisible.value);
       
       // 移动端强制隐藏 TOC，不管 props 如何变化
       const isMobile = window.innerWidth <= 768;
       if (isMobile) {
-        console.log('📱 [DEBUG] 移动端检测到，强制隐藏 TOC');
         if (isTocVisible.value !== false) {
           isTocVisible.value = false;
         }
@@ -1472,39 +1408,24 @@ export default {
       
       // 同步 prop 到本地状态（仅桌面端）
       if (newVal !== isTocVisible.value) {
-        console.log('✅ [DEBUG] 同步 prop 到本地状态');
         isTocVisible.value = newVal;
       }
     });
     
     watch(isTocVisible, (newVal, oldVal) => {
-      console.log('🔄 [DEBUG] isTocVisible 变化:', oldVal, '->', newVal);
-      console.log('🔍 [DEBUG] 当前 displayMode:', displayMode.value);
-      console.log('🔍 [DEBUG] 计算后 shouldShowToc:', shouldShowToc.value);
     });
     
     watch(visualAvailable, (newVal, oldVal) => {
-      console.log('🔄 [DEBUG] visualAvailable 变化:', oldVal, '->', newVal);
     });
     
     watch(visualStatus, (newVal, oldVal) => {
-      console.log('🔄 [DEBUG] visualStatus 变化:', oldVal, '->', newVal);
     });
     
     watch(displayMode, (newVal, oldVal) => {
-      console.log('🔄 [DEBUG] displayMode 变化:', oldVal, '->', newVal);
-      console.log('🔍 [DEBUG] 当前 isTocVisible:', isTocVisible.value);
-      console.log('🔍 [DEBUG] 当前 shouldShowToc:', shouldShowToc.value);
       
-      // 从 Quick Insight 切换出去时，清理 iframe 资源
+      // 从 Quick Insight 切换出去时，不再清理 iframe 资源
+      // 保留 iframe 内容，避免切换回来时重新加载导致的黑屏
       if (oldVal === 'quick' && newVal !== 'quick') {
-        const iframe = visualIframe.value;
-        if (iframe) {
-          // 设置 src 为 about:blank 释放内存
-          iframe.src = 'about:blank';
-          console.log('🧹 [DEBUG] 清理 iframe 资源');
-        }
-        
         // 清理高度更新定时器
         if (heightUpdateTimer) {
           clearTimeout(heightUpdateTimer);
@@ -1514,16 +1435,13 @@ export default {
       
       // 切换到 Deep Insight 模式时，重新初始化 DOM
       if (newVal === 'deep' && oldVal !== 'deep') {
-        console.log('✅ [DEBUG] 切换到 Deep Insight 模式，重新初始化');
         // DOM 会被重新渲染，需要等待 DOM 更新后重新初始化标题 ID
         // 使用双重 nextTick 确保 v-html 内容完全渲染
         nextTick(() => {
           nextTick(() => {
-            console.log('🔧 [DEBUG] 重新解析内容和初始化标题 ID');
             if (cleanContent.value) {
               parsedSections.value = parseContent(cleanContent.value);
               ensureHeadingIds();
-              console.log('✅ [DEBUG] 标题 ID 初始化完成');
               
               // 🔧 修复：重新绑定文档内 TOC 链接的点击事件
               rebindInDocumentTocLinks();
@@ -1531,14 +1449,9 @@ export default {
               // 验证 DOM 元素是否存在
               const bodyContainer = document.querySelector('.reading-view__body');
               const scrollContainer = document.querySelector('.reading-view__content');
-              console.log('🔍 [DEBUG] bodyContainer 存在:', !!bodyContainer);
-              console.log('🔍 [DEBUG] scrollContainer 存在:', !!scrollContainer);
               
               if (bodyContainer) {
                 const headings = bodyContainer.querySelectorAll('h1, h2, h3, h4, h5, h6');
-                console.log('🔍 [DEBUG] 找到标题数量:', headings.length);
-                console.log('🔍 [DEBUG] 前3个标题 ID:', 
-                  Array.from(headings).slice(0, 3).map(h => h.id));
               }
             }
           });
@@ -1547,38 +1460,26 @@ export default {
     });
     
     watch(() => props.currentHash, (newVal, oldVal) => {
-      console.log('🔄 [DEBUG] currentHash 变化:', oldVal, '->', newVal);
       if (newVal) {
-        console.log('🔍 [DEBUG] currentHash 变化，重新检查状态');
-        checkVisualStatus();
-        checkUltraStatus();  // 同时检查Ultra状态
+        // 注意：不在这里检查 visualStatus，因为 currentVersion 可能还未更新
+        // visualStatus 会在 currentVersion 的 watch 中检查
+        checkUltraStatus();  // Ultra 不依赖版本号，可以立即检查
       }
     });
     
     // 同步 props.currentVersion 到内部变量
     watch(() => props.currentVersion, (newVal, oldVal) => {
-      console.log('🔄 [DEBUG] props.currentVersion 变化:', oldVal, '->', newVal);
       if (newVal !== undefined && newVal !== null) {
         currentVersion.value = newVal;
-        // 版本变化后重新检查可视化状态
-        checkVisualStatus();
+        // 版本变化后检查可视化状态（此时 currentHash 已经更新）
+        if (props.currentHash) {
+          checkVisualStatus();
+        }
       }
     });
     
     // 生命周期
     onMounted(() => {
-      console.log('🚀 [DEBUG] ReadingView onMounted');
-      console.log('🔍 [DEBUG] 初始 props:', {
-        currentHash: props.currentHash,
-        initialDisplayMode: props.initialDisplayMode,
-        currentVersion: props.currentVersion
-      });
-      console.log('🔍 [DEBUG] 初始状态:', {
-        displayMode: displayMode.value,
-        visualAvailable: visualAvailable.value,
-        visualStatus: visualStatus.value
-      });
-      
       window.addEventListener('resize', handleResize);
       document.addEventListener('keydown', handleKeydown);
       
@@ -1613,8 +1514,6 @@ export default {
       const isMobile = window.innerWidth <= 768;
       
       if (isMobile) {
-        console.log('📱 [CHROME FIX] 检测到移动端，强制刷新布局');
-        console.log('🔍 [CHROME FIX] 浏览器:', isChrome ? 'Chrome' : 'Other');
         
         nextTick(() => {
           // 强制触发重排，清除可能的缓存
@@ -1628,7 +1527,6 @@ export default {
             
             // 方法2: 如果是 Chrome，使用更激进的修复
             if (isChrome) {
-              console.log('🔧 [CHROME FIX] 应用 Chrome 特殊修复');
               
               // 临时移除并重新添加样式，强制 Chrome 重新渲染
               const originalLeft = content.style.left;
@@ -1638,12 +1536,10 @@ export default {
               requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                   content.style.left = originalLeft || '';
-                  console.log('✅ [CHROME FIX] Chrome 特殊修复完成');
                 });
               });
             }
             
-            console.log('📱 [CHROME FIX] 布局已强制刷新');
           }
         });
       }
@@ -1657,17 +1553,14 @@ export default {
       }
       
       // 检查可视化状态
-      console.log('🔍 [DEBUG] 准备检查可视化状态...');
       checkVisualStatus();
       
       // 检查Ultra DeepInsight状态
-      console.log('🔍 [Ultra] 准备检查Ultra状态...');
       checkUltraStatus();
       
       // 监听刷新状态事件（用于Ultra完成后刷新）
       if (window.eventBus) {
         unsubscribeRefreshStatus = window.eventBus.on('refresh-reading-status', () => {
-          console.log('🔄 [刷新] 收到刷新状态事件');
           checkVisualStatus();
           checkUltraStatus();
         });
@@ -1675,7 +1568,6 @@ export default {
       
       // 添加打印前处理 - 修复分页问题
       const beforePrintHandler = () => {
-        console.log('🖨️ [打印] 准备打印，强制移除flex布局...');
         const elements = document.querySelectorAll('.reading-view, .reading-view *, .reading-view__article, .reading-view__article-wrapper');
         elements.forEach(el => {
           // 跳过需要隐藏的元素
@@ -1692,7 +1584,6 @@ export default {
       };
       
       const afterPrintHandler = () => {
-        console.log('🖨️ [打印] 打印完成，恢复样式');
         // 移除内联样式，恢复CSS控制
         const elements = document.querySelectorAll('.reading-view, .reading-view *, .reading-view__article, .reading-view__article-wrapper');
         elements.forEach(el => {
@@ -1806,7 +1697,6 @@ export default {
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
         
-        console.log('✅ Markdown 文件下载成功:', filename);
       } catch (error) {
         console.error('❌ 下载 Markdown 文件失败:', error);
       }
@@ -1839,6 +1729,7 @@ export default {
       visualAvailable,
       visualStatus,
       visualHtmlUrl,
+      iframeLoading,
       currentVersion,
       
       // Ultra DeepInsight 状态

@@ -19,17 +19,14 @@ const ensureMarkedReady = (callback) => {
   };
 
   if (checkMarked()) {
-    console.log('✅ marked已就绪，直接执行回调');
     callback(window.marked);
     return;
   }
 
-  console.log('⏳ marked未加载，等待加载...');
 
   // 检查是否已经在加载中
   if (window.markedLoadingPromise) {
     window.markedLoadingPromise.then(() => {
-      console.log('✅ marked加载完成（复用Promise）');
       callback(window.marked);
     });
     return;
@@ -38,7 +35,6 @@ const ensureMarkedReady = (callback) => {
   // 首先尝试等待已有的script标签加载完成
   const existingScript = document.querySelector('script[src*="marked"]');
   if (existingScript) {
-    console.log('⏳ 检测到marked脚本标签，等待加载完成...');
     window.markedLoadingPromise = new Promise((resolve, reject) => {
       // 设置超时检查
       let checkCount = 0;
@@ -47,7 +43,6 @@ const ensureMarkedReady = (callback) => {
         checkCount++;
         if (checkMarked()) {
           clearInterval(checkInterval);
-          console.log('✅ marked加载完成（轮询检测）');
           resolve(window.marked);
         } else if (checkCount >= maxChecks) {
           clearInterval(checkInterval);
@@ -72,12 +67,10 @@ const ensureMarkedReady = (callback) => {
     });
   } else {
     // 如果没有找到script标签，动态创建一个
-    console.log('⏳ 动态加载marked.js...');
     window.markedLoadingPromise = new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = '/js/vendor/marked.min.js';
       script.onload = () => {
-        console.log('✅ marked.js脚本加载完成');
         window.librariesReady.marked = true;
         resolve(window.marked);
       };
@@ -123,7 +116,6 @@ const configureMarked = (markedInstance) => {
       smartLists: true,
       smartypants: false
     });
-    console.log('✅ marked配置完成');
   } catch (error) {
     console.error('❌ marked配置失败:', error);
   }
@@ -398,14 +390,7 @@ const app = createApp({
 
     // 监听readingContent变化，手动更新articleTextForTTS
     watch([readingContent, currentView], ([content, view]) => {
-      console.log('📝 [DEBUG] readingContent/currentView 变化:', {
-        contentLength: content?.length || 0,
-        hasContent: !!content,
-        currentView: view
-      });
-
       if (!content || view !== 'read') {
-        console.log('🎵 [TTS] 清空文本 - 条件不满足');
         articleTextForTTS.value = '';
         return;
       }
@@ -441,21 +426,10 @@ const app = createApp({
             }
           }
 
-          console.log('🎵 [TTS] 文本提取成功:', {
-            originalLength: content.length,
-            extractedLength: text.length,
-            readingHash: readingHash.value
-          });
-
           articleTextForTTS.value = text;
 
           // 强制触发Vue更新
-          nextTick(() => {
-            console.log('🎵 [TTS] nextTick后检查:', {
-              articleTextForTTSLength: articleTextForTTS.value.length,
-              readingHash: readingHash.value
-            });
-          });
+          nextTick(() => {});
         } catch (error) {
           console.error('[TTS] 提取文本失败:', error);
           articleTextForTTS.value = '';
@@ -505,7 +479,6 @@ const app = createApp({
 
         // 如果有登录回调（如Ultra触发），则不切换视图，直接执行回调
         if (loginSuccessCallback.value) {
-          console.log('🔄 [认证] 执行登录成功回调，保持当前页面');
           const callback = loginSuccessCallback.value;
           loginSuccessCallback.value = null; // 清空回调
           await callback();
@@ -513,7 +486,6 @@ const app = createApp({
           // 无回调时，正常跳转到主页
           currentView.value = 'recent';
           await nextTick();
-          console.log('🔐 登录成功，正在重新加载笔记库...');
           await loadSummaries();
         }
       } catch (error) {
@@ -536,7 +508,6 @@ const app = createApp({
       // 重新加载访客模式下的公开文章列表
       try {
         await loadSummaries();
-        console.log('🔄 退出登录后重新加载公开文章列表成功');
       } catch (error) {
         console.error('❌ 退出登录后重新加载文章列表失败:', error);
         // 如果加载失败，至少保持数组为空而不是显示错误数据
@@ -629,13 +600,9 @@ const app = createApp({
 
     // TOC 相关方法
     const toggleToc = () => {
-      console.log('🔘 [APP] toggleToc 被调用');
-      console.log('🔍 [APP] 当前 showToc:', showToc.value);
 
       showToc.value = !showToc.value;
 
-      console.log('✅ [APP] 切换后 showToc:', showToc.value);
-      console.log('💾 [APP] 保存到 localStorage');
 
       localStorage.setItem('showToc', showToc.value);
     };
@@ -782,7 +749,6 @@ const app = createApp({
         ? `/api/tasks/${taskId}/stream?token=${encodeURIComponent(token)}`
         : `/api/tasks/${taskId}/stream`;
 
-      console.log(`🔌 建立 SSE 连接: ${sseUrl.replace(/token=[^&]+/, 'token=***')}`);
 
       // 创建 EventSource
       const eventSource = new EventSource(sseUrl);
@@ -833,11 +799,8 @@ const app = createApp({
             }
           } else if (data.type === 'progress') {
             // 处理进度消息（仅记录日志，不显示进度条）
-            console.log(`📊 进度更新: ${data.progress}%`);
           } else if (data.type === 'error') {
             // 处理结构化错误消息
-            console.log('📛 收到错误消息:', data);
-
             // 存储结构化错误信息
             currentError.value = {
               error_type: data.error_type || 'unknown',
@@ -857,7 +820,6 @@ const app = createApp({
             eventSource.close();
           } else if (data.type === 'heartbeat') {
             // 心跳消息，保持连接活跃
-            console.log('💓 SSE 心跳正常');
           }
         } catch (error) {
           console.error('解析 SSE 消息失败:', error, event.data);
@@ -899,16 +861,13 @@ const app = createApp({
       try {
         // 统一使用公开API端点
         const endpoint = '/api/public/summaries';
-        console.log(`📚 正在加载笔记库，认证状态: ${isAuthenticated.value}, 端点: ${endpoint}`);
 
         const res = await axios.get(endpoint);
-        console.log('📚 API响应:', res.data);
 
         // 统一使用res.data.summaries格式
         const dataArray = res.data.summaries || [];
 
         summaries.value = dataArray;
-        console.log(`📚 设置summaries数组，长度: ${summaries.value.length}`);
       } catch (error) {
         console.error('加载笔记库失败:', error);
         showToast('加载笔记库失败', 'danger');
@@ -926,7 +885,6 @@ const app = createApp({
       }
 
       try {
-        console.log('🗑️ 正在删除文章:', data.hash);
         const res = await axios.delete(`/api/summaries/${data.hash}`);
         
         if (res.data.success) {
@@ -935,7 +893,6 @@ const app = createApp({
           
           const title = data.titleCn || data.titleEn || '文章';
           showToast(`已删除「${title.substring(0, 20)}${title.length > 20 ? '...' : ''}」`, 'success');
-          console.log('✅ 文章删除成功:', res.data);
         } else {
           throw new Error(res.data.message || '删除失败');
         }
@@ -959,7 +916,6 @@ const app = createApp({
       try {
         const res = await axios.get('/api/admin/trash');
         trashItems.value = res.data.items || [];
-        console.log('🗑️ 加载回收站:', trashItems.value.length, '条记录');
       } catch (error) {
         console.error('✖ 加载回收站失败:', error);
         showToast('加载回收站失败', 'danger');
@@ -971,7 +927,6 @@ const app = createApp({
     // 恢复文章
     const restoreFromTrash = async (docHash, title) => {
       try {
-        console.log('🔄 正在恢复文章:', docHash);
         const res = await axios.post(`/api/admin/trash/${docHash}/restore`);
         
         if (res.data.success) {
@@ -982,7 +937,6 @@ const app = createApp({
           
           const displayTitle = title ? (title.length > 20 ? title.substring(0, 20) + '...' : title) : '文章';
           showToast(`已恢复「${displayTitle}」`, 'success');
-          console.log('✔ 文章恢复成功:', res.data);
         }
       } catch (error) {
         console.error('✖ 恢复文章失败:', error);
@@ -994,7 +948,6 @@ const app = createApp({
     // 永久删除文章
     const permanentlyDelete = async (docHash, title) => {
       try {
-        console.log('🗑️ 正在永久删除:', docHash);
         const res = await axios.delete(`/api/admin/trash/${docHash}`);
         
         if (res.data.success) {
@@ -1002,7 +955,6 @@ const app = createApp({
           
           const displayTitle = title ? (title.length > 20 ? title.substring(0, 20) + '...' : title) : '文章';
           showToast(`已永久删除「${displayTitle}」`, 'success');
-          console.log('✔ 永久删除成功:', res.data);
         }
       } catch (error) {
         console.error('✖ 永久删除失败:', error);
@@ -1019,13 +971,11 @@ const app = createApp({
       }
       
       try {
-        console.log('🗑️ 正在清空回收站...');
         const res = await axios.delete('/api/admin/trash');
         
         if (res.data.success) {
           trashItems.value = [];
           showToast('已清空回收站', 'success');
-          console.log('✔ 回收站已清空:', res.data);
         }
       } catch (error) {
         console.error('✖ 清空回收站失败:', error);
@@ -1078,12 +1028,6 @@ const app = createApp({
         }
 
         const data = res.data;
-
-        console.log('📄 加载文档数据:', {
-          title: data.title_cn || data.title,
-          contentLength: data.content?.length || 0,
-          hasContent: !!data.content
-        });
 
         // 检查是否需要重定向到新的统一hash
         if (data.redirect && data.new_hash) {
@@ -1213,7 +1157,6 @@ const app = createApp({
           return;
         }
 
-        console.log('🔄 开始渲染内容，长度:', contentToRender.length);
 
         // 确保marked已加载
         if (typeof marked === 'undefined' || typeof window.marked === 'undefined') {
@@ -1227,12 +1170,6 @@ const app = createApp({
 
           const renderedHtml = marked.parse(contentToRender);
           readingContent.value = renderedHtml;
-          console.log('✅ 内容渲染完成，HTML长度:', renderedHtml.length);
-
-          // 强制触发Vue的响应式更新
-          nextTick(() => {
-            console.log('✅ DOM已更新');
-          });
         } catch (error) {
           console.error('❌ 内容渲染失败:', error);
         }
@@ -1240,7 +1177,6 @@ const app = createApp({
 
       if (needVersionSwitch) {
         // 需要切换版本：先显示加载状态，然后加载目标版本内容
-        console.log('🔄 需要切换到版本:', targetVersion);
         documentLoading.value = true;
         nextTick(async () => {
           try {
@@ -1256,13 +1192,11 @@ const app = createApp({
         });
       } else {
         // 不需要切换版本：直接显示当前内容
-        console.log('✅ 使用默认版本，直接渲染内容，content长度:', content?.length || 0);
 
         // 使用双重nextTick确保视图完全切换后再渲染内容
         nextTick(() => {
           nextTick(() => {
             ensureMarkedReady(() => {
-              console.log('✅ marked.js已就绪，开始渲染内容');
               updateContent(content);
             });
           });
@@ -1294,7 +1228,6 @@ const app = createApp({
           const res = await axios.get(`/api/public/doc/${readingHash.value}/${versionNumber}`);
           const data = res.data;
 
-          console.log('📄 版本切换：获取到内容，长度:', data.content?.length || 0);
 
           // 使用ensureMarkedReady确保marked已加载
           await new Promise((resolve, reject) => {
@@ -1309,7 +1242,6 @@ const app = createApp({
                 documentTitle.value = data.title_cn || data.title;
                 documentTitleEn.value = data.title_en || '';
 
-                console.log('✅ 版本内容渲染完成，HTML长度:', renderedHtml.length);
                 resolve();
               } catch (error) {
                 reject(error);
@@ -1319,8 +1251,6 @@ const app = createApp({
 
           // 将用户选择的版本保存到 localStorage（成功后才保存）
           localStorage.setItem(`document_version_${readingHash.value}`, versionNumber);
-
-          console.log(`✅ 版本切换成功: ${previousVersion} → ${versionNumber}`);
 
         } catch (error) {
           console.error('❌ 切换版本失败:', error);
@@ -1351,7 +1281,6 @@ const app = createApp({
     // 处理显示模式切换
     const handleDisplayModeChange = (mode) => {
       try {
-        console.log('🔄 切换显示模式:', displayMode.value, '→', mode);
         displayMode.value = mode;
 
         // TODO: 后续在此处触发后端数据加载
@@ -1362,7 +1291,6 @@ const app = createApp({
         //   loadSimplifiedText(readingHash.value);
         // }
 
-        console.log('✅ 显示模式切换成功:', mode);
       } catch (error) {
         console.error('❌ 显示模式切换失败:', error);
         showToast('模式切换失败，请重试', 'danger');
@@ -1474,10 +1402,7 @@ const app = createApp({
 
     // Markdown 下载
     const downloadMarkdown = async () => {
-      console.log('🟢 [DEBUG] downloadMarkdown 被调用');
-      console.log('🟢 [DEBUG] readingFilename:', readingFilename.value);
       if (!readingFilename.value) {
-        console.log('❌ [DEBUG] readingFilename 为空，退出');
         return;
       }
 
@@ -1525,8 +1450,6 @@ const app = createApp({
 
     // 处理笔记库排序变化
     const handleLibrarySortChange = (sortOrder) => {
-      console.log('笔记库排序方式已更改:', sortOrder);
-      // 可以在这里添加额外的逻辑，如保存用户偏好到localStorage
       localStorage.setItem('librarySortOrder', sortOrder);
     };
 
@@ -1601,8 +1524,6 @@ const app = createApp({
       const taskUrl = localStorage.getItem('active_task_url');
 
       if (taskId && taskUrl) {
-        console.log('🔄 尝试恢复任务:', taskId);
-        
         try {
           // 先检查任务是否存在
           const token = localStorage.getItem('authToken');
@@ -1611,20 +1532,16 @@ const app = createApp({
           const response = await axios.get(`/api/tasks/${taskId}/status`, { headers });
           
           if (response.data && response.data.status) {
-            console.log('✅ 任务存在，状态:', response.data.status);
-            
             // 只有进行中的任务才恢复SSE连接
             if (['queued', 'processing', 'running'].includes(response.data.status)) {
               url.value = taskUrl;
               loading.value = true;
               connectSSE(taskId);
             } else {
-              console.log('ℹ️ 任务已完成或失败，清理本地状态');
               clearActiveTask();
             }
           }
         } catch (error) {
-          console.warn('⚠️ 任务不存在或已过期，清理本地状态:', error.response?.status);
           // 404或其他错误表示任务不存在，清理localStorage
           clearActiveTask();
         }
@@ -1679,8 +1596,6 @@ const app = createApp({
       // 监听 require-login 事件（用于Ultra DeepInsight等功能）
       if (window.eventBus) {
         window.eventBus.on('require-login', ({ reason, callback }) => {
-          console.log('🔑 [认证] 收到登录请求:', reason);
-          
           // 保存回调函数
           if (callback && typeof callback === 'function') {
             loginSuccessCallback.value = callback;
@@ -1697,18 +1612,15 @@ const app = createApp({
         
         // 监听 session-expired 事件
         window.eventBus.on('session-expired', () => {
-          console.log('⚠️ [认证] 会话已过期');
           logout();
         });
         
         // 监听 reload-document 事件（用于Ultra完成后刷新）
         window.eventBus.on('reload-document', async ({ hash, reason }) => {
-          console.log('🔄 [文档] 收到重新加载请求:', hash, reason);
           if (hash && currentView.value === 'read') {
             // Ultra完成后，清除保存的版本号，强制使用最新版本
             if (reason === 'ultra_completed') {
               localStorage.removeItem(`document_version_${hash}`);
-              console.log('🔄 [文档] Ultra完成，已清除保存的版本号');
             }
             
             // 重新加载文档
@@ -1725,13 +1637,6 @@ const app = createApp({
       if (newView === 'library' && oldView === 'read') {
         loadSummaries();
       }
-    });
-
-    // 🔍 调试：监控 showToc 变化
-    watch(showToc, (newVal, oldVal) => {
-      console.log('🔄 [APP WATCH] showToc 变化:', oldVal, '->', newVal);
-      console.log('🔍 [APP WATCH] currentView:', currentView.value);
-      console.log('🔍 [APP WATCH] displayMode:', displayMode.value);
     });
 
     onUnmounted(() => {
@@ -2008,10 +1913,8 @@ components.forEach(c => {
   }
 });
 
-console.log(`🚀 动态优化: 将 [${extraCriticalComponents.join(', ')}] 标记为关键组件`);
 if (window.ResourceHints) {
   const criticalComponents = components.filter(c => c.critical === true);
-  console.log(`🔗 预加载 ${criticalComponents.length} 个关键组件资源...`);
   window.ResourceHints.preloadComponents(criticalComponents);
 }
 
@@ -2026,7 +1929,6 @@ window.LoadingStrategy.loadCriticalFirst(app, components, {
   },
   onCriticalComplete: (results) => {
     // 关键组件加载完成，立即挂载应用
-    console.log('✅ 关键组件加载完成，挂载应用...');
     updateLoadingProgress('正在启动应用...');
 
     setTimeout(() => {
@@ -2034,23 +1936,19 @@ window.LoadingStrategy.loadCriticalFirst(app, components, {
 
       setTimeout(() => {
         showApp();
-        console.log('✅ 应用已启动，后台继续加载非关键组件...');
       }, 50);
     }, 50);
   }
 }).then((results) => {
-  console.log('✅ 所有组件加载完成');
 
   // 输出性能报告
   if (window.PerformanceMonitor) {
     const report = window.PerformanceMonitor.getReport();
-    console.log(`📊 性能统计: 总耗时 ${report.totalLoadTime.toFixed(2)}ms, 缓存命中率 ${(report.cacheHitRate * 100).toFixed(1)}%`);
   }
 
   // 输出缓存统计
   if (window.CacheManager) {
     const stats = window.CacheManager.getStats();
-    console.log(`💾 缓存统计: 命中率 ${(stats.hitRate * 100).toFixed(1)}%, 条目数 ${stats.entryCount}`);
   }
 
   // 检查失败的组件

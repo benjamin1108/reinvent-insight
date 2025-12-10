@@ -57,18 +57,15 @@ class LoadingStrategy {
       timeout = 10000
     } = options;
 
-    console.log('🚀 开始关键组件优先加载策略...');
 
     // 分类组件
     const { critical, nonCritical } = this.categorizeComponents(components);
 
-    console.log(`📊 关键组件: ${critical.length} 个, 非关键组件: ${nonCritical.length} 个`);
 
     const allResults = [];
 
     // 第一阶段：并行加载所有关键组件
     if (critical.length > 0) {
-      console.log('⚡ 阶段1: 加载关键组件...');
 
       const criticalResults = await window.ComponentLoader.registerComponents(
         app,
@@ -87,7 +84,6 @@ class LoadingStrategy {
 
       allResults.push(...criticalResults);
 
-      console.log(`✅ 关键组件加载完成: ${criticalResults.filter(r => r.success).length}/${critical.length}`);
 
       // 通知关键组件加载完成
       if (onCriticalComplete) {
@@ -97,7 +93,6 @@ class LoadingStrategy {
 
     // 第二阶段：后台加载非关键组件
     if (nonCritical.length > 0) {
-      console.log('🔄 阶段2: 后台加载非关键组件...');
 
       // 使用requestIdleCallback在空闲时加载
       if (window.requestIdleCallback) {
@@ -125,7 +120,6 @@ class LoadingStrategy {
 
             allResults.push(...nonCriticalResults);
 
-            console.log(`✅ 非关键组件加载完成: ${nonCriticalResults.filter(r => r.success).length}/${nonCritical.length}`);
 
             resolve();
           });
@@ -154,7 +148,6 @@ class LoadingStrategy {
 
         allResults.push(...nonCriticalResults);
 
-        console.log(`✅ 非关键组件加载完成: ${nonCriticalResults.filter(r => r.success).length}/${nonCritical.length}`);
       }
     }
 
@@ -176,7 +169,6 @@ class LoadingStrategy {
       delay = 1000 // 延迟加载时间
     } = options;
 
-    console.log(`🕐 懒加载策略: ${delay}ms 后开始加载...`);
 
     // 延迟加载
     await new Promise(resolve => setTimeout(resolve, delay));
@@ -203,7 +195,6 @@ class LoadingStrategy {
       onProgress = null
     } = context;
 
-    console.log(`🔮 预测性加载策略: 当前视图=${currentView}, 已认证=${isAuthenticated}`);
 
     // 根据当前视图预测需要的组件
     const predictions = this._predictComponents(currentView, isAuthenticated);
@@ -215,7 +206,6 @@ class LoadingStrategy {
     });
 
     if (predictedComponents.length > 0) {
-      console.log(`📦 预测需要加载: ${predictedComponents.map(c => Array.isArray(c) ? c[0] : c.name).join(', ')}`);
 
       // 预加载预测的组件
       await window.ComponentLoader.preloadComponents(predictedComponents, {

@@ -106,31 +106,12 @@ export default {
         if (response.ok) {
           const config = await response.json();
           audioButtonEnabled.value = config.tts_audio_button_enabled;
-          console.log('🔊 [AppHeader] 音频按钮配置:', audioButtonEnabled.value);
         }
       } catch (error) {
         console.error('加载配置失败:', error);
         // 加载失败时默认显示
         audioButtonEnabled.value = true;
       }
-    });
-    
-    // 调试：监听音频相关props
-    watch(() => [props.articleHash, props.articleText], ([hash, text]) => {
-      console.log('🎵 [AppHeader] 音频props变化:');
-      console.log('  - articleHash:', hash);
-      console.log('  - articleTextLength:', text?.length || 0);
-      console.log('  - hasHash:', !!hash);
-      console.log('  - hasText:', !!text);
-      console.log('  - 条件满足:', !!(hash && text));
-      console.log('  - 当前时间:', new Date().toISOString());
-    }, { immediate: true });
-    
-    // 单独监听articleText
-    watch(() => props.articleText, (newText, oldText) => {
-      console.log('📝 [AppHeader] articleText 单独变化:');
-      console.log('  - 旧长度:', oldText?.length || 0);
-      console.log('  - 新长度:', newText?.length || 0);
     });
     
     // 事件处理方法
@@ -167,15 +148,11 @@ export default {
     };
     
     const handleDownloadMarkdown = () => {
-      console.log('🔵 [DEBUG] handleDownloadMarkdown 被调用');
       emit('download-markdown');
     };
     
     const handleToggleToc = () => {
-      console.log('🔘 [HEADER] handleToggleToc 被调用');
-      console.log('🔍 [HEADER] 当前 showToc prop:', props.showToc);
       emit('toggle-toc');
-      console.log('✅ [HEADER] 已发送 toggle-toc 事件');
     };
     
     return {

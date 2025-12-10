@@ -79,11 +79,6 @@ export default {
     },
 
     async mounted() {
-        console.log('🎵 [SimpleAudioButton] 组件已挂载:', {
-            articleHash: this.articleHash,
-            articleTitle: this.articleTitle
-        });
-
         // 自动检查音频状态
         if (this.autoCheck) {
             await this.checkAudioStatus();
@@ -94,7 +89,6 @@ export default {
     },
 
     beforeUnmount() {
-        console.log('🎵 [SimpleAudioButton] 组件卸载');
         this.cleanup();
         // 清理轮询定时器
         if (this.pollInterval) {
@@ -110,7 +104,6 @@ export default {
             try {
                 const response = await fetch(`/api/tts/status/${this.articleHash}`);
                 if (!response.ok) {
-                    console.log('🔊 音频状态查询失败，可能还未生成');
                     this.audioStatus = 'none';
                     this.isVisible = true;
                     return;
@@ -124,7 +117,6 @@ export default {
                 // 总是显示按钮
                 this.isVisible = true;
 
-                console.log('🔊 音频状态:', data);
 
                 // 如果正在生成中，启动轮询
                 if (data.status === 'processing' || data.status === 'pending') {
@@ -192,12 +184,10 @@ export default {
                     
                     if (status && status.has_partial && status.partial_url) {
                         // 有部分音频，播放它
-                        console.log('🎵 播放部分音频:', status.partial_url);
                         await this.playPartialAudio(status.partial_url);
                         return;
                     } else {
                         // 没有部分音频，启动等待模式
-                        console.log('🎵 还没有部分音频，等待生成...');
                         const chunksGenerated = status?.chunks_generated || 0;
                         this.showInfo(`准备中... ${chunksGenerated}/10 片段`);
                         
@@ -209,7 +199,6 @@ export default {
                 }
 
                 // 否则触发生成
-                console.log('🎵 没有缓存，触发生成...');
                 await this.triggerGeneration();
 
             } catch (error) {
@@ -259,7 +248,6 @@ export default {
                 // 更新 MediaSession 元数据
                 this.updateMediaSessionMetadata();
 
-                console.log('✅ 开始播放部分音频');
 
             } catch (error) {
                 console.error('播放部分音频失败:', error);
@@ -271,7 +259,6 @@ export default {
 
         async triggerGeneration() {
             try {
-                console.log('🔊 触发音频生成...');
                 this.isGenerating = true;
                 this.generationProgress = 0;
 
@@ -293,7 +280,6 @@ export default {
                 const data = await response.json();
                 this.taskId = data.task_id;
 
-                console.log('🔊 音频生成任务已启动:', data);
 
                 // 开始轮询进度
                 this.startPolling();
@@ -321,7 +307,6 @@ export default {
         },
 
         startWaitingForPartial() {
-            console.log('🔍 启动快速轮询，等待部分音频...');
             
             // 清除旧的轮询
             if (this.pollInterval) {
@@ -344,7 +329,6 @@ export default {
                 if (!status) return;
 
                 const chunksGenerated = status.chunks_generated || 0;
-                console.log(`📊 等待中: ${chunksGenerated}/10 片段`);
 
                 // 更新提示信息
                 this.showInfo(`准备中... ${chunksGenerated}/10 片段`);
@@ -352,7 +336,6 @@ export default {
                 // 检查是否有部分音频
                 if (status.has_partial && status.partial_url) {
                     // 找到部分音频！
-                    console.log('✅ 部分音频已准备好，开始播放！');
                     
                     // 停止快速轮询
                     if (this.pollInterval) {
@@ -369,7 +352,6 @@ export default {
                     this.startPolling();
                 } else if (status.status === 'ready') {
                     // 已经完成了！直接播放完整音频
-                    console.log('✅ 完整音频已准备好！');
                     
                     if (this.pollInterval) {
                         clearInterval(this.pollInterval);
@@ -398,7 +380,6 @@ export default {
 
                 const data = await response.json();
                 
-                console.log('📊 生成进度:', data);
 
                 // 使用后端计算的进度
                 if (data.progress_percent > 0) {
@@ -420,7 +401,6 @@ export default {
                         this.pollInterval = null;
                     }
 
-                    console.log('✅ 音频生成完成！');
                     
                     // 如果正在播放部分音频，替换为完整音频
                     if (this.isPlaying && this.audioElement) {
@@ -428,7 +408,6 @@ export default {
                         this.audioElement.src = data.audio_url;
                         this.audioElement.currentTime = currentTime;
                         await this.audioElement.play();
-                        console.log('🔄 切换到完整音频');
                     } else {
                         // 自动开始播放
                         setTimeout(() => {
@@ -456,7 +435,6 @@ export default {
             this.audioElement.addEventListener('ended', () => {
                 this.isPlaying = false;
                 this.isPaused = false;
-                console.log('🎵 播放完毕');
             });
 
             this.audioElement.addEventListener('error', (error) => {
@@ -466,48 +444,39 @@ export default {
             });
 
             this.audioElement.addEventListener('pause', () => {
-                console.log('🎵 已暂停');
             });
 
             this.audioElement.addEventListener('play', () => {
-                console.log('🎵 开始播放');
             });
         },
 
         setupMediaSession() {
             if (!('mediaSession' in navigator)) {
-                console.log('📱 当前浏览器不支持 MediaSession API');
                 return;
             }
 
-            console.log('📱 初始化 MediaSession API');
 
             // 设置控制器
             navigator.mediaSession.setActionHandler('play', () => {
-                console.log('📱 MediaSession: play');
                 this.play();
             });
 
             navigator.mediaSession.setActionHandler('pause', () => {
-                console.log('📱 MediaSession: pause');
                 this.pause();
             });
 
             navigator.mediaSession.setActionHandler('stop', () => {
-                console.log('📱 MediaSession: stop');
                 this.stop();
             });
 
             // 快进/快退
             navigator.mediaSession.setActionHandler('seekbackward', () => {
-                console.log('📱 MediaSession: seekbackward');
                 if (this.audioElement) {
                     this.audioElement.currentTime = Math.max(0, this.audioElement.currentTime - 10);
                 }
             });
 
             navigator.mediaSession.setActionHandler('seekforward', () => {
-                console.log('📱 MediaSession: seekforward');
                 if (this.audioElement) {
                     this.audioElement.currentTime = Math.min(
                         this.audioElement.duration,
@@ -529,7 +498,6 @@ export default {
                 // ]
             });
 
-            console.log('📱 MediaSession 元数据已更新');
         },
 
         cleanup() {

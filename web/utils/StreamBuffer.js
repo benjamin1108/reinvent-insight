@@ -11,11 +11,6 @@ export class StreamBuffer {
     this.sampleRate = 24000;  // Qwen3-TTS 采样率
     this.channels = 1;         // 单声道
     this.totalSamples = 0;
-
-    console.log('🎵 StreamBuffer 初始化:', {
-      sampleRate: this.sampleRate,
-      channels: this.channels
-    });
   }
 
   /**
@@ -43,13 +38,6 @@ export class StreamBuffer {
 
       this.chunks.push(floatData);
       this.totalSamples += floatData.length;
-
-      console.log('📦 追加音频块:', {
-        chunkIndex: this.chunks.length - 1,
-        samples: floatData.length,
-        totalSamples: this.totalSamples,
-        duration: this.getDuration()
-      });
 
       return floatData;
 
@@ -102,13 +90,6 @@ export class StreamBuffer {
         offset += chunk.length;
       }
 
-      console.log('✅ AudioBuffer 创建完成:', {
-        duration: audioBuffer.duration,
-        sampleRate: audioBuffer.sampleRate,
-        channels: audioBuffer.numberOfChannels,
-        length: audioBuffer.length
-      });
-
       return audioBuffer;
 
     } catch (error) {
@@ -148,7 +129,6 @@ export class StreamBuffer {
   clear() {
     this.chunks = [];
     this.totalSamples = 0;
-    console.log('🗑️ StreamBuffer 已清空');
   }
 
   /**

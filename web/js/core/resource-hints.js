@@ -51,7 +51,6 @@ class ResourceHints {
     document.head.appendChild(link);
     this.preloadedResources.add(key);
 
-    console.log(`🔗 预加载资源: ${href} (${link.rel})`);
   }
 
   /**
@@ -69,8 +68,6 @@ class ResourceHints {
 
     document.head.appendChild(link);
     this.prefetchedResources.add(href);
-
-    console.log(`🔮 预取资源: ${href}`);
   }
 
   /**

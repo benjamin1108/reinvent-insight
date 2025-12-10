@@ -152,7 +152,6 @@ class ComponentLoader {
       console.error(`Error loading component ${name}:`, error);
 
       // 尝试降级处理
-      console.log(`🔄 尝试降级处理组件: ${name}`);
 
       // 1. 尝试从缓存恢复
       const recovered = this.tryRecoverFromCache(name, path, actualFileName);
@@ -339,7 +338,6 @@ class ComponentLoader {
 
       // 并行加载所有依赖
       if (dependenciesToLoad.length > 0) {
-        console.log(`📦 加载 ${dependenciesToLoad.length} 个依赖组件...`);
         const depResults = await this.loadComponentsParallel(dependenciesToLoad, {
           useCache,
           timeout: 3000,  // 依赖组件使用更短的超时
@@ -423,7 +421,6 @@ class ComponentLoader {
     // 结束总体性能监控
     if (window.PerformanceMonitor) {
       const totalTime = window.PerformanceMonitor.end('total-component-loading');
-      console.log(`✅ 组件加载完成: ${results.length} 个组件，耗时 ${totalTime.toFixed(2)}ms`);
 
       // 打印性能报告
       if (window.PerformanceMonitor.verbose) {
@@ -452,7 +449,6 @@ class ComponentLoader {
       timeout = 10000
     } = options;
 
-    console.log(`🔄 预加载 ${components.length} 个组件...`);
 
     await this.loadComponentsParallel(components, {
       useCache,
@@ -460,7 +456,6 @@ class ComponentLoader {
       continueOnError: true
     });
 
-    console.log(`✅ 预加载完成`);
   }
 
   /**
@@ -499,7 +494,6 @@ class ComponentLoader {
     if (window.CacheManager) {
       const cached = window.CacheManager.get(cacheKey);
       if (cached) {
-        console.log(`✅ 从CacheManager恢复组件: ${name}`);
         return cached;
       }
     }
@@ -507,7 +501,6 @@ class ComponentLoader {
     // 尝试从旧缓存恢复
     if (this.cache.has(cacheKey)) {
       const cached = this.cache.get(cacheKey);
-      console.log(`✅ 从内存缓存恢复组件: ${name}`);
       return cached;
     }
 

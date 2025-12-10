@@ -56,7 +56,6 @@ class PerformanceMonitor {
     this.timers.delete(label);
     
     if (this.verbose) {
-      console.log(`⏱️ ${label}: ${duration.toFixed(2)}ms`);
     }
     
     return duration;
@@ -249,7 +248,6 @@ class PerformanceMonitor {
   static printReport() {
     const report = this.getReport();
     
-    console.group('📊 组件加载性能报告');
     console.log(`总加载时间: ${report.totalLoadTime.toFixed(2)}ms`);
     console.log(`组件数量: ${report.componentCount}`);
     console.log(`缓存命中率: ${(report.cacheHitRate * 100).toFixed(1)}%`);
@@ -260,14 +258,11 @@ class PerformanceMonitor {
     }
     
     if (report.errors.length > 0) {
-      console.group(`❌ 错误 (${report.errors.length})`);
       report.errors.forEach(err => {
         console.error(`${err.component}: ${err.error}`);
       });
-      console.groupEnd();
     }
     
-    console.groupEnd();
   }
   
   /**

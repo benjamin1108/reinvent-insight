@@ -60,6 +60,30 @@ async def get_visual_interpretation(doc_hash: str, version: Optional[int] = None
         # 读取 HTML 内容
         html_content = visual_path.read_text(encoding="utf-8")
         
+        # 动态替换 CDN 链接为本地路径，加快加载速度
+        # Chart.js
+        html_content = re.sub(
+            r'https://cdn\.bootcdn\.net/ajax/libs/Chart\.js/[\d.]+/chart\.umd\.min\.js',
+            '/js/vendor/chart.umd.min.js',
+            html_content
+        )
+        html_content = re.sub(
+            r'https://cdn\.jsdelivr\.net/npm/chart\.js@[\d.]+/dist/chart\.umd\.min\.js',
+            '/js/vendor/chart.umd.min.js',
+            html_content
+        )
+        # Font Awesome CSS
+        html_content = re.sub(
+            r'https://cdn\.bootcdn\.net/ajax/libs/font-awesome/[\d.]+/css/all\.min\.css',
+            '/css/vendor/fontawesome/all.min.css',
+            html_content
+        )
+        html_content = re.sub(
+            r'https://cdnjs\.cloudflare\.com/ajax/libs/font-awesome/[\d.]+/css/all\.min\.css',
+            '/css/vendor/fontawesome/all.min.css',
+            html_content
+        )
+        
         return Response(
             content=html_content,
             media_type="text/html",
