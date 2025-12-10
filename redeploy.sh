@@ -440,6 +440,24 @@ deploy_new_version() {
         print_info "  ✓ packaging 模块已安装"
     fi
     
+    # 验证 Playwright 并安装浏览器
+    print_info "验证 Playwright 和浏览器..."
+    if ! $VENV_NAME/bin/python -c "import playwright" 2>/dev/null; then
+        print_warning "  Playwright 未正确安装"
+        deps_ok=false
+    else
+        print_info "  ✓ Playwright 已安装"
+        
+        # 安装 Chromium 浏览器
+        print_info "  安装 Chromium 浏览器（用于长图生成功能）..."
+        if $VENV_NAME/bin/playwright install chromium >/dev/null 2>&1; then
+            print_success "  ✓ Chromium 浏览器已安装"
+        else
+            print_warning "  Chromium 浏览器安装失败（可能需要手动安装）"
+            print_info "    手动安装: $VENV_NAME/bin/playwright install chromium"
+        fi
+    fi
+    
     # 最后验证PDF处理模块
     if $VENV_NAME/bin/python -c "from reinvent_insight.infrastructure.media.pdf_processor import PDFProcessor" 2>/dev/null; then
         print_success "PDF处理功能已正确安装"
@@ -815,6 +833,8 @@ show_deployment_info() {
     echo "  • 网页内容分析"
     echo "  • Markdown 渲染和 PDF 导出"
     echo "  • AI 智能标题生成（PDF文档）"
+    echo "  • Visual Insight 可视化解读"
+    echo "  • Visual Insight 转长图（✓ 已启用）"
     echo ""
     echo "常用命令:"
     echo "  Web 服务:"

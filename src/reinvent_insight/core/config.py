@@ -195,6 +195,24 @@ TEXT2HTML_PROMPT_PATH = PROJECT_ROOT / "prompt" / "text2html.txt"
 # 可视化 HTML 存储目录（与深度解读同目录）
 VISUAL_HTML_DIR = OUTPUT_DIR
 
+# --- Visual Long Image 配置 ---
+# 是否启用长图生成功能
+VISUAL_LONG_IMAGE_ENABLED = os.getenv("VISUAL_LONG_IMAGE_ENABLED", "true").lower() == "true"
+
+# 长图存储目录
+VISUAL_LONG_IMAGE_DIR = OUTPUT_DIR / "images"
+
+# 截图视口宽度（像素）
+# 默认 1080px 适合移动端分享，减少两侧留白
+# 如需桌面端宽度，可设置为 1920
+VISUAL_SCREENSHOT_VIEWPORT_WIDTH = int(os.getenv("VISUAL_SCREENSHOT_VIEWPORT_WIDTH", "1080"))
+
+# 截图等待时间（秒，用于等待图表渲染）
+VISUAL_SCREENSHOT_WAIT_TIME = int(os.getenv("VISUAL_SCREENSHOT_WAIT_TIME", "3"))
+
+# 浏览器启动超时（秒）
+VISUAL_SCREENSHOT_BROWSER_TIMEOUT = int(os.getenv("VISUAL_SCREENSHOT_BROWSER_TIMEOUT", "30"))
+
 # --- 版本控制配置 ---
 # 是否启用版本选择器
 ENABLE_VERSION_SELECTOR = os.getenv("ENABLE_VERSION_SELECTOR", "false").lower() == "true"

@@ -3,8 +3,8 @@
 import logging
 from typing import Optional
 from pathlib import Path
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import Response
+from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import Response, FileResponse
 import yaml
 import re
 
@@ -13,6 +13,7 @@ from reinvent_insight.services.document.hash_registry import (
     hash_to_filename,
     hash_to_versions,
 )
+from reinvent_insight.services.visual_to_image_service import get_visual_to_image_service
 
 logger = logging.getLogger(__name__)
 
@@ -178,4 +179,115 @@ async def get_visual_status(doc_hash: str, version: Optional[int] = None):
         raise
     except Exception as e:
         logger.error(f"获取可视化状态失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="服务器错误")
+
+
+@router.post("/{doc_hash}/visual/to-image")
+async def generate_visual_long_image(
+    doc_hash: str,
+    version: Optional[int] = Query(None, description="版本号"),
+    viewport_width: Optional[int] = Query(None, description="视口宽度（像素）"),
+    force_regenerate: bool = Query(False, description="是否强制重新生成")
+):
+    """
+    生成 Visual Insight 长图
+    
+    Args:
+        doc_hash: 文档哈希
+        version: 版本号（可选）
+        viewport_width: 视口宽度（可选，默认 1920px）
+        force_regenerate: 是否强制重新生成（默认 False）
+        
+    Returns:
+        生成结果 JSON
+    """
+    try:
+        # 检查功能是否启用
+        if not config.VISUAL_LONG_IMAGE_ENABLED:
+            raise HTTPException(status_code=403, detail="长图生成功能未启用")
+        
+        logger.info(f"开始生成长图 - doc_hash: {doc_hash}, version: {version}")
+        
+        # 获取服务
+        service = get_visual_to_image_service()
+        
+        # 生成长图
+        result = await service.generate_long_image(
+            doc_hash=doc_hash,
+            version=version,
+            viewport_width=viewport_width,
+            force_regenerate=force_regenerate
+        )
+        
+        # 构造图片 URL
+        image_url = f"/api/article/{doc_hash}/visual/image"
+        if version is not None:
+            image_url += f"?version={version}"
+        
+        return {
+            "status": result["status"],
+            "message": result["message"],
+            "image_url": image_url,
+            "image_path": result["image_path"],
+            "file_size": result["file_size"],
+            "dimensions": result["dimensions"],
+            "generated_at": result["generated_at"]
+        }
+        
+    except FileNotFoundError as e:
+        logger.warning(f"文件未找到: {e}")
+        raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"生成长图失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"生成长图失败: {str(e)}")
+
+
+@router.get("/{doc_hash}/visual/image")
+async def get_visual_long_image(
+    doc_hash: str,
+    version: Optional[int] = Query(None, description="版本号")
+):
+    """
+    获取 Visual Insight 长图
+    
+    Args:
+        doc_hash: 文档哈希
+        version: 版本号（可选）
+        
+    Returns:
+        PNG 图片文件
+    """
+    try:
+        # 检查功能是否启用
+        if not config.VISUAL_LONG_IMAGE_ENABLED:
+            raise HTTPException(status_code=403, detail="长图功能未启用")
+        
+        # 获取服务
+        service = get_visual_to_image_service()
+        
+        # 获取长图路径
+        image_path = service.get_long_image_path(doc_hash, version)
+        
+        if not image_path or not image_path.exists():
+            raise HTTPException(
+                status_code=404, 
+                detail="长图尚未生成，请先调用 POST /{doc_hash}/visual/to-image 生成"
+            )
+        
+        # 返回图片文件
+        return FileResponse(
+            path=str(image_path),
+            media_type="image/png",
+            filename=image_path.name,
+            headers={
+                "Cache-Control": "public, max-age=86400",  # 缓存 24 小时
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取长图失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="服务器错误")

@@ -556,12 +556,21 @@ const app = createApp({
       });
     };
 
+    // 默认页面标题
+    const DEFAULT_PAGE_TITLE = 'reinvent Insight - 深度分析笔记';
+
+    // 更新浏览器标题
+    const updatePageTitle = (title) => {
+      document.title = title || DEFAULT_PAGE_TITLE;
+    };
+
     // 视图导航方法
     const goHome = () => {
       history.pushState(null, '', '/');
       currentView.value = 'recent';
       clearReadingState();
       closeVideoPlayer();
+      updatePageTitle(); // 恢复默认标题
     };
 
     const goBackToLibrary = () => {
@@ -569,6 +578,7 @@ const app = createApp({
       currentView.value = 'library';
       clearReadingState();
       closeVideoPlayer();
+      updatePageTitle(); // 恢复默认标题
     };
 
     const clearReadingState = () => {
@@ -588,6 +598,7 @@ const app = createApp({
       // 切换到列表视图时加载数据（从特殊页面切换时强制刷新）
       if (view === 'library' || view === 'recent') {
         loadSummaries();
+        updatePageTitle(); // 恢复默认标题
       }
     };
 
@@ -1204,6 +1215,10 @@ const app = createApp({
       readingHash.value = docHash;
       currentDocHash.value = docHash; // 设置当前文档哈希用于可视化解读
       documentVersions.value = versions;
+
+      // 更新浏览器标题
+      const pageTitle = title_en || title_cn || title;
+      updatePageTitle(pageTitle ? `${pageTitle} - reinvent Insight` : null);
 
       // 切换视图
       currentView.value = 'read';
