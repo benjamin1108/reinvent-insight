@@ -1156,6 +1156,17 @@
   .reading-view .prose-tech h2::after {
     display: none !important;
   }
+  
+  /* 修复有序列表编号在打印时被截断的问题 */
+  .reading-view .prose-tech ol {
+    padding-left: 40px !important; /* 给两位数编号留出足够空间 */
+    margin-left: 0 !important;
+  }
+  
+  .reading-view .prose-tech ul {
+    padding-left: 30px !important; /* 给无序列表符号留出空间 */
+    margin-left: 0 !important;
+  }
 }
 
 /* 确保与其他组件的兼容性 */

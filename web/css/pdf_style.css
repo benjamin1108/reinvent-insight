@@ -108,8 +108,9 @@ html, body {
 }
 
 #nice ol > li {
-    margin-bottom: 5px;
-    padding-left: 5px; /* 内容稍微缩进 */
+    margin-bottom: 8px;
+    padding-left: 0;
+    line-height: 26px;
 }
 
 /* 无序列表样式修复 */
@@ -120,7 +121,9 @@ html, body {
 
 #nice ul > li {
     list-style-type: disc;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
+    padding-left: 0;
+    line-height: 26px;
 }
 
 /* 调整无序列表的圆点大小 */
@@ -152,9 +155,11 @@ html, body {
 }
 
 #nice li section { 
-    margin: 5px 0;
+    margin: 0; /* 移除 margin，避免文字与数字标记不对齐 */
+    padding: 0;
     line-height: 26px; 
     text-align: left;
+    display: inline; /* 让 section 行内显示，与标记对齐 */
 } 
 
 #nice blockquote { 
