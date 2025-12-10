@@ -87,6 +87,65 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# 带倒计时的确认函数
+# 参数: $1 提示文字, $2 默认值(y/n), $3 倒计时秒数
+confirm_with_countdown() {
+    local prompt="$1"
+    local default="$2"
+    local timeout="${3:-5}"
+    local response
+    
+    if [ "$default" = "y" ]; then
+        echo -n -e "${YELLOW}${prompt} (Y/n) [${timeout}s 后默认 Y]: ${NC}"
+    else
+        echo -n -e "${YELLOW}${prompt} (y/N) [${timeout}s 后默认 N]: ${NC}"
+    fi
+    
+    # 读取用户输入，带超时
+    if read -t "$timeout" -r response; then
+        # 用户有输入
+        if [ -z "$response" ]; then
+            response="$default"
+        fi
+    else
+        # 超时，使用默认值
+        echo ""  # 换行
+        response="$default"
+        print_info "超时，使用默认值: $default"
+    fi
+    
+    # 返回结果
+    if [[ "$response" =~ ^[Yy]$ ]]; then
+        return 0  # true
+    else
+        return 1  # false
+    fi
+}
+
+# 预先获取 sudo 权限
+acquire_sudo() {
+    print_info "需要 sudo 权限执行部署操作..."
+    if sudo -v; then
+        print_success "已获取 sudo 权限"
+        # 保持 sudo 会话活跃（在后台每 60 秒刷新一次）
+        ( while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null ) &
+        SUDO_KEEPER_PID=$!
+    else
+        print_error "无法获取 sudo 权限"
+        exit 1
+    fi
+}
+
+# 清理 sudo keeper 进程
+cleanup_sudo_keeper() {
+    if [ -n "$SUDO_KEEPER_PID" ]; then
+        kill "$SUDO_KEEPER_PID" 2>/dev/null || true
+    fi
+}
+
+# 注册退出时清理
+trap cleanup_sudo_keeper EXIT
+
 # 检查是否在项目根目录
 check_project_root() {
     if [ ! -f "pyproject.toml" ] || [ ! -d "src/reinvent_insight" ]; then
@@ -268,9 +327,7 @@ show_deployment_plan() {
         exit 0
     else
         echo ""
-        echo -n -e "${YELLOW}是否继续执行？(y/N): ${NC}"
-        read -r confirm
-        if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+        if ! confirm_with_countdown "是否继续执行？" "y" 5; then
             print_info "部署已取消"
             exit 0
         fi
@@ -563,9 +620,7 @@ restore_data() {
         # 如果没有通过命令行参数指定，询问用户
         if [ "$COPY_DEV_ARTICLES" = false ] && [ "$DRY_RUN" = false ]; then
             echo ""
-            echo -n -e "${YELLOW}是否复制开发环境的文章到生产环境？(y/N): ${NC}"
-            read -r copy_confirm
-            if [[ "$copy_confirm" =~ ^[Yy]$ ]]; then
+            if confirm_with_countdown "是否复制开发环境的文章到生产环境？" "n" 5; then
                 COPY_DEV_ARTICLES=true
             fi
         fi
@@ -869,8 +924,15 @@ main() {
     
     # 如果只是修复权限，执行权限修复后退出
     if [ "$FIX_PERMISSIONS" = true ]; then
+        # 修复权限也需要 sudo
+        acquire_sudo
         fix_permissions_only
         exit 0
+    fi
+    
+    # 预先获取 sudo 权限（非演练模式）
+    if [ "$DRY_RUN" = false ]; then
+        acquire_sudo
     fi
     
     print_info "开始自动化部署流程..."
