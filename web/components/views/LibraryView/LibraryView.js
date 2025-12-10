@@ -86,6 +86,11 @@ export default {
     
     // 判断是否为re:Invent摘要
     const isReinventSummary = (summary) => {
+      // 优先使用后端的 is_reinvent 字段
+      if (summary.is_reinvent) {
+        return true;
+      }
+      // 其次检查标题（向后兼容）
       const titleEn = summary.title_en || '';
       return titleEn.toLowerCase().includes('reinvent') || 
              titleEn.toLowerCase().includes('re:invent');

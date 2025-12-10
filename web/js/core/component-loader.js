@@ -351,6 +351,37 @@ class ComponentLoader {
           }
         }
 
+        // 递归处理依赖的依赖（如 LevelFilter 依赖 CustomDropdown）
+        const nestedDependenciesToLoad = [];
+        for (const result of depResults) {
+          if (result.success && result.component.dependencies) {
+            await this.collectDependencies(
+              result.component.dependencies,
+              collected,
+              nestedDependenciesToLoad,
+              false
+            );
+          }
+        }
+
+        // 加载嵌套依赖
+        if (nestedDependenciesToLoad.length > 0) {
+          const nestedDepResults = await this.loadComponentsParallel(nestedDependenciesToLoad, {
+            useCache,
+            timeout: 3000,
+            continueOnError: true
+          });
+
+          for (const result of nestedDepResults) {
+            if (result.success) {
+              componentMap.set(result.name, result.component);
+            }
+          }
+
+          // 嵌套依赖最先注册
+          allComponents.unshift(...nestedDependenciesToLoad);
+        }
+
         // 将依赖添加到allComponents前面（依赖先注册）
         allComponents.unshift(...dependenciesToLoad);
       }

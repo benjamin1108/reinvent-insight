@@ -330,11 +330,16 @@ const app = createApp({
       const other = [];
 
       summaries.value.forEach(summary => {
-        const titleEn = summary.title_en || '';
-        if (titleEn.toLowerCase().includes('reinvent') || titleEn.toLowerCase().includes('re:invent')) {
+        // 优先使用后端的 is_reinvent 字段，其次才检查标题
+        if (summary.is_reinvent) {
           reinvent.push(summary);
         } else {
-          other.push(summary);
+          const titleEn = summary.title_en || '';
+          if (titleEn.toLowerCase().includes('reinvent') || titleEn.toLowerCase().includes('re:invent')) {
+            reinvent.push(summary);
+          } else {
+            other.push(summary);
+          }
         }
       });
 
@@ -856,7 +861,14 @@ const app = createApp({
     };
 
     // 笔记库相关方法
+    let isLoadingSummaries = false; // 防止重复调用
+    
     const loadSummaries = async () => {
+      if (isLoadingSummaries) {
+        return;
+      }
+      
+      isLoadingSummaries = true;
       libraryLoading.value = true;
       try {
         // 统一使用公开API端点
@@ -873,6 +885,7 @@ const app = createApp({
         showToast('加载笔记库失败', 'danger');
       } finally {
         libraryLoading.value = false;
+        isLoadingSummaries = false;
       }
     };
 
@@ -1577,7 +1590,8 @@ const app = createApp({
       await restoreTask();
 
       // 加载笔记库（已登录用户或访客都需要）
-      if (currentView.value === 'library' || currentView.value === 'recent') {
+      // 注意：handleRouting 可能已经触发了加载，避免重复调用
+      if ((currentView.value === 'library' || currentView.value === 'recent') && summaries.value.length === 0) {
         await loadSummaries();
       }
 
