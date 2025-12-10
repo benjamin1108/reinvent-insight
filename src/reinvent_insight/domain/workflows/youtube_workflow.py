@@ -375,10 +375,11 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
             }
             
             # 添加可选字段
-            if hasattr(metadata, 'title') and metadata.title:
-                yaml_data['title_en'] = metadata.title
+            # 优先使用原始标题（YouTube/PDF等），只有无法提取时才用 AI 生成标题
             if self.generated_title_en:
                 yaml_data['title_en'] = self.generated_title_en
+            if hasattr(metadata, 'title') and metadata.title:
+                yaml_data['title_en'] = metadata.title  # 原始标题优先，会覆盖 AI 标题
             if hasattr(metadata, 'is_reinvent'):
                 yaml_data['is_reinvent'] = metadata.is_reinvent
             if hasattr(metadata, 'course_code') and metadata.course_code:
@@ -432,10 +433,13 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
             final_report = "\n\n".join(part for part in final_report_parts if part and part.strip())
             
             # 生成文件名
-            if self.generated_title_en:
+            # 优先使用原始标题（YouTube/PDF等），只有无法提取时才用 AI 生成标题
+            if hasattr(metadata, 'title') and metadata.title:
+                base_name = sanitize_filename(metadata.title)
+            elif self.generated_title_en:
                 base_name = sanitize_filename(self.generated_title_en)
             else:
-                base_name = sanitize_filename(metadata.title if hasattr(metadata, 'title') else title)
+                base_name = sanitize_filename(title)  # 最后降级使用中文标题
             
             final_filename = f"{base_name}_v{new_version}.md"
             
