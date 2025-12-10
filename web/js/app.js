@@ -863,23 +863,114 @@ const app = createApp({
     // 笔记库相关方法
     let isLoadingSummaries = false; // 防止重复调用
     
-    const loadSummaries = async () => {
+    // ===== 文档列表缓存管理 =====
+    const SUMMARIES_CACHE_KEY = 'reinvent_summaries_cache';
+    const SUMMARIES_VERSION_KEY = 'reinvent_summaries_version';
+    const SUMMARIES_TIMESTAMP_KEY = 'reinvent_summaries_timestamp';
+    const SUMMARIES_CACHE_TTL = 5 * 60 * 1000; // 5分钟
+    
+    // 获取缓存的文档列表
+    const getCachedSummaries = () => {
+      try {
+        const cached = localStorage.getItem(SUMMARIES_CACHE_KEY);
+        const timestamp = localStorage.getItem(SUMMARIES_TIMESTAMP_KEY);
+        
+        if (!cached || !timestamp) return null;
+        
+        // 检查缓存是否过期
+        const cacheAge = Date.now() - parseInt(timestamp, 10);
+        if (cacheAge > SUMMARIES_CACHE_TTL) return null;
+        
+        return JSON.parse(cached);
+      } catch (error) {
+        return null;
+      }
+    };
+    
+    // 保存文档列表到缓存
+    const cacheSummaries = (data, version) => {
+      try {
+        localStorage.setItem(SUMMARIES_CACHE_KEY, JSON.stringify(data));
+        localStorage.setItem(SUMMARIES_VERSION_KEY, String(version || 0));
+        localStorage.setItem(SUMMARIES_TIMESTAMP_KEY, String(Date.now()));
+      } catch (error) {
+        // 存储失败（可能是空间不足），清理缓存
+        clearSummariesCache();
+      }
+    };
+    
+    // 清除缓存
+    const clearSummariesCache = () => {
+      try {
+        localStorage.removeItem(SUMMARIES_CACHE_KEY);
+        localStorage.removeItem(SUMMARIES_VERSION_KEY);
+        localStorage.removeItem(SUMMARIES_TIMESTAMP_KEY);
+      } catch (error) {
+        // 忽略
+      }
+    };
+    
+    // 获取缓存版本号
+    const getCachedVersion = () => {
+      try {
+        const version = localStorage.getItem(SUMMARIES_VERSION_KEY);
+        return version ? parseInt(version, 10) : 0;
+      } catch (error) {
+        return 0;
+      }
+    };
+    
+    // 检查服务器缓存版本（后台检查，不影响用户体验）
+    const checkAndUpdateSummariesInBackground = async () => {
+      try {
+        const res = await axios.get('/api/public/cache-info');
+        const serverVersion = res.data.cache_version || 0;
+        const cachedVersion = getCachedVersion();
+        
+        if (serverVersion !== cachedVersion) {
+          // 版本不一致，后台拉取新数据
+          const newRes = await axios.get('/api/public/summaries');
+          const newData = newRes.data.summaries || [];
+          const newVersion = newRes.data.cache_version || 0;
+          
+          cacheSummaries(newData, newVersion);
+          summaries.value = newData;
+        }
+      } catch (error) {
+        // 后台检查失败，忽略
+      }
+    };
+    
+    const loadSummaries = async (forceRefresh = false) => {
       if (isLoadingSummaries) {
         return;
       }
       
       isLoadingSummaries = true;
+      
+      // 优先使用缓存（如果不是强制刷新）
+      if (!forceRefresh) {
+        const cached = getCachedSummaries();
+        if (cached && Array.isArray(cached) && cached.length > 0) {
+          summaries.value = cached;
+          libraryLoading.value = false;
+          isLoadingSummaries = false;
+          
+          // 后台检查是否有更新
+          checkAndUpdateSummariesInBackground();
+          return;
+        }
+      }
+      
+      // 缓存无效或强制刷新，从服务器获取
       libraryLoading.value = true;
       try {
-        // 统一使用公开API端点
-        const endpoint = '/api/public/summaries';
-
-        const res = await axios.get(endpoint);
-
-        // 统一使用res.data.summaries格式
+        const res = await axios.get('/api/public/summaries');
         const dataArray = res.data.summaries || [];
-
+        const version = res.data.cache_version || 0;
+        
         summaries.value = dataArray;
+        cacheSummaries(dataArray, version);
       } catch (error) {
         console.error('加载笔记库失败:', error);
         showToast('加载笔记库失败', 'danger');
@@ -903,6 +994,8 @@ const app = createApp({
         if (res.data.success) {
           // 从本地列表中移除
           summaries.value = summaries.value.filter(s => s.hash !== data.hash);
+          // 清除缓存（下次加载时会从服务器重新获取）
+          clearSummariesCache();
           
           const title = data.titleCn || data.titleEn || '文章';
           showToast(`已删除「${title.substring(0, 20)}${title.length > 20 ? '...' : ''}」`, 'success');
@@ -945,8 +1038,9 @@ const app = createApp({
         if (res.data.success) {
           // 从回收站列表中移除
           trashItems.value = trashItems.value.filter(item => item.doc_hash !== docHash);
-          // 刷新主列表
-          fetchSummaries();
+          // 清除缓存并刷新主列表
+          clearSummariesCache();
+          loadSummaries(true);
           
           const displayTitle = title ? (title.length > 20 ? title.substring(0, 20) + '...' : title) : '文章';
           showToast(`已恢复「${displayTitle}」`, 'success');

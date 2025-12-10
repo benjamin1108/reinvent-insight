@@ -35,103 +35,79 @@ router = APIRouter(prefix="/api", tags=["documents"])
 
 @router.get("/public/summaries")
 async def list_public_summaries():
-    """获取所有已生成的摘要文件列表供公开展示，无需认证。"""
+    """获取所有已生成的摘要文件列表供公开展示，无需认证。
+    
+    使用内存缓存，响应速度显著提升。
+    """
     try:
-        summaries = []
-        video_url_map = {}
+        from reinvent_insight.services.document.summary_cache import get_summary_cache
         
-        if config.OUTPUT_DIR.exists():
-            for md_file in config.OUTPUT_DIR.glob("*.md"):
-                try:
-                    content = md_file.read_text(encoding="utf-8")
-                    metadata = parse_metadata_from_md(content)
-                    
-                    title_cn = metadata.get("title_cn")
-                    title_en = metadata.get("title_en", metadata.get("title", ""))
-                    
-                    if not title_cn:
-                        for line in content.splitlines():
-                            stripped = line.strip()
-                            if stripped.startswith('# '):
-                                title_cn = stripped[2:].strip()
-                                break
-                    
-                    if not title_cn:
-                        title_cn = title_en if title_en else md_file.stem
-                    
-                    doc_hash = filename_to_hash.get(md_file.name)
-                    if not doc_hash:
-                        continue
-                    
-                    pure_text = extract_text_from_markdown(content)
-                    word_count = count_chinese_words(pure_text)
-                    stat = md_file.stat()
-                    
-                    # 检查是否为PDF文档
-                    video_url = metadata.get("video_url", "")
-                    is_pdf = is_pdf_document(video_url)
-                    
-                    # 优先级：metadata的created_at > metadata的upload_date > 文件系统时间
-                    created_at_value = stat.st_ctime
-                    modified_at_value = stat.st_mtime
-                    
-                    if metadata.get("created_at"):
-                        try:
-                            dt = datetime.fromisoformat(metadata.get("created_at").replace('Z', '+00:00'))
-                            created_at_value = dt.timestamp()
-                            modified_at_value = created_at_value
-                        except (ValueError, AttributeError) as e:
-                            logger.warning(f"解析文件 {md_file.name} 的created_at失败: {e}")
-                    elif metadata.get("upload_date"):
-                        try:
-                            upload_date_str = str(metadata.get("upload_date")).replace('-', '')
-                            if len(upload_date_str) == 8:
-                                year = int(upload_date_str[0:4])
-                                month = int(upload_date_str[4:6])
-                                day = int(upload_date_str[6:8])
-                                dt = datetime(year, month, day)
-                                created_at_value = dt.timestamp()
-                                modified_at_value = created_at_value
-                        except (ValueError, AttributeError) as e:
-                            logger.warning(f"解析文件 {md_file.name} 的upload_date失败: {e}")
-                    
-                    summary_data = {
-                        "filename": md_file.name,
-                        "title_cn": title_cn,
-                        "title_en": title_en,
-                        "size": stat.st_size,
-                        "word_count": word_count,
-                        "created_at": created_at_value,
-                        "modified_at": modified_at_value,
-                        "upload_date": metadata.get("upload_date", "1970-01-01"),
-                        "video_url": video_url,
-                        "is_reinvent": metadata.get("is_reinvent", False),
-                        "course_code": metadata.get("course_code"),
-                        "level": metadata.get("level"),
-                        "hash": doc_hash,
-                        "version": metadata.get("version", 0),
-                        "is_pdf": is_pdf,
-                        "content_type": "PDF文档" if is_pdf else "YouTube视频"
-                    }
-                    
-                    if video_url:
-                        if video_url not in video_url_map:
-                            video_url_map[video_url] = summary_data
-                        else:
-                            existing_version = video_url_map[video_url].get("version", 0)
-                            new_version = summary_data.get("version", 0)
-                            if new_version > existing_version:
-                                video_url_map[video_url] = summary_data
-                        
-                except Exception as e:
-                    logger.warning(f"处理文件 {md_file.name} 时出错: {e}")
+        cache = get_summary_cache()
+        summaries = cache.get_all_summaries(sort_by="upload_date", reverse=True)
         
-        summaries.extend(video_url_map.values())
-        summaries.sort(key=lambda x: x.get("upload_date", "1970-01-01"), reverse=True)
-        return {"summaries": summaries}
+        return {
+            "summaries": summaries,
+            "cache_version": cache.cache_version
+        }
     except Exception as e:
         logger.error(f"获取公共摘要列表失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="获取公共摘要列表失败")
+
+
+@router.get("/public/summaries/paginated")
+async def list_public_summaries_paginated(
+    page: int = 1,
+    page_size: int = 50,
+    sort_by: str = "upload_date"
+):
+    """获取分页的摘要文件列表
+    
+    Args:
+        page: 页码（从 1 开始），默认 1
+        page_size: 每页数量，默认 50，最大 100
+        sort_by: 排序字段 (upload_date|modified_at|title)
+    
+    Returns:
+        分页后的文档列表，包含总数和分页信息
+    """
+    try:
+        from reinvent_insight.services.document.summary_cache import get_summary_cache
+        
+        # 参数校验
+        if page < 1:
+            page = 1
+        if page_size < 1:
+            page_size = 50
+        if page_size > 100:
+            page_size = 100
+        if sort_by not in ("upload_date", "modified_at", "title"):
+            sort_by = "upload_date"
+        
+        cache = get_summary_cache()
+        result = cache.get_paginated_summaries(
+            page=page,
+            page_size=page_size,
+            sort_by=sort_by,
+            reverse=True
+        )
+        
+        return result
+    except Exception as e:
+        logger.error(f"获取分页摘要列表失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="获取分页摘要列表失败")
+
+
+@router.get("/public/cache-info")
+async def get_cache_info():
+    """获取缓存状态信息（用于前端判断是否需要刷新）"""
+    try:
+        from reinvent_insight.services.document.summary_cache import get_summary_cache
+        
+        cache = get_summary_cache()
+        return cache.get_cache_info()
+    except Exception as e:
+        logger.error(f"获取缓存信息失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="获取缓存信息失败")
 
 
 @router.get("/public/summary/{video_id}")

@@ -21,11 +21,20 @@
   <div v-else-if="displayMode === 'quick' && visualAvailable" class="reading-view__visual-container"
     key="quick-insight">
 
-    <!-- 模式切换器 - 固定在顶部 -->
+    <!-- 工具栏 - 固定在顶部 -->
     <div class="reading-view__visual-header">
-      <mode-toggle :current-mode="displayMode" :visual-available="visualAvailable" :visual-status="visualStatus"
-        @mode-change="handleDisplayModeChange">
-      </mode-toggle>
+      <div class="reading-view__toolbar reading-view__toolbar--visual">
+        <button 
+          @click="handleDisplayModeChange('deep')"
+          class="reading-view__toolbar-btn reading-view__toolbar-btn--active"
+          title="切换到 Deep Insight"
+        >
+          <svg class="reading-view__toolbar-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          <span class="reading-view__toolbar-text">Deep</span>
+        </button>
+      </div>
     </div>
 
     <!-- iframe 加载状态指示器 -->
@@ -97,50 +106,49 @@
               <h1 v-if="documentTitleEn" class="reading-view__title-en">{{ documentTitleEn }}</h1>
               <h2 v-if="documentTitle" class="reading-view__title-cn">{{ documentTitle }}</h2>
             </div>
-
-            <!-- 模式切换器 - 放在标题之后，内容之前 -->
-            <div v-if="visualAvailable || visualStatus === 'processing'" class="reading-view__mode-toggle-wrapper">
-              <mode-toggle :current-mode="displayMode" :visual-available="visualAvailable" :visual-status="visualStatus"
-                @mode-change="handleDisplayModeChange" class="reading-view__mode-toggle">
-              </mode-toggle>
-            </div>
             
-            <!-- Ultra DeepInsight 生成按钮 - 仅登录用户且Ultra版本不存在时显示 -->
-            <div v-if="isAuthenticated && !ultraAvailable && ultraStatus === 'not_exists'" class="reading-view__ultra-button-wrapper">
+            <!-- 工具栏 - 标题分割线下方，引言上方 -->
+            <div class="reading-view__toolbar" v-if="visualAvailable || visualStatus === 'processing' || (isAuthenticated && !ultraAvailable && ultraStatus === 'not_exists') || ultraStatus === 'generating'">
+              
+              <!-- Visual 模式切换按钮 -->
               <button 
-                @click="triggerUltraGeneration" 
-                class="reading-view__ultra-button"
-                :disabled="isGeneratingUltra"
+                v-if="visualAvailable || visualStatus === 'processing'"
+                @click="handleDisplayModeChange(displayMode === 'quick' ? 'deep' : 'quick')"
+                class="reading-view__toolbar-btn"
+                :class="{ 'reading-view__toolbar-btn--active': displayMode === 'quick' }"
+                :disabled="visualStatus === 'processing'"
+                :title="displayMode === 'quick' ? '切换到 Deep Insight' : '切换到 Quick Insight'"
               >
-                <span class="reading-view__ultra-button-icon">✨</span>
-                <span class="reading-view__ultra-button-text">
-                  {{ isGeneratingUltra ? '生成中...' : 'Ultra DeepInsight' }}
-                </span>
-              </button>
-              <p v-if="!isGeneratingUltra" class="reading-view__ultra-button-hint">
-                生成超深度解读版本（18-20章，全文约30000字）
-              </p>
-              <p v-else class="reading-view__ultra-button-progress">
-                Ultra DeepInsight生成中，预计15-20分钟...
-              </p>
-            </div>
-            
-            <!-- Ultra生成中的提示 -->
-            <div v-else-if="ultraStatus === 'generating' && !ultraAvailable" class="reading-view__ultra-generating">
-              <div class="reading-view__ultra-generating-icon">
-                <svg class="reading-view__ultra-spinner" fill="none" viewBox="0 0 24 24">
-                  <circle style="opacity: 0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path style="opacity: 0.75" fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                  </path>
+                <svg v-if="visualStatus !== 'processing'" class="reading-view__toolbar-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
+                <svg v-else class="reading-view__toolbar-icon reading-view__toolbar-icon--spinning" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span class="reading-view__toolbar-text">{{ displayMode === 'quick' ? 'Deep' : 'Visual' }}</span>
+              </button>
+              
+              <!-- Ultra 生成按钮 -->
+              <button 
+                v-if="isAuthenticated && !ultraAvailable && ultraStatus === 'not_exists'"
+                @click="triggerUltraGeneration"
+                class="reading-view__toolbar-btn reading-view__toolbar-btn--ultra"
+                :disabled="isGeneratingUltra"
+                title="生成超深度解读版本（18-20章）"
+              >
+                <span class="reading-view__toolbar-ultra-icon">✨</span>
+                <span class="reading-view__toolbar-text">Ultra</span>
+              </button>
+              
+              <!-- Ultra 生成中状态 -->
+              <div v-else-if="ultraStatus === 'generating' && !ultraAvailable" class="reading-view__toolbar-btn reading-view__toolbar-btn--generating">
+                <svg class="reading-view__toolbar-icon reading-view__toolbar-icon--spinning" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span class="reading-view__toolbar-text">Ultra...</span>
               </div>
-              <p class="reading-view__ultra-generating-text">
-                ✨ Ultra DeepInsight 生成中，预计15-20分钟
-              </p>
-              <p class="reading-view__ultra-generating-hint">
-                生成完成后将自动切换到Ultra版本
-              </p>
             </div>
 
             <!-- Deep Insight 模式内容 -->

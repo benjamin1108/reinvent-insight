@@ -24,23 +24,59 @@ router = APIRouter(prefix="/api/article", tags=["ultra_deep"])
 
 
 def count_toc_chapters(content: str) -> int:
-    """计算文档中的章节数量"""
+    """计算文档中的章节数量
+    
+    支持多种格式：
+    1. 目录中的 `- [xxx](...)` 链接
+    2. 正文中的编号章节标题 `## 1.` 或 `### 1.`
+    """
     lines = content.splitlines()
     chapter_count = 0
     in_toc = False
     
+    # 方法 1: 统计目录中的链接
     for line in lines:
         stripped = line.strip()
-        if '## 目录' in stripped or '## Table of Contents' in stripped:
+        if '目录' in stripped or 'Table of Contents' in stripped:
             in_toc = True
             continue
         if in_toc:
-            if stripped.startswith('##'):
-                in_toc = False
+            if stripped.startswith('##') or stripped.startswith('###'):
+                # 检查是否是新章节开始（非目录类标题）
+                if '目录' not in stripped and 'Table of Contents' not in stripped:
+                    in_toc = False
             elif stripped.startswith('- ['):
                 chapter_count += 1
     
-    return chapter_count
+    # 如果从目录找到了章节，直接返回
+    if chapter_count > 0:
+        return chapter_count
+    
+    # 方法 2: 统计编号章节标题（如 ### 1. xxx 或 ## 1. xxx）
+    import re
+    chapter_pattern = re.compile(r'^#{2,3}\s+(\d+)\.\s+')
+    seen_numbers = set()
+    
+    for line in lines:
+        match = chapter_pattern.match(line)
+        if match:
+            num = int(match.group(1))
+            seen_numbers.add(num)
+    
+    if seen_numbers:
+        return len(seen_numbers)
+    
+    # 方法 3: 统计所有 ## 标题（排除目录、引言、结语等）
+    excluded_titles = {'目录', '主要目录', 'table of contents', '引言', '结语', '结论', '总结'}
+    h2_count = 0
+    for line in lines:
+        stripped = line.strip().lower()
+        if stripped.startswith('## '):
+            title = stripped[3:].strip()
+            if title not in excluded_titles:
+                h2_count += 1
+    
+    return h2_count
 
 
 @router.get("/{doc_hash}/ultra-deep/status")
