@@ -279,7 +279,19 @@ OUTLINE_PROMPT_TEMPLATE = """
       "source_content_amount": "[rich/moderate/sparse]",
       "information_density": "[high/medium/low]",
       "generation_depth": "[detailed/moderate/brief]",
-      "rationale": "[为什么这样建议的简短说明]"
+      "subsections": [
+        {{{{
+          "subtitle": "[子章节标题，可选]",
+          "key_points": ["[该子章节必须覆盖的核心论点1]", "[核心论点2]"]
+        }}}}
+      ],
+      "opening_hook": "[该章节的起始引子，如何开篇，用什么事实或数据引入]",
+      "closing_transition": "[该章节的结尾过渡，如何与下一章衔接]",
+      "must_include": ["[必须包含的关键数据点]", "[必须引用的案例]"],
+      "must_exclude": ["[不要涉及的内容，已在其他章节覆盖]"],
+      "prev_chapter_link": "[与上一章的逻辑关系，第一章可留空]",
+      "next_chapter_link": "[与下一章的逻辑关系]",
+      "rationale": "[详细的内容范围指导，至少100字]"
     }}}},
     {{{{
       "index": 2,
@@ -287,7 +299,14 @@ OUTLINE_PROMPT_TEMPLATE = """
       "source_content_amount": "[rich/moderate/sparse]",
       "information_density": "[high/medium/low]",
       "generation_depth": "[detailed/moderate/brief]",
-      "rationale": "[为什么这样建议的简短说明]"
+      "subsections": [...],
+      "opening_hook": "...",
+      "closing_transition": "...",
+      "must_include": [...],
+      "must_exclude": [...],
+      "prev_chapter_link": "...",
+      "next_chapter_link": "...",
+      "rationale": "..."
     }}}}
     // ... 更多章节
   ]
@@ -310,10 +329,16 @@ OUTLINE_PROMPT_TEMPLATE = """
 
 ---
 **重要提醒**：
-1. 必须首先输出完整的 JSON 格式元数据，包含所有章节的详细 rationale
-2. **rationale 字段是并发生成的关键**：必须写得足够详细（至少100字），明确区分各章节的边界，避免内容重复
-3. 每个 rationale 必须包含：(1)必须包含的关键论点/数据/案例 (2)与相邻章节的边界 (3)该章节的独特角度
-4. JSON 中的 chapters 数组必须包含每个章节的详细元数据
+1. 必须首先输出完整的 JSON 格式元数据，包含所有章节的详细框架
+2. **章节框架是并发生成的关键**：
+   - `subsections`: 子章节列表，明确内部结构
+   - `opening_hook`: 章节开篇设计，避免千篇一律
+   - `closing_transition`: 章节结尾过渡，确保衔接顺畅
+   - `must_include`: 必须包含的内容，避免遗漏
+   - `must_exclude`: 禁止包含的内容，避免重复
+   - `prev_chapter_link` 和 `next_chapter_link`: 章节间的逻辑连接
+3. **rationale 字段**：必须写得足够详细（至少100字），明确区分各章节的边界
+4. JSON 中的 chapters 数组必须包含每个章节的完整框架
 5. 然后输出 Markdown 格式的标题、引言和大纲索引
 6. 确保 JSON 格式完全合法，可以被标准解析器解析
 """

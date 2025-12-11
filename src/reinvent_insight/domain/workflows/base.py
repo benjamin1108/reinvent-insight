@@ -2,6 +2,7 @@
 
 import os
 import re
+import json
 import asyncio
 from abc import ABC, abstractmethod
 from typing import List, Optional, Tuple, Dict, Any, Union, Protocol
@@ -108,6 +109,7 @@ class AnalysisWorkflow(ABC):
         # 配置
         self.max_retries = 2
         self.generated_title_en = None  # 存储AI生成的英文标题
+        self.chapter_metadata: Dict[int, Dict] = {}  # 存储章节元数据
     
     def _get_model_client(self):
         """获取模型客户端（子类可覆盖）"""
@@ -232,6 +234,9 @@ class AnalysisWorkflow(ABC):
         
         title, chapters_raw, introduction = parse_outline(outline_content)
         
+        # 提取章节元数据（JSON部分）
+        self._extract_chapter_metadata(outline_content)
+        
         # 对于PDF文档，尝试提取AI生成的英文标题
         if self.is_pdf:
             try:
@@ -243,6 +248,66 @@ class AnalysisWorkflow(ABC):
                 logger.warning(f"无法从大纲中提取英文标题: {e}")
         
         return title, chapters_raw, introduction
+    
+    def _extract_chapter_metadata(self, outline_content: str):
+        """从大纲内容中提取章节元数据（JSON部分）"""
+        try:
+            # 尝试提取 JSON 块
+            json_match = re.search(r'```json\s*([\s\S]*?)```', outline_content)
+            if not json_match:
+                # 尝试直接匹配 JSON 对象
+                json_match = re.search(r'\{[\s\S]*"chapters"[\s\S]*\}', outline_content)
+                if json_match:
+                    json_str = json_match.group(0)
+                else:
+                    logger.warning("未能从大纲中提取JSON元数据")
+                    return
+            else:
+                json_str = json_match.group(1)
+            
+            # 清理JSON字符串
+            json_str = json_str.strip()
+            
+            # 解析JSON
+            outline_json = json.loads(json_str)
+            
+            # 提取章节元数据
+            chapters = outline_json.get('chapters', [])
+            for chapter in chapters:
+                index = chapter.get('index', 0)
+                if index > 0:
+                    self.chapter_metadata[index] = {
+                        'title': chapter.get('title', ''),
+                        'source_content_amount': chapter.get('source_content_amount', 'moderate'),
+                        'information_density': chapter.get('information_density', 'medium'),
+                        'generation_depth': chapter.get('generation_depth', 'detailed'),
+                        'subsections': chapter.get('subsections', []),
+                        'opening_hook': chapter.get('opening_hook', ''),
+                        'closing_transition': chapter.get('closing_transition', ''),
+                        'must_include': chapter.get('must_include', []),
+                        'must_exclude': chapter.get('must_exclude', []),
+                        'prev_chapter_link': chapter.get('prev_chapter_link', ''),
+                        'next_chapter_link': chapter.get('next_chapter_link', ''),
+                        'rationale': chapter.get('rationale', '')
+                    }
+            
+            logger.info(f"成功提取 {len(self.chapter_metadata)} 个章节的元数据")
+            
+        except json.JSONDecodeError as e:
+            logger.warning(f"解析大纲JSON失败: {e}")
+        except Exception as e:
+            logger.warning(f"提取章节元数据时出错: {e}")
+    
+    def _get_chapter_metadata(self, chapter_index: int) -> Dict:
+        """获取指定章节的元数据
+        
+        Args:
+            chapter_index: 章节索引（1-based）
+            
+        Returns:
+            章节元数据字典
+        """
+        return self.chapter_metadata.get(chapter_index, {})
     
     async def _validate_chapter_count(self, chapters: List[str], outline_content: str):
         """验证章节数量（Ultra模式）"""
@@ -316,8 +381,12 @@ class AnalysisWorkflow(ABC):
             await asyncio.sleep(delay)
         
         try:
+            # 获取章节元数据
+            chapter_meta = self._get_chapter_metadata(index + 1)  # index is 0-based, metadata is 1-based
+            rationale = self._build_chapter_rationale(index + 1, chapter_meta)
+            
             chapter_content = await self._generate_single_chapter(
-                index, chapter_title, outline_content, previous_chapters=None, rationale=""
+                index, chapter_title, outline_content, previous_chapters=None, rationale=rationale
             )
             
             # 更新进度
@@ -329,3 +398,61 @@ class AnalysisWorkflow(ABC):
         except Exception as e:
             logger.error(f"任务 {self.task_id} - 生成章节 '{chapter_title}' 失败: {e}", exc_info=e)
             return False
+    
+    def _build_chapter_rationale(self, chapter_index: int, chapter_meta: Dict) -> str:
+        """构建章节生成的详细指导信息
+        
+        Args:
+            chapter_index: 章节索引（1-based）
+            chapter_meta: 章节元数据
+            
+        Returns:
+            格式化的章节指导信息
+        """
+        if not chapter_meta:
+            return ""
+        
+        parts = []
+        
+        # 基础 rationale
+        if chapter_meta.get('rationale'):
+            parts.append(f"**内容范围指导**：{chapter_meta['rationale']}")
+        
+        # 子章节结构
+        subsections = chapter_meta.get('subsections', [])
+        if subsections:
+            parts.append("\n**子章节结构**（按顺序展开）：")
+            for i, sub in enumerate(subsections, 1):
+                subtitle = sub.get('subtitle', f'子章节{i}')
+                key_points = sub.get('key_points', [])
+                if key_points:
+                    points_str = '、'.join(key_points)
+                    parts.append(f"  {i}. {subtitle}：覆盖 {points_str}")
+                else:
+                    parts.append(f"  {i}. {subtitle}")
+        
+        # 开篇指导
+        if chapter_meta.get('opening_hook'):
+            parts.append(f"\n**开篇方式**：{chapter_meta['opening_hook']}")
+        
+        # 结尾过渡
+        if chapter_meta.get('closing_transition'):
+            parts.append(f"\n**结尾过渡**：{chapter_meta['closing_transition']}")
+        
+        # 必须包含
+        must_include = chapter_meta.get('must_include', [])
+        if must_include:
+            parts.append(f"\n**必须包含**：{'、'.join(must_include)}")
+        
+        # 必须排除
+        must_exclude = chapter_meta.get('must_exclude', [])
+        if must_exclude:
+            parts.append(f"\n**禁止涉及**（已在其他章节覆盖）：{'、'.join(must_exclude)}")
+        
+        # 章节连接
+        if chapter_meta.get('prev_chapter_link'):
+            parts.append(f"\n**与上一章的关系**：{chapter_meta['prev_chapter_link']}")
+        if chapter_meta.get('next_chapter_link'):
+            parts.append(f"\n**与下一章的关系**：{chapter_meta['next_chapter_link']}")
+        
+        return '\n'.join(parts)

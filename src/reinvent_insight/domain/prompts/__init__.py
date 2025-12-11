@@ -26,6 +26,7 @@ from .chapter import (
 from .conclusion import CONCLUSION_PROMPT_TEMPLATE
 
 from .ultra import (
+    DEEP_OUTLINE_INSTRUCTIONS,
     ULTRA_OUTLINE_INSTRUCTIONS,
     ULTRA_CHAPTER_INSTRUCTIONS,
 )
@@ -45,7 +46,8 @@ __all__ = [
     'CHAPTER_PROMPT_TEMPLATE',
     # Conclusion
     'CONCLUSION_PROMPT_TEMPLATE',
-    # Ultra
+    # Ultra / Deep
+    'DEEP_OUTLINE_INSTRUCTIONS',
     'ULTRA_OUTLINE_INSTRUCTIONS',
     'ULTRA_CHAPTER_INSTRUCTIONS',
 ]

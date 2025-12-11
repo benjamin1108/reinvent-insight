@@ -39,7 +39,12 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
         Returns:
             (title, chapters, introduction)
         """
-        return parse_outline(outline_content)
+        title, chapters, introduction = parse_outline(outline_content)
+        
+        # 提取章节元数据（复用父类方法）
+        self._extract_chapter_metadata(outline_content)
+        
+        return title, chapters, introduction
     
     async def _validate_chapter_count(self, chapters: List[str], outline_content: str):
         """验证章节数量（Ultra模式特殊处理）"""
@@ -66,15 +71,18 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
         """生成大纲（包含标题、引言、章节列表）"""
         await self._log("步骤 1/4: 正在分析内容结构...")
         
-        # Ultra模式特殊指令
-        ultra_instructions = ""
+        # 根据模式选择章节框架指令
         if self.is_ultra_mode:
-            ultra_instructions = prompts.ULTRA_OUTLINE_INSTRUCTIONS
+            # Ultra模式：使用完整的Ultra指令（包含章节数限制）
+            outline_instructions = prompts.ULTRA_OUTLINE_INSTRUCTIONS
+        else:
+            # 普通模式：使用章节框架指令（无章节数限制）
+            outline_instructions = prompts.DEEP_OUTLINE_INSTRUCTIONS
         
         # 构建提示词
         prompt = prompts.OUTLINE_PROMPT_TEMPLATE.format(
             role_and_style=prompts.ROLE_AND_STYLE_GUIDE,
-            base_prompt=self.base_prompt + ultra_instructions,
+            base_prompt=self.base_prompt + outline_instructions,
             content_type="完整英文字幕",
             content_description="完整字幕",
             full_content=self.transcript,
@@ -155,11 +163,16 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
                 chapter_content=last_chapter.get('content', '')
             )
         
-        # 构建章节深度约束
+        # 构建章节深度约束（优先从元数据获取）
+        chapter_meta = self._get_chapter_metadata(index + 1)
+        source_content_amount = chapter_meta.get('source_content_amount', 'moderate')
+        information_density = chapter_meta.get('information_density', 'medium')
+        generation_depth = chapter_meta.get('generation_depth', 'detailed' if self.is_ultra_mode else 'moderate')
+        
         chapter_depth_constraint = prompts.CHAPTER_DEPTH_CONSTRAINT_TEMPLATE.format(
-            source_content_amount="moderate",
-            information_density="medium",
-            generation_depth="detailed" if self.is_ultra_mode else "moderate",
+            source_content_amount=source_content_amount,
+            information_density=information_density,
+            generation_depth=generation_depth,
             rationale=rationale or f"本章节聚焦于'{chapter_title}'主题，请基于原文内容深入分析。"
         )
         
@@ -219,19 +232,19 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
     def _fix_chapter_title(self, chapter_content: str, chapter_num: int, expected_title: str) -> str:
         """修复章节标题格式
         
-        确保章节标题格式为: ## {chapter_num}. {title}
+        确保章节标题格式为: ### {chapter_num}. {title} (H3)
         """
         lines = chapter_content.split('\n')
         if not lines:
             return chapter_content
         
         first_line = lines[0].strip()
-        expected_pattern = f"## {chapter_num}. {expected_title}"
+        expected_pattern = f"### {chapter_num}. {expected_title}"
         
         # 检查第一行是否符合预期
         if first_line != expected_pattern:
             # 尝试修复
-            if first_line.startswith('##'):
+            if first_line.startswith('#'):
                 # 替换第一行
                 lines[0] = expected_pattern
                 logger.info(f"修复章节标题: {first_line} -> {expected_pattern}")
