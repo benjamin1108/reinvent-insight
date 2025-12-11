@@ -22,6 +22,12 @@ export default {
       default: false
     },
     
+    // 是否为管理员
+    isAdmin: {
+      type: Boolean,
+      default: false
+    },
+    
     // 是否为分享页面
     isShareView: {
       type: Boolean,
@@ -111,6 +117,7 @@ export default {
     'login-show',        // 显示登录框
     'logout',           // 退出登录
     'test-toast',       // 测试Toast（临时）
+    'admin-click',      // 跳转管理页面
     'back-to-library',  // 返回笔记库
     'open-video',       // 打开视频播放器
     'download-pdf',     // 下载PDF
@@ -190,6 +197,10 @@ export default {
       emit('mode-change', mode);
     };
     
+    const handleAdminClick = () => {
+      emit('admin-click');
+    };
+    
     return {
       // 配置状态
       audioButtonEnabled,
@@ -199,6 +210,7 @@ export default {
       handleLoginShow,
       handleLogout,
       handleTestToast,
+      handleAdminClick,
       handleBackToLibrary,
       handleOpenVideo,
       handleDownloadPDF,

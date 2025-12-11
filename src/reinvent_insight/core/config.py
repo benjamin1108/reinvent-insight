@@ -77,6 +77,8 @@ def _get_stripped_env(*keys, default: str = "") -> str:
 
 ADMIN_USERNAME = _get_stripped_env("ADMIN_USERNAME", "USERNAME", default="admin")
 ADMIN_PASSWORD = _get_stripped_env("ADMIN_PASSWORD", "PASSWORD", default="password")
+# 密码哈希（优先使用，比明文密码更安全）
+ADMIN_PASSWORD_HASH = _get_stripped_env("ADMIN_PASSWORD_HASH", default="")
 
 # --- 基础路径 ---
 # 定义输出目录

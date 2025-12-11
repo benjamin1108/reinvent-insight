@@ -117,3 +117,6 @@ venv.bak/
 .cookies
 tasks/
 *.pdf
+
+# User data
+config/users.json

@@ -3,48 +3,12 @@
     'summary-card tech-gradient glow-effect',
     summaryType === 'reinvent' 
       ? 'summary-card--reinvent' 
-      : 'summary-card--other',
-    { 'summary-card--deleting': isDeleting }
+      : 'summary-card--other'
   ]"
   @click="handleClick">
   
   <!-- 分类光晕效果 -->
   <div class="summary-card__category-glow"></div>
-  
-  <!-- 删除按钮（仅登录状态显示） -->
-  <button 
-    v-if="isAuthenticated && !showDeleteConfirm"
-    class="summary-card__delete-btn"
-    @click="showDeleteDialog"
-    title="删除文章"
-    aria-label="删除文章">
-    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-    </svg>
-  </button>
-  
-  <!-- 删除确认弹窗 -->
-  <div v-if="showDeleteConfirm" class="summary-card__delete-confirm">
-    <div class="summary-card__delete-confirm-content">
-      <p class="summary-card__delete-confirm-text">确定删除这篇文章吗？</p>
-      <div class="summary-card__delete-confirm-actions">
-        <button 
-          class="summary-card__delete-confirm-btn summary-card__delete-confirm-btn--cancel"
-          @click="cancelDelete"
-          :disabled="isDeleting">
-          取消
-        </button>
-        <button 
-          class="summary-card__delete-confirm-btn summary-card__delete-confirm-btn--confirm"
-          @click="confirmDelete"
-          :disabled="isDeleting">
-          <span v-if="isDeleting">删除中...</span>
-          <span v-else>删除</span>
-        </button>
-      </div>
-    </div>
-  </div>
   
   <!-- Main clickable area -->
   <div class="summary-card__content">

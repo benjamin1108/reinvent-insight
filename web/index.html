@@ -116,6 +116,7 @@
     <app-header
       :mode="currentView === 'read' ? 'reading' : 'normal'"
       :is-authenticated="isAuthenticated"
+      :is-admin="isAdmin"
       :is-share-view="isShareView"
       :current-view="currentView"
       :show-toc="showToc"
@@ -132,6 +133,7 @@
       @view-change="handleViewChange"
       @login-show="handleLoginShow"
       @logout="logout"
+      @admin-click="handleAdminClick"
       @back-to-library="goBackToLibrary"
       @open-video="openVideoPlayer"
       @download-pdf="downloadPDF"
@@ -235,6 +237,11 @@
         @delete="permanentlyDelete"
         @empty="emptyTrash">
       </trash-view>
+      
+      <!-- 管理页面（仅管理员可访问） -->
+      <admin-view 
+        v-if="currentView === 'admin' && isAuthenticated && isAdmin">
+      </admin-view>
 
     </main>
 

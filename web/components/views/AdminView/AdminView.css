@@ -1,0 +1,792 @@
+/* AdminView 组件样式 */
+
+.admin-view {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+/* ========== 页面标题 ========== */
+
+.admin-view__header {
+  margin-bottom: 2rem;
+}
+
+.admin-view__title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #f0f9ff;
+  margin: 0;
+}
+
+.admin-view__title-icon {
+  width: 2rem;
+  height: 2rem;
+  color: #06b6d4;
+}
+
+/* ========== 标签页 ========== */
+
+.admin-view__tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.admin-view__tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  bottom: -2px;
+}
+
+.admin-view__tab:hover {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.admin-view__tab--active {
+  color: #06b6d4;
+  border-bottom-color: #06b6d4;
+}
+
+.admin-view__tab-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* ========== 内容区域 ========== */
+
+.admin-view__content {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1.5rem;
+  min-height: 400px;
+}
+
+/* ========== 工具栏 ========== */
+
+.admin-view__toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.admin-view__toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.admin-view__count {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.875rem;
+}
+
+.admin-view__batch-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2));
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 0.5rem;
+  color: #fca5a5;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.admin-view__batch-btn:hover {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.3));
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #fecaca;
+}
+
+.admin-view__refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.admin-view__refresh-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.admin-view__refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-view__refresh-icon {
+  width: 1rem;
+  height: 1rem;
+  transition: transform 0.3s ease;
+}
+
+.admin-view__refresh-icon--spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ========== 加载状态 ========== */
+
+.admin-view__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 0;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.admin-view__loading-spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #06b6d4;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+/* ========== 表格 ========== */
+
+.admin-view__table-wrapper {
+  overflow-x: auto;
+}
+
+.admin-view__table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.admin-view__th {
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: left;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.admin-view__th--checkbox {
+  width: 3rem;
+  text-align: center;
+}
+
+.admin-view__th--title {
+  min-width: 250px;
+}
+
+.admin-view__th--type {
+  width: 100px;
+}
+
+.admin-view__th--words {
+  width: 100px;
+}
+
+.admin-view__th--version {
+  width: 80px;
+}
+
+.admin-view__th--date {
+  width: 150px;
+}
+
+.admin-view__th--actions {
+  width: 200px;
+}
+
+.admin-view__tr {
+  transition: background-color 0.2s ease;
+}
+
+.admin-view__tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.admin-view__td {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.875rem;
+}
+
+.admin-view__td--checkbox {
+  text-align: center;
+}
+
+.admin-view__checkbox {
+  width: 1.125rem;
+  height: 1.125rem;
+  cursor: pointer;
+  accent-color: #06b6d4;
+}
+
+.admin-view__article-link {
+  cursor: pointer;
+  color: inherit;
+  text-decoration: none;
+  display: block;
+}
+
+.admin-view__article-link:hover .admin-view__article-title {
+  color: #06b6d4;
+}
+
+.admin-view__article-title {
+  font-weight: 500;
+  color: #f0f9ff;
+  transition: color 0.2s ease;
+  margin-bottom: 0.25rem;
+}
+
+.admin-view__article-subtitle {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* ========== 徽章 ========== */
+
+.admin-view__badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.admin-view__badge--youtube {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.admin-view__badge--document {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.admin-view__badge--pdf {
+  background: rgba(168, 85, 247, 0.2);
+  color: #c4b5fd;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.admin-view__badge--url {
+  background: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.admin-view__badge--default {
+  background: rgba(107, 114, 128, 0.2);
+  color: #d1d5db;
+  border: 1px solid rgba(107, 114, 128, 0.3);
+}
+
+/* ========== 操作按钮 ========== */
+
+.admin-view__actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.admin-view__action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.admin-view__action-btn--ultra {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(14, 165, 233, 0.2));
+  border-color: rgba(6, 182, 212, 0.4);
+  color: #67e8f9;
+}
+
+.admin-view__action-btn--ultra:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(14, 165, 233, 0.3));
+  border-color: rgba(6, 182, 212, 0.6);
+  color: #a5f3fc;
+}
+
+.admin-view__action-btn--ultra:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-view__action-btn--delete {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2));
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+.admin-view__action-btn--delete:hover {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.3));
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #fecaca;
+}
+
+.admin-view__action-spin {
+  animation: spin 1s linear infinite;
+}
+
+.admin-view__action-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.admin-view__action-badge--success {
+  background: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.admin-view__action-badge--disabled {
+  background: rgba(107, 114, 128, 0.2);
+  color: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(107, 114, 128, 0.3);
+}
+
+/* ========== 空状态 ========== */
+
+.admin-view__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 0;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.admin-view__empty-icon {
+  width: 4rem;
+  height: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.admin-view__empty-text {
+  font-size: 1.125rem;
+  margin: 0;
+}
+
+/* ========== 模态框 ========== */
+
+.admin-view__modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.admin-view__modal-content {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.admin-view__modal-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.admin-view__modal-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #f0f9ff;
+}
+
+.admin-view__modal-body {
+  padding: 1.5rem;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.6;
+}
+
+.admin-view__modal-body strong {
+  color: #06b6d4;
+}
+
+.admin-view__modal-hint {
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.admin-view__modal-footer {
+  padding: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.admin-view__modal-btn {
+  padding: 0.625rem 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid;
+}
+
+.admin-view__modal-btn--cancel {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.admin-view__modal-btn--cancel:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.admin-view__modal-btn--danger {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  border-color: #b91c1c;
+  color: white;
+}
+
+.admin-view__modal-btn--danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+}
+
+.admin-view__modal-btn--danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ========== 响应式 ========== */
+
+@media (max-width: 768px) {
+  .admin-view {
+    padding: 1rem 0.5rem;
+  }
+  
+  .admin-view__title {
+    font-size: 1.5rem;
+  }
+  
+  .admin-view__tabs {
+    gap: 0.25rem;
+  }
+  
+  .admin-view__tab {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+  
+  .admin-view__content {
+    padding: 1rem;
+  }
+  
+  .admin-view__toolbar {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: stretch;
+  }
+  
+  .admin-view__toolbar-left {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .admin-view__table-wrapper {
+    margin: 0 -1rem;
+  }
+  
+  .admin-view__th,
+  .admin-view__td {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  .admin-view__th--title,
+  .admin-view__article-subtitle {
+    display: none;
+  }
+  
+  .admin-view__actions {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  
+  .admin-view__action-btn {
+    font-size: 0.625rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+/* ========== 用户管理样式 ========== */
+
+.admin-view__toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-view__add-user-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(6, 182, 212, 0.3));
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  border-radius: 0.5rem;
+  color: #67e8f9;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.admin-view__add-user-btn:hover {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(6, 182, 212, 0.4));
+  border-color: rgba(6, 182, 212, 0.6);
+  color: #a5f3fc;
+}
+
+.admin-view__username {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-view__admin-icon {
+  color: #fbbf24;
+}
+
+.admin-view__badge--admin {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2));
+  border-color: rgba(251, 191, 36, 0.4);
+  color: #fcd34d;
+}
+
+.admin-view__badge--user {
+  background: linear-gradient(135deg, rgba(107, 114, 128, 0.2), rgba(75, 85, 99, 0.2));
+  border-color: rgba(107, 114, 128, 0.4);
+  color: #d1d5db;
+}
+
+/* 表单样式 */
+.admin-view__form-group {
+  margin-bottom: 1.5rem;
+}
+
+.admin-view__form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.admin-view__form-input,
+.admin-view__form-select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem;
+  color: #f0f9ff;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+}
+
+.admin-view__form-input:focus,
+.admin-view__form-select:focus {
+  outline: none;
+  border-color: rgba(6, 182, 212, 0.6);
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2);
+}
+
+.admin-view__form-input:disabled,
+.admin-view__form-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-view__form-error {
+  margin-top: 0.5rem;
+  color: #fca5a5;
+  font-size: 0.75rem;
+}
+
+.admin-view__modal-content--wide {
+  max-width: 500px;
+}
+
+.admin-view__modal-btn--primary {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(6, 182, 212, 0.4));
+  border: 1px solid rgba(6, 182, 212, 0.5);
+  color: #67e8f9;
+}
+
+.admin-view__modal-btn--primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.4), rgba(6, 182, 212, 0.5));
+  border-color: rgba(6, 182, 212, 0.7);
+  color: #a5f3fc;
+}
+
+/* ========== 用户管理样式 ========== */
+
+/* 用户名显示 */
+.admin-view__user-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 管理员徽章 */
+.admin-view__admin-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #fff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+}
+
+/* 角色徽章样式 */
+.admin-view__badge--admin {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+}
+
+.admin-view__badge--user {
+  background: #e5e7eb;
+  color: #6b7280;
+}
+
+/* 表单组 */
+.admin-view__form-group {
+  margin-bottom: 20px;
+}
+
+.admin-view__form-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.admin-view__form-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.admin-view__form-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.admin-view__form-error {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #ef4444;
+}
+
+/* 模态框表单样式 */
+.admin-view__modal-content--form {
+  max-width: 450px;
+}
+
+/* 主按钮样式 */
+.admin-view__modal-btn--primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.admin-view__modal-btn--primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.admin-view__modal-btn--primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.admin-view__modal-btn--primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

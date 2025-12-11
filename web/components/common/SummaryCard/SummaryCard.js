@@ -64,14 +64,10 @@ export default {
     }
   },
   
-  emits: ['click', 'delete'],
+  emits: ['click'],
   
   setup(props, { emit }) {
-    const { computed, ref } = Vue;
-    
-    // 删除确认状态
-    const showDeleteConfirm = ref(false);
-    const isDeleting = ref(false);
+    const { computed } = Vue;
     
     // 处理后的显示标题（移除冗余前缀）
     const displayTitle = computed(() => {
@@ -126,38 +122,10 @@ export default {
     });
     
     // 处理点击事件
-    const handleClick = (event) => {
-      // 如果点击的是删除按钮区域，不触发卡片点击
-      if (event.target.closest('.summary-card__delete-btn') || 
-          event.target.closest('.summary-card__delete-confirm')) {
-        return;
-      }
+    const handleClick = () => {
       emit('click', {
         hash: props.hash,
         type: props.summaryType
-      });
-    };
-    
-    // 显示删除确认
-    const showDeleteDialog = (event) => {
-      event.stopPropagation();
-      showDeleteConfirm.value = true;
-    };
-    
-    // 取消删除
-    const cancelDelete = (event) => {
-      event.stopPropagation();
-      showDeleteConfirm.value = false;
-    };
-    
-    // 确认删除
-    const confirmDelete = (event) => {
-      event.stopPropagation();
-      isDeleting.value = true;
-      emit('delete', {
-        hash: props.hash,
-        titleCn: props.titleCn,
-        titleEn: props.titleEn
       });
     };
     
@@ -167,12 +135,7 @@ export default {
       levelText,
       contentTypeText,
       contentTypeIcon,
-      handleClick,
-      showDeleteConfirm,
-      isDeleting,
-      showDeleteDialog,
-      cancelDelete,
-      confirmDelete
+      handleClick
     };
   }
 }; 

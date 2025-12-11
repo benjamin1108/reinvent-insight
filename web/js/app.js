@@ -249,6 +249,7 @@ const app = createApp({
 
     // 认证状态 - 必须在 getInitialView 之前声明
     const isAuthenticated = ref(false);
+    const isAdmin = ref(false); // 管理员标识
     const showLogin = ref(false);
     const loginSuccessCallback = ref(null); // 存储登录成功后的回调函数
 
@@ -265,6 +266,11 @@ const app = createApp({
       // 支持回收站页面
       if (path === '/trash') {
         return 'trash';
+      }
+      
+      // 支持管理页面
+      if (path === '/admin') {
+        return 'admin';
       }
 
       // 默认显示最近文章页面（登录和未登录用户都可以访问）
@@ -464,6 +470,20 @@ const app = createApp({
       } else if (path === '/trash') {
         // 回收站页面
         currentView.value = 'trash';
+      } else if (path === '/admin') {
+        // 管理页面 - 需要管理员权限
+        if (isAuthenticated.value && isAdmin.value) {
+          currentView.value = 'admin';
+        } else if (isAuthenticated.value && !isAdmin.value) {
+          // 已登录但不是管理员
+          currentView.value = 'library';
+          showToast('无权访问管理页面', 'danger');
+        } else {
+          // 未登录，跳转到首页并显示登录
+          currentView.value = 'library';
+          showLogin.value = true;
+          showToast('请先登录', 'warning');
+        }
       } else {
         currentView.value = 'library';
         if (isAuthenticated.value && summaries.value.length === 0) {
@@ -483,6 +503,10 @@ const app = createApp({
         localStorage.setItem('authToken', token);
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         isAuthenticated.value = true;
+        
+        // 保存用户角色信息
+        const userRole = res.data.role || 'user';
+        isAdmin.value = (userRole === 'admin');
         showLogin.value = false;
 
         // 如果有登录回调（如Ultra触发），则不切换视图，直接执行回调
@@ -523,13 +547,37 @@ const app = createApp({
       }
     };
 
-    const checkAuth = () => {
+    const checkAuth = async () => {
       const token = localStorage.getItem('authToken');
       if (token) {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         isAuthenticated.value = true;
+        // 检查管理员权限 - 等待完成
+        await checkAdminStatus();
       } else {
         isAuthenticated.value = false;
+        isAdmin.value = false;
+      }
+    };
+    
+    const checkAdminStatus = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          isAdmin.value = false;
+          return;
+        }
+        
+        const response = await axios.get('/api/auth/check-admin', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        isAdmin.value = response.data.is_admin || false;
+      } catch (error) {
+        console.error('检查管理员权限失败:', error);
+        isAdmin.value = false;
       }
     };
 
@@ -605,6 +653,26 @@ const app = createApp({
         loadSummaries();
         updatePageTitle(); // 恢复默认标题
       }
+    };
+    
+    const handleAdminClick = () => {
+      // 检查登录状态
+      if (!isAuthenticated.value) {
+        showLogin.value = true;
+        showToast('请先登录', 'warning');
+        return;
+      }
+      
+      // 检查管理员权限
+      if (!isAdmin.value) {
+        showToast('无权访问管理页面', 'danger');
+        return;
+      }
+      
+      // 跳转到 Admin 页面
+      currentView.value = 'admin';
+      history.pushState(null, '', '/admin');
+      updatePageTitle(); // 更新标题
     };
 
     const handleLoginShow = () => {
@@ -1747,8 +1815,8 @@ const app = createApp({
     // ===== 生命周期钩子 =====
 
     onMounted(async () => {
-      // 检查认证状态
-      checkAuth();
+      // 检查认证状态 - 等待完成后再处理路由
+      await checkAuth();
 
       // 处理路由
       handleRouting();
@@ -1814,6 +1882,13 @@ const app = createApp({
             window.eventBus.emit('refresh-reading-status');
           }
         });
+        
+        // 监听 navigate-to-reading 事件（从 Admin 跳转到阅读页）
+        window.eventBus.on('navigate-to-reading', ({ hash }) => {
+          if (hash) {
+            loadSummaryByHash(hash);
+          }
+        });
       }
     });
 
@@ -1868,6 +1943,7 @@ const app = createApp({
       articleTextForTTS,
       currentView,
       isAuthenticated,
+      isAdmin,
       showLogin,
       showToc,
       tocWidth,
@@ -1905,6 +1981,7 @@ const app = createApp({
       goHome,
       goBackToLibrary,
       handleViewChange,
+      handleAdminClick,
       handleLoginShow,
       handleSummaryClick,
       deleteSummary,
@@ -2040,6 +2117,14 @@ const components = [
     critical: false,
     priority: 9,
     version: '1.0.0'
+  },
+  {
+    name: 'admin-view',
+    path: '/components/views/AdminView',
+    fileName: 'AdminView',
+    critical: false,
+    priority: 9,
+    version: '1.0.0'
   }
 ];
 
@@ -2089,6 +2174,9 @@ if (currentPath.match(/^\/d\/|^\/documents\//)) {
 } else if (currentPath === '/trash') {
   // 回收站页面
   extraCriticalComponents = ['trash-view'];
+} else if (currentPath === '/admin') {
+  // 管理页面
+  extraCriticalComponents = ['admin-view'];
 } else {
   // 首页/列表页 (同时加载 library 和 recent 以确保切换流畅)
   extraCriticalComponents = ['library-view', 'hero-section', 'recent-view'];
