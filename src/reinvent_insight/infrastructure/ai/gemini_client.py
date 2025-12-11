@@ -65,6 +65,9 @@ class GeminiClient(BaseModelClient):
         Raises:
             APIError: API调用失败
         """
+        # 钩子：开始可观测层记录
+        recorder = self._start_observability_recording("generate_content")
+        
         await self._apply_rate_limit()
         
         # 如果没有指定thinking_level，根据配置自动选择
@@ -72,6 +75,16 @@ class GeminiClient(BaseModelClient):
             thinking_level = "low" if self.config.low_thinking else "high"
         
         logger.info(f"开始使用 {self.config.model_name} 生成内容 (thinking_level={thinking_level}, from_config={thinking_level is None})...")
+        
+        # 钩子：记录请求
+        self._record_request(recorder, prompt, {
+            "is_json": is_json,
+            "thinking_level": thinking_level,
+            "temperature": self.config.temperature,
+            "top_p": self.config.top_p,
+            "top_k": self.config.top_k,
+            "max_output_tokens": self.config.max_output_tokens
+        })
         
         # 使用新的google.genai SDK
         config = self.types.GenerateContentConfig(
@@ -122,9 +135,20 @@ class GeminiClient(BaseModelClient):
         try:
             content = await self._retry_with_backoff(_generate)
             logger.info(f"{self.config.model_name} 内容生成完成")
+            
+            # 钩子：记录响应
+            self._record_response(recorder, content)
+            
+            # 钩子：完成记录
+            self._finalize_observability(recorder)
+            
             return content
             
         except Exception as e:
+            # 钩子：记录错误
+            self._record_error(recorder, e)
+            self._finalize_observability(recorder)
+            
             logger.error(f"调用 Gemini API 时发生错误: {e}", exc_info=True)
             if "API key not valid" in str(e):
                 raise ConfigurationError("Gemini API 密钥无效")
@@ -152,6 +176,9 @@ class GeminiClient(BaseModelClient):
         Raises:
             APIError: API调用失败
         """
+        # 钩子：开始可观测层记录
+        recorder = self._start_observability_recording("generate_content_with_file")
+        
         await self._apply_rate_limit()
         
         # 如果没有指定thinking_level，根据配置自动选择
@@ -159,6 +186,18 @@ class GeminiClient(BaseModelClient):
             thinking_level = "low" if self.config.low_thinking else "high"
         
         logger.info(f"开始使用 {self.config.model_name} 进行多模态分析 (thinking_level={thinking_level})...")
+        
+        # 钩子：记录请求
+        self._record_request(recorder, prompt, {
+            "is_json": is_json,
+            "thinking_level": thinking_level,
+            "has_file": True,
+            "file_type": file_info.get("mime_type", "unknown"),
+            "temperature": self.config.temperature,
+            "top_p": self.config.top_p,
+            "top_k": self.config.top_k,
+            "max_output_tokens": self.config.max_output_tokens
+        })
         
         generation_config = self.types.GenerateContentConfig(
             temperature=self.config.temperature,
@@ -240,9 +279,18 @@ class GeminiClient(BaseModelClient):
         try:
             content = await self._retry_with_backoff(_generate)
             logger.info(f"{self.config.model_name} 多模态分析完成")
+            
+            # 钩子：记录响应
+            self._record_response(recorder, content)
+            self._finalize_observability(recorder)
+            
             return content
             
         except Exception as e:
+            # 钩子：记录错误
+            self._record_error(recorder, e)
+            self._finalize_observability(recorder)
+            
             logger.error(f"调用 Gemini API 进行多模态分析时发生错误: {e}", exc_info=True)
             if "API key not valid" in str(e):
                 raise ConfigurationError("Gemini API 密钥无效")

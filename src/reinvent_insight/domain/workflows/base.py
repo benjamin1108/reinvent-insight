@@ -12,6 +12,7 @@ from reinvent_insight.core import config
 from reinvent_insight.domain.models import DocumentContent
 from reinvent_insight.infrastructure.media.youtube_downloader import VideoMetadata
 from reinvent_insight.infrastructure.ai.model_config import get_model_client
+from reinvent_insight.infrastructure.ai.observability import set_business_context
 
 
 # 任务通知接口（依赖倒置）
@@ -120,55 +121,64 @@ class AnalysisWorkflow(ABC):
     
     async def run(self):
         """执行完整的分析工作流（模板方法）"""
-        try:
-            await self._log("正在启动深度分析流程...")
-            self.task_notifier.tasks[self.task_id].status = "running"
+        # 设置业务上下文
+        task_type = "ultra_deep" if self.is_ultra_mode else "video_summary"
+        
+        with set_business_context(
+            task_id=self.task_id,
+            task_type=task_type,
+            content_type=self.content_type,
+            is_pdf=self.is_pdf
+        ):
+            try:
+                await self._log("正在启动深度分析流程...")
+                self.task_notifier.tasks[self.task_id].status = "running"
 
-            # 步骤 1: 生成大纲
-            outline_content = await self._generate_outline()
-            if not outline_content:
-                raise Exception("生成大纲失败")
+                # 步骤 1: 生成大纲
+                outline_content = await self._generate_outline()
+                if not outline_content:
+                    raise Exception("生成大纲失败")
 
-            title, chapters_raw, introduction = await self._parse_outline_result(outline_content)
-            if not title or not chapters_raw:
-                raise Exception("解析大纲失败")
-            
-            # 清理章节标题
-            chapters = [re.sub(r'[\[\]]', '', c).strip() for c in chapters_raw]
-            
-            # Ultra模式章节数量验证
-            await self._validate_chapter_count(chapters, outline_content)
-            
-            await self._log(f"成功生成标题和 {len(chapters)} 个章节的分析框架")
-            
-            # 生成带链接的目录
-            from reinvent_insight.core.utils import generate_toc_with_links
-            toc_md = generate_toc_with_links(chapters)
+                title, chapters_raw, introduction = await self._parse_outline_result(outline_content)
+                if not title or not chapters_raw:
+                    raise Exception("解析大纲失败")
+                
+                # 清理章节标题
+                chapters = [re.sub(r'[\[\]]', '', c).strip() for c in chapters_raw]
+                
+                # Ultra模式章节数量验证
+                await self._validate_chapter_count(chapters, outline_content)
+                
+                await self._log(f"成功生成标题和 {len(chapters)} 个章节的分析框架")
+                
+                # 生成带链接的目录
+                from reinvent_insight.core.utils import generate_toc_with_links
+                toc_md = generate_toc_with_links(chapters)
 
-            # 步骤 2: 并发生成章节
-            success = await self._generate_chapters_parallel(chapters, title, outline_content)
-            if not success:
-                raise Exception("部分或全部章节内容生成失败")
-            
-            # 步骤 3: 生成结论
-            conclusion_content = await self._generate_conclusion(chapters)
-            if not conclusion_content:
-                raise Exception("生成收尾内容失败")
-            
-            # 步骤 4: 组装最终报告
-            final_report, final_filename, doc_hash = await self._assemble_final_report(
-                title, introduction, toc_md, conclusion_content, len(chapters), self.metadata
-            )
-            if not final_report:
-                raise Exception("组装最终报告失败")
+                # 步骤 2: 并发生成章节
+                success = await self._generate_chapters_parallel(chapters, title, outline_content)
+                if not success:
+                    raise Exception("部分或全部章节内容生成失败")
+                
+                # 步骤 3: 生成结论
+                conclusion_content = await self._generate_conclusion(chapters)
+                if not conclusion_content:
+                    raise Exception("生成收尾内容失败")
+                
+                # 步骤 4: 组装最终报告
+                final_report, final_filename, doc_hash = await self._assemble_final_report(
+                    title, introduction, toc_md, conclusion_content, len(chapters), self.metadata
+                )
+                if not final_report:
+                    raise Exception("组装最终报告失败")
 
-            await self._log("分析完成！", progress=100)
-            await self.task_notifier.send_result(title, final_report, self.task_id, final_filename, doc_hash)
+                await self._log("分析完成！", progress=100)
+                await self.task_notifier.send_result(title, final_report, self.task_id, final_filename, doc_hash)
 
-        except Exception as e:
-            error_message = f"工作流遇到严重错误: {e}"
-            logger.error(f"任务 {self.task_id} - {error_message}", exc_info=True)
-            await self.task_notifier.set_task_error(self.task_id, "分析过程中出现错误，请稍后重试")
+            except Exception as e:
+                error_message = f"工作流遇到严重错误: {e}"
+                logger.error(f"任务 {self.task_id} - {error_message}", exc_info=True)
+                await self.task_notifier.set_task_error(self.task_id, "分析过程中出现错误，请稍后重试")
     
     # ======= 抽象方法（子类必须实现） =======
     

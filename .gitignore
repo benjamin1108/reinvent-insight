@@ -120,3 +120,4 @@ tasks/
 
 # User data
 config/users.json
+.qoder/

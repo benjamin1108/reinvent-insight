@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Callable
+from typing import Dict, Any, Callable, Optional
 
 from .config_models import ModelConfig, APIError
 from .rate_limiter import RateLimiter
@@ -23,6 +23,15 @@ class BaseModelClient(ABC):
         """
         self.config = config
         self._rate_limiter = RateLimiter(config.rate_limit_interval)
+        
+        # 可观测层支持
+        self._observability_enabled = False
+        try:
+            from .observability import get_manager
+            self._obs_manager = get_manager()
+            self._observability_enabled = self._obs_manager.is_enabled()
+        except Exception as e:
+            logger.debug(f"可观测层初始化失败（将禁用）: {e}")
         
     @abstractmethod
     async def generate_content(
@@ -112,3 +121,119 @@ class BaseModelClient(ABC):
                     )
         
         raise APIError(f"API调用失败: {last_exception}") from last_exception
+    
+    def _start_observability_recording(
+        self,
+        method_name: str
+    ) -> Optional[Any]:
+        """
+        开始可观测层记录（钩子）
+        
+        Args:
+            method_name: 调用的方法名
+            
+        Returns:
+            记录器实例，如果未启用则返回None
+        """
+        if not self._observability_enabled:
+            return None
+        
+        try:
+            from .observability import InteractionRecorder
+            recorder = InteractionRecorder()
+            recorder.start_recording(
+                provider=self.config.provider,
+                model_name=self.config.model_name,
+                method_name=method_name
+            )
+            return recorder
+        except Exception as e:
+            logger.warning(f"可观测层记录启动失败: {e}")
+            return None
+    
+    def _record_request(
+        self,
+        recorder: Optional[Any],
+        prompt: str,
+        params: Dict[str, Any]
+    ) -> None:
+        """
+        记录请求信息（钩子）
+        
+        Args:
+            recorder: 记录器实例
+            prompt: 提示词
+            params: 请求参数
+        """
+        if recorder is None:
+            return
+        
+        try:
+            recorder.record_request(prompt, params)
+        except Exception as e:
+            logger.warning(f"可观测层请求记录失败: {e}")
+    
+    def _record_response(
+        self,
+        recorder: Optional[Any],
+        content: str,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """
+        记录响应信息（钩子）
+        
+        Args:
+            recorder: 记录器实例
+            content: 响应内容
+            metadata: 额外元数据
+        """
+        if recorder is None:
+            return
+        
+        try:
+            recorder.record_response(content, metadata or {})
+        except Exception as e:
+            logger.warning(f"可观测层响应记录失败: {e}")
+    
+    def _record_error(
+        self,
+        recorder: Optional[Any],
+        exception: Exception
+    ) -> None:
+        """
+        记录错误信息（钩子）
+        
+        Args:
+            recorder: 记录器实例
+            exception: 异常对象
+        """
+        if recorder is None:
+            return
+        
+        try:
+            recorder.record_error(exception)
+        except Exception as e:
+            logger.warning(f"可观测层错误记录失败: {e}")
+    
+    def _finalize_observability(
+        self,
+        recorder: Optional[Any]
+    ) -> None:
+        """
+        完成可观测层记录并写入（钩子）
+        
+        Args:
+            recorder: 记录器实例
+        """
+        if recorder is None or not self._observability_enabled:
+            return
+        
+        try:
+            record = recorder.finalize(
+                max_prompt_length=self._obs_manager.max_prompt_length,
+                max_response_length=self._obs_manager.max_response_length,
+                mask_sensitive=self._obs_manager.mask_sensitive
+            )
+            self._obs_manager.log_interaction(record)
+        except Exception as e:
+            logger.warning(f"可观测层记录完成失败: {e}")
