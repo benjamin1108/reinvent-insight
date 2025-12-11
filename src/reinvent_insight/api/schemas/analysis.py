@@ -12,9 +12,16 @@ class SummarizeRequest(BaseModel):
 
 class SummarizeResponse(BaseModel):
     """Analysis task response"""
-    task_id: str
+    task_id: Optional[str] = None
     message: str
-    status: str  # "created", "reconnected"
+    status: str  # "created", "reconnected", "exists", "in_progress"
+    # 重复检测相关字段
+    exists: Optional[bool] = None
+    doc_hash: Optional[str] = None
+    title: Optional[str] = None
+    redirect_url: Optional[str] = None
+    in_progress: Optional[bool] = None
+    in_queue: Optional[bool] = None
 
 
 class PDFAnalysisRequest(BaseModel):

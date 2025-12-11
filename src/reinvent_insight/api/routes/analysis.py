@@ -81,13 +81,14 @@ async def summarize_endpoint(
                         metadata = parse_metadata_from_md(content)
                         title = metadata.get("title_cn") or metadata.get("title_en", "未知标题")
                         
-                        return {
-                            "exists": True,
-                            "doc_hash": doc_hash,
-                            "title": title,
-                            "message": "该视频已有解读，请使用查看功能或添加force=true参数重新解读",
-                            "redirect_url": f"/article/{doc_hash}"
-                        }
+                        return SummarizeResponse(
+                            status="exists",
+                            exists=True,
+                            doc_hash=doc_hash,
+                            title=title,
+                            message="该视频已有解读，请使用查看功能或添加force=true参数重新解读",
+                            redirect_url=f"/article/{doc_hash}"
+                        )
                 
                 # 检查任务队列中是否已有相同视频的任务
                 # 注意：访问 PriorityQueue 的内部队列需要谨慎，这里仅用于检查
@@ -99,12 +100,13 @@ async def summarize_endpoint(
                                 task_url, task_metadata = normalize_youtube_url(processing_task.url_or_path)
                                 if task_metadata.get('video_id') == video_id:
                                     logger.info(f"检测到正在处理的相同视频: video_id={video_id}")
-                                    return {
-                                        "exists": True,
-                                        "in_queue": True,
-                                        "task_id": processing_task.task_id,
-                                        "message": "该视频的分析任务正在处理中，请稍候"
-                                    }
+                                    return SummarizeResponse(
+                                        status="in_progress",
+                                        exists=True,
+                                        in_queue=True,
+                                        task_id=processing_task.task_id,
+                                        message="该视频的分析任务正在处理中，请稍候"
+                                    )
                             except:
                                 pass
                 except Exception as e:
@@ -117,12 +119,13 @@ async def summarize_endpoint(
                             task_url, task_metadata = normalize_youtube_url(task_state.url_or_path)
                             if task_metadata.get('video_id') == video_id and task_state.status in ['processing', 'running', 'queued']:
                                 logger.info(f"检测到进行中的相同视频任务: video_id={video_id}")
-                                return {
-                                    "exists": True,
-                                    "in_progress": True,
-                                    "task_id": task_id_check,
-                                    "message": "该视频正在分析中，请连接WebSocket查看进度"
-                                }
+                                return SummarizeResponse(
+                                    status="in_progress",
+                                    exists=True,
+                                    in_progress=True,
+                                    task_id=task_id_check,
+                                    message="该视频正在分析中，请连接WebSocket查看进度"
+                                )
                         except:
                             pass
         except Exception as e:
