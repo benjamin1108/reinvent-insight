@@ -375,6 +375,23 @@
   color: #fecaca;
 }
 
+.admin-view__action-btn--proofread {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(139, 92, 246, 0.2));
+  border-color: rgba(168, 85, 247, 0.4);
+  color: #d8b4fe;
+}
+
+.admin-view__action-btn--proofread:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(139, 92, 246, 0.3));
+  border-color: rgba(168, 85, 247, 0.6);
+  color: #e9d5ff;
+}
+
+.admin-view__action-btn--proofread:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .admin-view__action-spin {
   animation: spin 1s linear infinite;
 }

@@ -551,9 +551,20 @@ const app = createApp({
       const token = localStorage.getItem('authToken');
       if (token) {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        isAuthenticated.value = true;
-        // 检查管理员权限 - 等待完成
-        await checkAdminStatus();
+        
+        // 验证 token 是否有效
+        try {
+          const response = await axios.get('/api/auth/check-admin');
+          isAuthenticated.value = true;
+          isAdmin.value = response.data.is_admin || false;
+        } catch (error) {
+          // token 无效或过期
+          console.error('Token 验证失败:', error);
+          localStorage.removeItem('authToken');
+          delete axios.defaults.headers.common['Authorization'];
+          isAuthenticated.value = false;
+          isAdmin.value = false;
+        }
       } else {
         isAuthenticated.value = false;
         isAdmin.value = false;
@@ -578,6 +589,13 @@ const app = createApp({
       } catch (error) {
         console.error('检查管理员权限失败:', error);
         isAdmin.value = false;
+        
+        // 如果是 401 错误，token 已过期，清除登录状态
+        if (error.response && error.response.status === 401) {
+          localStorage.removeItem('authToken');
+          delete axios.defaults.headers.common['Authorization'];
+          isAuthenticated.value = false;
+        }
       }
     };
 

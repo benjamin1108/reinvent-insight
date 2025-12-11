@@ -3,7 +3,10 @@
 import logging
 import uuid
 import re
-from fastapi import APIRouter, HTTPException, Header
+import tempfile
+import shutil
+from pathlib import Path
+from fastapi import APIRouter, HTTPException, Header, BackgroundTasks
 
 from reinvent_insight.core import config
 from reinvent_insight.api.routes.auth import verify_token
@@ -249,6 +252,378 @@ async def get_ultra_deep_status(doc_hash: str):
     except Exception as e:
         logger.error(f"获取Ultra状态失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="服务器错误")
+
+
+# 存储校对任务状态
+proofreading_tasks = {}
+
+
+@router.get("/{doc_hash}/proofread/status")
+async def get_proofread_status(doc_hash: str):
+    """
+    获取文章校对状态
+    
+    Args:
+        doc_hash: 文档哈希
+        
+    Returns:
+        校对状态信息
+    """
+    task_info = proofreading_tasks.get(doc_hash)
+    
+    if not task_info:
+        return {
+            "status": "idle",
+            "can_proofread": True,
+            "message": None
+        }
+    
+    return task_info
+
+
+@router.post("/{doc_hash}/proofread")
+async def trigger_proofread(
+    doc_hash: str, 
+    background_tasks: BackgroundTasks,
+    authorization: str = Header(None)
+):
+    """
+    触发文章后校验
+    
+    对已存在的文章进行全局校对优化，
+    将碎片化章节重构为逻辑连贯的核心板块。
+    
+    Args:
+        doc_hash: 文档哈希
+        authorization: 认证令牌
+        
+    Returns:
+        校对任务状态
+    """
+    verify_token(authorization)
+    
+    try:
+        # 1. 检查是否已有进行中的校对任务
+        if doc_hash in proofreading_tasks:
+            status = proofreading_tasks[doc_hash].get("status")
+            if status == "processing":
+                raise HTTPException(
+                    status_code=409,
+                    detail="该文章正在校对中，请稍后重试"
+                )
+        
+        # 2. 检查文档是否存在
+        default_filename = hash_to_filename.get(doc_hash)
+        if not default_filename:
+            raise HTTPException(status_code=404, detail="文档未找到")
+        
+        file_path = config.OUTPUT_DIR / default_filename
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="文档文件不存在")
+        
+        # 3. 读取文档内容并检查章节数
+        content = file_path.read_text(encoding="utf-8")
+        chapter_count = count_toc_chapters(content)
+        
+        if chapter_count < 6:
+            raise HTTPException(
+                status_code=400,
+                detail=f"该文章仅有 {chapter_count} 个章节，不需要校对"
+            )
+        
+        # 4. 标记任务开始
+        task_id = str(uuid.uuid4())
+        proofreading_tasks[doc_hash] = {
+            "status": "processing",
+            "task_id": task_id,
+            "can_proofread": False,
+            "message": "校对进行中...",
+            "chapter_count": chapter_count
+        }
+        
+        # 5. 在后台执行校对任务
+        background_tasks.add_task(
+            run_proofreading_task,
+            doc_hash=doc_hash,
+            file_path=file_path,
+            content=content,
+            task_id=task_id
+        )
+        
+        return {
+            "success": True,
+            "task_id": task_id,
+            "message": "校对任务已启动",
+            "chapter_count": chapter_count
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"触发校对失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"服务器错误: {str(e)}")
+
+
+async def run_proofreading_task(
+    doc_hash: str,
+    file_path: Path,
+    content: str,
+    task_id: str
+):
+    """
+    执行校对任务的后台函数
+    
+    Args:
+        doc_hash: 文档哈希
+        file_path: 文档文件路径
+        content: 文档内容
+        task_id: 任务ID
+    """
+    temp_dir = None
+    
+    try:
+        from reinvent_insight.services.analysis.proofreader import ArticleProofreader
+        from reinvent_insight.services.document.metadata_service import parse_metadata_from_md
+        
+        # 0. 从元数据中提取 video_url 和 source_type
+        metadata = parse_metadata_from_md(content)
+        video_url = metadata.get("video_url", "")
+        # 判断来源类型
+        if video_url and ("youtube.com" in video_url or "youtu.be" in video_url):
+            source_type = "youtube"
+        elif video_url and video_url.endswith(".pdf"):
+            source_type = "pdf"
+        else:
+            source_type = "text"
+        
+        # 1. 创建临时目录
+        temp_dir = Path(tempfile.mkdtemp(prefix="proofread_"))
+        logger.info(f"校对任务 {task_id} - 创建临时目录: {temp_dir}")
+        
+        # 2. 将文章按章节拆分保存到临时目录
+        chapters = split_article_to_temp_files(content, temp_dir)
+        logger.info(f"校对任务 {task_id} - 拆分为 {len(chapters)} 个章节")
+        
+        if len(chapters) < 6:
+            proofreading_tasks[doc_hash] = {
+                "status": "failed",
+                "can_proofread": True,
+                "message": f"章节数不足 ({len(chapters)} 章)，无需校对"
+            }
+            return
+        
+        # 3. 执行校对（传入 video_url 和 source_type）
+        proofreader = ArticleProofreader(
+            task_id=task_id,
+            task_dir=str(temp_dir),
+            video_url=video_url,
+            source_type=source_type
+        )
+        success = await proofreader.run()
+        
+        if not success:
+            proofreading_tasks[doc_hash] = {
+                "status": "failed",
+                "can_proofread": True,
+                "message": "校对失败，请稍后重试"
+            }
+            return
+        
+        # 4. 合并校对后的章节并覆盖原文件
+        new_content = merge_proofread_chapters(temp_dir, content)
+        
+        # 5. 写回原文件
+        file_path.write_text(new_content, encoding="utf-8")
+        logger.info(f"校对任务 {task_id} - 已更新文件: {file_path}")
+        
+        # 6. 统计新章节数
+        new_chapter_count = count_toc_chapters(new_content)
+        
+        proofreading_tasks[doc_hash] = {
+            "status": "completed",
+            "can_proofread": True,
+            "message": f"校对完成，从 {len(chapters)} 章优化为 {new_chapter_count} 章"
+        }
+        
+    except Exception as e:
+        logger.error(f"校对任务 {task_id} 失败: {e}", exc_info=True)
+        proofreading_tasks[doc_hash] = {
+            "status": "failed",
+            "can_proofread": True,
+            "message": f"校对失败: {str(e)}"
+        }
+    finally:
+        # 保存诊断文件到永久位置
+        if temp_dir and temp_dir.exists():
+            debug_src = temp_dir / "proofreading_debug"
+            if debug_src.exists():
+                debug_dst = config.OUTPUT_DIR / "proofreading_debug" / doc_hash
+                debug_dst.mkdir(parents=True, exist_ok=True)
+                for f in debug_src.glob("*"):
+                    shutil.copy2(f, debug_dst / f.name)
+                logger.info(f"校对任务 {task_id} - 诊断文件已保存到 {debug_dst}")
+            
+            # 清理临时目录
+            try:
+                shutil.rmtree(temp_dir)
+                logger.info(f"校对任务 {task_id} - 清理临时目录")
+            except Exception as e:
+                logger.warning(f"清理临时目录失败: {e}")
+
+
+def split_article_to_temp_files(content: str, temp_dir: Path) -> list:
+    """
+    将文章内容按章节拆分保存到临时文件
+    
+    Args:
+        content: 文章内容
+        temp_dir: 临时目录
+        
+    Returns:
+        章节列表
+    """
+    chapters = []
+    
+    # 提取文章正文部分（跳过元数据）
+    lines = content.split('\n')
+    in_metadata = False
+    body_lines = []
+    metadata_count = 0
+    
+    for line in lines:
+        if line.strip() == '---':
+            metadata_count += 1
+            if metadata_count <= 2:  # 跳过 YAML 元数据块
+                in_metadata = not in_metadata
+                continue
+        if in_metadata:
+            continue
+        body_lines.append(line)
+    
+    body_content = '\n'.join(body_lines)
+    
+    # 按 ## 或 ### 章节标题拆分（兼容两种格式）
+    # 匹配 ## 或 ### 开头的行
+    parts = re.split(r'\n(?=##+ )', body_content)
+    
+    chapter_index = 0
+    excluded_titles = {'主要目录', '目录', 'table of contents', '引言', '导读'}
+    
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
+        
+        # 检查是否是有效章节（以 ## 或 ### 开头）
+        if not (part.startswith('## ') or part.startswith('### ')):
+            continue
+        
+        # 提取标题并跳过目录/引言等
+        first_line = part.split('\n')[0].lower()
+        # 去掉 ## 或 ### 前缀
+        title_text = re.sub(r'^#{2,3}\s*', '', first_line).strip()
+        
+        # 跳过目录和引言
+        should_skip = False
+        for excluded in excluded_titles:
+            if excluded in title_text:
+                should_skip = True
+                break
+        if should_skip:
+            continue
+        
+        chapter_index += 1
+        chapters.append({
+            "index": chapter_index,
+            "content": part
+        })
+        
+        # 保存到临时文件
+        chapter_file = temp_dir / f"chapter_{chapter_index}.md"
+        chapter_file.write_text(part, encoding="utf-8")
+    
+    # 保存原始大纲（用于参考）
+    outline_file = temp_dir / "outline.md"
+    outline_content = "# 原始大纲\n\n"
+    for ch in chapters:
+        first_line = ch["content"].split('\n')[0]
+        outline_content += f"- {first_line}\n"
+    outline_file.write_text(outline_content, encoding="utf-8")
+    
+    return chapters
+
+
+def merge_proofread_chapters(temp_dir: Path, original_content: str) -> str:
+    """
+    合并校对后的章节，保留原始元数据和目录结构
+    
+    Args:
+        temp_dir: 临时目录
+        original_content: 原始文章内容
+        
+    Returns:
+        合并后的完整文章
+    """
+    # 1. 提取原始元数据部分
+    lines = original_content.split('\n')
+    header_lines = []
+    in_metadata = False
+    metadata_ended = False
+    
+    for line in lines:
+        if line.strip() == '---' and not metadata_ended:
+            in_metadata = not in_metadata
+            header_lines.append(line)
+            if not in_metadata:
+                metadata_ended = True
+            continue
+        if in_metadata or not metadata_ended:
+            header_lines.append(line)
+            continue
+        # 元数据结束后，跳过到第一个 ## 之前的内容（如标题、引言）
+        if line.strip().startswith('## '):
+            break
+        header_lines.append(line)
+    
+    header = '\n'.join(header_lines)
+    
+    # 2. 读取校对后的章节
+    chapter_files = sorted(
+        temp_dir.glob("chapter_*.md"),
+        key=lambda f: int(re.search(r'chapter_(\d+)', f.name).group(1))
+    )
+    
+    chapters_content = []
+    for chapter_file in chapter_files:
+        chapter_content = chapter_file.read_text(encoding="utf-8")
+        chapters_content.append(chapter_content)
+    
+    # 3. 生成新的目录
+    toc_lines = ["### 主要目录\n"]
+    for i, ch_content in enumerate(chapters_content, 1):
+        first_line = ch_content.split('\n')[0]
+        # 提取标题文本
+        title_match = re.match(r'## \d+\.\s*(.+)', first_line)
+        if title_match:
+            title = title_match.group(1).strip()
+            anchor = f"section-{i}"
+            toc_lines.append(f"- [{i}. {title}](#{anchor})")
+    toc_lines.append("")  # 空行
+    toc = '\n'.join(toc_lines)
+    
+    # 4. 组合最终内容
+    final_content = header.rstrip() + "\n\n" + toc + "\n" + "\n\n".join(chapters_content)
+    
+    # 5. 添加校对标记到元数据（如果有）
+    if '---' in final_content:
+        final_content = re.sub(
+            r'(---\n)',
+            r'\1proofread: true\n',
+            final_content,
+            count=1
+        )
+    
+    return final_content
 
 
 @router.post("/{doc_hash}/ultra-deep")

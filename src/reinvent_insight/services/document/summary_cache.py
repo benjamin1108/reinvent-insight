@@ -87,6 +87,7 @@ class SummaryCache:
             count_chinese_words,
         )
         from reinvent_insight.services.document.hash_registry import filename_to_hash
+        from reinvent_insight.api.routes.ultra_deep import count_toc_chapters
         
         self._cache.clear()
         self._filename_to_hash.clear()
@@ -129,6 +130,9 @@ class SummaryCache:
                 # 计算字数
                 pure_text = extract_text_from_markdown(content)
                 word_count = count_chinese_words(pure_text)
+                
+                # 计算章节数
+                chapter_count = count_toc_chapters(content)
                 
                 # 获取文件时间
                 stat = md_file.stat()
@@ -175,7 +179,9 @@ class SummaryCache:
                     "hash": doc_hash,
                     "version": metadata.get("version", 0),
                     "is_pdf": is_pdf,
-                    "content_type": "PDF文档" if is_pdf else "YouTube视频"
+                    "content_type": "PDF文档" if is_pdf else "YouTube视频",
+                    "chapter_count": chapter_count,
+                    "source_type": "pdf" if is_pdf else "youtube"
                 }
                 
                 # 记录文件修改时间
@@ -282,6 +288,7 @@ class SummaryCache:
             count_chinese_words,
         )
         from reinvent_insight.services.document.hash_registry import filename_to_hash
+        from reinvent_insight.api.routes.ultra_deep import count_toc_chapters
         
         file_path = config.OUTPUT_DIR / filename
         if not file_path.exists():
@@ -312,6 +319,7 @@ class SummaryCache:
             
             pure_text = extract_text_from_markdown(content)
             word_count = count_chinese_words(pure_text)
+            chapter_count = count_toc_chapters(content)
             stat = file_path.stat()
             video_url = metadata.get("video_url", "")
             is_pdf = is_pdf_document(video_url)
@@ -355,7 +363,9 @@ class SummaryCache:
                 "hash": doc_hash,
                 "version": metadata.get("version", 0),
                 "is_pdf": is_pdf,
-                "content_type": "PDF文档" if is_pdf else "YouTube视频"
+                "content_type": "PDF文档" if is_pdf else "YouTube视频",
+                "chapter_count": chapter_count,
+                "source_type": "pdf" if is_pdf else "youtube"
             }
             
             # 更新缓存

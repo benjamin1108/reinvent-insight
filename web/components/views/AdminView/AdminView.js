@@ -52,7 +52,10 @@ export default {
       deletingUser: false,
       
       // Ultra Deep 轮询定时器
-      ultraPollingTimer: null
+      ultraPollingTimer: null,
+      
+      // 校对轮询定时器
+      proofreadPollingTimer: null
     };
   },
 
@@ -87,6 +90,9 @@ export default {
     if (this.ultraPollingTimer) {
       clearInterval(this.ultraPollingTimer);
     }
+    if (this.proofreadPollingTimer) {
+      clearInterval(this.proofreadPollingTimer);
+    }
   },
   
   methods: {
@@ -119,11 +125,17 @@ export default {
             chapter_count: summary.chapter_count || 0,
             ultraExists: false,
             ultraGenerating: false,
-            ultraDisabledReason: ''
+            ultraDisabledReason: '',
+            // 校对状态
+            proofreading: false,
+            proofreadStatus: null
           };
           
           // 查询 Ultra Deep 状态
           await this.checkUltraStatus(article);
+          
+          // 查询校对状态
+          await this.checkProofreadStatus(article);
           
           articles.push(article);
         }
@@ -139,6 +151,9 @@ export default {
         
         // 启动轮询检查生成中的 Ultra 任务
         this.startUltraPolling();
+        
+        // 启动轮询检查校对中的任务
+        this.startProofreadPolling();
         
       } catch (error) {
         console.error('加载文章列表失败:', error);
@@ -183,6 +198,42 @@ export default {
       }
     },
     
+    // 检查校对状态
+    async checkProofreadStatus(article) {
+      try {
+        const response = await fetch(`/api/article/${article.hash}/proofread/status`);
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        article.proofreadStatus = data.status;
+        
+        if (data.status === 'processing') {
+          article.proofreading = true;
+        } else {
+          article.proofreading = false;
+          
+          // 如果刚完成，显示提示
+          if (data.status === 'completed' && data.message) {
+            if (window.eventBus) {
+              window.eventBus.emit('show-toast', {
+                message: data.message,
+                type: 'success'
+              });
+            }
+          } else if (data.status === 'failed' && data.message) {
+            if (window.eventBus) {
+              window.eventBus.emit('show-toast', {
+                message: data.message,
+                type: 'error'
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error('检查校对状态失败:', error);
+      }
+    },
+    
     // 启动 Ultra 轮询
     startUltraPolling() {
       if (this.ultraPollingTimer) {
@@ -199,6 +250,26 @@ export default {
         
         for (const article of generatingArticles) {
           await this.checkUltraStatus(article);
+        }
+      }, 5000); // 每5秒检查一次
+    },
+    
+    // 启动校对轮询
+    startProofreadPolling() {
+      if (this.proofreadPollingTimer) {
+        clearInterval(this.proofreadPollingTimer);
+      }
+      
+      this.proofreadPollingTimer = setInterval(async () => {
+        // 只检查校对中的文章
+        const proofreadingArticles = this.articles.filter(a => a.proofreading);
+        
+        if (proofreadingArticles.length === 0) {
+          return;
+        }
+        
+        for (const article of proofreadingArticles) {
+          await this.checkProofreadStatus(article);
         }
       }, 5000); // 每5秒检查一次
     },
@@ -233,6 +304,77 @@ export default {
         return '章节数超过15章，已是深度内容';
       }
       return '生成 Ultra DeepInsight 版本';
+    },
+    
+    // 判断是否可以校对
+    canProofread(article) {
+      // 章节数 >= 6 且不在校对中
+      return article.chapter_count >= 6 && !article.proofreading;
+    },
+    
+    // 获取校对按钮标题
+    getProofreadButtonTitle(article) {
+      if (article.proofreading) {
+        return '校对进行中...';
+      }
+      if (article.chapter_count < 6) {
+        return '章节数不足，无需校对';
+      }
+      return '对文章进行全局校对优化';
+    },
+    
+    // 触发校对
+    async handleProofread(article) {
+      if (!this.canProofread(article)) {
+        return;
+      }
+      
+      try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          if (window.eventBus) {
+            window.eventBus.emit('show-login-modal');
+          }
+          return;
+        }
+        
+        article.proofreading = true;
+        
+        const response = await fetch(`/api/article/${article.hash}/proofread`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || '触发校对失败');
+        }
+        
+        const data = await response.json();
+        
+        if (window.eventBus) {
+          window.eventBus.emit('show-toast', {
+            message: '校对任务已启动',
+            type: 'success'
+          });
+        }
+        
+        // 启动轮询
+        this.startProofreadPolling();
+        
+      } catch (error) {
+        console.error('触发校对失败:', error);
+        article.proofreading = false;
+        
+        if (window.eventBus) {
+          window.eventBus.emit('show-toast', {
+            message: error.message || '触发校对失败',
+            type: 'error'
+          });
+        }
+      }
     },
     
     // 触发 Ultra Deep 生成

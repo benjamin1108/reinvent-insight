@@ -155,6 +155,13 @@ class AnalysisWorkflow(ABC):
             if not conclusion_content:
                 raise Exception("生成收尾内容失败")
             
+            # 步骤 3.5: Ultra 模式后校验（可选）
+            if self.is_ultra_mode:
+                proofread_success = await self._run_proofreading()
+                if proofread_success:
+                    # 校对成功后需要重新加载章节和结论
+                    chapters, conclusion_content, toc_md = await self._reload_after_proofreading()
+            
             # 步骤 4: 组装最终报告
             final_report, final_filename, doc_hash = await self._assemble_final_report(
                 title, introduction, toc_md, conclusion_content, len(chapters), self.metadata
@@ -319,3 +326,81 @@ class AnalysisWorkflow(ABC):
         except Exception as e:
             logger.error(f"任务 {self.task_id} - 生成章节 '{chapter_title}' 失败: {e}", exc_info=e)
             return False
+    
+    async def _run_proofreading(self) -> bool:
+        """
+        执行后校验（Ultra 模式专用）
+        
+        判断是否需要校对，如需要则执行校对流程。
+        
+        Returns:
+            校对是否成功执行（如果不需要校对则返回 False）
+        """
+        try:
+            from reinvent_insight.services.analysis.proofreader import ArticleProofreader
+            
+            proofreader = ArticleProofreader(self.task_id, self.task_dir)
+            
+            if not await proofreader.should_proofread():
+                logger.info(f"任务 {self.task_id} - 章节数未达到校对阈值，跳过校对")
+                return False
+            
+            await self._log("正在进行全局校对优化...")
+            
+            success = await proofreader.run()
+            
+            if success:
+                await self._log("校对完成，文章结构已优化")
+            else:
+                logger.warning(f"任务 {self.task_id} - 校对未成功，使用原始章节")
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"任务 {self.task_id} - 校对过程出错: {e}", exc_info=True)
+            return False
+    
+    async def _reload_after_proofreading(self) -> Tuple[List[str], str, str]:
+        """
+        校对后重新加载章节和目录
+        
+        校对可能会改变章节数量和结构，需要重新加载。
+        
+        Returns:
+            (chapters, conclusion_content, toc_md)
+        """
+        import re
+        from pathlib import Path
+        from reinvent_insight.core.utils import generate_toc_with_links
+        
+        task_path = Path(self.task_dir)
+        
+        # 重新加载章节标题
+        chapter_files = sorted(
+            task_path.glob("chapter_*.md"),
+            key=lambda f: int(re.search(r'chapter_(\d+)', f.name).group(1))
+        )
+        
+        chapters = []
+        for chapter_file in chapter_files:
+            content = chapter_file.read_text(encoding="utf-8")
+            # 提取标题（## 数字. 标题 格式）
+            match = re.match(r'## \d+\.\s*(.+)', content)
+            if match:
+                chapters.append(match.group(1).strip())
+            else:
+                # 备用：从文件名推断
+                chapters.append(f"章节 {chapter_file.stem.replace('chapter_', '')}")
+        
+        # 重新生成目录
+        toc_md = generate_toc_with_links(chapters)
+        
+        # 重新加载结论
+        conclusion_path = task_path / "conclusion.md"
+        conclusion_content = ""
+        if conclusion_path.exists():
+            conclusion_content = conclusion_path.read_text(encoding="utf-8")
+        
+        logger.info(f"任务 {self.task_id} - 校对后重新加载: {len(chapters)} 个章节")
+        
+        return chapters, conclusion_content, toc_md
