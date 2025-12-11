@@ -325,6 +325,11 @@
   display: block;
 }
 
+/* 移动端 ModeToggle - 默认显示 */
+.app-header__mobile-mode-toggle {
+  display: block;
+}
+
 .app-header__mobile-hide-toc {
   display: none;
 }
@@ -387,6 +392,11 @@
   }
   
   .app-header__mobile-back {
+    display: none;
+  }
+  
+  /* 桌面端隐藏移动端的 ModeToggle（已在左侧显示） */
+  .app-header__mobile-mode-toggle {
     display: none;
   }
   
@@ -723,6 +733,130 @@
   
   .app-header--reading .app-header__audio-btn {
     margin-left: 0.25rem;
+  }
+}
+
+/* ============================================= */
+/* == 移动端工具栏样式 == */
+/* ============================================= */
+
+.app-header__mobile-toolbar {
+  display: none; /* 默认隐藏，仅移动端显示 */
+}
+
+/* 移动端图标按钮基础样式 */
+.app-header__mobile-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: rgba(34, 211, 238, 0.1);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  border-radius: 8px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-header__mobile-icon-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+}
+
+.app-header__mobile-icon-btn:hover:not(:disabled) {
+  background: rgba(34, 211, 238, 0.2);
+  border-color: rgba(34, 211, 238, 0.5);
+  color: #22d3ee;
+}
+
+.app-header__mobile-icon-btn:active:not(:disabled) {
+  transform: scale(0.95);
+  background: rgba(34, 211, 238, 0.25);
+}
+
+.app-header__mobile-icon-btn--active {
+  background: rgba(34, 211, 238, 0.25);
+  border-color: #22d3ee;
+  color: #22d3ee;
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.3);
+}
+
+.app-header__mobile-icon-btn--loading {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.app-header__mobile-icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 旋转动画 */
+.app-header__mobile-icon-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 移动端显示工具栏 */
+@media (max-width: 768px) {
+  .app-header__mobile-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 8px;
+  }
+  
+  /* 极小屏幕优化 */
+  @media (max-width: 480px) {
+    .app-header__mobile-toolbar {
+      gap: 4px;
+      margin-right: 4px;
+    }
+    
+    .app-header__mobile-icon-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+    }
+    
+    .app-header__mobile-icon-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+  
+  /* 超小屏幕 - 隐藏部分按钮 */
+  @media (max-width: 360px) {
+    .app-header__mobile-toolbar {
+      gap: 3px;
+      margin-right: 3px;
+    }
+    
+    .app-header__mobile-icon-btn {
+      width: 30px;
+      height: 30px;
+    }
+    
+    .app-header__mobile-icon-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+}
+
+/* 桌面端隐藏移动端工具栏 */
+@media (min-width: 769px) {
+  .app-header__mobile-toolbar {
+    display: none !important;
   }
 }
 

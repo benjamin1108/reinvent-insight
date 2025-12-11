@@ -1468,9 +1468,9 @@ export default {
     
     watch(() => props.currentHash, (newVal, oldVal) => {
       if (newVal) {
-        // 注意：不在这里检查 visualStatus，因为 currentVersion 可能还未更新
-        // visualStatus 会在 currentVersion 的 watch 中检查
-        checkUltraStatus();  // Ultra 不依赖版本号，可以立即检查
+        // hash 变化后检查可视化状态
+        checkVisualStatus();
+        checkUltraStatus();
       }
     });
     

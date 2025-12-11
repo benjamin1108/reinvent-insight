@@ -574,6 +574,7 @@ const app = createApp({
       clearReadingState();
       closeVideoPlayer();
       updatePageTitle(); // 恢复默认标题
+      loadSummaries();   // 刷新文章列表
     };
 
     const goBackToLibrary = () => {
@@ -582,6 +583,7 @@ const app = createApp({
       clearReadingState();
       closeVideoPlayer();
       updatePageTitle(); // 恢复默认标题
+      loadSummaries();   // 刷新文章列表
     };
 
     const clearReadingState = () => {
