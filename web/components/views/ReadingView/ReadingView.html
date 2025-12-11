@@ -90,31 +90,6 @@
               <h1 v-if="documentTitleEn" class="reading-view__title-en">{{ documentTitleEn }}</h1>
               <h2 v-if="documentTitle" class="reading-view__title-cn">{{ documentTitle }}</h2>
             </div>
-            
-            <!-- 工具栏 - 仅保留 Ultra 按钮（Visual 切换已移至 AppHeader） -->
-            <div class="reading-view__toolbar" v-if="(isAuthenticated && !ultraAvailable && ultraStatus === 'not_exists') || ultraStatus === 'generating'">
-              
-              <!-- Ultra 生成按钮 -->
-              <button 
-                v-if="isAuthenticated && !ultraAvailable && ultraStatus === 'not_exists'"
-                @click="triggerUltraGeneration"
-                class="reading-view__toolbar-btn reading-view__toolbar-btn--ultra"
-                :disabled="isGeneratingUltra"
-                title="生成超深度解读版本（18-20章）"
-              >
-                <span class="reading-view__toolbar-ultra-icon">✨</span>
-                <span class="reading-view__toolbar-text">Ultra</span>
-              </button>
-              
-              <!-- Ultra 生成中状态 -->
-              <div v-else-if="ultraStatus === 'generating' && !ultraAvailable" class="reading-view__toolbar-btn reading-view__toolbar-btn--generating">
-                <svg class="reading-view__toolbar-icon reading-view__toolbar-icon--spinning" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span class="reading-view__toolbar-text">Ultra...</span>
-              </div>
-            </div>
 
             <!-- Deep Insight 模式内容 -->
             <div class="reading-view__full-analysis">
