@@ -243,6 +243,9 @@ const app = createApp({
     const displayMode = ref('deep'); // 'deep' | 'quick'
     const coreSummary = ref(null); // 核心要点数据（预留）
     const simplifiedText = ref(''); // 精简摘要内容（预留）
+    const longImageGenerating = ref(false); // 长图生成状态
+    const visualAvailable = ref(false);      // Visual Insight 是否可用
+    const visualStatus = ref('pending');     // Visual 状态
 
     // 认证状态 - 必须在 getInitialView 之前声明
     const isAuthenticated = ref(false);
@@ -1419,6 +1422,12 @@ const app = createApp({
       }
     };
 
+    // 处理 Visual 状态变化
+    const handleVisualStatusChange = (data) => {
+      visualAvailable.value = data.available;
+      visualStatus.value = data.status;
+    };
+
     // TODO: 预留后端数据加载方法
     // const loadCoreSummary = async (docHash) => {
     //   try {
@@ -1562,6 +1571,56 @@ const app = createApp({
         showToast('Markdown下载失败', 'danger');
       } finally {
         markdownDownloading.value = false;
+      }
+    };
+
+    // 下载 Visual Insight 长图
+    const downloadLongImage = async () => {
+      if (!readingHash.value) {
+        showToast('文章信息不完整', 'danger');
+        return;
+      }
+
+      longImageGenerating.value = true;
+      try {
+        // 调用生成长图 API
+        const generateUrl = `/api/article/${readingHash.value}/visual/to-image`;
+        const params = new URLSearchParams();
+        if (currentVersion.value) {
+          params.append('version', currentVersion.value);
+        }
+        
+        const generateResponse = await axios.post(
+          params.toString() ? `${generateUrl}?${params}` : generateUrl
+        );
+
+        if (generateResponse.data.status !== 'success') {
+          throw new Error(generateResponse.data.message || '生成失败');
+        }
+
+        // 下载生成的长图
+        const imageUrl = generateResponse.data.image_url;
+        const downloadResponse = await axios.get(imageUrl, {
+          responseType: 'blob'
+        });
+
+        const blob = new Blob([downloadResponse.data], { type: 'image/png' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${documentTitle.value || 'visual-insight'}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        showToast('长图下载成功', 'success');
+      } catch (error) {
+        console.error('长图下载失败:', error);
+        const errorMsg = error.response?.data?.detail || error.message || '长图生成失败';
+        showToast(errorMsg, 'danger');
+      } finally {
+        longImageGenerating.value = false;
       }
     };
 
@@ -1788,6 +1847,9 @@ const app = createApp({
       readingVideoUrl,
       pdfDownloading,
       markdownDownloading,
+      longImageGenerating,
+      visualAvailable,
+      visualStatus,
       readingContent,
       documentTitle,
       documentTitleEn,
@@ -1855,6 +1917,7 @@ const app = createApp({
       viewSummary,
       switchVersion,
       handleDisplayModeChange,
+      handleVisualStatusChange,
       openVideoPlayer,
       closeVideoPlayer,
       toggleVideoPlayerMinimize,
@@ -1862,6 +1925,7 @@ const app = createApp({
       handleVideoSizeChange,
       downloadPDF,
       downloadMarkdown,
+      downloadLongImage,
       handleArticleClick,
       handleLibrarySortChange,
       testToast,

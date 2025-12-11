@@ -21,22 +21,6 @@
   <div v-else-if="displayMode === 'quick' && visualAvailable" class="reading-view__visual-container"
     key="quick-insight">
 
-    <!-- 工具栏 - 固定在顶部 -->
-    <div class="reading-view__visual-header">
-      <div class="reading-view__toolbar reading-view__toolbar--visual">
-        <button 
-          @click="handleDisplayModeChange('deep')"
-          class="reading-view__toolbar-btn reading-view__toolbar-btn--active"
-          title="切换到 Deep Insight"
-        >
-          <svg class="reading-view__toolbar-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
-          <span class="reading-view__toolbar-text">Deep</span>
-        </button>
-      </div>
-    </div>
-
     <!-- iframe 加载状态指示器 -->
     <div v-if="iframeLoading" class="reading-view__visual-loading">
       <div class="reading-view__visual-loading-content">
@@ -107,27 +91,8 @@
               <h2 v-if="documentTitle" class="reading-view__title-cn">{{ documentTitle }}</h2>
             </div>
             
-            <!-- 工具栏 - 标题分割线下方，引言上方 -->
-            <div class="reading-view__toolbar" v-if="visualAvailable || visualStatus === 'processing' || (isAuthenticated && !ultraAvailable && ultraStatus === 'not_exists') || ultraStatus === 'generating'">
-              
-              <!-- Visual 模式切换按钮 -->
-              <button 
-                v-if="visualAvailable || visualStatus === 'processing'"
-                @click="handleDisplayModeChange(displayMode === 'quick' ? 'deep' : 'quick')"
-                class="reading-view__toolbar-btn"
-                :class="{ 'reading-view__toolbar-btn--active': displayMode === 'quick' }"
-                :disabled="visualStatus === 'processing'"
-                :title="displayMode === 'quick' ? '切换到 Deep Insight' : '切换到 Quick Insight'"
-              >
-                <svg v-if="visualStatus !== 'processing'" class="reading-view__toolbar-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                <svg v-else class="reading-view__toolbar-icon reading-view__toolbar-icon--spinning" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span class="reading-view__toolbar-text">{{ displayMode === 'quick' ? 'Deep' : 'Visual' }}</span>
-              </button>
+            <!-- 工具栏 - 仅保留 Ultra 按钮（Visual 切换已移至 AppHeader） -->
+            <div class="reading-view__toolbar" v-if="(isAuthenticated && !ultraAvailable && ultraStatus === 'not_exists') || ultraStatus === 'generating'">
               
               <!-- Ultra 生成按钮 -->
               <button 

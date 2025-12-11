@@ -122,6 +122,10 @@
       :reading-video-url="readingVideoUrl"
       :pdf-downloading="pdfDownloading"
       :markdown-downloading="markdownDownloading"
+      :display-mode="displayMode"
+      :long-image-generating="longImageGenerating"
+      :visual-available="visualAvailable"
+      :visual-status="visualStatus"
       :article-hash="readingHash"
       :article-text="articleTextForTTS"
       @home-click="goHome"
@@ -132,7 +136,9 @@
       @open-video="openVideoPlayer"
       @download-pdf="downloadPDF"
       @download-markdown="downloadMarkdown"
-      @toggle-toc="toggleToc">
+      @download-long-image="downloadLongImage"
+      @toggle-toc="toggleToc"
+      @mode-change="handleDisplayModeChange">
     </app-header>
 
     <!-- 浮动视频播放器 -->
@@ -215,7 +221,8 @@
         @toc-resize="handleTocResize"
         @article-click="handleArticleClick" 
         @version-change="switchVersion"
-        @display-mode-change="handleDisplayModeChange">
+        @display-mode-change="handleDisplayModeChange"
+        @visual-status-change="handleVisualStatusChange">
       </reading-view>
 
       <!-- 回收站视图（隐藏页面，仅登录用户可访问） -->

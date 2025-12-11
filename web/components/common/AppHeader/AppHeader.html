@@ -142,12 +142,13 @@
           v-if="readingVideoUrl" 
           variant="secondary" 
           icon-before="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-          @click="() => { console.log('DEBUG: Watch Video button clicked on template'); handleOpenVideo(); }">
+          @click="handleOpenVideo">
           观看原视频
         </tech-button>
 
-        <!-- 下载PDF按钮 -->
+        <!-- 下载PDF按钮 - 仅在 Deep Insight 模式显示 -->
         <tech-button 
+          v-if="displayMode !== 'quick'"
           variant="secondary" 
           :loading="pdfDownloading"
           :icon-before="pdfDownloading ? '' : 'M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'"
@@ -156,8 +157,9 @@
           {{ pdfDownloading ? '生成中...' : '下载PDF' }}
         </tech-button>
 
-        <!-- 下载Markdown按钮 -->
+        <!-- 下载Markdown按钮 - 仅在 Deep Insight 模式显示 -->
         <tech-button 
+          v-if="displayMode !== 'quick'"
           variant="secondary" 
           :loading="markdownDownloading"
           :icon-before="markdownDownloading ? '' : 'M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'"
@@ -166,8 +168,20 @@
           {{ markdownDownloading ? '下载中...' : '下载MD' }}
         </tech-button>
 
-        <!-- 目录切换按钮 -->
+        <!-- 下载长图按钮 - 仅在 Visual Insight 模式显示 -->
         <tech-button 
+          v-if="displayMode === 'quick'"
+          variant="secondary" 
+          :loading="longImageGenerating"
+          :icon-before="longImageGenerating ? '' : 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z'"
+          loading-text="生成中..."
+          @click="handleDownloadLongImage">
+          {{ longImageGenerating ? '生成中...' : '下载长图' }}
+        </tech-button>
+
+        <!-- 目录切换按钮 - 仅在 Deep 模式显示 -->
+        <tech-button 
+          v-if="displayMode !== 'quick'"
           variant="secondary" 
           min-width="80px"
           :icon-before="showToc ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h7'"
@@ -176,9 +190,19 @@
           目录
         </tech-button>
 
-        <!-- 音频播放按钮 -->
+        <!-- iOS 风格模式切换开关 - 仅在有 Visual 时显示 -->
+        <mode-toggle
+          v-if="visualAvailable"
+          :current-mode="displayMode"
+          :visual-available="visualAvailable"
+          :visual-status="visualStatus"
+          :compact="true"
+          @mode-change="handleModeChange">
+        </mode-toggle>
+
+        <!-- 音频播放按钮 - 仅在 Deep 模式显示 -->
         <simple-audio-button 
-          v-if="audioButtonEnabled && articleHash && articleText"
+          v-if="audioButtonEnabled && articleHash && articleText && displayMode !== 'quick'"
           :article-hash="articleHash"
           :article-text="articleText"
           class="app-header__audio-btn">

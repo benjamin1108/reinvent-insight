@@ -1,16 +1,37 @@
-<div class="mode-toggle">
-    <button
-        v-for="mode in modes"
-        :key="mode.id"
-        class="mode-button"
-        :class="{
-            'active': currentMode === mode.id,
-            'disabled': mode.id === 'quick' && isQuickModeDisabled
-        }"
-        :title="mode.id === 'quick' ? quickModeTooltip : mode.description"
-        @click="handleModeChange(mode.id)"
+<div class="mode-toggle" :class="{ 'mode-toggle--compact': compact }">
+    <!-- Deep 标签 -->
+    <span 
+        class="mode-toggle__label" 
+        :class="{ 'mode-toggle__label--active': currentMode === 'deep' }"
+        @click="handleLabelClick('deep')"
     >
-        <span class="mode-icon">{{ mode.icon }}</span>
-        <span class="mode-label">{{ mode.label }}</span>
-    </button>
+        Deep
+    </span>
+    
+    <!-- iOS 风格开关 -->
+    <div 
+        class="mode-toggle__switch" 
+        :class="{ 
+            'mode-toggle__switch--quick': isQuickMode,
+            'mode-toggle__switch--disabled': isDisabled 
+        }"
+        :title="switchTooltip"
+        @click="handleToggle"
+    >
+        <div class="mode-toggle__track">
+            <div class="mode-toggle__thumb"></div>
+        </div>
+    </div>
+    
+    <!-- Visual 标签 -->
+    <span 
+        class="mode-toggle__label" 
+        :class="{ 
+            'mode-toggle__label--active': isQuickMode,
+            'mode-toggle__label--disabled': isDisabled
+        }"
+        @click="handleLabelClick('quick')"
+    >
+        Visual
+    </span>
 </div>

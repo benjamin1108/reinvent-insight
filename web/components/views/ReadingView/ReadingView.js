@@ -226,7 +226,8 @@ export default {
     'version-change',
     'toc-toggle',
     'toc-resize',
-    'display-mode-change'
+    'display-mode-change',
+    'visual-status-change'  // 发送 visual 状态变化
   ],
   
   setup(props, { emit }) {
@@ -701,6 +702,12 @@ export default {
         const status = data.status || 'not_exists';
         visualStatus.value = status;
         visualAvailable.value = status === 'completed';
+        
+        // 发送状态变化事件给父组件
+        emit('visual-status-change', {
+          available: visualAvailable.value,
+          status: visualStatus.value
+        });
         
         if (visualAvailable.value) {
           visualHtmlUrl.value = `/api/article/${props.currentHash}/visual?version=${currentVersion.value}`;
@@ -1475,6 +1482,13 @@ export default {
         if (props.currentHash) {
           checkVisualStatus();
         }
+      }
+    });
+    
+    // 监听父组件传入的 displayMode 变化（来自 AppHeader 的模式切换）
+    watch(() => props.initialDisplayMode, (newVal, oldVal) => {
+      if (newVal && newVal !== displayMode.value) {
+        displayMode.value = newVal;
       }
     });
     

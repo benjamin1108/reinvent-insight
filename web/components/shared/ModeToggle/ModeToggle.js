@@ -14,55 +14,48 @@ export default {
         visualStatus: {
             type: String,
             default: 'pending',  // 'pending' | 'processing' | 'completed' | 'failed'
+        },
+        // 紧凑模式（用于 AppHeader 等小空间场景）
+        compact: {
+            type: Boolean,
+            default: false
         }
     },
     
     emits: ['mode-change'],
     
-    data() {
-        return {
-            modes: [
-                {
-                    id: 'deep',
-                    label: 'Deep Insight',
-                    icon: '📖',
-                    description: '完整深度解读'
-                },
-                {
-                    id: 'quick',
-                    label: 'Quick Insight',
-                    icon: '⚡',
-                    description: '可视化解读'
-                }
-            ]
-        };
-    },
-    
     computed: {
-        isQuickModeDisabled() {
+        isDisabled() {
             return !this.visualAvailable || this.visualStatus !== 'completed';
         },
         
-        quickModeTooltip() {
-            if (!this.visualAvailable) {
+        isQuickMode() {
+            return this.currentMode === 'quick';
+        },
+        
+        switchTooltip() {
+            if (this.isDisabled) {
+                if (this.visualStatus === 'processing') {
+                    return '可视化解读生成中...';
+                }
                 return '可视化解读尚未生成';
             }
-            if (this.visualStatus === 'processing') {
-                return '正在生成可视化解读...';
-            }
-            if (this.visualStatus === 'failed') {
-                return '可视化解读生成失败';
-            }
-            return '切换到可视化解读';
+            return this.isQuickMode ? '切换到 Deep Insight' : '切换到 Visual Insight';
         }
     },
     
     methods: {
-        handleModeChange(modeId) {
-            if (modeId === 'quick' && this.isQuickModeDisabled) {
-                return;
+        handleToggle() {
+            if (this.isDisabled) return;
+            const newMode = this.isQuickMode ? 'deep' : 'quick';
+            this.$emit('mode-change', newMode);
+        },
+        
+        handleLabelClick(mode) {
+            if (this.isDisabled && mode === 'quick') return;
+            if (this.currentMode !== mode) {
+                this.$emit('mode-change', mode);
             }
-            this.$emit('mode-change', modeId);
         }
     }
 };

@@ -5,7 +5,8 @@
 export default {
   dependencies: [
     ['tech-button', '/components/shared/TechButton', 'TechButton'],
-    ['simple-audio-button', '/components/shared/SimpleAudioButton', 'SimpleAudioButton']
+    ['simple-audio-button', '/components/shared/SimpleAudioButton', 'SimpleAudioButton'],
+    ['mode-toggle', '/components/shared/ModeToggle', 'ModeToggle']
   ],
   props: {
     // Header模式：normal（普通页面）或 reading（阅读页面）
@@ -65,6 +66,30 @@ export default {
       default: false
     },
     
+    // 当前显示模式 (deep/quick)
+    displayMode: {
+      type: String,
+      default: 'deep'
+    },
+    
+    // 长图生成状态
+    longImageGenerating: {
+      type: Boolean,
+      default: false
+    },
+    
+    // Visual Insight 是否可用
+    visualAvailable: {
+      type: Boolean,
+      default: false
+    },
+    
+    // Visual 状态
+    visualStatus: {
+      type: String,
+      default: 'pending'
+    },
+    
     // === 音频播放相关props ===
     
     // 文章哈希值（用于TTS）
@@ -90,7 +115,9 @@ export default {
     'open-video',       // 打开视频播放器
     'download-pdf',     // 下载PDF
     'download-markdown', // 下载Markdown
-    'toggle-toc'        // 切换目录
+    'toggle-toc',        // 切换目录
+    'download-long-image', // 下载长图
+    'mode-change'         // 模式切换
   ],
   
   setup(props, { emit }) {
@@ -155,6 +182,14 @@ export default {
       emit('toggle-toc');
     };
     
+    const handleDownloadLongImage = () => {
+      emit('download-long-image');
+    };
+    
+    const handleModeChange = (mode) => {
+      emit('mode-change', mode);
+    };
+    
     return {
       // 配置状态
       audioButtonEnabled,
@@ -168,7 +203,9 @@ export default {
       handleOpenVideo,
       handleDownloadPDF,
       handleDownloadMarkdown,
-      handleToggleToc
+      handleToggleToc,
+      handleDownloadLongImage,
+      handleModeChange
     };
   }
 }; 

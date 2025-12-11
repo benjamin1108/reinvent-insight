@@ -1,195 +1,199 @@
+/* ============================================= */
+/* ModeToggle 组件 - iOS 风格开关 */
+/* ============================================= */
+
 .mode-toggle {
     display: flex;
-    gap: 12px;
+    align-items: center;
+    gap: 0.75rem;
     padding: 16px 0;
     justify-content: center;
-    align-items: center;
 }
 
-.mode-button {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 24px;
-    background: linear-gradient(135deg, rgba(34, 211, 238, 0.08), rgba(168, 85, 247, 0.08));
-    border: 1px solid rgba(34, 211, 238, 0.2);
-    border-radius: 12px;
-    color: var(--text-secondary, #888);
-    font-size: 15px;
+/* 紧凑模式（用于 AppHeader） */
+.mode-toggle--compact {
+    padding: 0;
+    gap: 0.625rem;
+}
+
+/* 标签样式 */
+.mode-toggle__label {
+    font-size: 0.875rem;
     font-weight: 600;
-    font-family: 'Inter', 'Outfit', system-ui, -apple-system, sans-serif;
+    font-family: 'Inter', 'SF Pro Text', system-ui, sans-serif;
+    color: rgba(148, 163, 184, 0.7);
     cursor: pointer;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+    user-select: none;
+    letter-spacing: 0.02em;
 }
 
-/* 按钮内部光效 */
-.mode-button::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-    transition: left 0.6s;
+.mode-toggle__label:hover {
+    color: rgba(148, 163, 184, 1);
 }
 
-.mode-button:hover::before:not(.disabled) {
-    left: 100%;
+.mode-toggle__label--active {
+    color: #22d3ee;
+    text-shadow: 0 0 10px rgba(34, 211, 238, 0.4);
 }
 
-.mode-button:hover:not(.disabled) {
-    color: var(--text-color, #e0e0e0);
-    background: linear-gradient(135deg, rgba(34, 211, 238, 0.15), rgba(168, 85, 247, 0.15));
-    border-color: rgba(34, 211, 238, 0.4);
-    transform: translateY(-2px);
-    box-shadow: 
-        0 8px 24px rgba(34, 211, 238, 0.25),
-        0 0 40px rgba(34, 211, 238, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
-.mode-button.active {
-    color: #ffffff;
-    background: linear-gradient(135deg, rgba(34, 211, 238, 0.25), rgba(168, 85, 247, 0.25));
-    border-color: var(--primary-color, #22d3ee);
-    box-shadow: 
-        0 8px 32px rgba(34, 211, 238, 0.4),
-        0 0 60px rgba(34, 211, 238, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2),
-        inset 0 -1px 0 rgba(0, 0, 0, 0.2);
-    animation: pulse-glow 2s ease-in-out infinite;
-}
-
-/* 激活状态的光晕动画 */
-@keyframes pulse-glow {
-    0%, 100% {
-        box-shadow: 
-            0 8px 32px rgba(34, 211, 238, 0.4),
-            0 0 60px rgba(34, 211, 238, 0.3),
-            inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    }
-    50% {
-        box-shadow: 
-            0 8px 32px rgba(34, 211, 238, 0.6),
-            0 0 80px rgba(34, 211, 238, 0.5),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    }
-}
-
-.mode-button.disabled {
-    opacity: 0.3;
+.mode-toggle__label--disabled {
+    opacity: 0.5;
     cursor: not-allowed;
-    background: linear-gradient(135deg, rgba(100, 100, 100, 0.05), rgba(80, 80, 80, 0.05));
-    border-color: rgba(100, 100, 100, 0.1);
-    box-shadow: none;
 }
 
-.mode-icon {
-    font-size: 20px;
-    line-height: 1;
-    filter: drop-shadow(0 0 8px currentColor);
-    transition: transform 0.3s ease;
+/* iOS 风格开关 */
+.mode-toggle__switch {
+    position: relative;
+    width: 52px;
+    height: 28px;
+    cursor: pointer;
+    transition: all 0.3s ease;
 }
 
-.mode-button:hover:not(.disabled) .mode-icon {
-    transform: scale(1.1) rotate(5deg);
+.mode-toggle__switch--disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
-.mode-button.active .mode-icon {
-    filter: drop-shadow(0 0 12px rgba(34, 211, 238, 0.8));
-    animation: icon-float 3s ease-in-out infinite;
+/* 开关轨道 */
+.mode-toggle__track {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(34, 211, 238, 0.15), rgba(59, 130, 246, 0.15));
+    border: 1px solid rgba(34, 211, 238, 0.3);
+    border-radius: 14px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 
+        inset 0 1px 3px rgba(0, 0, 0, 0.2),
+        0 1px 2px rgba(34, 211, 238, 0.1);
 }
 
-@keyframes icon-float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-3px); }
+.mode-toggle__switch:hover:not(.mode-toggle__switch--disabled) .mode-toggle__track {
+    border-color: rgba(34, 211, 238, 0.5);
+    box-shadow: 
+        inset 0 1px 3px rgba(0, 0, 0, 0.2),
+        0 0 12px rgba(34, 211, 238, 0.2);
 }
 
-.mode-label {
-    font-size: 14px;
-    white-space: nowrap;
-    letter-spacing: 0.5px;
-    text-shadow: 0 0 10px rgba(34, 211, 238, 0.3);
+/* 开关滑块 - Deep 模式 (左侧) */
+.mode-toggle__thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 22px;
+    height: 22px;
+    background: linear-gradient(135deg, #22d3ee, #3b82f6);
+    border-radius: 50%;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 
+        0 2px 6px rgba(34, 211, 238, 0.4),
+        0 0 12px rgba(34, 211, 238, 0.3);
+}
+
+/* Quick/Visual 模式 - 滑块向右 */
+.mode-toggle__switch--quick .mode-toggle__thumb {
+    left: calc(100% - 24px);
+    background: linear-gradient(135deg, #a855f7, #ec4899);
+    box-shadow: 
+        0 2px 6px rgba(168, 85, 247, 0.4),
+        0 0 12px rgba(168, 85, 247, 0.3);
+}
+
+.mode-toggle__switch--quick .mode-toggle__track {
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(236, 72, 153, 0.15));
+    border-color: rgba(168, 85, 247, 0.3);
+}
+
+.mode-toggle__switch--quick:hover:not(.mode-toggle__switch--disabled) .mode-toggle__track {
+    border-color: rgba(168, 85, 247, 0.5);
+    box-shadow: 
+        inset 0 1px 3px rgba(0, 0, 0, 0.2),
+        0 0 12px rgba(168, 85, 247, 0.2);
+}
+
+/* 滑块悬停效果 */
+.mode-toggle__switch:hover:not(.mode-toggle__switch--disabled) .mode-toggle__thumb {
+    transform: scale(1.08);
+}
+
+.mode-toggle__switch:active:not(.mode-toggle__switch--disabled) .mode-toggle__thumb {
+    transform: scale(0.95);
+}
+
+/* 紧凑模式样式调整 */
+.mode-toggle--compact .mode-toggle__label {
+    font-size: 0.8125rem;
+}
+
+.mode-toggle--compact .mode-toggle__switch {
+    width: 48px;
+    height: 26px;
+}
+
+.mode-toggle--compact .mode-toggle__track {
+    border-radius: 13px;
+}
+
+.mode-toggle--compact .mode-toggle__thumb {
+    width: 20px;
+    height: 20px;
+}
+
+.mode-toggle--compact .mode-toggle__switch--quick .mode-toggle__thumb {
+    left: calc(100% - 22px);
 }
 
 /* 移动端适配 */
 @media (max-width: 768px) {
     .mode-toggle {
-        width: 100%;
-        gap: 4px;
+        gap: 0.5rem;
     }
     
-    .mode-button {
-        flex: 1;
-        justify-content: center;
-        padding: 8px 12px;
-        font-size: 13px;
+    .mode-toggle__label {
+        font-size: 0.75rem;
     }
     
-    .mode-label {
-        font-size: 12px;
+    .mode-toggle__switch {
+        width: 44px;
+        height: 24px;
     }
     
-    .mode-icon {
-        font-size: 16px;
+    .mode-toggle__track {
+        border-radius: 12px;
+    }
+    
+    .mode-toggle__thumb {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .mode-toggle__switch--quick .mode-toggle__thumb {
+        left: calc(100% - 20px);
     }
 }
 
-/* 响应式：小屏幕使用缩写 */
+/* 极小屏幕 */
 @media (max-width: 480px) {
-    .mode-label {
+    .mode-toggle__label {
         display: none;
     }
     
-    .mode-button {
-        padding: 8px 16px;
+    .mode-toggle {
+        gap: 0.25rem;
     }
 }
 
-/* 可视化模式下的紧凑样式 - 更沉浸 */
+/* 减少动画模式 */
+@media (prefers-reduced-motion: reduce) {
+    .mode-toggle__thumb,
+    .mode-toggle__track,
+    .mode-toggle__label {
+        transition: none;
+    }
+}
+
+/* 可视化模式下的样式（兼容 ReadingView 中的使用） */
 .reading-view__visual-header .mode-toggle {
-    padding: 0; /* 移除padding */
-    gap: 12px; /* 适当间距 */
-}
-
-.reading-view__visual-header .mode-button {
-    padding: 10px 20px; /* 紧凑但不过小 */
-    font-size: 14px;
-    border-radius: 10px;
-    background: rgba(17, 24, 39, 0.85); /* 半透明深色背景 */
-    backdrop-filter: blur(12px); /* 添加模糊效果 */
-    border-color: rgba(34, 211, 238, 0.25);
-    box-shadow: 
-        0 4px 12px rgba(0, 0, 0, 0.4),
-        0 0 20px rgba(34, 211, 238, 0.1); /* 轻微光晕 */
-}
-
-.reading-view__visual-header .mode-button:hover:not(.disabled) {
-    background: rgba(17, 24, 39, 0.95);
-    border-color: rgba(34, 211, 238, 0.4);
-    transform: translateY(-2px);
-    box-shadow: 
-        0 6px 16px rgba(0, 0, 0, 0.5),
-        0 0 30px rgba(34, 211, 238, 0.2);
-}
-
-.reading-view__visual-header .mode-button.active {
-    background: linear-gradient(135deg, rgba(34, 211, 238, 0.25), rgba(168, 85, 247, 0.25));
-    backdrop-filter: blur(12px);
-    border-color: rgba(34, 211, 238, 0.6);
-    box-shadow: 
-        0 6px 20px rgba(34, 211, 238, 0.35),
-        0 0 40px rgba(34, 211, 238, 0.25);
-}
-
-.reading-view__visual-header .mode-icon {
-    font-size: 18px;
-}
-
-.reading-view__visual-header .mode-label {
-    font-size: 13px;
+    padding: 0;
 }
