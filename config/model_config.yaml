@@ -257,6 +257,32 @@ tasks:
       # 缓存目录
       cache_dir: downloads/tts_cache
 
+  # --------------------------------------------------------------------------
+  # 关键帧分析任务
+  # --------------------------------------------------------------------------
+  # 用于分析YouTube视频内容，识别关键时间点进行截图
+  keyframe_analysis:
+    provider: gemini
+    model_name: gemini-3-pro-preview
+    api_key_env: GEMINI_API_KEY
+    
+    # 思考模式配置
+    thinking:
+      low_thinking: false  # 使用低思考模式（快速分析即可）
+    
+    generation:
+      # 使用中等温度，平衡准确性和多样性
+      temperature: 0.5
+      top_p: 0.9
+      top_k: 40
+      # 返回JSON格式，不需要太大空间
+      max_output_tokens: 4000
+    
+    rate_limit:
+      interval: 1.0
+      max_retries: 3
+      retry_backoff_base: 2.0
+
 # ============================================================================
 # 配置说明
 # ============================================================================

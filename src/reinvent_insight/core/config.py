@@ -215,6 +215,29 @@ VISUAL_SCREENSHOT_WAIT_TIME = int(os.getenv("VISUAL_SCREENSHOT_WAIT_TIME", "3"))
 # 浏览器启动超时（秒）
 VISUAL_SCREENSHOT_BROWSER_TIMEOUT = int(os.getenv("VISUAL_SCREENSHOT_BROWSER_TIMEOUT", "30"))
 
+# --- 关键帧截图配置 ---
+# 是否启用关键帧截图功能
+ENABLE_KEYFRAME_SCREENSHOT = os.getenv("ENABLE_KEYFRAME_SCREENSHOT", "false").lower() == "true"
+
+# 最小章节数（低于此值不生成截图）
+KEYFRAME_MIN_CHAPTER_COUNT = int(os.getenv("KEYFRAME_MIN_CHAPTER_COUNT", "5"))
+
+# 最大截图数量
+KEYFRAME_MAX_COUNT = int(os.getenv("KEYFRAME_MAX_COUNT", "8"))
+
+# 截图分辨率
+KEYFRAME_SCREENSHOT_WIDTH = int(os.getenv("KEYFRAME_SCREENSHOT_WIDTH", "1920"))
+KEYFRAME_SCREENSHOT_HEIGHT = int(os.getenv("KEYFRAME_SCREENSHOT_HEIGHT", "1080"))
+
+# 等待时间（秒，视频缓冲稳定）
+KEYFRAME_WAIT_TIME = int(os.getenv("KEYFRAME_WAIT_TIME", "3"))
+
+# 单个截图超时时间（秒）
+KEYFRAME_TIMEOUT = int(os.getenv("KEYFRAME_TIMEOUT", "30"))
+
+# 关键帧截图存储目录
+KEYFRAME_OUTPUT_DIR = OUTPUT_DIR / "keyframes"
+
 # --- 版本控制配置 ---
 # 是否启用版本选择器
 ENABLE_VERSION_SELECTOR = os.getenv("ENABLE_VERSION_SELECTOR", "false").lower() == "true"

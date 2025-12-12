@@ -16,9 +16,15 @@ def init_post_processors():
             register_processor,
             VisualInsightProcessor
         )
+        from reinvent_insight.services.analysis.post_processors.keyframe_screenshot import KeyframeScreenshotProcessor
         
         # 注册 Visual Insight 后处理器（异步，文章生成后自动触发）
         register_processor(VisualInsightProcessor())
+        
+        # 注册关键帧截图处理器（异步，文章生成后自动触发）
+        if config.ENABLE_KEYFRAME_SCREENSHOT:
+            register_processor(KeyframeScreenshotProcessor())
+            logger.info("关键帧截图处理器已注册")
         
         logger.info("后处理管道已初始化")
         

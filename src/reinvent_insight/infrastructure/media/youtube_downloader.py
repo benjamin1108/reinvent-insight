@@ -423,10 +423,6 @@ class SubtitleDownloader:
 
     def _get_base_command(self) -> list[str]:
         """获取基础的 yt-dlp 命令参数，包含反爬虫选项。"""
-        # 在下载前检查 cookie 健康状态
-        from reinvent_insight.services.cookie.health_checker import check_and_warn
-        check_and_warn()
-        
         command = [
             'yt-dlp',
             '--no-playlist',
@@ -440,12 +436,22 @@ class SubtitleDownloader:
             '--sleep-subtitles', '1',
         ]
         
-        # 添加 cookies 文件
-        if config.COOKIES_FILE and config.COOKIES_FILE.exists():
-            command.extend(['--cookies', str(config.COOKIES_FILE)])
-            logger.info(f"使用 Cookies 文件: {config.COOKIES_FILE}")
-        else:
-            logger.warning(f"Cookies 文件不存在: {config.COOKIES_FILE}")
+        # 先确保 Netscape 格式的 Cookie 文件存在（从 JSON 导出），再进行健康检查
+        try:
+            from reinvent_insight.services.cookie.cookie_store import CookieStore
+            store = CookieStore()
+            if store.store_path.exists():
+                # 确保导出为 Netscape 格式
+                store.export_to_netscape(store.netscape_path)
+                if store.netscape_path.exists():
+                    command.extend(['--cookies', str(store.netscape_path)])
+                    logger.info(f"使用 Cookies 文件: {store.netscape_path}")
+                else:
+                    logger.warning(f"Cookies 文件导出失败")
+            else:
+                logger.warning(f"Cookies JSON 文件不存在: {store.store_path}")
+        except Exception as e:
+            logger.warning(f"加载 Cookies 失败: {e}")
         
         return command
 

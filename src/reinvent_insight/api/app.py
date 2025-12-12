@@ -145,6 +145,11 @@ if web_dir.is_dir():
     fonts_dir = web_dir / "fonts"
     if fonts_dir.is_dir():
         app.mount("/fonts", StaticFiles(directory=fonts_dir), name="fonts")
+    
+    # Mount keyframes directory for screenshot images
+    keyframes_dir = config.OUTPUT_DIR / "keyframes"
+    if keyframes_dir.is_dir():
+        app.mount("/d/keyframes", StaticFiles(directory=keyframes_dir), name="keyframes")
 else:
     logger.warning(f"Frontend directory 'web' not found at {web_dir}, will only serve API.")
 

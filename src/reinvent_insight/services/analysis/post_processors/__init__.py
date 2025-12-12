@@ -15,6 +15,7 @@ from .base import PostProcessor, PostProcessorContext, PostProcessorResult, Proc
 from .pipeline import PostProcessorPipeline, get_default_pipeline, register_processor
 from .image_enhancement import ImageEnhancementProcessor, DiagramGeneratorProcessor
 from .visual_insight import VisualInsightProcessor
+from .keyframe_screenshot import KeyframeScreenshotProcessor
 
 __all__ = [
     # 基类
@@ -30,4 +31,5 @@ __all__ = [
     'ImageEnhancementProcessor',
     'DiagramGeneratorProcessor',
     'VisualInsightProcessor',
+    'KeyframeScreenshotProcessor',
 ]

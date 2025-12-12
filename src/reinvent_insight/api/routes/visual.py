@@ -1,10 +1,11 @@
 """Visual interpretation routes"""
 
 import logging
-from typing import Optional
+from typing import Optional, List
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response, FileResponse
+from pydantic import BaseModel
 import yaml
 import re
 
@@ -291,3 +292,143 @@ async def get_visual_long_image(
     except Exception as e:
         logger.error(f"获取长图失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="服务器错误")
+
+
+class PostProcessRequest(BaseModel):
+    """后处理请求"""
+    processor: str  # visual_insight, keyframe_screenshot
+    video_url: Optional[str] = None  # keyframe_screenshot 需要
+
+
+@router.post("/{doc_hash}/post-process")
+async def trigger_post_processor(
+    doc_hash: str,
+    request: PostProcessRequest,
+    version: Optional[int] = Query(None, description="版本号")
+):
+    """
+    触发指定的后处理器
+    
+    Args:
+        doc_hash: 文档哈希
+        request.processor: 处理器名称 (visual_insight, keyframe_screenshot)
+        request.video_url: YouTube URL（keyframe_screenshot 需要）
+        version: 版本号（可选）
+        
+    Returns:
+        触发结果
+    """
+    from reinvent_insight.services.analysis.post_processors import (
+        get_default_pipeline,
+        PostProcessorContext
+    )
+    
+    try:
+        # 获取文章文件名
+        if version is not None:
+            versions = hash_to_versions.get(doc_hash, [])
+            filename = None
+            for v_filename in versions:
+                if f"_v{version}.md" in v_filename or (version == 0 and "_v" not in v_filename):
+                    filename = v_filename
+                    break
+            if not filename:
+                raise HTTPException(status_code=404, detail=f"版本 {version} 未找到")
+        else:
+            filename = hash_to_filename.get(doc_hash)
+            if not filename:
+                raise HTTPException(status_code=404, detail="文章未找到")
+        
+        # 读取文章内容
+        article_path = config.OUTPUT_DIR / filename
+        content = article_path.read_text(encoding="utf-8")
+        
+        # 解析元数据获取标题和章节数
+        title = "Unknown"
+        chapter_count = 0
+        video_url = request.video_url or ""
+        
+        if content.startswith("---"):
+            parts = content.split("---", 2)
+            if len(parts) >= 3:
+                metadata = yaml.safe_load(parts[1])
+                title = metadata.get("title", metadata.get("title_cn", "Unknown"))
+                video_url = video_url or metadata.get("video_url", "")
+                chapter_count = metadata.get("chapter_count", 0)
+        
+        # 如果元数据没有 chapter_count，通过正则统计
+        if chapter_count == 0:
+            chapter_count = len(re.findall(r'^##+ ', content, re.MULTILINE))
+        
+        # 构建上下文
+        context = PostProcessorContext(
+            task_id=f"manual_{doc_hash}",
+            report_content=content,
+            title=title,
+            doc_hash=doc_hash,
+            chapter_count=chapter_count,
+            content_type="youtube" if video_url else "document",
+            video_url=video_url,
+            is_ultra_mode=True,
+            extra={"article_path": str(article_path)}
+        )
+        
+        # 获取管道并找到指定处理器
+        pipeline = get_default_pipeline()
+        target_processor = None
+        
+        for proc in pipeline.processors:
+            if proc.name == request.processor:
+                target_processor = proc
+                break
+        
+        if not target_processor:
+            available = [p.name for p in pipeline.processors]
+            raise HTTPException(
+                status_code=400,
+                detail=f"处理器 '{request.processor}' 不存在。可用: {available}"
+            )
+        
+        # 检查条件
+        should_run = await target_processor.should_run(context)
+        if not should_run:
+            # 返回详细的跳过原因
+            skip_reasons = []
+            if hasattr(target_processor, 'enabled') and not target_processor.enabled:
+                skip_reasons.append(f"处理器未启用 (ENABLE_KEYFRAME_SCREENSHOT=false)")
+            if hasattr(target_processor, 'min_chapter_count'):
+                if context.chapter_count < target_processor.min_chapter_count:
+                    skip_reasons.append(f"章节数不足: {context.chapter_count} < {target_processor.min_chapter_count}")
+            if request.processor == "keyframe_screenshot":
+                if context.content_type != "youtube":
+                    skip_reasons.append(f"content_type='{context.content_type}', 需要 'youtube'")
+                if not context.video_url:
+                    skip_reasons.append("缺少 video_url")
+            
+            return {
+                "status": "skipped",
+                "processor": request.processor,
+                "message": "条件不满足，未执行",
+                "reasons": skip_reasons or ["未知原因"],
+                "context_info": {
+                    "content_type": context.content_type,
+                    "video_url": context.video_url[:50] + "..." if context.video_url and len(context.video_url) > 50 else context.video_url,
+                    "chapter_count": context.chapter_count
+                }
+            }
+        
+        # 执行处理器
+        result = await target_processor.process(context)
+        
+        return {
+            "status": "success" if result.success else "error",
+            "processor": request.processor,
+            "message": result.message,
+            "task_id": f"manual_{doc_hash}"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"触发后处理器失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"触发失败: {str(e)}")
