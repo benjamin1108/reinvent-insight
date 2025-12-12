@@ -638,7 +638,19 @@ export default {
     formatDate(dateStr) {
       if (!dateStr) return '—';
       try {
-        const date = new Date(dateStr);
+        let date;
+        // 如果是数字类型（Unix 时间戳，秒），需要乘以 1000 转换为毫秒
+        if (typeof dateStr === 'number') {
+          date = new Date(dateStr * 1000);
+        } else {
+          date = new Date(dateStr);
+        }
+        
+        // 检查日期是否有效
+        if (isNaN(date.getTime()) || date.getFullYear() < 2000) {
+          return '—';
+        }
+        
         return date.toLocaleString('zh-CN', {
           year: 'numeric',
           month: '2-digit',
@@ -647,7 +659,7 @@ export default {
           minute: '2-digit'
         });
       } catch {
-        return dateStr;
+        return '—';
       }
     },
     
