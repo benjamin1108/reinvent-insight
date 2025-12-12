@@ -48,7 +48,8 @@ async def summary_task_worker_async(url: str, task_id: str):
             
         video_title = metadata.title
         # 将原始视频标题写入任务目录，供后续重新拼接等操作使用
-        task_dir = f"./downloads/tasks/{task_id}"
+        from reinvent_insight.domain.workflows.base import get_task_dir_path
+        task_dir = get_task_dir_path(task_id, "youtube")
         try:
             Path(task_dir).mkdir(parents=True, exist_ok=True)
             (Path(task_dir) / "video_title.txt").write_text(video_title, encoding="utf-8")

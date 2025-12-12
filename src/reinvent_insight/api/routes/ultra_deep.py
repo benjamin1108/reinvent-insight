@@ -79,6 +79,92 @@ def count_toc_chapters(content: str) -> int:
     return h2_count
 
 
+@router.post("/batch-ultra-status")
+async def batch_get_ultra_status(hashes: list[str]):
+    """
+    批量查询Ultra状态，优化性能
+    """
+    from reinvent_insight.services.analysis.worker_pool import worker_pool
+    
+    results = {}
+    
+    # 1. 一次性收集所有正在生成的Ultra任务
+    generating_hashes = set()
+    try:
+        for task_id, task in worker_pool.processing_tasks.items():
+            if hasattr(task, 'task_type') and task.task_type == 'ultra_deep_insight':
+                if hasattr(task, 'doc_hash'):
+                    generating_hashes.add(task.doc_hash)
+    except:
+        pass
+    
+    try:
+        queue_items = list(worker_pool.queue._queue) if hasattr(worker_pool.queue, '_queue') else []
+        for queued_task in queue_items:
+            task = queued_task[1] if isinstance(queued_task, tuple) else queued_task
+            if hasattr(task, 'task_type') and task.task_type == 'ultra_deep_insight':
+                if hasattr(task, 'doc_hash'):
+                    generating_hashes.add(task.doc_hash)
+    except:
+        pass
+    
+    for task_id, task_state in manager.tasks.items():
+        if (hasattr(task_state, 'is_ultra_deep') and task_state.is_ultra_deep and
+            hasattr(task_state, 'doc_hash') and
+            task_state.status in ['queued', 'running', 'processing']):
+            generating_hashes.add(task_state.doc_hash)
+    
+    # 2. 处理每个 hash
+    for doc_hash in hashes:
+        if doc_hash in generating_hashes:
+            results[doc_hash] = {"exists": False, "status": "generating"}
+            continue
+        
+        # 检查文件版本
+        versions = hash_to_versions.get(doc_hash, [])
+        ultra_found = False
+        
+        for filename in versions:
+            try:
+                file_path = config.OUTPUT_DIR / filename
+                if not file_path.exists():
+                    continue
+                content = file_path.read_text(encoding="utf-8")
+                metadata = parse_metadata_from_md(content)
+                
+                if metadata.get("is_ultra_deep", False):
+                    results[doc_hash] = {"exists": True, "status": "completed"}
+                    ultra_found = True
+                    break
+            except:
+                continue
+        
+        if ultra_found:
+            continue
+        
+        # 检查默认版本章节数
+        default_filename = hash_to_filename.get(doc_hash)
+        if default_filename:
+            try:
+                file_path = config.OUTPUT_DIR / default_filename
+                if file_path.exists():
+                    content = file_path.read_text(encoding="utf-8")
+                    chapter_count = count_toc_chapters(content)
+                    if chapter_count > 15:
+                        results[doc_hash] = {
+                            "exists": True, 
+                            "status": "completed",
+                            "reason": "章节数超过15章"
+                        }
+                        continue
+            except:
+                pass
+        
+        results[doc_hash] = {"exists": False, "status": "not_exists"}
+    
+    return {"results": results}
+
+
 @router.get("/{doc_hash}/ultra-deep/status")
 async def get_ultra_deep_status(doc_hash: str):
     """

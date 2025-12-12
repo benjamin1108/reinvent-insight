@@ -105,28 +105,21 @@ export default {
         const data = await response.json();
         const summaries = data.summaries || [];
         
-        // 组装文章数据
-        const articles = [];
-        for (const summary of summaries) {
-          const article = {
-            hash: summary.hash,
-            title_cn: summary.title_cn,
-            title_en: summary.title_en,
-            source_type: summary.source_type || 'document',
-            word_count: summary.word_count || 0,
-            version: summary.version || 0,
-            created_at: summary.created_at || summary.upload_date,
-            chapter_count: summary.chapter_count || 0,
-            ultraExists: false,
-            ultraGenerating: false,
-            ultraDisabledReason: ''
-          };
-          
-          // 查询 Ultra Deep 状态
-          await this.checkUltraStatus(article);
-          
-          articles.push(article);
-        }
+        // 组装文章数据（不等待 Ultra 状态）
+        const articles = summaries.map(summary => ({
+          hash: summary.hash,
+          title_cn: summary.title_cn,
+          title_en: summary.title_en,
+          source_type: summary.source_type || 'document',
+          word_count: summary.word_count || 0,
+          version: summary.version || 0,
+          created_at: summary.created_at || summary.upload_date,
+          chapter_count: summary.chapter_count || 0,
+          ultraExists: false,
+          ultraGenerating: false,
+          ultraDisabledReason: '',
+          ultraStatusLoading: true  // 标记正在加载状态
+        }));
         
         // 按创建时间倒序排序
         articles.sort((a, b) => {
@@ -135,10 +128,12 @@ export default {
           return dateB - dateA;
         });
         
+        // 先显示列表
         this.articles = articles;
+        this.loading = false;
         
-        // 启动轮询检查生成中的 Ultra 任务
-        this.startUltraPolling();
+        // 后台并发加载 Ultra 状态（使用 this.articles 保证响应式）
+        this.loadUltraStatusBatch();
         
       } catch (error) {
         console.error('加载文章列表失败:', error);
@@ -148,8 +143,62 @@ export default {
             type: 'error'
           });
         }
-      } finally {
         this.loading = false;
+      }
+    },
+    
+    // 批量加载 Ultra 状态（使用批量 API）
+    async loadUltraStatusBatch() {
+      if (this.articles.length === 0) return;
+      
+      try {
+        const hashes = this.articles.map(a => a.hash);
+        const response = await fetch('/api/article/batch-ultra-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(hashes)
+        });
+        
+        if (!response.ok) {
+          throw new Error('批量查询失败');
+        }
+        
+        const data = await response.json();
+        const results = data.results || {};
+        
+        // 更新每篇文章的 Ultra 状态（使用 this.articles 保证响应式更新）
+        for (const article of this.articles) {
+          const status = results[article.hash];
+          if (status) {
+            if (status.status === 'completed' && status.exists) {
+              article.ultraExists = true;
+              article.ultraGenerating = false;
+              if (status.reason) {
+                article.ultraDisabledReason = status.reason;
+              }
+            } else if (status.status === 'generating') {
+              article.ultraExists = false;
+              article.ultraGenerating = true;
+            } else {
+              article.ultraExists = false;
+              article.ultraGenerating = false;
+            }
+          }
+          article.ultraStatusLoading = false;
+        }
+        
+        // 检查是否有生成中的任务，如有则启动轮询
+        const hasGenerating = this.articles.some(a => a.ultraGenerating);
+        if (hasGenerating) {
+          this.startUltraPolling();
+        }
+        
+      } catch (error) {
+        console.error('批量加载Ultra状态失败:', error);
+        // 失败时清除加载状态
+        for (const article of this.articles) {
+          article.ultraStatusLoading = false;
+        }
       }
     },
     
@@ -157,7 +206,10 @@ export default {
     async checkUltraStatus(article) {
       try {
         const response = await fetch(`/api/article/${article.hash}/ultra-deep/status`);
-        if (!response.ok) return;
+        if (!response.ok) {
+          article.ultraStatusLoading = false;
+          return;
+        }
         
         const data = await response.json();
         
@@ -179,7 +231,9 @@ export default {
           }
         }
       } catch (error) {
-        console.error('检查Ultra状态失败:', error);
+        // 静默失败，不阻塞列表展示
+      } finally {
+        article.ultraStatusLoading = false;
       }
     },
     
@@ -205,13 +259,9 @@ export default {
     
     // ========== 文章操作 ==========
     
-    // 点击文章标题跳转阅读
+    // 点击文章标题跳转阅读（新标签页）
     handleArticleClick(article) {
-      if (window.eventBus) {
-        window.eventBus.emit('navigate-to-reading', {
-          hash: article.hash
-        });
-      }
+      window.open(`/d/${article.hash}`, '_blank');
     },
     
     // 判断是否可以触发 Ultra

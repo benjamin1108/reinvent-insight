@@ -32,6 +32,41 @@ TASKS_ROOT_DIR = "./downloads/tasks"
 BASE_PROMPT_PATH = "./prompt/youtbe-deep-summary.txt"
 
 
+def get_task_dir_path(task_id: str, content_type: str = "youtube") -> str:
+    """生成任务目录路径
+    
+    格式: tasks/YYYYMMDD/HHMM-taskid-type
+    
+    Args:
+        task_id: 任务ID
+        content_type: 内容类型 (youtube/pdf/md/txt/document)
+    
+    Returns:
+        任务目录路径
+    """
+    from datetime import datetime
+    now = datetime.now()
+    date_dir = now.strftime("%Y%m%d")
+    time_prefix = now.strftime("%H%M")
+    
+    # 类型映射
+    type_map = {
+        "transcript": "youtube",
+        "pdf": "pdf",
+        "md": "md",
+        "txt": "txt",
+        "document": "doc",
+        "youtube": "youtube",
+    }
+    task_type = type_map.get(content_type, "unknown")
+    
+    # 取task_id前8位作为短标识
+    short_id = task_id[:8] if len(task_id) >= 8 else task_id
+    
+    folder_name = f"{time_prefix}-{short_id}-{task_type}"
+    return os.path.join(TASKS_ROOT_DIR, date_dir, folder_name)
+
+
 def load_base_prompt() -> str:
     """加载基础提示词模板"""
     try:
@@ -96,8 +131,8 @@ class AnalysisWorkflow(ABC):
         else:
             raise ValueError(f"不支持的内容类型: {type(content)}")
         
-        # 任务目录
-        self.task_dir = os.path.join(TASKS_ROOT_DIR, self.task_id)
+        # 任务目录（使用日期+类型结构）
+        self.task_dir = get_task_dir_path(self.task_id, self.content_type)
         os.makedirs(self.task_dir, exist_ok=True)
         
         # 模型客户端
