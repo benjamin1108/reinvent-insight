@@ -60,6 +60,11 @@ src/reinvent_insight/
 ### 认证
 - `api/routes/auth.py` - **认证逻辑** `verify_token()`, `get_current_user()`
 
+### 后处理管道
+- `services/analysis/post_processors/base.py` - **后处理器基类** `PostProcessor`, `PostProcessorContext`
+- `services/analysis/post_processors/pipeline.py` - **管道执行** `PostProcessorPipeline`, `register_processor()`
+- `services/analysis/post_processors/visual_insight.py` - **Visual 生成处理器**
+
 ---
 
 ## 导入规范
@@ -163,4 +168,83 @@ from reinvent_insight.api.routes.auth import verify_token, get_current_user
 
 ---
 
-*更新时间: 2025-12-10*
+## 后处理管道机制
+
+文章生成后的精加工通过后处理管道实现，支持同步/异步两种执行模式。
+
+### 架构设计
+
+```
+文章生成完成 → PostProcessorPipeline.run()
+                    ↓
+    ┌───────────────┴───────────────┐
+    │ 同步处理器 (is_async=False)    │ → 顺序执行，等待结果，可修改内容
+    │ 异步处理器 (is_async=True)     │ → 仅触发，不等待，不阻塞返回
+    └───────────────────────────────┘
+```
+
+### 处理器类型
+
+| 类型 | `is_async` | 执行方式 | 适用场景 |
+|-----|-----------|---------|----------|
+| 同步 | `False` | 执行并等待结果 | 内容润色、格式修正 |
+| 异步 | `True` | 仅触发不等待 | Visual 生成、图片增强 |
+
+### 创建新处理器
+
+```python
+from reinvent_insight.services.analysis.post_processors import (
+    PostProcessor, PostProcessorContext, PostProcessorResult, ProcessorPriority
+)
+
+class MyProcessor(PostProcessor):
+    name = "my_processor"
+    description = "我的处理器"
+    priority = ProcessorPriority.NORMAL  # HIGH/NORMAL/LOW/LOWEST
+    is_async = False  # True=异步触发，False=同步等待
+    
+    async def should_run(self, context: PostProcessorContext) -> bool:
+        """判断是否需要运行"""
+        return True
+    
+    async def process(self, context: PostProcessorContext) -> PostProcessorResult:
+        """执行处理逻辑"""
+        # 同步处理器：返回修改后的内容
+        # 异步处理器：触发后台任务，返回成功即可
+        return PostProcessorResult(
+            success=True,
+            content=context.content,  # 同步处理器需返回修改后内容
+            message="处理完成"
+        )
+```
+
+### 注册处理器
+
+在 `services/startup_service.py` 的 `init_post_processors()` 中注册：
+
+```python
+from reinvent_insight.services.analysis.post_processors import register_processor
+from .my_processor import MyProcessor
+
+register_processor(MyProcessor())
+```
+
+### 防重机制
+
+- 异步处理器通过 `task_manager` 注册任务（任务ID格式：`{type}_{name}_{timestamp}`）
+- `visual_watcher` 等监控器会检查 `task_manager` 中的任务状态，避免重复触发
+- 共享 `task_manager` 是防重的关键
+
+### 上下文数据
+
+`PostProcessorContext` 包含：
+- `content`: 文章内容
+- `title`: 文章标题
+- `doc_hash`: 文档哈希
+- `chapter_count`: 章节数
+- `outline`: 大纲内容
+- `extra`: 扩展数据（如 `article_path`）
+
+---
+
+*更新时间: 2025-12-12*

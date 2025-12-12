@@ -72,7 +72,7 @@ async def startup_event():
     from reinvent_insight.services.document.hash_registry import init_hash_mappings
     from reinvent_insight.services.document.summary_cache import init_summary_cache
     from reinvent_insight.infrastructure.file_system.watcher import start_watching
-    from reinvent_insight.services.startup_service import start_visual_watcher
+    from reinvent_insight.services.startup_service import start_visual_watcher, init_post_processors
     from reinvent_insight.services.tts_pregeneration_service import get_tts_pregeneration_service
     from reinvent_insight.services.analysis.worker_pool import worker_pool
     from reinvent_insight.services.cookie.health_checker import check_and_warn
@@ -89,13 +89,16 @@ async def startup_event():
         init_summary_cache()
     start_watching(config.OUTPUT_DIR, on_file_change)
     
-    # 4. Check Cookie health status
+    # 4. Initialize post-processing pipeline
+    init_post_processors()
+    
+    # 5. Check Cookie health status
     check_and_warn()
     
-    # 5. Start visual interpretation watcher
+    # 6. Start visual interpretation watcher
     await start_visual_watcher()
     
-    # 6. Start TTS pregeneration service (on-demand mode)
+    # 7. Start TTS pregeneration service (on-demand mode)
     try:
         pregeneration_service = get_tts_pregeneration_service()
         await pregeneration_service.start()
@@ -103,7 +106,7 @@ async def startup_event():
     except Exception as e:
         logger.error(f"启动 TTS 预生成服务失败: {e}", exc_info=True)
     
-    # 7. Start Worker Pool (task queue system)
+    # 8. Start Worker Pool (task queue system)
     try:
         await worker_pool.start()
         logger.info(

@@ -9,6 +9,23 @@ from reinvent_insight.core import config
 logger = logging.getLogger(__name__)
 
 
+def init_post_processors():
+    """初始化后处理管道，注册处理器"""
+    try:
+        from reinvent_insight.services.analysis.post_processors import (
+            register_processor,
+            VisualInsightProcessor
+        )
+        
+        # 注册 Visual Insight 后处理器（异步，文章生成后自动触发）
+        register_processor(VisualInsightProcessor())
+        
+        logger.info("后处理管道已初始化")
+        
+    except Exception as e:
+        logger.error(f"初始化后处理管道失败: {e}", exc_info=True)
+
+
 async def start_visual_watcher():
     """启动可视化解读文件监测器"""
     # 检查配置开关

@@ -14,6 +14,11 @@ from reinvent_insight.domain.models import DocumentContent
 from reinvent_insight.infrastructure.media.youtube_downloader import VideoMetadata
 from reinvent_insight.infrastructure.ai.model_config import get_model_client
 from reinvent_insight.infrastructure.ai.observability import set_business_context
+from reinvent_insight.services.analysis.post_processors import (
+    PostProcessorPipeline,
+    PostProcessorContext,
+    get_default_pipeline,
+)
 
 
 # 任务通知接口（依赖倒置）
@@ -145,6 +150,9 @@ class AnalysisWorkflow(ABC):
         self.max_retries = 2
         self.generated_title_en = None  # 存储AI生成的英文标题
         self.chapter_metadata: Dict[int, Dict] = {}  # 存储章节元数据
+        
+        # 后处理管道（默认使用全局管道，可通过子类覆盖）
+        self.post_processor_pipeline: Optional[PostProcessorPipeline] = None
     
     def _get_model_client(self):
         """获取模型客户端（子类可覆盖）"""
@@ -208,6 +216,11 @@ class AnalysisWorkflow(ABC):
                 )
                 if not final_report:
                     raise Exception("组装最终报告失败")
+                
+                # 步骤 5: 后处理管道（精加工）
+                final_report = await self._run_post_processors(
+                    final_report, title, doc_hash, len(chapters), outline_content, final_filename
+                )
 
                 await self._log("分析完成！", progress=100)
                 await self.task_notifier.send_result(title, final_report, self.task_id, final_filename, doc_hash)
@@ -491,3 +504,66 @@ class AnalysisWorkflow(ABC):
             parts.append(f"\n**与下一章的关系**：{chapter_meta['next_chapter_link']}")
         
         return '\n'.join(parts)
+    
+    async def _run_post_processors(
+        self,
+        report_content: str,
+        title: str,
+        doc_hash: str,
+        chapter_count: int,
+        outline_content: str,
+        final_filename: str = None
+    ) -> str:
+        """执行后处理管道
+        
+        Args:
+            report_content: 报告内容
+            title: 标题
+            doc_hash: 文档哈希
+            chapter_count: 章节数量
+            outline_content: 大纲内容
+            final_filename: 最终文件名
+            
+        Returns:
+            处理后的报告内容
+        """
+        # 获取管道（优先用实例级，其次用全局）
+        pipeline = self.post_processor_pipeline or get_default_pipeline()
+        
+        # 检查是否有处理器
+        if not pipeline.processors:
+            logger.debug("没有注册后处理器，跳过后处理")
+            return report_content
+        
+        await self._log("步骤 5/5: 正在进行精加工...", progress=95)
+        
+        # 构建上下文
+        context = PostProcessorContext(
+            task_id=self.task_id,
+            report_content=report_content,
+            title=title,
+            doc_hash=doc_hash,
+            chapter_count=chapter_count,
+            is_ultra_mode=self.is_ultra_mode,
+            is_pdf=self.is_pdf,
+            content_type=self.content_type,
+            task_dir=self.task_dir,
+            source_content=self.transcript,
+            outline_content=outline_content,
+            video_url=self.metadata.video_url if hasattr(self.metadata, 'video_url') else "",
+            upload_date=self.metadata.upload_date if hasattr(self.metadata, 'upload_date') else "",
+            extra={'article_path': str(config.OUTPUT_DIR / final_filename) if final_filename else None}
+        )
+        
+        try:
+            result = await pipeline.run(context)
+            if result.success:
+                if result.changes:
+                    logger.info(f"任务 {self.task_id} - 后处理完成: {result.message}")
+                return result.content
+            else:
+                logger.warning(f"任务 {self.task_id} - 后处理失败: {result.message}")
+                return report_content  # 失败时返回原内容
+        except Exception as e:
+            logger.error(f"任务 {self.task_id} - 后处理异常: {e}", exc_info=True)
+            return report_content  # 异常时返回原内容
