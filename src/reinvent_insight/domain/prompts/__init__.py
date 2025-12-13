@@ -26,6 +26,11 @@ from .chapter import (
 from .conclusion import CONCLUSION_PROMPT_TEMPLATE
 
 from .ultra import (
+    MODE_CONFIGS,
+    get_mode_config,
+    get_outline_instructions,
+    get_chapter_instructions,
+    # 向后兼容
     DEEP_OUTLINE_INSTRUCTIONS,
     ULTRA_OUTLINE_INSTRUCTIONS,
     ULTRA_CHAPTER_INSTRUCTIONS,
@@ -53,6 +58,10 @@ __all__ = [
     # Conclusion
     'CONCLUSION_PROMPT_TEMPLATE',
     # Ultra / Deep
+    'MODE_CONFIGS',
+    'get_mode_config',
+    'get_outline_instructions',
+    'get_chapter_instructions',
     'DEEP_OUTLINE_INSTRUCTIONS',
     'ULTRA_OUTLINE_INSTRUCTIONS',
     'ULTRA_CHAPTER_INSTRUCTIONS',

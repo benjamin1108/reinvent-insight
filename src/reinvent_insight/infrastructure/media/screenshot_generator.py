@@ -90,22 +90,27 @@ class ScreenshotGenerator:
                 logger.info("启动 Chromium 浏览器（无头模式）")
                 
                 # 启动浏览器（无头模式）
+                # 注意：移除 --disable-gpu，使用 GPU 加速渲染避免长页面色块/撕裂问题
                 browser = await p.chromium.launch(
                     headless=True,
                     args=[
-                        '--disable-gpu',
                         '--no-sandbox',
                         '--disable-dev-shm-usage',
                         '--disable-web-security',  # 允许加载本地资源
+                        '--disable-software-rasterizer',  # 禁用软件光栅化
+                        '--enable-gpu-rasterization',  # 启用 GPU 光栅化
+                        '--enable-zero-copy',  # 零拷贝优化
+                        '--ignore-gpu-blocklist',  # 忽略 GPU 黑名单
                     ],
                     timeout=self.browser_timeout
                 )
                 
                 # 创建页面并设置视口
-                # 使用 2x deviceScaleFactor 提升截图清晰度（模拟高清屏）
+                # 使用 1.5x deviceScaleFactor 平衡清晰度和渲染稳定性
+                # 注意：2x 在超长页面下可能导致渲染问题
                 page = await browser.new_page(
                     viewport={'width': width, 'height': 1080},
-                    device_scale_factor=2  # 2倍分辨率，提升清晰度
+                    device_scale_factor=1.5  # 1.5倍分辨率，平衡清晰度和稳定性
                 )
                 
                 # 设置超时

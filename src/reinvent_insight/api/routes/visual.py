@@ -300,10 +300,10 @@ async def generate_visual_long_image(
             force_regenerate=force_regenerate
         )
         
-        # 构造图片 URL
-        image_url = f"/api/article/{doc_hash}/visual/image"
+        # 构造图片 URL（添加时间戳破坏 Nginx 缓存）
+        image_url = f"/api/article/{doc_hash}/visual/image?t={int(service.get_long_image_path(doc_hash, version).stat().st_mtime)}"
         if version is not None:
-            image_url += f"?version={version}"
+            image_url += f"&version={version}"
         
         return {
             "status": result["status"],
@@ -328,7 +328,8 @@ async def generate_visual_long_image(
 @router.get("/{doc_hash}/visual/image")
 async def get_visual_long_image(
     doc_hash: str,
-    version: Optional[int] = Query(None, description="版本号")
+    version: Optional[int] = Query(None, description="版本号"),
+    t: Optional[int] = Query(None, description="缓存破坏时间戳（仅用于 URL 参数）")
 ):
     """
     获取 Visual Insight 长图
@@ -340,6 +341,8 @@ async def get_visual_long_image(
     Returns:
         PNG 图片文件
     """
+    from datetime import datetime, timezone
+    
     try:
         # 检查功能是否启用
         if not config.VISUAL_LONG_IMAGE_ENABLED:
@@ -357,15 +360,26 @@ async def get_visual_long_image(
                 detail="长图尚未生成，请先调用 POST /{doc_hash}/visual/to-image 生成"
             )
         
-        # 返回图片文件（禁用缓存，确保获取最新版本）
+        # 获取文件修改时间作为 ETag
+        file_stat = image_path.stat()
+        mtime = file_stat.st_mtime
+        etag = f'"{doc_hash}-{int(mtime)}"'
+        last_modified = datetime.fromtimestamp(mtime, tz=timezone.utc).strftime('%a, %d %b %Y %H:%M:%S GMT')
+        
+        # 返回图片文件（禁用缓存 + ETag 双重保障）
         return FileResponse(
             path=str(image_path),
             media_type="image/png",
             filename=image_path.name,
             headers={
-                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
                 "Pragma": "no-cache",
                 "Expires": "0",
+                "ETag": etag,
+                "Last-Modified": last_modified,
+                # 防止 CDN/代理缓存
+                "CDN-Cache-Control": "no-cache",
+                "Surrogate-Control": "no-store",
             }
         )
         

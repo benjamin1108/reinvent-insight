@@ -71,21 +71,17 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
         """生成大纲（包含标题、引言、章节列表）"""
         await self._log("步骤 1/4: 正在分析内容结构...")
         
-        # 根据模式选择章节框架指令
-        if self.is_ultra_mode:
-            # Ultra模式：使用完整的Ultra指令（包含章节数限制）
-            outline_instructions = prompts.ULTRA_OUTLINE_INSTRUCTIONS
-        else:
-            # 普通模式：使用章节框架指令（无章节数限制）
-            outline_instructions = prompts.DEEP_OUTLINE_INSTRUCTIONS
+        # 使用统一的模式指令获取函数
+        mode_instructions = prompts.get_outline_instructions(self.is_ultra_mode)
         
         # 构建提示词
         prompt = prompts.OUTLINE_PROMPT_TEMPLATE.format(
             role_and_style=prompts.ROLE_AND_STYLE_GUIDE,
-            base_prompt=self.base_prompt + outline_instructions,
+            base_prompt=self.base_prompt,
             content_type="完整英文字幕",
             content_description="完整字幕",
             full_content=self.transcript,
+            mode_instructions=mode_instructions,
             quality_control_rules=prompts.QUALITY_CONTROL_RULES
         )
         
@@ -169,12 +165,20 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
         information_density = chapter_meta.get('information_density', 'medium')
         generation_depth = chapter_meta.get('generation_depth', 'detailed' if self.is_ultra_mode else 'moderate')
         
+        # 获取模式配置以确定字数目标
+        mode_config = prompts.get_mode_config(self.is_ultra_mode)
+        target_words = mode_config["word_targets"].get(generation_depth, 3000)
+        
         chapter_depth_constraint = prompts.CHAPTER_DEPTH_CONSTRAINT_TEMPLATE.format(
             source_content_amount=source_content_amount,
             information_density=information_density,
             generation_depth=generation_depth,
             rationale=rationale or f"本章节聚焦于'{chapter_title}'主题，请基于原文内容深入分析。"
         )
+        
+        # Ultra 模式追加字数要求
+        if self.is_ultra_mode:
+            chapter_depth_constraint += f"\n\n**Ultra 模式字数要求**：目标约 {target_words} 字，{mode_config['expansion_desc']}"
         
         # 构建提示词
         prompt = prompts.CHAPTER_PROMPT_TEMPLATE.format(
