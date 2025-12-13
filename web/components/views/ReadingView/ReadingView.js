@@ -1173,6 +1173,55 @@ export default {
     
     // 全屏相关方法已移除
     
+    // 🔧 iPad Chrome 布局修复：强制刷新布局
+    // 解决设备旋转或后台切换时内容宽度变半的问题
+    const forceLayoutRefresh = () => {
+      const layout = document.querySelector('.reading-view__layout');
+      const content = document.querySelector('.reading-view__content');
+      
+      if (!layout || !content) return;
+      
+      // 检测是否是移动设备
+      const isMobileNow = window.innerWidth <= 768;
+      
+      // 方法1: 读取 offsetWidth/offsetHeight 强制浏览器重新计算布局
+      void layout.offsetWidth;
+      void content.offsetWidth;
+      
+      // 方法2: 临时修改样式强制重绘
+      const originalTransform = content.style.transform;
+      content.style.transform = 'translateZ(0)';
+      
+      // 方法3: 对于移动设备，强制重置关键样式
+      if (isMobileNow) {
+        // 确保移动端使用正确的宽度
+        content.style.width = '100vw';
+        content.style.maxWidth = '100vw';
+        content.style.left = '0px';
+        
+        // 强制重置 CSS 变量
+        layout.style.setProperty('--toc-width', '0px');
+      } else {
+        // 桌面端：使用当前 tocWidth 值重置 CSS 变量
+        layout.style.setProperty('--toc-width', `${tocWidth.value}px`);
+      }
+      
+      // 使用双 requestAnimationFrame 确保渲染完成
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          content.style.transform = originalTransform || '';
+          
+          // 对于移动设备，确保样式被正确应用
+          if (isMobileNow) {
+            // 移除内联样式，让 CSS 规则接管
+            content.style.width = '';
+            content.style.maxWidth = '';
+            content.style.left = '';
+          }
+        });
+      });
+    };
+    
     // 响应式处理
     const handleResize = () => {
       // 在移动设备上自动隐藏TOC
@@ -1180,39 +1229,68 @@ export default {
         isTocVisible.value = false;
         emit('toc-toggle', false);
       }
-      // 强制触发 shouldShowToc 重新计算
-      // 通过修改一个依赖项来触发
-      nextTick(() => {
-      });
+      
+      // 🔧 关键修复：每次 resize 都强制刷新布局
+      forceLayoutRefresh();
     };
     
     // 处理页面可见性变化（应用切换时触发）
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         // 页面重新可见时，强制检查并修复布局
-        nextTick(() => {
-          const isMobile = window.innerWidth <= 768;
-          if (isMobile && isTocVisible.value) {
+        // 🔧 iPad Chrome 修复：使用多次延迟确保布局正确更新
+        const fixLayout = () => {
+          const isMobileNow = window.innerWidth <= 768;
+          if (isMobileNow && isTocVisible.value) {
             isTocVisible.value = false;
             emit('toc-toggle', false);
           }
-          // 强制重新计算布局
-          handleResize();
-        });
+          forceLayoutRefresh();
+        };
+        
+        // 立即执行一次
+        fixLayout();
+        
+        // 延迟执行，等待浏览器完成内部更新
+        setTimeout(fixLayout, 100);
+        setTimeout(fixLayout, 300);
       }
     };
     
     // 处理页面获得焦点（从其他应用切换回来）
     const handlePageFocus = () => {
-      // 延迟执行，确保浏览器完成布局更新
-      setTimeout(() => {
-        const isMobile = window.innerWidth <= 768;
-        if (isMobile && isTocVisible.value) {
+      // 🔧 iPad Chrome 修复：使用多次延迟确保布局正确更新
+      const fixLayout = () => {
+        const isMobileNow = window.innerWidth <= 768;
+        if (isMobileNow && isTocVisible.value) {
           isTocVisible.value = false;
           emit('toc-toggle', false);
         }
-        handleResize();
-      }, 100); // 100ms 延迟，等待浏览器完成渲染
+        forceLayoutRefresh();
+      };
+      
+      // 使用多次延迟，覆盖 iPad Chrome 的各种时序问题
+      setTimeout(fixLayout, 50);
+      setTimeout(fixLayout, 150);
+      setTimeout(fixLayout, 350);
+    };
+    
+    // 🔧 新增：处理设备方向变化
+    const handleOrientationChange = () => {
+      // 方向变化后，需要等待浏览器更新 viewport
+      const fixLayout = () => {
+        const isMobileNow = window.innerWidth <= 768;
+        if (isMobileNow && isTocVisible.value) {
+          isTocVisible.value = false;
+          emit('toc-toggle', false);
+        }
+        forceLayoutRefresh();
+      };
+      
+      // iPad Chrome 在方向变化时需要更长的延迟
+      setTimeout(fixLayout, 100);
+      setTimeout(fixLayout, 300);
+      setTimeout(fixLayout, 500);
     };
     
     // 滚动监听：高亮当前章节
@@ -1502,6 +1580,17 @@ export default {
       window.addEventListener('focus', handlePageFocus);
       window.addEventListener('pageshow', handlePageFocus); // iOS Safari 特殊处理
       
+      // 🔧 iPad Chrome 修复：添加设备方向变化监听
+      window.addEventListener('orientationchange', handleOrientationChange);
+      // 某些设备上 orientationchange 不触发，使用 matchMedia 作为备用
+      const orientationMediaQuery = window.matchMedia('(orientation: portrait)');
+      if (orientationMediaQuery.addEventListener) {
+        orientationMediaQuery.addEventListener('change', handleOrientationChange);
+      } else if (orientationMediaQuery.addListener) {
+        // 兼容旧浏览器
+        orientationMediaQuery.addListener(handleOrientationChange);
+      }
+      
       // 添加拖动事件监听
       document.addEventListener('mousemove', handleDrag);
       document.addEventListener('mouseup', endDrag);
@@ -1628,6 +1717,15 @@ export default {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handlePageFocus);
       window.removeEventListener('pageshow', handlePageFocus);
+      
+      // 移除设备方向变化监听
+      window.removeEventListener('orientationchange', handleOrientationChange);
+      const orientationMediaQuery = window.matchMedia('(orientation: portrait)');
+      if (orientationMediaQuery.removeEventListener) {
+        orientationMediaQuery.removeEventListener('change', handleOrientationChange);
+      } else if (orientationMediaQuery.removeListener) {
+        orientationMediaQuery.removeListener(handleOrientationChange);
+      }
       
       // 移除拖动事件监听
       document.removeEventListener('mousemove', handleDrag);

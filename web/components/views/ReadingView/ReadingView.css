@@ -841,6 +841,63 @@
   background: rgba(34, 211, 238, 0.5);
 }
 
+/* 🔧 iPad Chrome 布局修复：强制重绘类 */
+.reading-view__layout.force-refresh {
+  transform: translateZ(0);
+}
+
+.reading-view__content.force-refresh {
+  transform: translateZ(0);
+}
+
+/* iPad 特定优化（769px - 1024px）*/
+/* 这个范围覆盖 iPad 横竖屏的大部分情况 */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .reading-view__layout {
+    /* iPad 上使用更稳定的布局方式 */
+    will-change: auto; /* 避免过度优化导致的缓存问题 */
+  }
+  
+  .reading-view__content {
+    /* 避免在 iPad Chrome 上的缓存问题 */
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  
+  /* 在 iPad 上使用 flex 而不是 absolute 定位，更稳定 */
+  .reading-view__content:not(.reading-view__content--no-toc) {
+    position: relative;
+    left: 0;
+    width: 100%;
+    max-width: 100%;
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .reading-view__toc {
+    flex-shrink: 0;
+    width: var(--toc-width, 280px);
+    max-width: 40vw; /* 限制最大宽度，避免占用过多空间 */
+  }
+}
+
+/* 横屏 iPad 特定优化 */
+@media (min-width: 769px) and (max-width: 1024px) and (orientation: landscape) {
+  .reading-view__toc {
+    max-width: 30vw; /* 横屏时 TOC 占用更少空间 */
+  }
+}
+
+/* 竖屏 iPad 特定优化 */
+@media (min-width: 769px) and (max-width: 1024px) and (orientation: portrait) {
+  /* 竖屏时可以考虑隐藏 TOC，给内容更多空间 */
+  .reading-view__content:not(.reading-view__content--no-toc) {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
 /* 移动端优化 */
 @media (max-width: 768px) {
   .reading-view__layout {
@@ -852,6 +909,10 @@
     position: relative !important;
     /* 关键：在移动端重置 CSS 变量，防止 Chrome 缓存 */
     --toc-width: 0px !important;
+    /* 🔧 iPad Chrome 修复：添加硬件加速和稳定性属性 */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    will-change: auto;
     /* 移除 padding-top，改为调整 content 的 top 位置 */
   }
   
@@ -873,12 +934,17 @@
     bottom: 0 !important;
     margin: 0 !important;
     height: calc(100vh - 80px) !important; /* 减去 AppHeader 的高度 */
-    transform: none !important;
+    transform: translateZ(0) !important; /* 🔧 强制硬件加速 */
+    -webkit-transform: translateZ(0) !important;
     /* 额外保险：明确覆盖可能的 calc() 计算 */
     margin-left: 0 !important;
     margin-right: 0 !important;
     /* 确保内容从顶部开始滚动 */
     padding-top: 0 !important;
+    /* 🔧 iPad Chrome 修复：添加稳定性属性 */
+    backface-visibility: hidden !important;
+    -webkit-backface-visibility: hidden !important;
+    will-change: auto !important;
   }
   
   .reading-view__content--no-toc {
