@@ -4,10 +4,29 @@
 
 ## 核心要求
 
-1. 输出从 `<!DOCTYPE html>` 开始，到 `<main class="...">` 结束（main 标签开始但不关闭）
-2. 包含完整的 `<head>` 部分（meta、title、CDN 引入、style）
-3. 包含页面的 header 部分（标题区域）
-4. 自由设计，展现创意
+1. **先输出样式规范**（必须），然后输出 HTML 代码
+2. 输出从 `<!DOCTYPE html>` 开始，到 `<main class="...">` 结束（main 标签开始但不关闭）
+3. 包含完整的 `<head>` 部分（meta、title、CDN 引入、style）
+4. 包含页面的 header 部分（标题区域）
+5. 自由设计，展现创意
+
+## 样式规范输出（必须）
+
+**在输出 HTML 之前，先输出以下格式的样式规范：**
+
+```
+<!-- STYLE_SPEC_START
+{
+  "brand_color": "#XXXXXX",
+  "brand_color_name": "xxx-color",
+  "chapter_title_style": "text-3xl md:text-4xl font-bold text-white",
+  "chapter_number_style": "text-[#XXXXXX] font-mono text-2xl mr-3",
+  "card_style": "bg-zinc-900 rounded-2xl p-6 border border-zinc-800"
+}
+STYLE_SPEC_END -->
+```
+
+这个样式规范将传递给后续章节生成，确保整篇文章风格一致。
 
 ## 技术规范
 

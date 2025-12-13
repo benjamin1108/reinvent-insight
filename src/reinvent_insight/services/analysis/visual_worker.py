@@ -9,6 +9,7 @@
 
 import os
 import re
+import json
 import asyncio
 from pathlib import Path
 from typing import Optional, List, Dict
@@ -34,7 +35,18 @@ class VisualInterpretationWorker:
     
     采用分阶段生成：AI 设计 Header → 分章节生成内容 → AI 生成 Footer
     每个阶段都由 AI 灵活设计，保持每篇文章的独特性。
+    
+    样式传递机制：Header 阶段确定样式规范，传递给章节和 Footer，确保整篇文章风格一致。
     """
+    
+    # 默认样式规范（当 AI 未输出时使用）
+    DEFAULT_STYLE_SPEC = {
+        "brand_color": "#3B82F6",
+        "brand_color_name": "blue-500",
+        "chapter_title_style": "text-3xl md:text-4xl font-bold text-white",
+        "chapter_number_style": "text-blue-500 font-mono text-2xl mr-3",
+        "card_style": "bg-zinc-900 rounded-2xl p-6 border border-zinc-800"
+    }
     
     def __init__(
         self, 
@@ -53,6 +65,9 @@ class VisualInterpretationWorker:
         # 使用任务类型获取模型客户端
         self.client = get_model_client("visual_generation")
         self.max_retries = 3
+        
+        # 样式规范（由 Header 阶段确定，传递给章节和 Footer）
+        self.style_spec = None
         
         # 加载提示词
         self.header_prompt = self._load_prompt(HEADER_PROMPT_PATH)
@@ -200,7 +215,7 @@ class VisualInterpretationWorker:
         return html_content
     
     async def _generate_header(self, metadata: Dict, chapters: List[Dict]) -> str:
-        """让 AI 生成 HTML 头部（样式 + 标题）"""
+        """让 AI 生成 HTML 头部（样式 + 标题），并提取样式规范"""
         # 构建文章概要
         article_summary = self._build_article_summary(chapters)
         
@@ -220,6 +235,11 @@ class VisualInterpretationWorker:
             try:
                 header = await self.client.generate_content(prompt)
                 if header and header.strip():
+                    # 提取样式规范
+                    self.style_spec = self._extract_style_spec(header)
+                    logger.info(f"提取到样式规范: {self.style_spec}")
+                    
+                    # 清理 HTML（移除样式规范块）
                     return self._clean_header_html(header)
             except Exception as e:
                 logger.warning(f"Header 生成失败 (尝试 {attempt+1}): {e}")
@@ -229,12 +249,46 @@ class VisualInterpretationWorker:
         
         return ""
     
+    def _extract_style_spec(self, header_output: str) -> Dict:
+        """从 Header 输出中提取样式规范
+        
+        格式：
+        <!-- STYLE_SPEC_START
+        { "brand_color": "#XXXXXX", ... }
+        STYLE_SPEC_END -->
+        """
+        try:
+            # 匹配样式规范块
+            pattern = r'<!--\s*STYLE_SPEC_START\s*([\s\S]*?)STYLE_SPEC_END\s*-->'
+            match = re.search(pattern, header_output)
+            
+            if match:
+                json_str = match.group(1).strip()
+                spec = json.loads(json_str)
+                logger.info(f"成功提取样式规范: 品牌色={spec.get('brand_color')}")
+                return spec
+            else:
+                logger.warning("未找到样式规范块，使用默认值")
+                return self.DEFAULT_STYLE_SPEC.copy()
+                
+        except json.JSONDecodeError as e:
+            logger.warning(f"样式规范 JSON 解析失败: {e}，使用默认值")
+            return self.DEFAULT_STYLE_SPEC.copy()
+        except Exception as e:
+            logger.warning(f"提取样式规范失败: {e}，使用默认值")
+            return self.DEFAULT_STYLE_SPEC.copy()
+    
     async def _generate_footer(self, metadata: Dict) -> str:
-        """让 AI 生成 HTML 尾部（结尾 + 脚本）"""
+        """让 AI 生成 HTML 尾部（结尾 + 脚本），注入样式规范"""
+        # 构建样式规范文本
+        style_spec_text = self._format_style_spec_for_prompt()
+        
         prompt = self.footer_prompt.replace(
             "{{TITLE_CN}}", metadata.get('title_cn', '')
         ).replace(
             "{{GENERATION_DATE}}", datetime.now().strftime("%Y-%m-%d %H:%M")
+        ).replace(
+            "{{STYLE_SPEC}}", style_spec_text
         )
         
         for attempt in range(self.max_retries + 1):
@@ -262,7 +316,11 @@ class VisualInterpretationWorker:
         return '\n'.join(summary_parts)
     
     def _clean_header_html(self, html: str) -> str:
-        """清理 Header HTML"""
+        """清理 Header HTML，移除样式规范块"""
+        # 移除样式规范块
+        html = re.sub(r'<!--\s*STYLE_SPEC_START[\s\S]*?STYLE_SPEC_END\s*-->', '', html)
+        
+        # 移除 markdown 代码块标记
         html = re.sub(r'^```html\s*\n', '', html, flags=re.MULTILINE)
         html = re.sub(r'\n```\s*$', '', html, flags=re.MULTILINE)
         html = re.sub(r'```', '', html)
@@ -274,6 +332,17 @@ class VisualInterpretationWorker:
         html = re.sub(r'\n```\s*$', '', html, flags=re.MULTILINE)
         html = re.sub(r'```', '', html)
         return html.strip()
+    
+    def _format_style_spec_for_prompt(self) -> str:
+        """将样式规范格式化为提示词文本"""
+        spec = self.style_spec or self.DEFAULT_STYLE_SPEC
+        
+        return f"""
+- **品牌色**: {spec.get('brand_color', '#3B82F6')} ({spec.get('brand_color_name', 'blue-500')})
+- **章节标题样式**: `{spec.get('chapter_title_style', 'text-3xl md:text-4xl font-bold text-white')}`
+- **章节序号样式**: `{spec.get('chapter_number_style', 'text-blue-500 font-mono text-2xl mr-3')}`
+- **卡片样式**: `{spec.get('card_style', 'bg-zinc-900 rounded-2xl p-6 border border-zinc-800')}`
+"""
     
     def _ensure_iframe_script(self, footer: str) -> str:
         """确保 footer 包含 iframe 通信脚本"""
@@ -546,7 +615,7 @@ class VisualInterpretationWorker:
         current_index: int,
         total: int
     ) -> str:
-        """生成单个章节的 HTML 片段"""
+        """生成单个章节的 HTML 片段，注入样式规范"""
         if delay > 0:
             await asyncio.sleep(delay)
         
@@ -556,13 +625,18 @@ class VisualInterpretationWorker:
         
         logger.info(f"开始生成章节 {index}/{total}: {title[:30]}...")
         
-        # 构建提示词
+        # 构建样式规范文本
+        style_spec_text = self._format_style_spec_for_prompt()
+        
+        # 构建提示词，注入样式规范
         prompt = self.chapter_prompt.replace(
             "{{CHAPTER_INDEX}}", str(index)
         ).replace(
             "{{CHAPTER_TITLE}}", title
         ).replace(
             "{{CHAPTER_CONTENT}}", content
+        ).replace(
+            "{{STYLE_SPEC}}", style_spec_text
         )
         
         # 重试逻辑
