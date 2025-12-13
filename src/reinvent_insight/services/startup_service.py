@@ -14,7 +14,8 @@ def init_post_processors():
     try:
         from reinvent_insight.services.analysis.post_processors import (
             register_processor,
-            VisualInsightProcessor
+            VisualInsightProcessor,
+            SubtitleTranslationProcessor
         )
         from reinvent_insight.services.analysis.post_processors.keyframe_screenshot import KeyframeScreenshotProcessor
         
@@ -25,6 +26,11 @@ def init_post_processors():
         if config.ENABLE_KEYFRAME_SCREENSHOT:
             register_processor(KeyframeScreenshotProcessor())
             logger.info("关键帧截图处理器已注册")
+        
+        # 注册字幕翻译处理器（异步，文章生成后自动触发中文字幕翻译）
+        if getattr(config, 'SUBTITLE_AUTO_TRANSLATE', True):
+            register_processor(SubtitleTranslationProcessor())
+            logger.info("字幕翻译处理器已注册")
         
         logger.info("后处理管道已初始化")
         

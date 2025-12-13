@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from typing import Optional, List
 from enum import Enum
 
+import yt_dlp
+
 from reinvent_insight.core import config
 
 logger = logging.getLogger(__name__)
@@ -491,76 +493,101 @@ class SubtitleDownloader:
         """
         列出视频所有可用的字幕。
         
+        使用 yt-dlp Python API 获取结构化数据，更可靠。
+        
         Returns:
-            tuple: (字幕字典 {lang: is_auto}, 错误对象)
-            字幕字典格式: {'en': False, 'zh-Hans': True} 表示英文是人工字幕，中文是自动生成
+            tuple: (字幕字典 {base_lang: (original_key, is_auto)}, 错误对象)
+            字幕字典格式: {'en': ('en-eEY6OEpapPo', False)} 表示英文人工字幕，保留原始 key 用于下载
         """
         try:
             logger.info("正在获取可用字幕列表...")
-            command = self._get_base_command()
-            command.extend(['--list-subs', '--skip-download'])
-            command.append(self.url)
             
-            result = subprocess.run(
-                command,
-                capture_output=True, text=True, check=True, encoding='utf-8'
-            )
+            # 使用 yt-dlp Python API
+            ydl_opts = {
+                'skip_download': True,
+                'quiet': True,
+                'no_warnings': True,
+            }
             
-            # 解析输出，提取字幕信息
-            output = result.stdout
-            subtitles = {}
+            # 添加 Cookie 支持
+            try:
+                from reinvent_insight.services.cookie.cookie_store import CookieStore
+                store = CookieStore()
+                if store.store_path.exists():
+                    store.export_to_netscape(store.netscape_path)
+                    if store.netscape_path.exists():
+                        ydl_opts['cookiefile'] = str(store.netscape_path)
+            except Exception as e:
+                logger.warning(f"加载 Cookies 失败: {e}")
             
-            # 查找 "Available subtitles" 和 "Available automatic captions" 部分
-            in_manual_section = False
-            in_auto_section = False
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(self.url, download=False)
             
-            for line in output.splitlines():
-                line_lower = line.lower()
-                
-                if 'available subtitles' in line_lower and 'automatic' not in line_lower:
-                    in_manual_section = True
-                    in_auto_section = False
-                    continue
-                elif 'available automatic captions' in line_lower or 'auto-generated' in line_lower:
-                    in_auto_section = True
-                    in_manual_section = False
-                    continue
-                elif line.startswith('Available formats') or line.startswith('[info]'):
-                    in_manual_section = False
-                    in_auto_section = False
-                    continue
-                
-                # 提取语言代码（通常在行首）
-                if in_manual_section or in_auto_section:
-                    # 匹配语言代码格式：en, zh-Hans, zh-CN 等
-                    match = re.match(r'^([a-z]{2}(?:-[A-Z][a-z]+)?(?:-[A-Z]{2})?)\s', line)
-                    if match:
-                        lang = match.group(1)
-                        subtitles[lang] = in_auto_section  # True 表示自动生成
+            if not info:
+                return {}, DownloadError(
+                    error_type=DownloadErrorType.UNKNOWN,
+                    message="无法获取视频信息",
+                    suggestions=["检查 URL 是否正确"]
+                )
+            
+            subtitles = {}  # {base_lang: (original_key, is_auto)}
+            
+            # 获取人工字幕 - 保留原始 key
+            manual_subs = info.get('subtitles', {})
+            for lang_code in manual_subs.keys():
+                base_lang = self._normalize_lang_code(lang_code)
+                if base_lang not in subtitles:
+                    # 存储 (原始key, is_auto) 元组
+                    subtitles[base_lang] = (lang_code, False)  # False = 人工字幕
+            
+            # 获取自动字幕 - 保留原始 key
+            auto_subs = info.get('automatic_captions', {})
+            for lang_code in auto_subs.keys():
+                base_lang = self._normalize_lang_code(lang_code)
+                # 只有在没有人工字幕时才添加自动字幕
+                if base_lang not in subtitles:
+                    subtitles[base_lang] = (lang_code, True)  # True = 自动生成
             
             if subtitles:
-                manual_subs = [lang for lang, is_auto in subtitles.items() if not is_auto]
-                auto_subs = [lang for lang, is_auto in subtitles.items() if is_auto]
-                logger.info(f"找到 {len(subtitles)} 个字幕: 人工 {len(manual_subs)} 个, 自动 {len(auto_subs)} 个")
-                logger.info(f"人工字幕: {', '.join(manual_subs) if manual_subs else '无'}")
-                logger.info(f"自动字幕: {', '.join(auto_subs) if auto_subs else '无'}")
+                manual_langs = [lang for lang, (_, is_auto) in subtitles.items() if not is_auto]
+                auto_langs = [lang for lang, (_, is_auto) in subtitles.items() if is_auto]
+                logger.info(f"找到 {len(subtitles)} 个字幕: 人工 {len(manual_langs)} 个, 自动 {len(auto_langs)} 个")
+                logger.info(f"人工字幕: {', '.join(manual_langs) if manual_langs else '无'}")
+                logger.info(f"自动字幕: {', '.join(auto_langs[:10]) if auto_langs else '无'}{'...' if len(auto_langs) > 10 else ''}")
             else:
                 logger.warning("未找到任何可用字幕")
             
             return subtitles, None
             
-        except subprocess.CalledProcessError as e:
-            error_msg = e.stderr.strip() if e.stderr else str(e)
-            download_error = classify_download_error(stderr=error_msg, returncode=e.returncode)
+        except yt_dlp.utils.DownloadError as e:
+            error_msg = str(e)
+            download_error = classify_download_error(stderr=error_msg)
             logger.error(f"获取字幕列表失败: {download_error.message}")
             return {}, download_error
             
-        except FileNotFoundError as e:
+        except Exception as e:
             download_error = classify_download_error(exception=e)
-            logger.error(f"工具缺失: {download_error.message}")
+            logger.error(f"获取字幕列表失败: {e}")
             return {}, download_error
     
-    def _select_best_subtitle(self, available_subs: dict) -> Optional[str]:
+    def _normalize_lang_code(self, lang_code: str) -> str:
+        """归一化语言代码
+        
+        将 YouTube 的复杂语言代码简化为标准代码
+        例如: en-eEY6OEpapPo -> en, zh-Hans -> zh-Hans
+        """
+        # 保留常见的完整代码
+        preserved = ['zh-Hans', 'zh-Hant', 'zh-CN', 'zh-TW', 'en-US', 'en-GB', 'pt-PT', 'pt-BR']
+        if lang_code in preserved:
+            return lang_code
+        
+        # 复杂后缀（如 en-eEY6OEpapPo），取基础语言
+        if '-' in lang_code and len(lang_code) > 6:
+            return lang_code.split('-')[0]
+        
+        return lang_code
+    
+    def _select_best_subtitle(self, available_subs: dict) -> tuple[Optional[str], Optional[str], bool]:
         """
         根据优先级选择最佳字幕。
         
@@ -571,123 +598,266 @@ class SubtitleDownloader:
         4. 自动中文字幕
         
         Args:
-            available_subs: 字幕字典 {lang: is_auto}
+            available_subs: 字幕字典 {base_lang: (original_key, is_auto)}
             
         Returns:
-            选中的语言代码，如果没有可用字幕返回 None
+            (base_lang, original_key, is_auto) 元组
+            base_lang: 归一化后的语言代码，用于文件命名
+            original_key: 原始语言代码，用于 yt-dlp 下载
+            is_auto: 是否是自动字幕
+            如果没有可用字幕返回 (None, None, False)
         """
         if not available_subs:
-            return None
+            return None, None, False
         
-        # 定义优先级列表
-        priority_list = [
+        # 定义优先级列表（按 base_lang 匹配）
+        # 优先级：人工字幕（任何语言） > 自动字幕
+        priority_langs = [
             # 人工英文
-            ('en', False),
-            ('en-US', False),
-            ('en-GB', False),
+            'en', 'en-US', 'en-GB',
             # 人工中文
-            ('zh-Hans', False),
-            ('zh-CN', False),
-            ('zh', False),
-            ('zh-Hant', False),
-            ('zh-TW', False),
-            # 自动英文
-            ('en', True),
-            ('en-US', True),
-            ('en-GB', True),
-            # 自动中文
-            ('zh-Hans', True),
-            ('zh-CN', True),
-            ('zh', True),
-            ('zh-Hant', True),
-            ('zh-TW', True),
+            'zh-Hans', 'zh-CN', 'zh', 'zh-Hant', 'zh-TW',
         ]
         
-        for lang, is_auto in priority_list:
-            if lang in available_subs and available_subs[lang] == is_auto:
-                sub_type = "自动生成" if is_auto else "人工"
-                logger.info(f"选择字幕: {lang} ({sub_type})")
-                return lang
+        # 第一轮：优先选择人工字幕
+        for lang in priority_langs:
+            if lang in available_subs:
+                original_key, is_auto = available_subs[lang]
+                if not is_auto:  # 人工字幕
+                    logger.info(f"选择字幕: {lang} (人工, 原始key: {original_key})")
+                    return lang, original_key, False
         
-        # 如果没有匹配优先级的，选择第一个可用的
-        first_lang = next(iter(available_subs))
-        sub_type = "自动生成" if available_subs[first_lang] else "人工"
-        logger.info(f"使用备选字幕: {first_lang} ({sub_type})")
-        return first_lang
+        # 第二轮：检查是否有其他语言的人工字幕
+        for base_lang, (original_key, is_auto) in available_subs.items():
+            if not is_auto:  # 人工字幕
+                logger.info(f"选择字幕: {base_lang} (人工, 原始key: {original_key})")
+                return base_lang, original_key, False
+        
+        # 第三轮：完全没有人工字幕，回落到自动字幕
+        auto_priority = ['en', 'en-US', 'en-GB', 'zh-Hans', 'zh-CN', 'zh']
+        
+        for lang in auto_priority:
+            if lang in available_subs:
+                original_key, is_auto = available_subs[lang]
+                if is_auto:
+                    logger.info(f"选择字幕: {lang} (自动生成 - 回落, 原始key: {original_key})")
+                    return lang, original_key, True
+        
+        # 最后回落：选择第一个可用的自动字幕
+        for base_lang, (original_key, is_auto) in available_subs.items():
+            if is_auto:
+                logger.info(f"使用备选字幕: {base_lang} (自动生成, 原始key: {original_key})")
+                return base_lang, original_key, True
+        
+        return None, None, False
     
-    def _download_single_subtitle(self, lang: str) -> tuple[bool, Optional[DownloadError]]:
+    def _convert_srt_to_vtt(self, srt_path: Path, vtt_path: Path) -> None:
         """
-        下载指定语言的字幕，带重试机制。
+        将 SRT 字幕转换为 VTT 格式
         
         Args:
-            lang: 语言代码
+            srt_path: SRT 文件路径
+            vtt_path: 输出的 VTT 文件路径
+        """
+        try:
+            srt_content = srt_path.read_text(encoding='utf-8')
+            
+            # VTT 头部
+            vtt_lines = ['WEBVTT', '']
+            
+            # 解析 SRT 并转换
+            # SRT 格式: 序号\n时间轴\n文本\n\n
+            blocks = re.split(r'\n\n+', srt_content.strip())
+            
+            for block in blocks:
+                lines = block.strip().split('\n')
+                if len(lines) >= 2:
+                    # 跳过序号行，查找时间轴
+                    time_line = None
+                    text_lines = []
+                    
+                    for i, line in enumerate(lines):
+                        # 检测时间轴行: 00:00:01,000 --> 00:00:04,000
+                        if '-->' in line:
+                            # 将逗号替换为点（SRT 用逗号，VTT 用点）
+                            time_line = line.replace(',', '.')
+                            text_lines = lines[i+1:]
+                            break
+                    
+                    if time_line and text_lines:
+                        vtt_lines.append(time_line)
+                        vtt_lines.extend(text_lines)
+                        vtt_lines.append('')
+            
+            # 写入 VTT 文件
+            vtt_path.write_text('\n'.join(vtt_lines), encoding='utf-8')
+            logger.info(f"SRT 转 VTT 完成: {vtt_path.name}")
+            
+            # 删除中间 SRT 文件
+            try:
+                srt_path.unlink()
+            except Exception:
+                pass
+                
+        except Exception as e:
+            logger.error(f"SRT 转 VTT 失败: {e}")
+            raise
+    
+    def _download_single_subtitle(self, original_key: str, base_lang: str, is_auto: bool = False) -> tuple[bool, Optional[DownloadError]]:
+        """
+        使用 yt-dlp Python 库下载指定语言的字幕。
+        
+        核心：使用 subtitlesformat='srt' 让 yt-dlp 自动合并重复的滚动行，
+        然后转换为 VTT 格式供系统使用。
+        
+        Args:
+            original_key: 原始语言代码（如 en-eEY6OEpapPo），用于 yt-dlp 下载
+            base_lang: 归一化后的语言代码（如 en），用于文件命名
+            is_auto: 是否是自动生成字幕
             
         Returns:
             tuple: (是否成功, 错误对象)
         """
         attempt = 0
+        output_template = str(config.SUBTITLE_DIR / f"{self.metadata.sanitized_title}.%(ext)s")
+        
         while attempt <= self.retry_strategy.config.max_attempts:
             try:
-                logger.info(f"下载 {lang} 字幕 (第 {attempt + 1} 次)...")
+                logger.info(f"下载 {original_key} 字幕 (第 {attempt + 1} 次)...")
                 
-                command = self._get_base_command()
-                command.extend([
-                    '--write-sub',
-                    '--write-auto-sub',
-                    '--sub-lang', lang,
-                    '--sub-format', 'vtt',
-                    '--skip-download',
-                    '-o', str(config.SUBTITLE_DIR / f"{self.metadata.sanitized_title}.%(ext)s"),
-                ])
-                command.append(self.url)
-
-                result = subprocess.run(
-                    command,
-                    capture_output=True, text=True, check=True, encoding='utf-8'
-                )
+                # 构建 yt-dlp 配置
+                ydl_opts = {
+                    # 不下载视频，只处理字幕
+                    'skip_download': True,
+                    
+                    # 根据 is_auto 决定下载人工还是自动字幕
+                    'writesubtitles': not is_auto,
+                    'writeautomaticsub': is_auto,
+                    
+                    # 核心：强制转换为 SRT 格式
+                    # yt-dlp 会在转换过程中合并重复的滚动行，解决"结巴"问题
+                    'subtitlesformat': 'srt',
+                    
+                    # 指定语言 - 使用原始的完整 key
+                    'subtitleslangs': [original_key],
+                    
+                    # 文件命名模板
+                    'outtmpl': output_template,
+                    
+                    # 不要忽略错误，让异常抛出
+                    'ignoreerrors': False,
+                    
+                    # 不要播放列表
+                    'noplaylist': True,
+                    
+                    # 网络配置
+                    'socket_timeout': config.DOWNLOAD_TIMEOUT,
+                    'retries': config.DOWNLOAD_RETRY_COUNT,
+                    
+                    # 输出日志（调试用）
+                    'quiet': False,
+                    'no_warnings': False,
+                }
+                
+                # 添加 Cookie 支持
+                try:
+                    from reinvent_insight.services.cookie.cookie_store import CookieStore
+                    store = CookieStore()
+                    if store.store_path.exists():
+                        store.export_to_netscape(store.netscape_path)
+                        if store.netscape_path.exists():
+                            ydl_opts['cookiefile'] = str(store.netscape_path)
+                            logger.info(f"使用 Cookies 文件: {store.netscape_path}")
+                except Exception as e:
+                    logger.warning(f"加载 Cookies 失败: {e}")
+                
+                # 使用 yt-dlp Python API 下载
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([self.url])
                 
                 # 检查是否成功下载了字幕文件
-                expected_vtt_path = config.SUBTITLE_DIR / f"{self.metadata.sanitized_title}.{lang}.vtt"
-                if expected_vtt_path.exists():
-                    logger.info(f"成功下载 {lang} 字幕: {expected_vtt_path.name}")
+                # yt-dlp 会使用原始语言代码命名，需要查找并重命名
+                
+                # 查找匹配的 SRT 文件（精确匹配或模糊匹配）
+                srt_patterns = [
+                    f"{self.metadata.sanitized_title}.{original_key}.srt",  # 精确匹配原始 key
+                    f"{self.metadata.sanitized_title}.{base_lang}.srt",  # 基础语言匹配
+                    f"{self.metadata.sanitized_title}.{base_lang}-*.srt",  # 模糊匹配 en-xxx
+                ]
+                
+                found_srt = None
+                for pattern in srt_patterns:
+                    matches = list(config.SUBTITLE_DIR.glob(pattern))
+                    if matches:
+                        found_srt = matches[0]
+                        break
+                
+                if found_srt:
+                    # 统一重命名为 base_lang
+                    target_vtt = config.SUBTITLE_DIR / f"{self.metadata.sanitized_title}.{base_lang}.vtt"
+                    logger.info(f"SRT 字幕下载成功: {found_srt.name}，转换为 VTT 格式...")
+                    self._convert_srt_to_vtt(found_srt, target_vtt)
+                    logger.info(f"成功下载并转换 {original_key} 字幕: {target_vtt.name}")
                     return True, None
                 
-            except subprocess.CalledProcessError as e:
-                error_msg = e.stderr.strip() if e.stderr else str(e)
-                download_error = classify_download_error(stderr=error_msg, returncode=e.returncode)
+                # 查找 VTT 文件（可能直接下载了 VTT）
+                vtt_patterns = [
+                    f"{self.metadata.sanitized_title}.{original_key}.vtt",
+                    f"{self.metadata.sanitized_title}.{base_lang}.vtt",
+                    f"{self.metadata.sanitized_title}.{base_lang}-*.vtt",
+                ]
+                
+                for pattern in vtt_patterns:
+                    matches = list(config.SUBTITLE_DIR.glob(pattern))
+                    if matches:
+                        found_vtt = matches[0]
+                        # 如果不是标准命名，重命名
+                        target_vtt = config.SUBTITLE_DIR / f"{self.metadata.sanitized_title}.{base_lang}.vtt"
+                        if found_vtt != target_vtt:
+                            found_vtt.rename(target_vtt)
+                        logger.info(f"成功下载 {original_key} 字幕: {target_vtt.name}")
+                        return True, None
+                
+                # 没找到字幕文件
+                logger.warning(f"下载完成但未找到字幕文件，已检查模式: {srt_patterns + vtt_patterns}")
+                
+            except yt_dlp.utils.DownloadError as e:
+                error_msg = str(e)
+                download_error = classify_download_error(stderr=error_msg)
                 self.error_history.append(download_error)
                 
                 logger.warning(
-                    f"下载 {lang} 字幕失败 (第 {attempt + 1} 次): "
+                    f"下载 {original_key} 字幕失败 (第 {attempt + 1} 次): "
                     f"{download_error.error_type.value} - {download_error.message}"
                 )
                 
-                # 判断是否应该重试
                 if not self.retry_strategy.should_retry(download_error, attempt):
                     logger.error(f"错误不可重试或已达到最大重试次数")
                     return False, download_error
                 
-                # 计算延迟时间并等待
                 delay = self.retry_strategy.get_delay(download_error, attempt)
                 logger.info(f"等待 {delay:.1f} 秒后重试...")
                 time.sleep(delay)
                 
-                attempt += 1
-                continue
-                
-            except FileNotFoundError as e:
-                download_error = classify_download_error(exception=e)
+            except Exception as e:
+                error_msg = str(e)
+                download_error = classify_download_error(stderr=error_msg, exception=e)
                 self.error_history.append(download_error)
-                logger.error(f"工具缺失: {download_error.message}")
-                return False, download_error
+                logger.error(f"下载失败: {download_error.message}")
+                
+                if not self.retry_strategy.should_retry(download_error, attempt):
+                    return False, download_error
+                
+                delay = self.retry_strategy.get_delay(download_error, attempt)
+                logger.info(f"等待 {delay:.1f} 秒后重试...")
+                time.sleep(delay)
             
-            # 如果成功但没有返回，说明文件不存在，继续重试
             attempt += 1
         
         # 重试失败
         last_error = self.error_history[-1] if self.error_history else DownloadError(
             error_type=DownloadErrorType.UNKNOWN,
-            message=f"下载 {lang} 字幕失败",
+            message=f"下载 {original_key} 字幕失败",
             suggestions=["检查网络连接", "稍后重试"]
         )
         return False, last_error
@@ -701,8 +871,8 @@ class SubtitleDownloader:
             如果成功，错误信息为 None
             如果失败，字幕文本和元数据为 None
         """
-        # 获取元数据
-        if not self._fetch_metadata() or not self.metadata:
+        # 获取元数据（复用已有的 metadata，避免重复调用）
+        if not self.metadata and not self._fetch_metadata():
             error = DownloadError(
                 error_type=DownloadErrorType.UNKNOWN,
                 message="无法获取视频元数据",
@@ -737,9 +907,10 @@ class SubtitleDownloader:
             return None, None, error
         
         # 2. 根据优先级选择最佳字幕
-        selected_lang = self._select_best_subtitle(available_subs)
+        # 返回 (base_lang, original_key, is_auto)
+        base_lang, original_key, is_auto = self._select_best_subtitle(available_subs)
         
-        if not selected_lang:
+        if not base_lang or not original_key:
             error = DownloadError(
                 error_type=DownloadErrorType.NO_SUBTITLES,
                 message="无法选择合适的字幕",
@@ -747,13 +918,14 @@ class SubtitleDownloader:
             )
             return None, None, error
         
-        # 3. 下载选中的字幕
-        success, download_error = self._download_single_subtitle(selected_lang)
+        # 3. 下载选中的字幕（使用原始 key 下载，base_lang 用于文件命名）
+        success, download_error = self._download_single_subtitle(original_key, base_lang, is_auto)
         
         if success:
-            vtt_path = config.SUBTITLE_DIR / f"{self.metadata.sanitized_title}.{selected_lang}.vtt"
+            # 使用 base_lang 查找文件（下载时已统一重命名）
+            vtt_path = config.SUBTITLE_DIR / f"{self.metadata.sanitized_title}.{base_lang}.vtt"
             if vtt_path.exists():
-                logger.info(f"使用 {selected_lang} 字幕文件: {vtt_path.name}")
+                logger.info(f"使用 {base_lang} 字幕文件: {vtt_path.name}")
                 subtitle_text = self.clean_vtt(vtt_path.read_text(encoding="utf-8"))
                 return subtitle_text, self.metadata, None
         

@@ -31,6 +31,12 @@ from .ultra import (
     ULTRA_CHAPTER_INSTRUCTIONS,
 )
 
+from .subtitle import (
+    SUBTITLE_TRANSLATION_PROMPT_WITH_CONTEXT,
+    SUBTITLE_TRANSLATION_PROMPT_FALLBACK,
+    build_translation_prompt,
+)
+
 __all__ = [
     # Common
     'PDF_MULTIMODAL_GUIDE',
@@ -50,4 +56,8 @@ __all__ = [
     'DEEP_OUTLINE_INSTRUCTIONS',
     'ULTRA_OUTLINE_INSTRUCTIONS',
     'ULTRA_CHAPTER_INSTRUCTIONS',
+    # Subtitle
+    'SUBTITLE_TRANSLATION_PROMPT_WITH_CONTEXT',
+    'SUBTITLE_TRANSLATION_PROMPT_FALLBACK',
+    'build_translation_prompt',
 ]

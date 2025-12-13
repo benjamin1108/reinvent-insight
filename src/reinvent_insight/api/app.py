@@ -25,6 +25,7 @@ from reinvent_insight.api.routes import (
     visual_router,
     ultra_deep_router,
     tasks_router,
+    subtitles_router,
 )
 
 setup_logger(config.LOG_LEVEL)
@@ -61,6 +62,7 @@ app.include_router(system_router)
 app.include_router(visual_router)
 app.include_router(ultra_deep_router)
 app.include_router(tasks_router)
+app.include_router(subtitles_router)
 
 
 @app.on_event("startup")
@@ -250,11 +252,26 @@ if web_dir.is_dir():
 def serve(host: str = "0.0.0.0", port: int = 8001, reload: bool = False):
     """使用 uvicorn 启动 Web 服务器。"""
     import uvicorn
+    import signal
+    import os
+    
+    # 添加信号处理器，解决 run_in_executor 中的同步调用无法中断的问题
+    def force_exit(signum, frame):
+        logger.info(f"\n收到信号 {signum}，强制退出进程...")
+        os._exit(0)
+    
+    # 在非 reload 模式下注册信号处理器
+    if not reload:
+        signal.signal(signal.SIGINT, force_exit)
+        signal.signal(signal.SIGTERM, force_exit)
+    
+    # 在 reload 模式下使用 handle_exit 参数
     uvicorn.run(
         "reinvent_insight.api.app:app",
         host=host,
         port=port,
-        reload=reload
+        reload=reload,
+        timeout_graceful_shutdown=1  # 设置 1 秒优雅关闭超时
     )
 
 

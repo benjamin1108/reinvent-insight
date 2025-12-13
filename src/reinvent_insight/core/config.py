@@ -273,6 +273,10 @@ TTS_TASK_TIMEOUT = int(os.getenv("TTS_TASK_TIMEOUT", "600"))
 # TTS 预处理规则版本
 TTS_PREPROCESSING_VERSION = "1.0.0"
 
+# --- 字幕翻译配置 ---
+# 是否在文章生成后自动翻译中文字幕
+SUBTITLE_AUTO_TRANSLATE = os.getenv("SUBTITLE_AUTO_TRANSLATE", "true").lower() == "true"
+
 # --- 模型可观测层配置 ---
 # 是否启用模型可观测
 MODEL_OBSERVABILITY_ENABLED = os.getenv("MODEL_OBSERVABILITY_ENABLED", "false").lower() == "true"

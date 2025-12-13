@@ -153,6 +153,80 @@
   display: block;
 }
 
+/* 字幕叠加层 */
+.floating-video-player__subtitle {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 95%;
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 18px;
+  line-height: 1.5;
+  text-align: center;
+  cursor: ns-resize;
+  z-index: 5;
+  white-space: pre-wrap;
+  word-break: normal;
+  overflow-wrap: break-word;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9);
+  transition: opacity 0.15s ease;
+  user-select: none;
+}
+
+.floating-video-player__subtitle:hover {
+  background: rgba(0, 0, 0, 0.9);
+}
+
+.floating-video-player__subtitle--dragging {
+  opacity: 0.8;
+  cursor: grabbing;
+}
+
+.floating-video-player__subtitle--hidden {
+  opacity: 0;
+}
+
+/* 字幕控制按钮 */
+.floating-video-player__subtitle-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+  outline: none;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.floating-video-player__subtitle-btn:hover {
+  background: rgba(251, 146, 60, 0.3);
+  border-color: rgba(251, 146, 60, 0.5);
+  color: #fb923c;
+  transform: scale(1.1);
+}
+
+.floating-video-player__subtitle-btn--active {
+  background: rgba(251, 146, 60, 0.4);
+  border-color: rgba(251, 146, 60, 0.6);
+  color: #fb923c;
+}
+
+.floating-video-player__subtitle-btn--loading {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 /* 调整大小手柄 */
 .floating-video-player__resize-handle {
   position: absolute;

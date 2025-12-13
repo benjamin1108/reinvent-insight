@@ -27,6 +27,28 @@
       
       <!-- 控制按钮 -->
       <div class="floating-video-player__controls">
+        <!-- 字幕开关按钮 -->
+        <button @click="toggleSubtitle" 
+                class="floating-video-player__subtitle-btn"
+                :class="{ 
+                  'floating-video-player__subtitle-btn--active': subtitleEnabled,
+                  'floating-video-player__subtitle-btn--loading': subtitleLoading
+                }"
+                :title="subtitleButtonTitle"
+                :disabled="subtitleLoading">
+          CC
+        </button>
+        
+        <!-- 字幕语言切换按钮 -->
+        <button v-if="subtitleEnabled"
+                @click="toggleSubtitleLang" 
+                class="floating-video-player__subtitle-btn"
+                :class="{ 'floating-video-player__subtitle-btn--loading': subtitleLoading }"
+                :title="subtitleLang === 'zh' ? '切换到英文字幕' : '切换到中文字幕'"
+                :disabled="subtitleLoading">
+          {{ subtitleLang === 'zh' ? '中' : 'EN' }}
+        </button>
+        
         <!-- 最小化/恢复按钮 -->
         <button @click="toggleMinimize" 
                 class="floating-video-player__control-btn" 
@@ -61,11 +83,20 @@
     
     <!-- 视频内容区域 -->
     <div v-show="!minimized" class="floating-video-player__content">
-      <iframe 
-        :src="iframeSrc"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowfullscreen>
-      </iframe>
+      <div :id="iframeContainerId" style="width:100%;height:100%;"></div>
+      
+      <!-- 字幕叠加层 -->
+      <div v-if="subtitleEnabled && currentSubtitle" 
+           class="floating-video-player__subtitle"
+           :class="{ 
+             'floating-video-player__subtitle--hidden': !currentSubtitle,
+             'floating-video-player__subtitle--dragging': isSubtitleDragging
+           }"
+           :style="{ bottom: subtitleBottom + 'px' }"
+           @mousedown="startSubtitleDrag"
+           @touchstart="startSubtitleDrag">
+        {{ currentSubtitle }}
+      </div>
     </div>
     
     <!-- 调整大小手柄 -->

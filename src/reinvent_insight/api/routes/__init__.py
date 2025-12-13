@@ -13,6 +13,7 @@ from .system import router as system_router
 from .visual import router as visual_router
 from .ultra_deep import router as ultra_deep_router
 from .tasks import router as tasks_router
+from .subtitles import router as subtitles_router
 
 __all__ = [
     "auth_router",
@@ -28,4 +29,5 @@ __all__ = [
     "visual_router",
     "ultra_deep_router",
     "tasks_router",
+    "subtitles_router",
 ]

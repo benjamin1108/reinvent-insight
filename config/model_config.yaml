@@ -283,6 +283,44 @@ tasks:
       max_retries: 3
       retry_backoff_base: 2.0
 
+  # --------------------------------------------------------------------------
+  # 字幕翻译任务
+  # --------------------------------------------------------------------------
+  # 用于将英文字幕翻译为中文，同时纠正机器生成字幕的错误
+  subtitle_translation:
+    provider: gemini
+    model_name: gemini-3-pro-preview
+    api_key_env: GEMINI_API_KEY
+    
+    # 思考模式配置
+    thinking:
+      low_thinking: true  # 使用低思考模式（翻译任务适合快速响应）
+    
+    generation:
+      # 使用较低温度以获得稳定、准确的翻译
+      temperature: 0
+      top_p: 0.9
+      top_k: 40
+      # 翻译合并后输出需要足够空间
+      max_output_tokens: 65535
+    
+    rate_limit:
+      interval: 0.5
+      max_retries: 3
+      retry_backoff_base: 2.0
+      timeout: 3600
+    
+    # 字幕翻译特定配置
+    translation:
+      # 每段翻译的最大字幕条数（减小以避免输出截断）
+      chunk_size: 50
+      # 目标语言
+      target_language: "中文"
+      # 源语言
+      source_language: "英文"
+      # 并发调用间隔（秒）
+      concurrent_delay: 1.0
+
 # ============================================================================
 # 配置说明
 # ============================================================================
