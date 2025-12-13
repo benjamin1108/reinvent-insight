@@ -172,7 +172,7 @@
   white-space: pre-wrap;
   word-break: normal;
   overflow-wrap: break-word;
-  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9);
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9), -1px -1px 3px rgba(0, 0, 0, 0.9);
   transition: opacity 0.15s ease;
   user-select: none;
 }
@@ -188,6 +188,105 @@
 
 .floating-video-player__subtitle--hidden {
   opacity: 0;
+}
+
+/* 字幕设置面板 */
+.floating-video-player__subtitle-settings {
+  position: absolute;
+  top: 50px;
+  right: 10px;
+  background: rgba(10, 14, 23, 0.95);
+  border: 1px solid rgba(251, 146, 60, 0.4);
+  border-radius: 8px;
+  padding: 12px;
+  z-index: 20;
+  min-width: 180px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.floating-video-player__settings-title {
+  color: #fb923c;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(251, 146, 60, 0.2);
+}
+
+.floating-video-player__settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.floating-video-player__settings-row:last-child {
+  margin-bottom: 0;
+}
+
+.floating-video-player__settings-label {
+  color: #a0a0a0;
+  font-size: 12px;
+}
+
+.floating-video-player__settings-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.floating-video-player__settings-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #e0e0e0;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.floating-video-player__settings-btn:hover:not(:disabled) {
+  background: rgba(251, 146, 60, 0.3);
+  border-color: rgba(251, 146, 60, 0.5);
+  color: #fb923c;
+}
+
+.floating-video-player__settings-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.floating-video-player__settings-value {
+  color: #e0e0e0;
+  font-size: 12px;
+  min-width: 40px;
+  text-align: center;
+}
+
+.floating-video-player__color-options {
+  display: flex;
+  gap: 6px;
+}
+
+.floating-video-player__color-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.floating-video-player__color-btn:hover {
+  transform: scale(1.15);
+}
+
+.floating-video-player__color-btn--active {
+  border-color: #fb923c;
+  box-shadow: 0 0 8px rgba(251, 146, 60, 0.6);
 }
 
 /* 字幕控制按钮 */

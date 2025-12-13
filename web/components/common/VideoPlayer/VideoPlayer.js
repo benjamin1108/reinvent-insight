@@ -173,6 +173,21 @@ export default {
     let subtitleDragStartY = 0;
     let subtitleStartBottom = 0;
     
+    // 字幕样式控制
+    const subtitleFontSize = ref(18); // 默认 18px
+    const subtitleColor = ref('#ffffff'); // 默认白色
+    const showSubtitleSettings = ref(false); // 是否显示设置面板
+    
+    // 可选颜色列表
+    const colorOptions = [
+      { name: '白色', value: '#ffffff' },
+      { name: '黄色', value: '#ffff00' },
+      { name: '青色', value: '#00ffff' },
+      { name: '绿色', value: '#00ff00' },
+      { name: '粉色', value: '#ff69b4' },
+      { name: '橙色', value: '#ffa500' }
+    ];
+    
     // 字幕按钮提示
     const subtitleButtonTitle = computed(() => {
       if (subtitleLoading.value) return '加载字幕中...';
@@ -386,8 +401,29 @@ export default {
       }
     };
     
-    const onPlayerReady = (event) => {
+    const onPlayerReady = async (event) => {
       console.log('YouTube player ready');
+      
+      // 自动尝试加载中文字幕
+      if (!subtitleEnabled.value && subtitleCues.value.length === 0) {
+        try {
+          // 先检查是否有中文字幕
+          const response = await fetch(`/api/public/subtitle/${props.videoId}/translated`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.vtt && !data.generating) {
+              // 有中文字幕，自动加载并启用
+              subtitleCues.value = parseVTT(data.vtt);
+              subtitleEnabled.value = true;
+              subtitleLang.value = 'zh';
+              console.log(`自动加载中文字幕: ${subtitleCues.value.length} 条`);
+            }
+          }
+        } catch (e) {
+          // 静默失败，不影响播放
+          console.log('自动加载字幕失败，用户可手动开启');
+        }
+      }
     };
     
     const onPlayerStateChange = (event) => {
@@ -532,6 +568,7 @@ export default {
         subtitleEnabled.value = false;
         stopSubtitleSync();
         currentSubtitle.value = '';
+        showSubtitleSettings.value = false;
       } else {
         // 开启字幕
         subtitleEnabled.value = true;
@@ -548,6 +585,30 @@ export default {
           }
         }
       }
+    };
+    
+    // 字幕字体调大
+    const increaseSubtitleSize = () => {
+      if (subtitleFontSize.value < 32) {
+        subtitleFontSize.value += 2;
+      }
+    };
+    
+    // 字幕字体调小
+    const decreaseSubtitleSize = () => {
+      if (subtitleFontSize.value > 12) {
+        subtitleFontSize.value -= 2;
+      }
+    };
+    
+    // 设置字幕颜色
+    const setSubtitleColor = (color) => {
+      subtitleColor.value = color;
+    };
+    
+    // 切换设置面板
+    const toggleSubtitleSettings = () => {
+      showSubtitleSettings.value = !showSubtitleSettings.value;
     };
     
     // 监听props变化
@@ -666,6 +727,10 @@ export default {
       subtitleLang,
       subtitleBottom,
       isSubtitleDragging,
+      subtitleFontSize,
+      subtitleColor,
+      showSubtitleSettings,
+      colorOptions,
       
       // 方法
       close,
@@ -674,7 +739,11 @@ export default {
       startResize,
       toggleSubtitle,
       toggleSubtitleLang,
-      startSubtitleDrag
+      startSubtitleDrag,
+      increaseSubtitleSize,
+      decreaseSubtitleSize,
+      setSubtitleColor,
+      toggleSubtitleSettings
     };
   }
 }; 
