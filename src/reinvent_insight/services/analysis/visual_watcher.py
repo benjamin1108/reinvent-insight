@@ -13,12 +13,12 @@ import asyncio
 from pathlib import Path
 from typing import Set
 
-from loguru import logger
+from reinvent_insight.core.logger import get_logger
 
 from reinvent_insight.core import config
 from .task_manager import manager as task_manager
 
-logger = logger.bind(name=__name__)
+logger = get_logger(__name__)
 
 
 class VisualInterpretationWatcher:
@@ -327,7 +327,15 @@ class VisualInterpretationWatcher:
             # 提取版本号
             version = self._extract_version(md_file.stem)
             
-            logger.info(f"触发可视化生成任务: {task_id} for {md_file.name} (版本: {version})")
+            # 尝试查找对应的 task_dir
+            task_dir = self._find_task_dir_for_article(md_file)
+            
+            if not task_dir:
+                logger.info(
+                    f"{md_file.name}：未找到 task_dir，使用一次性生成模式"
+                )
+            
+            logger.info(f"触发可视化生成任务: {task_id} for {md_file.name} (版本: {version}, 分章节: {bool(task_dir)})")
             
             # 创建工作器
             from .visual_worker import VisualInterpretationWorker
@@ -335,7 +343,8 @@ class VisualInterpretationWatcher:
                 task_id=task_id,
                 article_path=str(md_file),
                 model_name=self.model_name,
-                version=version
+                version=version,
+                task_dir=task_dir
             )
             
             # 创建后台任务
@@ -345,3 +354,65 @@ class VisualInterpretationWatcher:
             
         except Exception as e:
             logger.error(f"触发可视化生成失败: {e}", exc_info=True)
+    
+    def _find_task_dir_for_article(self, md_file: Path) -> str:
+        """
+        尝试根据文章查找对应的 task_dir
+        
+        查找逻辑：搜索 tasks 目录下最近的包含章节文件的任务目录
+        
+        Args:
+            md_file: Markdown 文件路径
+            
+        Returns:
+            task_dir 路径，未找到返回空字符串
+        """
+        from reinvent_insight.domain.workflows.base import TASKS_ROOT_DIR
+        
+        tasks_root = Path(TASKS_ROOT_DIR)
+        if not tasks_root.exists():
+            return ""
+        
+        # 从文章中提取 video_id 或其他标识符
+        try:
+            content = md_file.read_text(encoding="utf-8")
+            # 提取 doc_hash 或 task_id的一部分
+            import yaml
+            if content.startswith("---"):
+                parts = content.split("---", 2)
+                if len(parts) >= 3:
+                    metadata = yaml.safe_load(parts[1])
+                    # 尝试从元数据中获取 task_dir
+                    if metadata.get("task_dir"):
+                        task_dir_path = Path(metadata["task_dir"])
+                        if task_dir_path.exists():
+                            return str(task_dir_path)
+        except Exception:
+            pass
+        
+        # 回退：搜索最近日期目录下的任务目录
+        date_dirs = sorted(tasks_root.iterdir(), reverse=True)
+        for date_dir in date_dirs[:3]:  # 只检查最近 3 天
+            if not date_dir.is_dir():
+                continue
+            
+            for task_dir in sorted(date_dir.iterdir(), reverse=True):
+                if not task_dir.is_dir():
+                    continue
+                
+                # 检查是否有章节文件
+                chapter_files = list(task_dir.glob("chapter_*.md"))
+                if chapter_files:
+                    # 进一步验证：检查 article.md 是否与当前文章匹配
+                    article_in_task = task_dir / "article.md"
+                    if article_in_task.exists():
+                        try:
+                            task_content = article_in_task.read_text(encoding="utf-8", errors="ignore")[:2000]
+                            md_content = md_file.read_text(encoding="utf-8", errors="ignore")[:2000]
+                            # 简单比对前 2000 字符
+                            if task_content[:500] == md_content[:500]:
+                                return str(task_dir)
+                        except Exception:
+                            pass
+        
+        return ""

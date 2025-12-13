@@ -1,283 +1,638 @@
-"""
-可视化解读生成工作器
+"""可视化解读生成工作器
 
 该模块负责将深度解读文章转换为高度可视化的 HTML 网页。
-使用 text2html.txt 中定义的提示词指导 AI 生成符合设计规范的可视化内容。
+采用分阶段生成模式：
+1. AI 设计 Header（样式 + 标题）
+2. AI 分章节生成内容（灵活设计）
+3. AI 生成 Footer（脚本 + 结尾）
 """
 
 import os
 import re
 import asyncio
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Dict
 from datetime import datetime
 
-from loguru import logger
-
 from reinvent_insight.core import config
+from reinvent_insight.core.logger import get_logger
 from reinvent_insight.infrastructure.ai.model_config import get_model_client
 from .task_manager import manager as task_manager
 
-logger = logger.bind(name=__name__)
+logger = get_logger(__name__)
+
+# 提示词文件路径
+PROMPT_DIR = Path("./prompt/visual")
+HEADER_PROMPT_PATH = PROMPT_DIR / "header_prompt.txt"
+CHAPTER_PROMPT_PATH = PROMPT_DIR / "chapter_prompt.txt"
+FOOTER_PROMPT_PATH = PROMPT_DIR / "footer_prompt.txt"
+TEXT2HTML_PROMPT_PATH = Path("./prompt/text2html.txt")
 
 
 class VisualInterpretationWorker:
-    """可视化解读生成工作器"""
+    """可视化解读生成工作器
     
-    def __init__(self, task_id: str, article_path: str, model_name: str = None, version: int = 0):
-        """
-        初始化可视化解读工作器
-        
-        Args:
-            task_id: 任务ID（用于进度推送）
-            article_path: 深度解读文章的文件路径
-            model_name: AI模型名称（已废弃，保留用于兼容性）
-            version: 文章版本号（默认0表示无版本）
-        """
+    采用分阶段生成：AI 设计 Header → 分章节生成内容 → AI 生成 Footer
+    每个阶段都由 AI 灵活设计，保持每篇文章的独特性。
+    """
+    
+    def __init__(
+        self, 
+        task_id: str, 
+        article_path: str, 
+        model_name: str = None, 
+        version: int = 0,
+        task_dir: str = None
+    ):
+        """初始化可视化解读工作器"""
         self.task_id = task_id
         self.article_path = Path(article_path)
         self.version = version
+        self.task_dir = Path(task_dir) if task_dir else None
+        
         # 使用任务类型获取模型客户端
         self.client = get_model_client("visual_generation")
-        self.text2html_prompt = self._load_text2html_prompt()
         self.max_retries = 3
         
-        logger.info(f"初始化可视化工作器 - 任务: {task_id}, 文章: {article_path}, 版本: {version}")
+        # 加载提示词
+        self.header_prompt = self._load_prompt(HEADER_PROMPT_PATH)
+        self.chapter_prompt = self._load_prompt(CHAPTER_PROMPT_PATH)
+        self.footer_prompt = self._load_prompt(FOOTER_PROMPT_PATH)
+        self.text2html_prompt = self._load_prompt(TEXT2HTML_PROMPT_PATH)
+        
+        # 判断模式：有 task_dir 和章节文件则用分章节模式
+        self.use_chunked_mode = self._check_chunked_mode()
+        
+        logger.info(
+            f"初始化可视化工作器 - 任务: {task_id}, 分章节模式: {self.use_chunked_mode}"
+        )
     
-    def _load_text2html_prompt(self) -> str:
-        """
-        加载 text2html.txt 提示词
+    def _load_prompt(self, path: Path) -> str:
+        """加载提示词文件"""
+        if not path.exists():
+            logger.warning(f"提示词文件不存在: {path}")
+            return ""
+        try:
+            return path.read_text(encoding="utf-8")
+        except Exception as e:
+            logger.error(f"读取提示词失败 {path}: {e}")
+            return ""
+    
+    def _check_chunked_mode(self) -> bool:
+        """检查是否可以使用分章节模式
         
-        Returns:
-            提示词内容
-            
-        Raises:
-            FileNotFoundError: 如果提示词文件不存在
+        优先级：
+        1. task_dir 存在且有章节文件 → True
+        2. 文章内容可以精准还原章节 → True（回退模式）
+        3. 其他情况 → False（使用一次性模式）
         """
-        prompt_path = Path("./prompt/text2html.txt")
+        # 方式1：task_dir 中有章节文件
+        if self.task_dir and self.task_dir.exists():
+            chapter_files = list(self.task_dir.glob("chapter_*.md"))
+            if chapter_files:
+                self._chapter_source = 'task_dir'
+                return True
         
-        if not prompt_path.exists():
-            logger.error(f"text2html 提示词文件未找到: {prompt_path}")
-            raise FileNotFoundError(f"提示词文件不存在: {prompt_path}")
+        # 方式2：从文章内容中还原章节
+        if self._can_extract_chapters_from_article():
+            self._chapter_source = 'article'
+            logger.info("task_dir 不存在，将从文章内容中还原章节")
+            return True
+        
+        return False
+    
+    def _can_extract_chapters_from_article(self) -> bool:
+        """检查文章内容是否可以精准还原章节"""
+        if not self.article_path.exists():
+            return False
         
         try:
-            content = prompt_path.read_text(encoding="utf-8")
-            logger.info(f"成功加载 text2html 提示词，长度: {len(content)} 字符")
-            return content
+            content = self.article_path.read_text(encoding="utf-8")
+            # 检查是否有目录结构
+            if "### 主要目录" not in content:
+                return False
+            # 检查是否有章节标题格式
+            chapter_pattern = re.compile(r'^###? \d+\.', re.MULTILINE)
+            matches = chapter_pattern.findall(content)
+            return len(matches) >= 2  # 至少2个章节才值得分段
         except Exception as e:
-            logger.error(f"读取 text2html 提示词失败: {e}")
-            raise
+            logger.debug(f"检查文章格式失败: {e}")
+            return False
     
     async def run(self) -> Optional[str]:
-        """
-        执行可视化解读生成
-        
-        Returns:
-            生成的 HTML 文件路径，失败返回 None
-        """
+        """执行可视化解读生成"""
         try:
-            # 设置任务状态为 running
             if self.task_id in task_manager.tasks:
                 task_manager.tasks[self.task_id].status = "running"
             
-            logger.info(f"开始生成可视化解读 - 任务: {self.task_id}, 文章: {self.article_path}")
-            await self._log("正在生成可视化解读...", progress=10)
+            logger.info(f"开始生成可视化解读 - 任务: {self.task_id}")
+            await self._log("正在生成可视化解读...", progress=5)
             
-            # 1. 读取深度解读内容
-            logger.info(f"步骤1: 读取文章内容 - {self.article_path}")
-            article_content = await self._read_article_content()
-            logger.info(f"文章内容长度: {len(article_content)} 字符")
-            await self._log("已读取文章内容", progress=20)
+            # 根据模式选择生成方式
+            if self.use_chunked_mode:
+                html_content = await self._run_chunked_mode()
+            else:
+                html_content = await self._run_oneshot_mode()
             
-            # 2. 构建完整提示词
-            logger.info("步骤2: 构建提示词")
-            full_prompt = self._build_prompt(article_content)
-            logger.info(f"提示词长度: {len(full_prompt)} 字符")
-            await self._log("已构建提示词", progress=30)
+            if not html_content:
+                raise ValueError("生成的 HTML 内容为空")
             
-            # 3. 调用 AI 生成 HTML
-            logger.info("步骤3: 调用 AI 生成 HTML")
-            html_content = await self._generate_html(full_prompt)
-            logger.info(f"AI 返回内容长度: {len(html_content)} 字符")
-            await self._log("AI 生成完成", progress=60)
-            
-            # 4. 清理 HTML 内容
-            logger.info("步骤4: 清理 HTML 内容")
-            html_content = self._clean_html(html_content)
-            logger.info(f"清理后 HTML 长度: {len(html_content)} 字符")
-            await self._log("HTML 清理完成", progress=70)
-            
-            # 5. 验证 HTML 格式
-            logger.info("步骤5: 验证 HTML 格式")
-            if not self._validate_html(html_content):
-                raise ValueError("生成的 HTML 格式无效")
-            await self._log("HTML 验证通过", progress=80)
-            
-            # 6. 保存 HTML 文件
-            logger.info("步骤6: 保存 HTML 文件")
+            # 保存 HTML 文件
             html_path = await self._save_html(html_content)
-            logger.info(f"HTML 文件已保存到: {html_path}")
-            await self._log(f"HTML 文件已保存: {html_path.name}", progress=90)
+            await self._log(f"HTML 文件已保存: {html_path.name}", progress=95)
             
-            # 7. 更新文章元数据
-            logger.info("步骤7: 更新文章元数据")
+            # 更新文章元数据
             await self._update_article_metadata(html_path)
             await self._log("可视化解读生成完成！", progress=100)
             
-            # 8. 标记任务为完成
             await task_manager.set_task_completed(self.task_id, str(html_path))
-            
             logger.success(f"可视化解读生成成功: {html_path}")
             return str(html_path)
             
         except Exception as e:
-            error_msg = f"可视化解读生成失败: {e}"
-            logger.error(f"任务 {self.task_id} - {error_msg}", exc_info=True)
+            logger.error(f"任务 {self.task_id} - 可视化解读生成失败: {e}", exc_info=True)
             await self._log(f"生成失败: {str(e)}", progress=0)
             await task_manager.set_task_error(self.task_id, f"可视化解读生成失败: {str(e)}")
             return None
     
-    async def _read_article_content(self) -> str:
-        """
-        读取深度解读文章内容，移除 YAML front matter
+    # ==================== 分章节生成模式 ====================
+    
+    async def _run_chunked_mode(self) -> str:
+        """分章节生成模式：AI 灵活设计，分阶段生成"""
+        source = getattr(self, '_chapter_source', 'task_dir')
+        logger.info(f"使用分章节生成模式，章节来源: {source}")
         
-        Returns:
-            纯文本内容（不含元数据）
-            
-        Raises:
-            FileNotFoundError: 如果文章文件不存在
-        """
+        # 1. 读取章节文件
+        await self._log("正在读取章节内容...", progress=10)
+        
+        if source == 'task_dir':
+            chapters = self._load_chapter_files()
+        else:
+            chapters = self._extract_chapters_from_article()
+        
+        if not chapters:
+            raise ValueError("未找到章节内容")
+        
+        logger.info(f"成功加载 {len(chapters)} 个章节")
+        
+        # 2. 提取文章元数据
+        metadata = self._extract_article_metadata()
+        
+        # 3. AI 生成 Header（样式 + 标题区域）
+        await self._log("正在设计页面样式...", progress=15)
+        header_html = await self._generate_header(metadata, chapters)
+        
+        # 4. 并发生成各章节的 HTML 片段
+        await self._log(f"正在生成 {len(chapters)} 个章节的可视化内容...", progress=20)
+        chapter_htmls = await self._generate_chapters_parallel(chapters)
+        
+        # 5. AI 生成 Footer（结尾 + 脚本）
+        await self._log("正在生成页面结尾...", progress=85)
+        footer_html = await self._generate_footer(metadata)
+        
+        # 6. 组装完整 HTML
+        await self._log("HTML 组装完成，验证中...", progress=90)
+        html_content = header_html + '\n'.join(chapter_htmls) + footer_html
+        
+        if not self._validate_html(html_content):
+            raise ValueError("组装的 HTML 格式无效")
+        
+        return html_content
+    
+    async def _generate_header(self, metadata: Dict, chapters: List[Dict]) -> str:
+        """让 AI 生成 HTML 头部（样式 + 标题）"""
+        # 构建文章概要
+        article_summary = self._build_article_summary(chapters)
+        
+        prompt = self.header_prompt.replace(
+            "{{TITLE_CN}}", metadata.get('title_cn', '深度解读')
+        ).replace(
+            "{{TITLE_EN}}", metadata.get('title_en', 'Deep Insight')
+        ).replace(
+            "{{CHAPTER_COUNT}}", str(len(chapters))
+        ).replace(
+            "{{DATE}}", metadata.get('date', '')
+        ).replace(
+            "{{ARTICLE_SUMMARY}}", article_summary
+        )
+        
+        for attempt in range(self.max_retries + 1):
+            try:
+                header = await self.client.generate_content(prompt)
+                if header and header.strip():
+                    return self._clean_header_html(header)
+            except Exception as e:
+                logger.warning(f"Header 生成失败 (尝试 {attempt+1}): {e}")
+                if attempt == self.max_retries:
+                    raise
+                await asyncio.sleep(2 ** attempt)
+        
+        return ""
+    
+    async def _generate_footer(self, metadata: Dict) -> str:
+        """让 AI 生成 HTML 尾部（结尾 + 脚本）"""
+        prompt = self.footer_prompt.replace(
+            "{{TITLE_CN}}", metadata.get('title_cn', '')
+        ).replace(
+            "{{GENERATION_DATE}}", datetime.now().strftime("%Y-%m-%d %H:%M")
+        )
+        
+        for attempt in range(self.max_retries + 1):
+            try:
+                footer = await self.client.generate_content(prompt)
+                if footer and footer.strip():
+                    # 确保包含 iframe 通信脚本
+                    footer = self._ensure_iframe_script(footer)
+                    return self._clean_footer_html(footer)
+            except Exception as e:
+                logger.warning(f"Footer 生成失败 (尝试 {attempt+1}): {e}")
+                if attempt == self.max_retries:
+                    raise
+                await asyncio.sleep(2 ** attempt)
+        
+        return ""
+    
+    def _build_article_summary(self, chapters: List[Dict]) -> str:
+        """构建文章概要（供 AI 设计 Header 时参考）"""
+        summary_parts = []
+        for ch in chapters[:5]:  # 取前 5 章
+            title = ch.get('title', '')
+            content = ch.get('content', '')[:200]
+            summary_parts.append(f"- {title}: {content}...")
+        return '\n'.join(summary_parts)
+    
+    def _clean_header_html(self, html: str) -> str:
+        """清理 Header HTML"""
+        html = re.sub(r'^```html\s*\n', '', html, flags=re.MULTILINE)
+        html = re.sub(r'\n```\s*$', '', html, flags=re.MULTILINE)
+        html = re.sub(r'```', '', html)
+        return html.strip()
+    
+    def _clean_footer_html(self, html: str) -> str:
+        """清理 Footer HTML"""
+        html = re.sub(r'^```html\s*\n', '', html, flags=re.MULTILINE)
+        html = re.sub(r'\n```\s*$', '', html, flags=re.MULTILINE)
+        html = re.sub(r'```', '', html)
+        return html.strip()
+    
+    def _ensure_iframe_script(self, footer: str) -> str:
+        """确保 footer 包含 iframe 通信脚本"""
+        if 'iframe-height' not in footer:
+            iframe_script = '''
+<script>
+(function() {
+  function sendHeight() {
+    const height = Math.max(
+      document.body.scrollHeight,
+      document.body.offsetHeight,
+      document.documentElement.clientHeight,
+      document.documentElement.scrollHeight,
+      document.documentElement.offsetHeight
+    );
+    window.parent.postMessage({type: 'iframe-height', height: height}, '*');
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', sendHeight);
+  } else {
+    sendHeight();
+  }
+  window.addEventListener('load', sendHeight);
+  window.addEventListener('resize', sendHeight);
+  const observer = new MutationObserver(sendHeight);
+  observer.observe(document.body, {childList: true, subtree: true, attributes: true});
+})();
+</script>
+'''
+            # 在 </body> 前插入
+            if '</body>' in footer.lower():
+                pos = footer.lower().rfind('</body>')
+                footer = footer[:pos] + iframe_script + footer[pos:]
+        return footer
+    
+    # ==================== 一次性生成模式 ====================
+    
+    async def _run_oneshot_mode(self) -> str:
+        """一次性生成模式（无章节文件时使用）"""
+        logger.info("使用一次性生成模式")
+        
+        # 读取文章内容
+        article_content = await self._read_article_content()
+        await self._log("已读取文章内容", progress=20)
+        
+        # 构建提示词
+        prompt = self._build_oneshot_prompt(article_content)
+        await self._log("正在调用 AI 生成 HTML...", progress=30)
+        
+        # 调用 AI 生成
+        for attempt in range(self.max_retries + 1):
+            try:
+                html = await self.client.generate_content(prompt)
+                if html and html.strip():
+                    html = self._clean_full_html(html)
+                    html = self._inject_iframe_script(html)
+                    await self._log("AI 生成完成", progress=80)
+                    return html
+            except Exception as e:
+                logger.warning(f"HTML 生成失败 (尝试 {attempt+1}): {e}")
+                if attempt == self.max_retries:
+                    raise
+                await asyncio.sleep(2 ** attempt)
+        
+        return ""
+    
+    async def _read_article_content(self) -> str:
+        """读取文章内容，移除 YAML front matter"""
         if not self.article_path.exists():
             raise FileNotFoundError(f"文章文件不存在: {self.article_path}")
         
         content = self.article_path.read_text(encoding="utf-8")
-        
-        # 移除 YAML front matter
         if content.startswith("---"):
             parts = content.split("---", 2)
             if len(parts) >= 3:
                 content = parts[2].strip()
-                logger.info(f"已移除 YAML front matter，剩余内容长度: {len(content)} 字符")
-        
         return content
     
-    def _build_prompt(self, article_content: str) -> str:
-        """
-        构建完整的提示词
-        
-        Args:
-            article_content: 文章内容
-            
-        Returns:
-            完整的提示词
-        """
-        # 添加明确的输出格式要求
+    def _build_oneshot_prompt(self, article_content: str) -> str:
+        """构建一次性生成提示词"""
         output_instruction = """
 
 # 重要输出要求
 
-**你必须直接输出完整的 HTML 代码，不要添加任何解释、前缀或后缀。**
+**你必须直接输出完整的 HTML 代码，不要添加任何解释。**
 
-- ❌ 不要输出 "好的，我来生成..." 这样的开场白
-- ❌ 不要输出 "```html" 代码块标记
-- ❌ 不要在 HTML 前后添加任何说明文字
-- ✅ 直接从 `<!DOCTYPE html>` 开始输出
-- ✅ 以 `</html>` 结束输出
+- 直接从 `<!DOCTYPE html>` 开始输出
+- 以 `</html>` 结束输出
+- 不要输出 markdown 代码块标记
 
 现在，请直接输出 HTML 代码：
 
 """
-        
-        prompt = f"{self.text2html_prompt}{output_instruction}\n---\n{article_content}\n---"
-        logger.info(f"构建提示词完成，总长度: {len(prompt)} 字符")
-        return prompt
+        return f"{self.text2html_prompt}{output_instruction}\n---\n{article_content}\n---"
     
-    async def _generate_html(self, prompt: str) -> str:
-        """
-        调用 AI 生成 HTML
-        
-        Args:
-            prompt: 完整提示词
-            
-        Returns:
-            生成的 HTML 内容
-            
-        Raises:
-            RuntimeError: 生成失败
-        """
-        try:
-            logger.info("调用 AI 生成 HTML")
-            await self._log("正在调用 AI 生成 HTML，预计需要 2-5 分钟...", progress=40)
-            
-            # 使用新的模型客户端（内置重试机制）
-            html = await self.client.generate_content(prompt)
-            
-            if html and html.strip():
-                logger.success(f"AI 生成成功，HTML 长度: {len(html)} 字符")
-                await self._log(f"AI 生成成功，内容长度: {len(html)} 字符", progress=55)
-                return html
-            
-            raise ValueError("AI 返回空内容")
-            
-        except asyncio.TimeoutError as e:
-            error_msg = "AI 生成 HTML 超时，请稍后重试或检查网络连接"
-            logger.error(error_msg)
-            await self._log(error_msg, progress=0)
-            raise RuntimeError(error_msg) from e
-        except Exception as e:
-            logger.error(f"生成 HTML 失败: {e}")
-            await self._log(f"生成失败: {str(e)[:100]}", progress=0)
-            raise RuntimeError(f"HTML 生成失败: {e}") from e
-    
-    def _clean_html(self, html: str) -> str:
-        """
-        清理 HTML 内容，移除多余的前缀和后缀
-        
-        Args:
-            html: 原始 HTML 内容
-            
-        Returns:
-            清理后的 HTML
-        """
-        import re
-        
-        original_length = len(html)
-        
-        # 1. 移除 markdown 代码块标记
+    def _clean_full_html(self, html: str) -> str:
+        """清理完整 HTML"""
         html = re.sub(r'^```html\s*\n', '', html, flags=re.MULTILINE)
         html = re.sub(r'\n```\s*$', '', html, flags=re.MULTILINE)
-        html = re.sub(r'```', '', html)  # 移除所有剩余的 ``` 标记
+        html = re.sub(r'```', '', html)
         
-        # 2. 查找 <!DOCTYPE html> 的位置
+        # 从 DOCTYPE 开始
         doctype_match = re.search(r'<!DOCTYPE\s+html>', html, re.IGNORECASE)
         if doctype_match:
-            # 从 DOCTYPE 开始截取
             html = html[doctype_match.start():]
-            logger.info(f"已移除 DOCTYPE 之前的 {doctype_match.start()} 个字符")
-        else:
-            # 如果没有 DOCTYPE，尝试查找 <html
-            html_match = re.search(r'<html[^>]*>', html, re.IGNORECASE)
-            if html_match:
-                html = html[html_match.start():]
-                logger.info(f"未找到 DOCTYPE，从 <html> 标签开始截取")
         
-        # 3. 查找最后一个 </html> 的位置
-        html_end_matches = list(re.finditer(r'</html>', html, re.IGNORECASE))
-        if html_end_matches:
-            # 从最后一个 </html> 之后截断
-            last_match = html_end_matches[-1]
-            removed_chars = len(html) - last_match.end()
+        # 到 </html> 结束
+        html_end = list(re.finditer(r'</html>', html, re.IGNORECASE))
+        if html_end:
+            html = html[:html_end[-1].end()]
+        
+        return html.strip()
+    
+    def _load_chapter_files(self) -> List[Dict]:
+        """加载 task_dir 下的章节文件"""
+        chapters = []
+        chapter_files = sorted(
+            self.task_dir.glob("chapter_*.md"),
+            key=lambda p: int(re.search(r'chapter_(\d+)', p.name).group(1))
+        )
+        
+        for i, chapter_file in enumerate(chapter_files, 1):
+            try:
+                content = chapter_file.read_text(encoding="utf-8")
+                # 提取章节标题（第一个 ## 标题）
+                title_match = re.search(r'^##\s*\d*\.?\s*(.+)$', content, re.MULTILINE)
+                title = title_match.group(1).strip() if title_match else f"章节 {i}"
+                
+                chapters.append({
+                    'index': i,
+                    'title': title,
+                    'content': content,
+                    'file': chapter_file
+                })
+                logger.debug(f"加载章节 {i}: {title}")
+            except Exception as e:
+                logger.error(f"读取章节文件失败 {chapter_file}: {e}")
+        
+        return chapters
+    
+    def _extract_chapters_from_article(self) -> List[Dict]:
+        """从文章内容中精准还原章节
+        
+        根据文章标准格式进行切分：
+        - 章节标题格式：`## N. 标题` 或 `### N. 标题`
+        - 跳过引言和目录部分
+        
+        Returns:
+            章节列表，每个章节包含 index, title, content
+        """
+        chapters = []
+        
+        try:
+            content = self.article_path.read_text(encoding="utf-8")
+            
+            # 移除 YAML frontmatter
+            if content.startswith("---"):
+                parts = content.split("---", 2)
+                if len(parts) >= 3:
+                    content = parts[2].strip()
+            
+            # 找到第一个章节标题的位置（跳过引言和目录）
+            # 章节标题格式：## 1. xxx 或 ### 1. xxx
+            chapter_pattern = re.compile(
+                r'^(###?) (\d+)\.\s*(.+?)$',
+                re.MULTILINE
+            )
+            
+            matches = list(chapter_pattern.finditer(content))
+            
+            if not matches:
+                logger.warning("未在文章中找到章节标题")
+                return []
+            
+            logger.info(f"找到 {len(matches)} 个章节标题")
+            
+            for i, match in enumerate(matches):
+                chapter_num = int(match.group(2))
+                title = match.group(3).strip()
+                
+                # 计算章节内容范围
+                start_pos = match.start()
+                if i + 1 < len(matches):
+                    end_pos = matches[i + 1].start()
+                else:
+                    end_pos = len(content)
+                
+                chapter_content = content[start_pos:end_pos].strip()
+                
+                # 移除章节分隔符 ---
+                chapter_content = re.sub(r'\n---\s*$', '', chapter_content)
+                
+                chapters.append({
+                    'index': chapter_num,
+                    'title': title,
+                    'content': chapter_content,
+                    'file': None  # 从文章提取的没有文件
+                })
+                
+                logger.debug(f"提取章节 {chapter_num}: {title[:30]}... ({len(chapter_content)} 字符)")
+            
+            logger.info(f"从文章中成功提取 {len(chapters)} 个章节")
+            
+        except Exception as e:
+            logger.error(f"从文章提取章节失败: {e}", exc_info=True)
+        
+        return chapters
+    
+    def _extract_article_metadata(self) -> Dict:
+        """从文章中提取元数据（让 AI 自己决定配色）"""
+        import yaml
+        
+        metadata = {
+            'title_cn': '',
+            'title_en': '',
+            'date': datetime.now().strftime("%Y-%m-%d"),
+        }
+        
+        try:
+            content = self.article_path.read_text(encoding="utf-8")
+            if content.startswith("---"):
+                parts = content.split("---", 2)
+                if len(parts) >= 3:
+                    yaml_data = yaml.safe_load(parts[1])
+                    metadata['title_cn'] = yaml_data.get('title_cn', '')
+                    metadata['title_en'] = yaml_data.get('title_en', '')
+                    metadata['date'] = yaml_data.get('upload_date', metadata['date'])
+        except Exception as e:
+            logger.warning(f"提取文章元数据失败: {e}")
+        
+        return metadata
+    
+    async def _generate_chapters_parallel(self, chapters: List[Dict]) -> List[str]:
+        """并发生成各章节的 HTML 片段"""
+        total = len(chapters)
+        results = [''] * total
+        
+        # 获取并发延迟配置
+        concurrent_delay = getattr(self.client.config, 'concurrent_delay', 1.0)
+        logger.info(f"并发生成 {total} 个章节，间隔: {concurrent_delay}秒")
+        
+        # 创建并发任务
+        tasks = []
+        for i, chapter in enumerate(chapters):
+            delay = i * concurrent_delay
+            task = self._generate_single_chapter_html(chapter, delay, i, total)
+            tasks.append(task)
+        
+        # 执行并发任务
+        chapter_results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # 处理结果
+        success_count = 0
+        for i, result in enumerate(chapter_results):
+            if isinstance(result, Exception):
+                logger.error(f"生成章节 {i+1} 失败: {result}")
+                # 使用简单的回退内容
+                results[i] = self._generate_fallback_chapter_html(chapters[i])
+            else:
+                results[i] = result
+                success_count += 1
+        
+        logger.info(f"章节生成完成: {success_count}/{total}")
+        return results
+    
+    async def _generate_single_chapter_html(
+        self, 
+        chapter: Dict, 
+        delay: float,
+        current_index: int,
+        total: int
+    ) -> str:
+        """生成单个章节的 HTML 片段"""
+        if delay > 0:
+            await asyncio.sleep(delay)
+        
+        index = chapter['index']
+        title = chapter['title']
+        content = chapter['content']
+        
+        logger.info(f"开始生成章节 {index}/{total}: {title[:30]}...")
+        
+        # 构建提示词
+        prompt = self.chapter_prompt.replace(
+            "{{CHAPTER_INDEX}}", str(index)
+        ).replace(
+            "{{CHAPTER_TITLE}}", title
+        ).replace(
+            "{{CHAPTER_CONTENT}}", content
+        )
+        
+        # 重试逻辑
+        for attempt in range(self.max_retries + 1):
+            try:
+                html_fragment = await self.client.generate_content(prompt)
+                
+                if html_fragment and html_fragment.strip():
+                    # 清理 HTML 片段
+                    html_fragment = self._clean_chapter_html(html_fragment)
+                    
+                    # 更新进度
+                    progress = 20 + int((current_index + 1) / total * 55)
+                    await self._log(f"章节 {index} 生成完成", progress=progress)
+                    
+                    logger.info(f"章节 {index} 生成成功，片段长度: {len(html_fragment)}")
+                    return html_fragment
+                
+                raise ValueError("AI 返回空内容")
+                
+            except Exception as e:
+                logger.warning(f"生成章节 {index} 失败 (尝试 {attempt+1}): {e}")
+                if attempt == self.max_retries:
+                    raise
+                await asyncio.sleep(2 ** attempt)
+        
+        return ""
+    
+    def _clean_chapter_html(self, html: str) -> str:
+        """清理章节 HTML 片段"""
+        # 移除 markdown 代码块标记
+        html = re.sub(r'^```html\s*\n', '', html, flags=re.MULTILINE)
+        html = re.sub(r'\n```\s*$', '', html, flags=re.MULTILINE)
+        html = re.sub(r'```', '', html)
+        
+        # 确保从 <section 开始
+        section_match = re.search(r'<section[^>]*>', html, re.IGNORECASE)
+        if section_match:
+            html = html[section_match.start():]
+        
+        # 确保到 </section> 结束
+        section_end_matches = list(re.finditer(r'</section>', html, re.IGNORECASE))
+        if section_end_matches:
+            last_match = section_end_matches[-1]
             html = html[:last_match.end()]
-            if removed_chars > 0:
-                logger.info(f"已移除 </html> 之后的 {removed_chars} 个字符")
         
-        # 4. 移除首尾空白
-        html = html.strip()
+        return html.strip()
+    
+    def _generate_fallback_chapter_html(self, chapter: Dict) -> str:
+        """生成回退用的简单章节 HTML"""
+        index = chapter['index']
+        title = chapter['title']
+        content = chapter['content']
         
-        cleaned_length = len(html)
-        logger.info(f"HTML 清理完成: {original_length} → {cleaned_length} 字符")
+        # 简单的 Markdown 转 HTML
+        content_html = content.replace('\n\n', '</p><p class="text-gray-300 mb-4">').replace('\n', '<br>')
         
-        return html
+        return f'''
+<section id="chapter-{index}" class="chapter-section fade-in-up">
+    <h2 class="chapter-title">
+        <span class="text-brand mr-2">{index}.</span>
+        {title}
+    </h2>
+    <div class="main-card p-8">
+        <div class="text-gray-300 space-y-4">
+            <p>{content_html}</p>
+        </div>
+    </div>
+</section>
+'''
     
     def _validate_html(self, html: str) -> bool:
         """

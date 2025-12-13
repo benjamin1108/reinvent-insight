@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{TITLE_CN}}</title>
+    
+    <!-- TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome (本地) -->
+    <link rel="stylesheet" href="/css/vendor/fontawesome/all.min.css">
+    
+    <!-- Chart.js (本地) -->
+    <script src="/js/vendor/chart.umd.min.js"></script>
+    
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'brand': '{{BRAND_COLOR}}',
+                        'brand-light': '{{BRAND_COLOR_LIGHT}}',
+                        'card': '#1a1a1a',
+                        'card-light': '#222222',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* 基础样式 */
+        body {
+            background-color: #000000;
+            color: #e5e7eb;
+        }
+        
+        /* 高亮色变量 */
+        :root {
+            --brand-color: {{BRAND_COLOR}};
+            --brand-color-rgb: {{BRAND_COLOR_RGB}};
+        }
+        
+        /* 动画基础 */
+        .fade-in-up {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        
+        .fade-in-up.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* 交错动画延迟 */
+        .stagger-1 { transition-delay: 0.1s; }
+        .stagger-2 { transition-delay: 0.2s; }
+        .stagger-3 { transition-delay: 0.3s; }
+        .stagger-4 { transition-delay: 0.4s; }
+        .stagger-5 { transition-delay: 0.5s; }
+        
+        /* 渐变效果 */
+        .brand-gradient {
+            background: linear-gradient(135deg, 
+                rgba(var(--brand-color-rgb), 0.15) 0%, 
+                rgba(var(--brand-color-rgb), 0.05) 100%);
+        }
+        
+        .brand-border {
+            border: 1px solid rgba(var(--brand-color-rgb), 0.3);
+        }
+        
+        /* 主卡片样式 */
+        .main-card {
+            background-color: #1a1a1a;
+            border-radius: 1rem;
+            border: 1px solid #333;
+        }
+        
+        /* 迷你卡片样式 */
+        .mini-card {
+            background-color: #222222;
+            border-radius: 0.75rem;
+            border: 1px solid #333;
+        }
+        
+        /* 章节容器 */
+        .chapter-section {
+            margin-bottom: 4rem;
+        }
+        
+        /* 章节标题样式 */
+        .chapter-title {
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--brand-color);
+        }
+        
+        /* 高亮文本 */
+        .text-brand {
+            color: var(--brand-color);
+        }
+        
+        /* 大数字样式 */
+        .big-number {
+            font-size: 3.5rem;
+            font-weight: bold;
+            color: var(--brand-color);
+            line-height: 1.1;
+        }
+        
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .chapter-title {
+                font-size: 1.5rem;
+            }
+            .big-number {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- 主容器 -->
+    <div class="max-w-6xl mx-auto px-6 py-12">
+        
+        <!-- 头部区域 -->
+        <header class="mb-16 fade-in-up">
+            <!-- 主标题 -->
+            <h1 class="text-5xl md:text-6xl font-bold text-white mb-4">
+                {{TITLE_CN}}
+            </h1>
+            <!-- 英文副标题 -->
+            <p class="text-xl text-gray-400 mb-6">
+                {{TITLE_EN}}
+            </p>
+            <!-- 元信息 -->
+            <div class="flex flex-wrap gap-4 text-sm text-gray-500">
+                <span class="flex items-center gap-2">
+                    <i class="far fa-calendar-alt"></i>
+                    {{DATE}}
+                </span>
+                <span class="flex items-center gap-2">
+                    <i class="far fa-clock"></i>
+                    {{READING_TIME}}
+                </span>
+                <span class="flex items-center gap-2">
+                    <i class="far fa-file-alt"></i>
+                    {{CHAPTER_COUNT}} 个章节
+                </span>
+            </div>
+        </header>
+        
+        <!-- 导航目录卡片 -->
+        <nav class="main-card p-8 mb-16 fade-in-up">
+            <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                <i class="fas fa-list-ul text-brand"></i>
+                内容导航
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {{TOC_ITEMS}}
+            </div>
+        </nav>
+        
+        <!-- 章节内容开始 -->
+        <main class="space-y-16">

@@ -21,6 +21,86 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/article", tags=["visual"])
 
 
+def _find_task_dir_for_article(article_path: Path) -> Optional[Path]:
+    """查找文章对应的 task_dir（用于分章节生成模式）"""
+    from reinvent_insight.domain.workflows.base import TASKS_ROOT_DIR
+    
+    # 1. 优先从文章元数据中获取 task_dir
+    try:
+        content = article_path.read_text(encoding="utf-8")
+        if content.startswith("---"):
+            parts = content.split("---", 2)
+            if len(parts) >= 3:
+                metadata = yaml.safe_load(parts[1])
+                if metadata.get("task_dir"):
+                    task_dir_path = Path(metadata["task_dir"])
+                    if task_dir_path.exists():
+                        chapter_files = list(task_dir_path.glob("chapter_*.md"))
+                        if chapter_files:
+                            logger.info(f"从元数据找到 task_dir: {task_dir_path}（{len(chapter_files)} 个章节）")
+                            return task_dir_path
+    except Exception as e:
+        logger.debug(f"从元数据获取 task_dir 失败: {e}")
+    
+    # 2. 回退：搜索 tasks 目录下最近的匹配任务
+    tasks_root = Path(TASKS_ROOT_DIR)
+    if not tasks_root.exists():
+        return None
+    
+    # 提取文章标题用于匹配
+    article_title = None
+    try:
+        content = article_path.read_text(encoding="utf-8")
+        if content.startswith("---"):
+            parts = content.split("---", 2)
+            if len(parts) >= 3:
+                metadata = yaml.safe_load(parts[1])
+                article_title = metadata.get("title_cn") or metadata.get("title")
+    except Exception:
+        pass
+    
+    if not article_title:
+        return None
+    
+    import json
+    date_dirs = sorted(tasks_root.iterdir(), reverse=True)
+    for date_dir in date_dirs[:3]:  # 只检查最近 3 天
+        if not date_dir.is_dir():
+            continue
+        
+        for task_dir in sorted(date_dir.iterdir(), reverse=True):
+            if not task_dir.is_dir():
+                continue
+            
+            chapter_files = list(task_dir.glob("chapter_*.md"))
+            if not chapter_files:
+                continue
+            
+            # 通过 outline.md 的 title_cn 匹配
+            outline_path = task_dir / "outline.md"
+            if outline_path.exists():
+                try:
+                    outline_content = outline_path.read_text(encoding="utf-8")
+                    if "```json" in outline_content:
+                        json_start = outline_content.find("```json") + 7
+                        json_end = outline_content.find("```", json_start)
+                        json_str = outline_content[json_start:json_end].strip()
+                    else:
+                        json_str = outline_content.strip()
+                    
+                    outline_data = json.loads(json_str)
+                    outline_title = outline_data.get("title_cn") or outline_data.get("title")
+                    
+                    if outline_title and outline_title == article_title:
+                        logger.info(f"通过标题匹配找到 task_dir: {task_dir}（{len(chapter_files)} 个章节）")
+                        return task_dir
+                except Exception as e:
+                    logger.debug(f"解析 outline.md 失败: {e}")
+    
+    logger.debug(f"未找到文章对应的 task_dir: {article_path.name}")
+    return None
+
+
 @router.get("/{doc_hash}/visual")
 async def get_visual_interpretation(doc_hash: str, version: Optional[int] = None):
     """
@@ -277,13 +357,15 @@ async def get_visual_long_image(
                 detail="长图尚未生成，请先调用 POST /{doc_hash}/visual/to-image 生成"
             )
         
-        # 返回图片文件
+        # 返回图片文件（禁用缓存，确保获取最新版本）
         return FileResponse(
             path=str(image_path),
             media_type="image/png",
             filename=image_path.name,
             headers={
-                "Cache-Control": "public, max-age=86400",  # 缓存 24 小时
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0",
             }
         )
         
@@ -298,6 +380,7 @@ class PostProcessRequest(BaseModel):
     """后处理请求"""
     processor: str  # visual_insight, keyframe_screenshot
     video_url: Optional[str] = None  # keyframe_screenshot 需要
+    force: bool = False  # 强制重新生成（忽略已存在检查）
 
 
 @router.post("/{doc_hash}/post-process")
@@ -343,6 +426,9 @@ async def trigger_post_processor(
         article_path = config.OUTPUT_DIR / filename
         content = article_path.read_text(encoding="utf-8")
         
+        # 查找对应的 task_dir（用于分章节生成模式）
+        task_dir = _find_task_dir_for_article(article_path)
+        
         # 解析元数据获取标题和章节数
         title = "Unknown"
         chapter_count = 0
@@ -370,6 +456,7 @@ async def trigger_post_processor(
             content_type="youtube" if video_url else "document",
             video_url=video_url,
             is_ultra_mode=True,
+            task_dir=str(task_dir) if task_dir else None,
             extra={"article_path": str(article_path)}
         )
         
@@ -389,8 +476,8 @@ async def trigger_post_processor(
                 detail=f"处理器 '{request.processor}' 不存在。可用: {available}"
             )
         
-        # 检查条件
-        should_run = await target_processor.should_run(context)
+        # 检查条件（force=True 时跳过检查）
+        should_run = request.force or await target_processor.should_run(context)
         if not should_run:
             # 返回详细的跳过原因
             skip_reasons = []
@@ -399,6 +486,15 @@ async def trigger_post_processor(
             if hasattr(target_processor, 'min_chapter_count'):
                 if context.chapter_count < target_processor.min_chapter_count:
                     skip_reasons.append(f"章节数不足: {context.chapter_count} < {target_processor.min_chapter_count}")
+            
+            # visual_insight 特定检查
+            if request.processor == "visual_insight":
+                article_path = target_processor._get_article_path(context)
+                if article_path:
+                    visual_path = target_processor._get_visual_html_path(article_path)
+                    if visual_path.exists():
+                        skip_reasons.append(f"Visual HTML 已存在: {visual_path.name}（使用 force=true 强制重新生成）")
+            
             if request.processor == "keyframe_screenshot":
                 if context.content_type != "youtube":
                     skip_reasons.append(f"content_type='{context.content_type}', 需要 'youtube'")

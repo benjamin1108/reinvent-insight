@@ -7,10 +7,12 @@ import time
 import re
 from pathlib import Path
 from typing import Optional
-from loguru import logger
+from reinvent_insight.core.logger import get_logger
 
 from reinvent_insight.core import config
 from .base import PostProcessor, PostProcessorContext, PostProcessorResult, ProcessorPriority
+
+logger = get_logger(__name__)
 
 
 class VisualInsightProcessor(PostProcessor):
@@ -90,16 +92,21 @@ class VisualInsightProcessor(PostProcessor):
             # 提取版本号
             version = self._extract_version(article_path.stem)
             
+            # 获取 task_dir（用于分章节生成模式）
+            task_dir = context.task_dir if context.task_dir else self._find_task_dir(article_path)
+            
             logger.info(
                 f"触发 Visual 生成任务: {task_id}, "
-                f"文章: {article_path.name}, 版本: {version}"
+                f"文章: {article_path.name}, 版本: {version}, "
+                f"task_dir: {task_dir or '无'}"
             )
             
             # 创建后台任务
             await self._trigger_visual_generation(
                 task_id=task_id,
                 article_path=str(article_path),
-                version=version
+                version=version,
+                task_dir=task_dir
             )
             
             return PostProcessorResult.ok(
@@ -164,28 +171,110 @@ class VisualInsightProcessor(PostProcessor):
         version_match = re.search(r'_v(\d+)', filename)
         return int(version_match.group(1)) if version_match else 0
     
+    def _find_task_dir(self, article_path: Path) -> Optional[str]:
+        """查找文章对应的 task_dir"""
+        import yaml
+        from reinvent_insight.domain.workflows.base import TASKS_ROOT_DIR
+        
+        # 1. 优先从文章元数据中获取
+        try:
+            content = article_path.read_text(encoding="utf-8")
+            if content.startswith("---"):
+                parts = content.split("---", 2)
+                if len(parts) >= 3:
+                    metadata = yaml.safe_load(parts[1])
+                    if metadata.get("task_dir"):
+                        task_dir_path = Path(metadata["task_dir"])
+                        if task_dir_path.exists():
+                            chapter_files = list(task_dir_path.glob("chapter_*.md"))
+                            if chapter_files:
+                                logger.info(f"从元数据找到 task_dir: {task_dir_path}")
+                                return str(task_dir_path)
+        except Exception as e:
+            logger.debug(f"从元数据获取 task_dir 失败: {e}")
+        
+        # 2. 回退：搜索 tasks 目录
+        tasks_root = Path(TASKS_ROOT_DIR)
+        if not tasks_root.exists():
+            return None
+        
+        # 提取文章标题用于匹配
+        article_title = None
+        try:
+            content = article_path.read_text(encoding="utf-8")
+            if content.startswith("---"):
+                parts = content.split("---", 2)
+                if len(parts) >= 3:
+                    metadata = yaml.safe_load(parts[1])
+                    article_title = metadata.get("title_cn") or metadata.get("title")
+        except Exception:
+            pass
+        
+        if not article_title:
+            return None
+        
+        date_dirs = sorted(tasks_root.iterdir(), reverse=True)
+        for date_dir in date_dirs[:3]:
+            if not date_dir.is_dir():
+                continue
+            
+            for task_dir in sorted(date_dir.iterdir(), reverse=True):
+                if not task_dir.is_dir():
+                    continue
+                
+                chapter_files = list(task_dir.glob("chapter_*.md"))
+                if not chapter_files:
+                    continue
+                
+                # 通过 outline.md 的 title_cn 匹配
+                outline_path = task_dir / "outline.md"
+                if outline_path.exists():
+                    try:
+                        import json
+                        outline_content = outline_path.read_text(encoding="utf-8")
+                        # 提取 JSON 内容
+                        if "```json" in outline_content:
+                            json_start = outline_content.find("```json") + 7
+                            json_end = outline_content.find("```", json_start)
+                            json_str = outline_content[json_start:json_end].strip()
+                        else:
+                            json_str = outline_content.strip()
+                        
+                        outline_data = json.loads(json_str)
+                        outline_title = outline_data.get("title_cn") or outline_data.get("title")
+                        
+                        if outline_title and outline_title == article_title:
+                            logger.info(f"通过标题匹配找到 task_dir: {task_dir}")
+                            return str(task_dir)
+                    except Exception as e:
+                        logger.debug(f"解析 outline.md 失败: {e}")
+        
+        return None
+    
     async def _trigger_visual_generation(
         self, 
         task_id: str, 
         article_path: str, 
-        version: int
+        version: int,
+        task_dir: str = None
     ):
         """触发 Visual 生成任务
         
-        复用现有的 VisualInterpretationWorker
+        复用现有的 VisualInterpretationWorker，支持分章节生成模式
         """
         from reinvent_insight.services.analysis.visual_worker import VisualInterpretationWorker
         from reinvent_insight.services.analysis.task_manager import manager as task_manager
         
-        # 创建工作器
+        # 创建工作器（传递 task_dir 启用分章节模式）
         worker = VisualInterpretationWorker(
             task_id=task_id,
             article_path=article_path,
             model_name=self.model_name,
-            version=version
+            version=version,
+            task_dir=task_dir
         )
         
         # 创建后台任务（不等待完成）
         task_manager.create_task(task_id, worker.run())
         
-        logger.info(f"Visual 生成任务已触发: {task_id}")
+        logger.info(f"Visual 生成任务已触发: {task_id}，分章节模式: {bool(task_dir)}")

@@ -1,0 +1,90 @@
+# Visual HTML 头部生成提示词
+
+你是一个专业的可视化网页设计师。你的任务是为一篇深度解读文章设计 HTML 头部，包括样式定义和页面开头。
+
+## 核心要求
+
+1. 输出从 `<!DOCTYPE html>` 开始，到 `<main class="...">` 结束（main 标签开始但不关闭）
+2. 包含完整的 `<head>` 部分（meta、title、CDN 引入、style）
+3. 包含页面的 header 部分（标题区域）
+4. 自由设计，展现创意
+
+## 技术规范
+
+### CDN 引入（必须使用 CDN，禁止本地路径）
+```html
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+```
+
+### 样式设计（自由发挥）
+- 纯黑背景 (#000000)
+- 根据文章内容选择合适的高亮色（品牌色）
+- 可以自定义 Tailwind config 扩展颜色
+- **动画必须要求**（在 `<style>` 标签中定义，不能只在 Tailwind config 中）：
+  ```css
+  .fade-in-up {
+      animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      opacity: 0;
+      transform: translateY(20px);
+  }
+  @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+  }
+  ```
+- 设计适合内容的卡片样式
+- **布局规则**：使用 `absolute` 定位时，父容器必须预留足够空间（如 `pb-8`），避免内容溢出或重叠
+
+## 设计自由度
+
+你可以自由设计：
+- 品牌色和配色方案
+- 标题的视觉效果（渐变、动画等）
+- Header 区域的布局和装饰
+- 任何让页面更有视觉冲击力的元素
+
+## 必须包含的元素
+
+1. **大标题**：中文主标题（大、醒目）
+2. **副标题**：英文副标题（较小、灰色）
+3. **元信息**：阅读时间、章节数等
+4. **main 容器开始**：为后续章节内容预留位置
+
+## 输出格式
+
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <!-- meta, title, CDN, style -->
+</head>
+<body class="...">
+    <!-- 页面容器 -->
+    <div class="max-w-6xl mx-auto px-6 py-12">
+        <!-- Header 区域 -->
+        <header class="...">
+            <!-- 大标题、副标题、元信息 -->
+        </header>
+        
+        <!-- 主内容区域开始（不关闭） -->
+        <main class="space-y-16">
+```
+
+---
+
+## 文章信息
+
+**中文标题**: {{TITLE_CN}}
+**英文标题**: {{TITLE_EN}}
+**章节数**: {{CHAPTER_COUNT}}
+**日期**: {{DATE}}
+
+## 文章概要
+
+{{ARTICLE_SUMMARY}}
+
+---
+
+**现在，请直接输出 HTML 头部代码（从 `<!DOCTYPE html>` 开始，到 `<main class="...">` 标签开始）：**
