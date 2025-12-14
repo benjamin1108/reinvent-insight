@@ -133,6 +133,9 @@ async def summarize_endpoint(
 
     task_id = str(uuid.uuid4())
     
+    # 记录新任务创建
+    logger.info(f"[YouTube分析] 新任务创建 task_id={task_id}, url={req.url}")
+    
     # 先在 manager 中创建占位状态
     state = TaskState(task_id=task_id, status="queued", task=None)
     state.url_or_path = str(req.url)
@@ -157,12 +160,14 @@ async def summarize_endpoint(
     
     if not success:
         del manager.tasks[task_id]
+        logger.warning(f"[YouTube分析] 任务入队失败（队列已满）task_id={task_id}")
         raise HTTPException(
             status_code=503, 
             detail=f"任务队列已满（{config.ANALYSIS_QUEUE_MAX_SIZE} 个任务），请稍后重试"
         )
     
     queue_size = worker_pool.get_queue_size()
+    logger.info(f"[YouTube分析] 任务已入队 task_id={task_id}, priority={task_priority.name}, queue_size={queue_size}")
     return SummarizeResponse(
         task_id=task_id, 
         message=f"任务已加入队列（优先级: {task_priority.name}，排队: {queue_size} 个任务），请连接 WebSocket。", 

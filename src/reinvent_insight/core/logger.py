@@ -13,11 +13,24 @@ task_id_var: ContextVar[Optional[str]] = ContextVar('task_id', default=None)
 
 
 class ContextFilter(logging.Filter):
-    """添加上下文信息到日志记录"""
+    """添加上下文信息到日志记录
+    
+    规范：空值时不显示，而不是显示 '-' 占位符
+    """
     
     def filter(self, record):
-        record.request_id = request_id_var.get() or "-"
-        record.task_id = task_id_var.get() or "-"
+        req_id = request_id_var.get()
+        task_id = task_id_var.get()
+        
+        # 动态生成上下文字段（只显示有值的部分）
+        ctx_parts = []
+        if req_id:
+            ctx_parts.append(f"req={req_id}")
+        if task_id:
+            ctx_parts.append(f"task={task_id}")
+        
+        record.context = " ".join(ctx_parts) if ctx_parts else ""
+        record.context_sep = " │ " if ctx_parts else ""
         return True
 
 
@@ -85,10 +98,9 @@ def setup_logger(
         file_handler.setLevel(log_level)
         file_handler.addFilter(context_filter)
         
-        # 文件格式：包含完整信息
+        # 文件格式：包含完整信息（上下文空时不显示）
         file_formatter = logging.Formatter(
-            fmt="%(asctime)s │ %(levelname)-8s │ %(name)s:%(lineno)d │ "
-                "req=%(request_id)s task=%(task_id)s │ %(message)s",
+            fmt="%(asctime)s │ %(levelname)-8s │ %(name)s:%(lineno)d%(context_sep)s%(context)s │ %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S"
         )
         file_handler.setFormatter(file_formatter)

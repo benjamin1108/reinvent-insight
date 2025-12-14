@@ -140,7 +140,7 @@ class VisualInterpretationWorker:
             if self.task_id in task_manager.tasks:
                 task_manager.tasks[self.task_id].status = "running"
             
-            logger.info(f"开始生成可视化解读 - 任务: {self.task_id}")
+            logger.info(f"[可视化生成] 开始, task_id={self.task_id}, 分章节模式={self.use_chunked_mode}")
             await self._log("正在生成可视化解读...", progress=5)
             
             # 根据模式选择生成方式
@@ -161,7 +161,7 @@ class VisualInterpretationWorker:
             await self._log("可视化解读生成完成！", progress=100)
             
             await task_manager.set_task_completed(self.task_id, str(html_path))
-            logger.success(f"可视化解读生成成功: {html_path}")
+            logger.success(f"[可视化生成] 成功, task_id={self.task_id}, html={html_path}")
             return str(html_path)
             
         except Exception as e:

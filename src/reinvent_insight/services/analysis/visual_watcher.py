@@ -40,7 +40,7 @@ class VisualInterpretationWatcher:
         self._load_processed_files()
         self._cleanup_temp_files()
         
-        logger.info(f"初始化文件监测器 - 目录: {watch_dir}, 模型: {model_name}")
+        logger.info(f"[文件监测器] 初始化完成, 目录={watch_dir}, 模型={model_name}")
     
     def _load_processed_files(self):
         """从持久化存储加载已处理文件列表"""
@@ -88,7 +88,7 @@ class VisualInterpretationWatcher:
     
     async def start_watching(self):
         """开始监测文件变化"""
-        logger.info(f"开始监测目录: {self.watch_dir}")
+        logger.info(f"[文件监测器] 开始监测, 目录={self.watch_dir}")
         
         while True:
             try:

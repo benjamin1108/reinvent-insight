@@ -178,6 +178,15 @@ class AnalysisWorkflow(ABC):
             is_pdf=self.is_pdf
         ):
             try:
+                # 记录工作流启动上下文
+                mode_desc = "Ultra深度模式" if self.is_ultra_mode else "标准模式"
+                logger.info(
+                    f"[工作流启动] task_id={self.task_id}, "
+                    f"模式={mode_desc}, "
+                    f"内容类型={self.content_type}, "
+                    f"任务目录={self.task_dir}"
+                )
+                
                 await self._log("正在启动深度分析流程...")
                 self.task_notifier.tasks[self.task_id].status = "running"
 
@@ -224,6 +233,7 @@ class AnalysisWorkflow(ABC):
                     final_report, title, doc_hash, len(chapters), outline_content, final_filename
                 )
 
+                logger.info(f"[工作流完成] task_id={self.task_id}, 标题={title[:30]}..., 章节数={len(chapters)}, doc_hash={doc_hash}")
                 await self._log("分析完成！", progress=100)
                 await self.task_notifier.send_result(title, final_report, self.task_id, final_filename, doc_hash)
 

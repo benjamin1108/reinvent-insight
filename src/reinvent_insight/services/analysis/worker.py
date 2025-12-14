@@ -13,6 +13,8 @@ async def summary_task_worker_async(url: str, task_id: str):
     """
     异步工作函数，负责下载并启动多步骤摘要工作流。
     """
+    logger.info(f"[任务启动] task_id={task_id}, 类型=YouTube, url={url}")
+    
     # 1. 下载字幕 (这是一个阻塞操作，在异步函数中通过 to_thread 运行以避免阻塞事件循环)
     try:
         await manager.send_message("正在获取视频字幕...", task_id)
@@ -47,6 +49,8 @@ async def summary_task_worker_async(url: str, task_id: str):
             return
             
         video_title = metadata.title
+        logger.info(f"[字幕获取成功] task_id={task_id}, 标题={video_title[:50]}..." if len(video_title) > 50 else f"[字幕获取成功] task_id={task_id}, 标题={video_title}")
+        
         # 将原始视频标题写入任务目录，供后续重新拼接等操作使用
         from reinvent_insight.domain.workflows.base import get_task_dir_path
         task_dir = get_task_dir_path(task_id, "youtube")
@@ -95,7 +99,7 @@ async def summary_task_worker_async(url: str, task_id: str):
         task_notifier=manager
     )
 
-    logger.info(f"任务 {task_id} 的工作流已在后台完成。")
+    logger.info(f"[任务完成] task_id={task_id}, 类型=YouTube, 工作流执行完毕")
 
 
 async def ultra_deep_insight_worker_async(url: str, task_id: str, doc_hash: str, target_version: int):
@@ -108,6 +112,8 @@ async def ultra_deep_insight_worker_async(url: str, task_id: str, doc_hash: str,
         doc_hash: 文档哈希值
         target_version: 目标版本号
     """
+    logger.info(f"[Ultra任务启动] task_id={task_id}, doc_hash={doc_hash}, target_version={target_version}")
+    
     try:
         await manager.send_message("正在启动Ultra DeepInsight生成...", task_id)
         
@@ -161,7 +167,7 @@ async def ultra_deep_insight_worker_async(url: str, task_id: str, doc_hash: str,
             doc_hash=doc_hash  # 文档哈希
         )
         
-        logger.info(f"Ultra任务 {task_id} 的工作流已完成")
+        logger.info(f"[Ultra任务完成] task_id={task_id}, doc_hash={doc_hash}")
         
     except Exception as e:
         logger.error(f"Ultra任务 {task_id} 发生未预期错误: {e}", exc_info=True)

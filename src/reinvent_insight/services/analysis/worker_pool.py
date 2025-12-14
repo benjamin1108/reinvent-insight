@@ -162,7 +162,7 @@ class WorkerPool:
             
             queue_size = self.queue.qsize()
             logger.info(
-                f"任务已加入队列: task_id={task_id}, "
+                f"[任务入队] task_id={task_id}, "
                 f"type={task_type}, "
                 f"priority={priority.name}, "
                 f"queue_size={queue_size}/{self.max_queue_size}"
@@ -218,7 +218,7 @@ class WorkerPool:
         task_id = task.task_id
         
         try:
-            logger.info(f"开始执行任务: {task_id}, type={task.task_type}")
+            logger.info(f"[任务执行] task_id={task_id}, type={task.task_type}")
             
             # 更新状态为运行中
             task_state = manager.get_task_state(task_id)
@@ -267,12 +267,12 @@ class WorkerPool:
                 except Exception as e:
                     logger.warning(f"任务回调执行失败: {e}")
             
-            logger.info(f"任务执行成功: {task_id}")
+            logger.info(f"[任务成功] task_id={task_id}")
             self.stats['total_success'] += 1
             return True
             
         except asyncio.TimeoutError:
-            logger.error(f"任务执行超时 ({self.task_timeout}s): {task_id}")
+            logger.error(f"[任务超时] task_id={task_id}, timeout={self.task_timeout}s")
             
             # 通知超时
             await manager.set_task_error(
@@ -293,7 +293,7 @@ class WorkerPool:
             return False
             
         except Exception as e:
-            logger.error(f"任务执行失败: {task_id}, 错误: {e}", exc_info=True)
+            logger.error(f"[任务失败] task_id={task_id}, error={e}")
             
             # 任务可能已经在 worker 中设置了错误，这里不重复设置
             # 只有在任务状态不是 error 时才设置
@@ -335,9 +335,10 @@ class WorkerPool:
                 self.processing_tasks[task.task_id] = task
                 
                 logger.info(
-                    f"Worker {worker_id} 获取任务: {task.task_id}, "
-                    f"优先级: {-task.priority}, "
-                    f"队列剩余: {self.queue.qsize()}"
+                    f"[Worker取任务] worker_id={worker_id}, "
+                    f"task_id={task.task_id}, "
+                    f"priority={-task.priority}, "
+                    f"queue_remaining={self.queue.qsize()}"
                 )
                 
                 # 执行任务
@@ -352,8 +353,9 @@ class WorkerPool:
                 self.queue.task_done()
                 
                 logger.info(
-                    f"Worker {worker_id} 完成任务: {task.task_id}, "
-                    f"成功: {success}"
+                    f"[Worker完成] worker_id={worker_id}, "
+                    f"task_id={task.task_id}, "
+                    f"success={success}"
                 )
                 
             except asyncio.TimeoutError:

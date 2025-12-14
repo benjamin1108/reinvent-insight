@@ -81,7 +81,7 @@ class DocumentProcessor:
         # 获取文档类型
         doc_type = self._get_document_type(file_path)
         
-        logger.info(f"处理文档: {file_path}, 类型: {doc_type}")
+        logger.info(f"[文档处理] 开始, path={file_path}, type={doc_type}")
         
         # 根据文档类型选择处理策略
         if doc_type == 'text':
@@ -142,7 +142,7 @@ class DocumentProcessor:
                 try:
                     with open(file_path, 'r', encoding=encoding) as f:
                         text_content = f.read()
-                    logger.info(f"成功使用 {encoding} 编码读取文件")
+                    logger.debug(f"[文档处理] 编码识别成功, encoding={encoding}")
                     break
                 except UnicodeDecodeError:
                     continue
@@ -176,7 +176,7 @@ class DocumentProcessor:
                 text_content=text_content
             )
             
-            logger.info(f"文本文档处理完成: {doc_identifier}, 大小: {file_size} bytes")
+            logger.info(f"[文档处理] 完成, doc={doc_identifier}, size={file_size}bytes")
             return content
             
         except Exception as e:

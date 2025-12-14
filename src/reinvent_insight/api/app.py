@@ -167,17 +167,34 @@ else:
 
 # Frontend catch-all route (MUST be last)
 if web_dir.is_dir():
+    # 已知的前端路由前缀（SPA路由）
+    FRONTEND_ROUTES = (
+        '',           # 主页
+        'd/',         # 文档页
+        'article/',   # 文章页（别名）
+    )
+    
     @app.get("/{full_path:path}", response_class=FileResponse, include_in_schema=False)
     async def serve_vue_app(request: Request, full_path: str):
         """
         Serve the Vue.js application.
-        This allows the client-side router to handle all non-API, non-static-file paths.
+        只对已知前端路由返回 index.html，其他返回 404。
         """
         from reinvent_insight.services.document.hash_registry import hash_to_filename
         from reinvent_insight.services.document.metadata_service import (
             parse_metadata_from_md,
             extract_text_from_markdown,
         )
+        
+        # 检查是否是已知前端路由
+        is_frontend_route = (
+            full_path == '' or 
+            any(full_path.startswith(prefix) for prefix in FRONTEND_ROUTES if prefix)
+        )
+        
+        if not is_frontend_route:
+            # 未知路径返回 404
+            raise HTTPException(status_code=404, detail="Not Found")
         
         # 检查是否是文档URL
         if full_path.startswith("d/"):
