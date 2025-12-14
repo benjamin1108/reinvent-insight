@@ -115,6 +115,16 @@ async def delete_summary(doc_hash: str, authorization: str = Header(None)):
         if filename in filename_to_hash:
             del filename_to_hash[filename]
     
+    # 5. 主动刷新 summary_cache（避免前端立即请求时缓存未更新）
+    try:
+        from reinvent_insight.services.document.summary_cache import get_summary_cache
+        cache = get_summary_cache()
+        for filename in files_to_move:
+            cache.remove_document(filename)
+        logger.info(f"已主动刷新 summary_cache，移除 {len(files_to_move)} 个文档")
+    except Exception as e:
+        logger.warning(f"刷新 summary_cache 失败: {e}")
+    
     # 返回结果
     if not moved_files and errors:
         raise HTTPException(status_code=500, detail=f"删除失败: {'; '.join(errors)}")

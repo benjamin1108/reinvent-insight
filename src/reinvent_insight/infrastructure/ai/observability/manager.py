@@ -23,14 +23,21 @@ class ObservabilityManager:
     def __init__(self):
         """私有构造函数"""
         self.enabled = config.MODEL_OBSERVABILITY_ENABLED
-        self.output_dir = Path(config.MODEL_OBSERVABILITY_OUTPUT_DIR)
+        
+        # 生产环境可能没有配置输出目录
+        if config.MODEL_OBSERVABILITY_OUTPUT_DIR:
+            self.output_dir = Path(config.MODEL_OBSERVABILITY_OUTPUT_DIR)
+        else:
+            self.output_dir = None
+            self.enabled = False  # 无输出目录时强制禁用
+        
         self.log_level = config.MODEL_OBSERVABILITY_LOG_LEVEL
         self.mask_sensitive = config.MODEL_OBSERVABILITY_MASK_SENSITIVE
         self.max_prompt_length = config.MODEL_OBSERVABILITY_MAX_PROMPT_LENGTH
         self.max_response_length = config.MODEL_OBSERVABILITY_MAX_RESPONSE_LENGTH
         
         # 确保输出目录存在
-        if self.enabled:
+        if self.enabled and self.output_dir:
             self.output_dir.mkdir(parents=True, exist_ok=True)
             logger.info(f"可观测层已启用，日志目录: {self.output_dir}")
         

@@ -286,7 +286,7 @@ class VisualInterpretationWorker:
         prompt = self.footer_prompt.replace(
             "{{TITLE_CN}}", metadata.get('title_cn', '')
         ).replace(
-            "{{GENERATION_DATE}}", datetime.now().strftime("%Y-%m-%d %H:%M")
+            "{{GENERATION_DATE}}", datetime.now().strftime("%Y-%m-%d")
         ).replace(
             "{{STYLE_SPEC}}", style_spec_text
         )
@@ -555,10 +555,11 @@ class VisualInterpretationWorker:
         """从文章中提取元数据（让 AI 自己决定配色）"""
         import yaml
         
+        today = datetime.now().strftime("%Y-%m-%d")
         metadata = {
             'title_cn': '',
             'title_en': '',
-            'date': datetime.now().strftime("%Y-%m-%d"),
+            'date': today,
         }
         
         try:
@@ -569,7 +570,26 @@ class VisualInterpretationWorker:
                     yaml_data = yaml.safe_load(parts[1])
                     metadata['title_cn'] = yaml_data.get('title_cn', '')
                     metadata['title_en'] = yaml_data.get('title_en', '')
-                    metadata['date'] = yaml_data.get('upload_date', metadata['date'])
+                    
+                    # 处理日期：优先使用 upload_date，如果无效则使用 created_at 或当天日期
+                    raw_date = yaml_data.get('upload_date', '')
+                    if raw_date:
+                        # 格式化日期：YYYYMMDD -> YYYY-MM-DD
+                        date_str = str(raw_date).replace('-', '')
+                        if len(date_str) == 8:
+                            formatted = f"{date_str[0:4]}-{date_str[4:6]}-{date_str[6:8]}"
+                            # 检查日期是否有效（不是 1970-01-01）
+                            if formatted != '1970-01-01':
+                                metadata['date'] = formatted
+                            else:
+                                # upload_date 无效，尝试使用 created_at
+                                created_at = yaml_data.get('created_at', '')
+                                if created_at:
+                                    # created_at 格式：2025-12-14T15:36:57.920029
+                                    try:
+                                        metadata['date'] = str(created_at)[:10]
+                                    except:
+                                        pass
         except Exception as e:
             logger.warning(f"提取文章元数据失败: {e}")
         

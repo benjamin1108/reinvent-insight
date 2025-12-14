@@ -297,7 +297,8 @@ def serve(host: str = "127.0.0.1", port: int = 8001, reload: bool = False):
         host=host,
         port=port,
         reload=reload,
-        timeout_graceful_shutdown=1  # 设置 1 秒优雅关闭超时
+        timeout_graceful_shutdown=1,  # 设置 1 秒优雅关闭超时
+        log_config=None  # 保留我们的日志配置，不被 uvicorn 覆盖
     )
 
 

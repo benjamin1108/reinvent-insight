@@ -34,8 +34,8 @@ class TaskNotifier(Protocol):
     async def set_task_error(self, task_id: str, error_msg: str) -> None: ...
 
 
-# 定义任务根目录
-TASKS_ROOT_DIR = "./downloads/tasks"
+# 任务根目录（使用 config 中的缓存目录）
+TASKS_ROOT_DIR = str(config.TASKS_DIR)
 BASE_PROMPT_PATH = "./prompt/youtbe-deep-summary.txt"
 
 
@@ -131,10 +131,12 @@ class AnalysisWorkflow(ABC):
             self.content_type = "transcript"
             self.transcript = content
             self.is_pdf = False
+            self.file_info = None  # 文本内容无文件信息
         elif isinstance(content, DocumentContent):
             self.content_type = content.content_type
             self.transcript = content.text_content or ""
             self.is_pdf = content.is_multimodal
+            self.file_info = content.file_info if content.is_multimodal else None  # PDF 保存文件信息
         else:
             raise ValueError(f"不支持的内容类型: {type(content)}")
         

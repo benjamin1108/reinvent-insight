@@ -1,16 +1,25 @@
 #!/bin/bash
 
 # reinvent-insight 自动化重新打包和部署脚本
+# 采用软链接切换架构 (Symlink Switching)
 # 使用方法: ./redeploy.sh [选项]
 # 选项:
 #   --no-backup  不备份现有数据
 #   --copy-dev-articles  自动复制开发环境文章到生产环境（默认不复制）
 #   --port PORT  指定端口号（默认：8001）
 #   --host HOST  指定主机地址（默认：127.0.0.1）
+#   --fresh      完全重新部署（不复用旧 venv）
 #   --dry-run    显示将要执行的操作但不实际执行
 #   --fix-permissions 只修复现有部署的文件权限
+#   --rollback   回滚到上一个版本
 
 set -e  # 遇到错误立即退出
+
+# 禁止 root 用户直接运行
+if [ "$EUID" -eq 0 ]; then
+    echo -e "\033[0;31m❌ 请不要使用 sudo 直接运行此脚本！脚本内部会自动处理权限。\033[0m"
+    exit 1
+fi
 
 # 颜色定义
 RED='\033[0;31m'
@@ -23,18 +32,28 @@ NC='\033[0m' # No Color
 PORT=8001
 HOST="127.0.0.1"
 BACKUP=true
-COPY_DEV_ARTICLES=false  # 默认不复制开发环境文章
+COPY_DEV_ARTICLES=false
 PROJECT_NAME="reinvent-insight"
-DEPLOY_DIR="$HOME/${PROJECT_NAME}-prod"
-BACKUP_ROOT="$HOME/${PROJECT_NAME}-backups"  # 统一的备份根目录
 SERVICE_NAME="${PROJECT_NAME}"
-VENV_NAME=".venv-dist"
+VENV_NAME=".venv"
 FIX_PERMISSIONS=false
+FRESH_DEPLOY=false
+ROLLBACK=false
+
+# === 软链接架构目录结构 ===
+BASE_DIR="$HOME/${PROJECT_NAME}-deploy"     # 部署根目录
+RELEASES_DIR="$BASE_DIR/releases"           # 历史版本目录
+SHARED_DIR="$BASE_DIR/shared"               # 共享数据目录
+CURRENT_LINK="$BASE_DIR/current"            # 当前版本软链接（systemd 指向此）
+BACKUP_ROOT="$HOME/${PROJECT_NAME}-backups" # 备份目录
+
+# 新版本目录（运行时生成）
+NEW_RELEASE_DIR=""
 
 # 状态变量
-LATEST_BACKUP=""  # 最新的备份目录
-FRESH_INSTALL=false  # 是否为全新安装
-DRY_RUN=false  # 是否为演练模式
+LATEST_BACKUP=""
+FRESH_INSTALL=false
+DRY_RUN=false
 
 # 解析命令行参数
 while [[ $# -gt 0 ]]; do
@@ -61,6 +80,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --fix-permissions)
       FIX_PERMISSIONS=true
+      shift
+      ;;
+    --fresh)
+      FRESH_DEPLOY=true
+      shift
+      ;;
+    --rollback)
+      ROLLBACK=true
       shift
       ;;
     *)
@@ -151,6 +178,107 @@ check_project_root() {
     if [ ! -f "pyproject.toml" ] || [ ! -d "src/reinvent_insight" ]; then
         print_error "请在项目根目录下运行此脚本"
         exit 1
+    fi
+}
+
+# 初始化软链接架构目录结构
+init_structure() {
+    print_info "初始化部署目录结构..."
+    
+    # 创建核心目录
+    mkdir -p "$RELEASES_DIR"
+    # 只创建用户数据目录，不创建临时文件和日志目录
+    # 临时文件（tasks、chunks）在 cache/ 目录，每个 release 独立
+    # 日志使用 journalctl，不需要文件日志
+    mkdir -p "$SHARED_DIR/downloads/subtitles"
+    mkdir -p "$SHARED_DIR/downloads/summaries"
+    mkdir -p "$SHARED_DIR/downloads/pdfs"
+    mkdir -p "$SHARED_DIR/downloads/keyframes"
+    mkdir -p "$SHARED_DIR/downloads/trash"
+    mkdir -p "$SHARED_DIR/downloads/tts_cache"
+    mkdir -p "$SHARED_DIR/downloads/tts_texts"
+    mkdir -p "$SHARED_DIR/config"
+    mkdir -p "$BACKUP_ROOT"
+    
+    print_success "目录结构初始化完成"
+    print_info "  releases: $RELEASES_DIR"
+    print_info "  shared:   $SHARED_DIR"
+    print_info "  current:  $CURRENT_LINK"
+}
+
+# 迁移旧版部署数据到新架构
+migrate_old_deployment() {
+    local OLD_DEPLOY="$HOME/${PROJECT_NAME}-prod/reinvent_insight-0.1.0"
+    local MIGRATED=false
+    
+    # 1. 检查 shared/downloads 是否为空，如果有内容则无需迁移
+    local shared_file_count=$(find "$SHARED_DIR/downloads" -type f 2>/dev/null | wc -l)
+    if [ "$shared_file_count" -gt 0 ]; then
+        print_info "shared/downloads 已有 $shared_file_count 个文件，跳过数据迁移"
+        return
+    fi
+    
+    # 2. 尝试从旧版 reinvent-insight-prod 目录迁移
+    if [ -d "$OLD_DEPLOY" ]; then
+        print_info "检测到旧版部署，迁移数据到新架构..."
+        
+        # 迁移配置文件
+        if [ -f "$OLD_DEPLOY/.env" ]; then
+            if ! grep -q "your-gemini-api-key-here" "$OLD_DEPLOY/.env" 2>/dev/null; then
+                cp "$OLD_DEPLOY/.env" "$SHARED_DIR/config/.env"
+                print_info "已迁移 .env 配置文件"
+            fi
+        fi
+        
+        # 迁移 .cookies
+        if [ -f "$OLD_DEPLOY/.cookies" ]; then
+            cp "$OLD_DEPLOY/.cookies" "$SHARED_DIR/config/.cookies"
+            print_info "已迁移 .cookies 文件"
+        fi
+        
+        # 迁移 downloads 目录
+        if [ -d "$OLD_DEPLOY/downloads" ] && [ "$(ls -A "$OLD_DEPLOY/downloads" 2>/dev/null)" ]; then
+            cp -r "$OLD_DEPLOY/downloads"/* "$SHARED_DIR/downloads/" 2>/dev/null || true
+            MIGRATED=true
+        fi
+    fi
+    
+    # 3. 尝试从现有 releases 版本中迁移（处理非软链接的 downloads 目录）
+    if [ "$MIGRATED" = false ] && [ -d "$RELEASES_DIR" ]; then
+        for release in $(ls -t "$RELEASES_DIR" 2>/dev/null | head -5); do
+            local release_downloads="$RELEASES_DIR/$release/downloads"
+            # 检查是否为真实目录（非软链接）且有内容
+            if [ -d "$release_downloads" ] && [ ! -L "$release_downloads" ]; then
+                local release_file_count=$(find "$release_downloads" -type f 2>/dev/null | wc -l)
+                if [ "$release_file_count" -gt 0 ]; then
+                    print_info "从 releases/$release 迁移 $release_file_count 个文件到 shared/downloads..."
+                    cp -r "$release_downloads"/* "$SHARED_DIR/downloads/" 2>/dev/null || true
+                    MIGRATED=true
+                    break
+                fi
+            fi
+        done
+    fi
+    
+    # 4. 尝试从备份目录恢复（如果之前有备份）
+    if [ "$MIGRATED" = false ] && [ -d "$BACKUP_ROOT" ]; then
+        local latest_backup=$(ls -t "$BACKUP_ROOT" 2>/dev/null | head -1)
+        if [ -n "$latest_backup" ] && [ -d "$BACKUP_ROOT/$latest_backup/downloads" ]; then
+            local backup_file_count=$(find "$BACKUP_ROOT/$latest_backup/downloads" -type f 2>/dev/null | wc -l)
+            if [ "$backup_file_count" -gt 0 ]; then
+                print_info "从备份 $latest_backup 恢复 $backup_file_count 个文件到 shared/downloads..."
+                cp -r "$BACKUP_ROOT/$latest_backup/downloads"/* "$SHARED_DIR/downloads/" 2>/dev/null || true
+                MIGRATED=true
+            fi
+        fi
+    fi
+    
+    # 5. 报告结果
+    if [ "$MIGRATED" = true ]; then
+        local final_count=$(find "$SHARED_DIR/downloads" -type f 2>/dev/null | wc -l)
+        print_success "数据迁移完成 ($final_count 个文件)"
+    else
+        print_warning "未找到可迁移的数据，shared/downloads 目录为空"
     fi
 }
 
@@ -260,53 +388,48 @@ build_package() {
 show_deployment_plan() {
     echo ""
     echo "======================================"
-    echo -e "${BLUE}部署计划总结${NC}"
+    echo -e "${BLUE}部署计划总结 (软链接架构)${NC}"
     echo "======================================"
     
     # 检查现有部署
-    if [ -d "$DEPLOY_DIR" ]; then
-        echo "• 现有部署: 存在"
-        if [ "$BACKUP" = true ]; then
-            echo "• 数据备份: 将备份当前生产数据"
-            # 检查当前 .env 是否为真实配置
-            if [ -f "$DEPLOY_DIR/reinvent_insight-0.1.0/.env" ]; then
-                if ! grep -q "your-gemini-api-key-here" "$DEPLOY_DIR/reinvent_insight-0.1.0/.env" 2>/dev/null; then
-                    echo "  - .env: 真实配置（将备份）"
-                else
-                    echo "  - .env: 示例配置（跳过备份）"
-                fi
-            fi
-            # 检查 .cookies 文件
-            if [ -f "$DEPLOY_DIR/reinvent_insight-0.1.0/.cookies" ]; then
-                echo "  - .cookies: 存在（将备份）"
-            fi
-            # 检查 downloads 目录
-            if [ -d "$DEPLOY_DIR/reinvent_insight-0.1.0/downloads" ]; then
-                FILE_COUNT=$(find "$DEPLOY_DIR/reinvent_insight-0.1.0/downloads" -type f 2>/dev/null | wc -l)
-                echo "  - downloads: $FILE_COUNT 个文件"
-            fi
-        else
-            echo "• 数据备份: 跳过（--no-backup）"
-        fi
+    if [ -L "$CURRENT_LINK" ]; then
+        local current_release=$(readlink -f "$CURRENT_LINK")
+        echo "• 当前版本: $(basename "$current_release")"
     else
-        echo "• 现有部署: 不存在"
+        echo "• 当前版本: 无（首次部署）"
+    fi
+    
+    # 检查 shared 数据
+    if [ -d "$SHARED_DIR/downloads" ]; then
+        FILE_COUNT=$(find "$SHARED_DIR/downloads" -type f 2>/dev/null | wc -l)
+        echo "• 共享数据: $FILE_COUNT 个文件"
+    fi
+    
+    # 检查配置文件
+    if [ -f "$SHARED_DIR/config/.env" ]; then
+        if ! grep -q "your-gemini-api-key-here" "$SHARED_DIR/config/.env" 2>/dev/null; then
+            echo "• .env 配置: 已配置"
+        else
+            echo "• .env 配置: 示例文件"
+        fi
+    fi
+    
+    # 查找历史版本
+    if [ -d "$RELEASES_DIR" ]; then
+        local release_count=$(ls -d "$RELEASES_DIR"/*/ 2>/dev/null | wc -l)
+        echo "• 历史版本: $release_count 个"
     fi
     
     # 查找历史备份
     if [ -d "$BACKUP_ROOT" ]; then
-        local old_backups=$(ls -d "$BACKUP_ROOT"/backup_* 2>/dev/null | sort -r)
-        if [ -n "$old_backups" ]; then
-            echo "• 历史备份: $(echo "$old_backups" | wc -l) 个"
-            echo "  最新: $(basename $(echo "$old_backups" | head -1))"
-            echo "  位置: $BACKUP_ROOT"
-        else
-            echo "• 历史备份: 无"
+        local backup_count=$(ls -d "$BACKUP_ROOT"/backup_* 2>/dev/null | wc -l)
+        if [ "$backup_count" -gt 0 ]; then
+            echo "• 历史备份: $backup_count 个"
         fi
-    else
-        echo "• 历史备份: 无"
     fi
     
-    echo "• 部署位置: $DEPLOY_DIR"
+    echo "• 部署位置: $BASE_DIR"
+    echo "• current 链接: $CURRENT_LINK"
     echo "• 服务端口: $PORT"
     echo "• 服务主机: $HOST"
     
@@ -314,8 +437,6 @@ show_deployment_plan() {
     if [ -f "MANIFEST.in" ]; then
         if grep -q "prune web/test" MANIFEST.in; then
             echo "• 构建配置: 排除 test 目录 ✓"
-        else
-            echo "• 构建配置: 包含 test 目录 ⚠️"
         fi
     fi
     
@@ -325,90 +446,6 @@ show_deployment_plan() {
         echo ""
         print_info "演练模式结束，未执行任何实际操作"
         exit 0
-    else
-        echo ""
-        if ! confirm_with_countdown "是否继续执行？" "y" 5; then
-            print_info "部署已取消"
-            exit 0
-        fi
-    fi
-}
-
-# 检查并处理备份
-check_and_handle_backup() {
-    # 确保备份根目录存在
-    mkdir -p "$BACKUP_ROOT"
-    
-    # 查找最新的备份目录
-    LATEST_BACKUP=$(ls -d "$BACKUP_ROOT"/backup_* 2>/dev/null | sort -r | head -1)
-    
-    # 总是先备份当前的生产数据（如果存在）
-    if [ -d "$DEPLOY_DIR" ] && [ "$BACKUP" = true ]; then
-        print_info "发现现有部署，备份当前生产数据..."
-        BACKUP_DIR="$BACKUP_ROOT/backup_$(date +%Y%m%d_%H%M%S)"
-        mkdir -p "$BACKUP_DIR"
-        
-        # 备份下载目录
-        if [ -d "$DEPLOY_DIR/reinvent_insight-0.1.0/downloads" ]; then
-            # 检查是否有任何文件（不限深度）
-            if [ "$(find "$DEPLOY_DIR/reinvent_insight-0.1.0/downloads" -type f 2>/dev/null | head -1)" ]; then
-                cp -r "$DEPLOY_DIR/reinvent_insight-0.1.0/downloads" "$BACKUP_DIR/"
-                FILE_COUNT=$(find "$DEPLOY_DIR/reinvent_insight-0.1.0/downloads" -type f 2>/dev/null | wc -l)
-                print_info "已备份 downloads 目录（包含 $FILE_COUNT 个文件）"
-            else
-                # 即使没有文件，也备份目录结构
-                cp -r "$DEPLOY_DIR/reinvent_insight-0.1.0/downloads" "$BACKUP_DIR/"
-                print_info "已备份 downloads 目录结构（空目录）"
-            fi
-        fi
-        
-        # 备份 .env 文件（只备份非示例文件）
-        if [ -f "$DEPLOY_DIR/reinvent_insight-0.1.0/.env" ]; then
-            if ! grep -q "your-gemini-api-key-here" "$DEPLOY_DIR/reinvent_insight-0.1.0/.env" 2>/dev/null; then
-                cp "$DEPLOY_DIR/reinvent_insight-0.1.0/.env" "$BACKUP_DIR/"
-                print_info "已备份 .env 文件（真实配置）"
-            else
-                print_warning "现有 .env 是示例文件，跳过备份"
-            fi
-        fi
-        
-        # 备份 .cookies 文件
-        if [ -f "$DEPLOY_DIR/reinvent_insight-0.1.0/.cookies" ]; then
-            cp "$DEPLOY_DIR/reinvent_insight-0.1.0/.cookies" "$BACKUP_DIR/"
-            print_info "已备份 .cookies 文件"
-        fi
-        
-        # 检查备份目录是否有内容
-        if [ -d "$BACKUP_DIR" ]; then
-            if [ "$(ls -A "$BACKUP_DIR" 2>/dev/null)" ]; then
-                print_success "新备份完成: $BACKUP_DIR"
-                LATEST_BACKUP="$BACKUP_DIR"  # 使用最新的备份
-            else
-                # 即使没有实际数据，也保留备份目录作为标记
-                echo "$(date)" > "$BACKUP_DIR/backup_timestamp.txt"
-                print_info "创建备份标记: $BACKUP_DIR"
-                # 如果新备份为空，使用旧备份（如果存在）
-                if [ -z "$LATEST_BACKUP" ]; then
-                    LATEST_BACKUP="$BACKUP_DIR"
-                fi
-            fi
-        fi
-    fi
-    
-    # 判断是否为全新安装
-    if [ -z "$LATEST_BACKUP" ]; then
-        print_info "没有任何备份，执行全新部署"
-        FRESH_INSTALL=true
-    else
-        print_info "将使用备份: $LATEST_BACKUP"
-        FRESH_INSTALL=false
-    fi
-    
-    # 清理旧的部署目录
-    if [ -d "$DEPLOY_DIR" ]; then
-        print_info "清理旧的部署目录..."
-        rm -rf "$DEPLOY_DIR"
-        print_success "已清理旧部署"
     fi
 }
 
@@ -432,270 +469,145 @@ stop_service() {
     fi
 }
 
-# 部署新版本
-deploy_new_version() {
-    print_info "开始部署新版本..."
+# 预先准备新版本（在服务运行期间执行，不停服）
+prepare_release() {
+    print_info "开始准备新版本（服务仍在运行）..."
     
-    # 创建部署目录
-    mkdir -p "$DEPLOY_DIR"
+    # 生成新版本目录名
+    NEW_RELEASE_DIR="$RELEASES_DIR/$(date +%Y%m%d_%H%M%S)"
+    mkdir -p "$NEW_RELEASE_DIR"
     
-    # 复制包文件
-    cp "$PACKAGE_FILE" "$DEPLOY_DIR/"
-    
-    # 进入部署目录
-    cd "$DEPLOY_DIR"
-    
-    # 解压
+    # 复制并解压包
+    cp "$PACKAGE_FILE" "$NEW_RELEASE_DIR/"
+    cd "$NEW_RELEASE_DIR"
     print_info "解压文件..."
-    tar -xzf "$(basename "$PACKAGE_FILE")"
+    tar -xzf "$(basename "$PACKAGE_FILE")" --strip-components=1
+    rm -f "$(basename "$PACKAGE_FILE")"
     
-    # 进入解压后的目录
-    cd reinvent_insight-0.1.0
-    
-    # 创建虚拟环境
-    print_info "创建虚拟环境..."
-    python3 -m venv "$VENV_NAME"
-    
-    # 激活虚拟环境并安装
-    print_info "安装包..."
-    source "$VENV_NAME/bin/activate"
-    pip install --upgrade pip
-    pip install .
-    
-    # 创建必要的目录
-    mkdir -p downloads/subtitles downloads/summaries downloads/pdfs downloads/tasks
-    
-    # 验证PDF处理相关的Python模块是否正确安装
-    print_info "验证PDF处理模块..."
-    
-    # 先验证核心依赖
-    local deps_ok=true
-    if ! $VENV_NAME/bin/python -c "import google.generativeai" 2>/dev/null; then
-        print_warning "  Google Generative AI SDK 未正确安装"
-        deps_ok=false
-    else
-        print_info "  ✓ Google Generative AI SDK 已安装"
+    # 检查是否可以复用旧的 venv
+    local OLD_VENV=""
+    if [ -L "$CURRENT_LINK" ] && [ -d "$CURRENT_LINK/$VENV_NAME" ]; then
+        OLD_VENV="$CURRENT_LINK/$VENV_NAME"
     fi
     
-    if ! $VENV_NAME/bin/python -c "import reportlab" 2>/dev/null; then
-        print_warning "  ReportLab PDF处理库未正确安装"
-        deps_ok=false
-    else
-        print_info "  ✓ ReportLab PDF处理库已安装"
-    fi
-    
-    if ! $VENV_NAME/bin/python -c "import packaging" 2>/dev/null; then
-        print_warning "  packaging 模块未安装，尝试安装..."
-        $VENV_NAME/bin/pip install packaging >/dev/null 2>&1
-        if $VENV_NAME/bin/python -c "import packaging" 2>/dev/null; then
-            print_info "  ✓ packaging 模块已安装"
-        else
-            print_warning "  packaging 模块安装失败"
-            deps_ok=false
-        fi
-    else
-        print_info "  ✓ packaging 模块已安装"
-    fi
-    
-    # 验证 Playwright 并安装浏览器
-    print_info "验证 Playwright 和浏览器..."
-    if ! $VENV_NAME/bin/python -c "import playwright" 2>/dev/null; then
-        print_warning "  Playwright 未正确安装"
-        deps_ok=false
-    else
-        print_info "  ✓ Playwright 已安装"
+    if [ "$FRESH_DEPLOY" = false ] && [ -n "$OLD_VENV" ] && [ -f "$OLD_VENV/bin/python" ]; then
+        print_info "复用现有 venv（跳过依赖安装）..."
+        cp -r "$OLD_VENV" "$VENV_NAME"
         
-        # 安装 Chromium 浏览器
-        print_info "  安装 Chromium 浏览器（用于长图生成功能）..."
-        if $VENV_NAME/bin/playwright install chromium >/dev/null 2>&1; then
-            print_success "  ✓ Chromium 浏览器已安装"
-        else
-            print_warning "  Chromium 浏览器安装失败（可能需要手动安装）"
-            print_info "    手动安装: $VENV_NAME/bin/playwright install chromium"
+        # 修复 venv bin 目录（重建 python/pip 等可执行文件）
+        # 不删除 bin 目录，直接 update
+        python3 -m venv "$VENV_NAME"
+        
+        # 强制尝试恢复 pip 启动器
+        "$VENV_NAME/bin/python" -m ensurepip --upgrade --default-pip >/dev/null 2>&1 || true
+
+        # 稳健地使用 python -m pip 安装
+        "$VENV_NAME/bin/python" -m pip install . -q
+        print_success "venv 复用完成"
+    else
+        print_info "创建新的虚拟环境..."
+        python3 -m venv "$VENV_NAME"
+        
+        print_info "安装依赖（需要较长时间）..."
+        "$VENV_NAME/bin/python" -m pip install --upgrade pip -q
+        "$VENV_NAME/bin/python" -m pip install . -q
+        
+        # 验证核心依赖
+        print_info "验证核心依赖..."
+        if "$VENV_NAME/bin/python" -c "import google.generativeai" 2>/dev/null; then
+            print_info "  ✓ Google Generative AI SDK 已安装"
+        fi
+        if "$VENV_NAME/bin/python" -c "import reportlab" 2>/dev/null; then
+            print_info "  ✓ ReportLab PDF处理库已安装"
+        fi
+        
+        # 安装 Playwright 浏览器
+        if "$VENV_NAME/bin/python" -c "import playwright" 2>/dev/null; then
+            print_info "安装 Chromium 浏览器..."
+            "$VENV_NAME/bin/playwright" install chromium >/dev/null 2>&1 || true
+            print_info "  ✓ Chromium 浏览器已安装"
         fi
     fi
     
-    # 最后验证PDF处理模块
-    if $VENV_NAME/bin/python -c "from reinvent_insight.infrastructure.media.pdf_processor import PDFProcessor" 2>/dev/null; then
-        print_success "PDF处理功能已正确安装"
-    else
-        if [ "$deps_ok" = true ]; then
-            print_warning "PDF处理模块加载失败，但依赖已安装（可能是配置问题）"
-        else
-            print_warning "PDF处理模块加载失败，部分依赖未正确安装"
-        fi
-        print_info "  提示：服务启动后会自动加载依赖，如果问题持续请检查日志"
+    # 创建指向共享数据的软链接
+    print_info "链接共享数据目录..."
+    rm -rf downloads
+    ln -s "$SHARED_DIR/downloads" downloads
+    
+    # 链接配置文件
+    if [ -f "$SHARED_DIR/config/.env" ]; then
+        ln -sf "$SHARED_DIR/config/.env" .env
+    fi
+    if [ -f "$SHARED_DIR/config/.cookies" ]; then
+        ln -sf "$SHARED_DIR/config/.cookies" .cookies
     fi
     
+    # 修复权限
+    chmod -R u+rwX,g+rX,o+rX "$NEW_RELEASE_DIR"
     
-    # 确保所有文件和目录的权限正确
-    print_info "修复文件权限..."
-    sudo chown -R "$USER:$USER" "$DEPLOY_DIR"
-    chmod -R u+rwX,g+rX,o+rX "$DEPLOY_DIR"
-    
-    # 验证 test 目录是否被正确排除
-    if [ ! -d "web/test" ]; then
-        print_success "✓ test 目录已被正确排除"
-    else
-        print_warning "⚠️ test 目录仍然存在，请检查 MANIFEST.in 配置"
-        print_info "test 目录内容: $(ls -la web/test | wc -l) 个文件"
-    fi
-    
-    print_success "部署完成"
+    print_success "新版本准备完成: $NEW_RELEASE_DIR"
 }
 
-# 恢复数据
-restore_data() {
-    # 先处理备份数据
-    if [ -n "$LATEST_BACKUP" ] && [ -d "$LATEST_BACKUP" ]; then
-        print_info "从备份恢复数据: $LATEST_BACKUP"
-        
-        # 恢复 downloads 目录（整个目录，包括 subtitles、summaries、pdfs 等）
-        if [ -d "$LATEST_BACKUP/downloads" ] && [ "$(ls -A "$LATEST_BACKUP/downloads" 2>/dev/null)" ]; then
-            print_info "恢复 downloads 目录..."
-            # 直接复制整个目录结构
-            cp -r "$LATEST_BACKUP/downloads"/* "$DEPLOY_DIR/reinvent_insight-0.1.0/downloads/" 2>/dev/null || true
-            # 统计恢复的文件数量
-            FILE_COUNT=$(find "$LATEST_BACKUP/downloads" -type f 2>/dev/null | wc -l)
-            print_success "已恢复 $FILE_COUNT 个文件"
-        else
-            print_info "备份中没有 downloads 数据"
-        fi
-        
-        # 恢复 .env 文件
-        if [ -f "$LATEST_BACKUP/.env" ]; then
-            # 再次检查是否是示例文件（以防万一）
-            if grep -q "your-gemini-api-key-here" "$LATEST_BACKUP/.env" 2>/dev/null; then
-                print_warning "备份的 .env 是示例配置，跳过恢复"
-            else
-                cp "$LATEST_BACKUP/.env" "$DEPLOY_DIR/reinvent_insight-0.1.0/"
-                print_success "已恢复 .env 配置文件"
-            fi
-        else
-            print_info "备份中没有 .env 文件"
-        fi
-        
-        # 恢复 .cookies 文件
-        if [ -f "$LATEST_BACKUP/.cookies" ]; then
-            cp "$LATEST_BACKUP/.cookies" "$DEPLOY_DIR/reinvent_insight-0.1.0/"
-            print_success "已恢复 .cookies 文件"
-        else
-            print_info "备份中没有 .cookies 文件"
-        fi
-        
-        # 修复恢复数据的权限
-        print_info "修复恢复数据的权限..."
-        sudo chown -R "$USER:$USER" "$DEPLOY_DIR/reinvent_insight-0.1.0/downloads/"
-        if [ -f "$DEPLOY_DIR/reinvent_insight-0.1.0/.env" ]; then
-            sudo chown "$USER:$USER" "$DEPLOY_DIR/reinvent_insight-0.1.0/.env"
-        fi
-        if [ -f "$DEPLOY_DIR/reinvent_insight-0.1.0/.cookies" ]; then
-            sudo chown "$USER:$USER" "$DEPLOY_DIR/reinvent_insight-0.1.0/.cookies"
-        fi
-    else
-        if [ "$FRESH_INSTALL" = true ]; then
-            print_info "全新安装，没有历史数据需要恢复"
-        else
-            print_warning "未找到可用的备份目录"
-        fi
+# 原子切换到新版本（停服后执行，秒级完成）
+activate_release() {
+    print_info "原子切换到新版本..."
+    
+    if [ -z "$NEW_RELEASE_DIR" ] || [ ! -d "$NEW_RELEASE_DIR" ]; then
+        print_error "新版本目录不存在，无法切换"
+        exit 1
     fi
     
-    # 检查是否需要复制开发环境文章
-    DEV_SUMMARIES_DIR="$HOME/reinvent-insight/downloads/summaries"
-    PROD_SUMMARIES_DIR="$DEPLOY_DIR/reinvent_insight-0.1.0/downloads/summaries"
-    
-    # 检查开发环境是否有文章
-    if [ -d "$DEV_SUMMARIES_DIR" ] && [ "$(ls -A "$DEV_SUMMARIES_DIR" 2>/dev/null)" ]; then
-        DEV_FILE_COUNT=$(find "$DEV_SUMMARIES_DIR" -name "*.md" -type f 2>/dev/null | wc -l)
-        
-        # 检查生产环境现有文章数量（包括从备份恢复的）
-        EXISTING_PROD_COUNT=0
-        if [ -d "$PROD_SUMMARIES_DIR" ]; then
-            EXISTING_PROD_COUNT=$(find "$PROD_SUMMARIES_DIR" -name "*.md" -type f 2>/dev/null | wc -l)
-        fi
-        
-        print_info "开发环境: $DEV_FILE_COUNT 篇文章"
-        print_info "生产环境现有: $EXISTING_PROD_COUNT 篇文章（备份恢复后）"
-        
-        # 如果没有通过命令行参数指定，询问用户
-        if [ "$COPY_DEV_ARTICLES" = false ] && [ "$DRY_RUN" = false ]; then
-            echo ""
-            if confirm_with_countdown "是否复制开发环境的文章到生产环境？" "n" 5; then
-                COPY_DEV_ARTICLES=true
-            fi
-        fi
-        
-        # 执行复制操作
-        if [ "$COPY_DEV_ARTICLES" = true ]; then
-            print_info "执行增量同步检查..."
-            
-            # 增量复制：检查开发环境中是否有生产环境没有的文章
-            COPIED_COUNT=0
-            NEW_FILES=()
-            
-            for dev_file in "$DEV_SUMMARIES_DIR"/*.md; do
-                if [ -f "$dev_file" ]; then
-                    filename=$(basename "$dev_file")
-                    if [ ! -f "$PROD_SUMMARIES_DIR/$filename" ]; then
-                        cp "$dev_file" "$PROD_SUMMARIES_DIR/"
-                        COPIED_COUNT=$((COPIED_COUNT + 1))
-                        NEW_FILES+=("$filename")
-                        print_info "新增: $filename"
-                    fi
-                fi
-            done
-            
-            if [ "$COPIED_COUNT" -gt 0 ]; then
-                print_success "增量同步完成，新增 $COPIED_COUNT 篇文章"
-                # 显示部分新增文章名称（避免输出过长）
-                if [ "$COPIED_COUNT" -le 5 ]; then
-                    for file in "${NEW_FILES[@]}"; do
-                        print_info "  - $file"
-                    done
-                else
-                    for i in {0..4}; do
-                        if [ -n "${NEW_FILES[$i]}" ]; then
-                            print_info "  - ${NEW_FILES[$i]}"
-                        fi
-                    done
-                    print_info "  ... 以及其他 $((COPIED_COUNT - 5)) 篇文章"
-                fi
-            else
-                print_info "没有新文章需要同步，开发环境和生产环境文章已保持一致"
-            fi
-        else
-            print_info "跳过开发环境文章复制"
-        fi
-    else
-        print_info "开发环境没有文章"
+    # 记录旧版本（用于回滚）
+    if [ -L "$CURRENT_LINK" ]; then
+        local OLD_RELEASE=$(readlink -f "$CURRENT_LINK")
+        print_info "旧版本: $(basename "$OLD_RELEASE")"
     fi
     
-    # 最后统计总文章数
-    TOTAL_SUMMARIES=$(find "$DEPLOY_DIR/reinvent_insight-0.1.0/downloads/summaries" -name "*.md" -type f 2>/dev/null | wc -l)
-    print_success "部署环境总共有 $TOTAL_SUMMARIES 篇文章"
+    # 原子切换软链接（秒级操作）
+    ln -sfn "$NEW_RELEASE_DIR" "$CURRENT_LINK"
+    
+    # 验证切换是否成功
+    if [ -L "$CURRENT_LINK" ] && [ -d "$CURRENT_LINK" ]; then
+        print_success "软链接切换成功: $CURRENT_LINK -> $NEW_RELEASE_DIR"
+    else
+        print_error "软链接切换失败"
+        exit 1
+    fi
+    
+    # 确保权限正确
+    sudo chown -R "$USER:$USER" "$NEW_RELEASE_DIR"
+    
+    print_success "原子切换完成"
 }
 
 # 创建或更新 systemd 服务
 update_systemd_service() {
     print_info "更新 systemd 服务配置..."
     
-    # 创建服务文件内容
+    # 创建服务文件内容（指向 current 软链接）
     SERVICE_FILE="/tmp/${SERVICE_NAME}.service"
     cat > "$SERVICE_FILE" << EOF
 [Unit]
 Description=reinvent-insight Web Service
 After=network.target
+# 自动重启限制（防止无限重启死循环）
+StartLimitIntervalSec=500
+StartLimitBurst=5
 
 [Service]
 Type=simple
 User=$USER
 Group=$USER
-WorkingDirectory=$DEPLOY_DIR/reinvent_insight-0.1.0
-Environment="PATH=$DEPLOY_DIR/reinvent_insight-0.1.0/$VENV_NAME/bin"
+WorkingDirectory=$CURRENT_LINK
+Environment="PATH=$CURRENT_LINK/$VENV_NAME/bin"
 Environment="ENVIRONMENT=production"
-ExecStart=$DEPLOY_DIR/reinvent_insight-0.1.0/$VENV_NAME/bin/reinvent-insight web --host $HOST --port $PORT
+ExecStart=$CURRENT_LINK/$VENV_NAME/bin/reinvent-insight web --host $HOST --port $PORT
 Restart=always
 RestartSec=10
+# 安全加固
+ProtectSystem=full
+# 注意: 不能启用 PrivateTmp，否则无法读取 Cookie Manager 的 PID 文件
+PrivateTmp=false
 
 [Install]
 WantedBy=multi-user.target
@@ -714,14 +626,14 @@ EOF
 start_service() {
     print_info "启动服务..."
     
-    # 检查 .env 文件
-    if [ ! -f "$DEPLOY_DIR/reinvent_insight-0.1.0/.env" ]; then
+    # 检查 .env 文件（现在在 shared/config 目录）
+    if [ ! -f "$SHARED_DIR/config/.env" ]; then
         print_warning ".env 文件不存在，创建文件..."
         
         # 检查环境变量，如果设置了就使用它们
         if [ -n "$GEMINI_API_KEY" ] && [ -n "$ADMIN_USERNAME" ] && [ -n "$ADMIN_PASSWORD" ]; then
             print_info "使用环境变量创建 .env 文件..."
-            cat > "$DEPLOY_DIR/reinvent_insight-0.1.0/.env" << EOF
+            cat > "$SHARED_DIR/config/.env" << EOF
 GEMINI_API_KEY=$GEMINI_API_KEY
 ADMIN_USERNAME=$ADMIN_USERNAME
 ADMIN_PASSWORD=$ADMIN_PASSWORD
@@ -729,10 +641,9 @@ PREFERRED_MODEL=Gemini
 LOG_LEVEL=INFO
 EOF
             print_success ".env 文件已使用环境变量创建"
-            # 如果使用了环境变量，直接继续启动服务
         else
             # 创建示例文件
-            cat > "$DEPLOY_DIR/reinvent_insight-0.1.0/.env" << EOF
+            cat > "$SHARED_DIR/config/.env" << EOF
 # Gemini API 配置（PDF分析功能必需）
 GEMINI_API_KEY=your-gemini-api-key-here
 
@@ -746,10 +657,9 @@ PREFERRED_MODEL=Gemini
 # 日志级别
 LOG_LEVEL=INFO
 EOF
-            print_info "已创建示例 .env 文件"
+            print_info "已创建示例 .env 文件: $SHARED_DIR/config/.env"
             print_warning "请注意：PDF分析功能需要配置 GEMINI_API_KEY"
             
-            # 询问用户是否要编辑
             echo ""
             echo -e "${YELLOW}是否现在编辑 .env 文件？${NC}"
             echo "1) 使用 nano 编辑"
@@ -759,42 +669,36 @@ EOF
             read -r choice
             
             case $choice in
-                1)
-                    nano "$DEPLOY_DIR/reinvent_insight-0.1.0/.env"
-                    ;;
-                2)
-                    vim "$DEPLOY_DIR/reinvent_insight-0.1.0/.env"
-                    ;;
+                1) nano "$SHARED_DIR/config/.env" ;;
+                2) vim "$SHARED_DIR/config/.env" ;;
                 3)
-                    print_info "请稍后编辑 .env 文件："
-                    print_info "$DEPLOY_DIR/reinvent_insight-0.1.0/.env"
-                    print_warning "服务未启动，配置完成后请运行："
-                    print_warning "sudo systemctl start $SERVICE_NAME"
+                    print_info "请稍后编辑 .env 文件：$SHARED_DIR/config/.env"
+                    print_warning "服务未启动，配置完成后请运行：sudo systemctl start $SERVICE_NAME"
                     return
                     ;;
                 *)
-                    print_error "无效选择"
-                    print_warning "服务未启动，请手动编辑 .env 文件后运行："
-                    print_warning "sudo systemctl start $SERVICE_NAME"
+                    print_warning "服务未启动，请手动编辑 .env 文件后运行：sudo systemctl start $SERVICE_NAME"
                     return
                     ;;
             esac
             
-            # 编辑完成后询问是否启动服务
             echo ""
             echo -n -e "${YELLOW}是否现在启动服务？(y/N): ${NC}"
             read -r start_now
-            
             if [[ ! "$start_now" =~ ^[Yy]$ ]]; then
-                print_info "服务未启动，稍后可运行："
-                print_info "sudo systemctl start $SERVICE_NAME"
+                print_info "服务未启动，稍后可运行：sudo systemctl start $SERVICE_NAME"
                 return
             fi
         fi
+        
+        # 确保配置文件已链接到当前版本
+        if [ -d "$CURRENT_LINK" ] && [ ! -L "$CURRENT_LINK/.env" ]; then
+            ln -sf "$SHARED_DIR/config/.env" "$CURRENT_LINK/.env"
+        fi
     else
-        # 验证现有.env文件的配置
+        # 验证现有 .env 文件的配置
         print_info "验证 .env 配置..."
-        if grep -q "your-gemini-api-key-here" "$DEPLOY_DIR/reinvent_insight-0.1.0/.env" 2>/dev/null; then
+        if grep -q "your-gemini-api-key-here" "$SHARED_DIR/config/.env" 2>/dev/null; then
             print_warning "GEMINI_API_KEY 仍为默认值，PDF分析功能不可用"
         else
             print_success "GEMINI_API_KEY 已配置，PDF分析功能可用"
@@ -857,9 +761,18 @@ EOF
 show_deployment_info() {
     echo ""
     echo "======================================"
-    echo -e "${GREEN}部署信息${NC}"
+    echo -e "${GREEN}部署信息 (软链接架构)${NC}"
     echo "======================================"
-    echo "部署目录: $DEPLOY_DIR/reinvent_insight-0.1.0"
+    
+    # 显示当前版本
+    if [ -L "$CURRENT_LINK" ]; then
+        local current_release=$(readlink -f "$CURRENT_LINK")
+        echo "当前版本: $(basename "$current_release")"
+    fi
+    
+    echo "部署目录: $BASE_DIR"
+    echo "current 链接: $CURRENT_LINK"
+    echo "shared 目录: $SHARED_DIR"
     echo "服务地址: http://$HOST:$PORT"
     echo ""
     echo "服务状态:"
@@ -875,42 +788,43 @@ show_deployment_info() {
     echo "  • YouTube 链接分析"
     
     # 检查PDF功能状态
-    if [ -f "$DEPLOY_DIR/reinvent_insight-0.1.0/.env" ]; then
-        if grep -q "your-gemini-api-key-here" "$DEPLOY_DIR/reinvent_insight-0.1.0/.env" 2>/dev/null; then
+    if [ -f "$SHARED_DIR/config/.env" ]; then
+        if grep -q "your-gemini-api-key-here" "$SHARED_DIR/config/.env" 2>/dev/null; then
             echo "  • PDF 文件分析（需要配置 GEMINI_API_KEY）"
         else
             echo "  • PDF 文件分析（✓ 已配置）"
         fi
-    else
-        echo "  • PDF 文件分析（未配置）"
     fi
     
     echo "  • 网页内容分析"
     echo "  • Markdown 渲染和 PDF 导出"
-    echo "  • AI 智能标题生成（PDF文档）"
     echo "  • Visual Insight 可视化解读"
-    echo "  • Visual Insight 转长图（✓ 已启用）"
     echo ""
     echo "常用命令:"
-    echo "  Web 服务:"
-    echo "    查看状态: sudo systemctl status $SERVICE_NAME"
-    echo "    查看日志: sudo journalctl -u $SERVICE_NAME -f"
-    echo "    停止服务: sudo systemctl stop $SERVICE_NAME"
-    echo "    启动服务: sudo systemctl start $SERVICE_NAME"
-    echo "    重启服务: sudo systemctl restart $SERVICE_NAME"
-    echo ""
-    echo "Cookie 服务部署:"
-    echo "  如需启用 YouTube Cookie 自动刷新功能，请运行："
-    echo "    ./deploy-cookie-service.sh"
-    echo ""
-    echo "  Cookie 服务将："
-    echo "    • 统一管理 cookies（存储在 ~/.cookies）"
-    echo "    • 自动刷新 YouTube cookies"
-    echo "    • 独立于 Web 服务运行"
+    echo "  查看状态: sudo systemctl status $SERVICE_NAME"
+    echo "  查看日志: sudo journalctl -u $SERVICE_NAME -f"
+    echo "  重启服务: sudo systemctl restart $SERVICE_NAME"
+    echo "  回滚版本: ./redeploy.sh --rollback"
     echo ""
     
+    # 显示历史版本
+    if [ -d "$RELEASES_DIR" ]; then
+        local releases=($(ls -t "$RELEASES_DIR" | head -3))
+        if [ ${#releases[@]} -gt 1 ]; then
+            echo "最近版本:"
+            for release in "${releases[@]}"; do
+                if [ "$(readlink -f "$CURRENT_LINK")" = "$RELEASES_DIR/$release" ]; then
+                    echo "  • $release (当前)"
+                else
+                    echo "  • $release"
+                fi
+            done
+            echo ""
+        fi
+    fi
+    
     if [ -n "$LATEST_BACKUP" ]; then
-        echo "备份位置: $LATEST_BACKUP"
+        echo "最新备份: $LATEST_BACKUP"
     fi
     echo "======================================"
 }
@@ -924,9 +838,15 @@ main() {
     
     # 如果只是修复权限，执行权限修复后退出
     if [ "$FIX_PERMISSIONS" = true ]; then
-        # 修复权限也需要 sudo
         acquire_sudo
         fix_permissions_only
+        exit 0
+    fi
+    
+    # 如果是回滚操作
+    if [ "$ROLLBACK" = true ]; then
+        acquire_sudo
+        rollback
         exit 0
     fi
     
@@ -940,8 +860,18 @@ main() {
     # 检查是否在项目根目录
     check_project_root
     
+    # 初始化目录结构
+    init_structure
+    
+    # 迁移旧版部署数据（如果存在）
+    migrate_old_deployment
+    
     # 显示部署计划
     show_deployment_plan
+    
+    # ========== 第一阶段：服务运行中的准备工作 ==========
+    echo ""
+    echo -e "${BLUE}═════ 阶段 1/2: 准备新版本（服务仍在运行） ═════${NC}"
     
     # 清理旧的构建
     clean_build
@@ -949,31 +879,41 @@ main() {
     # 构建新包
     build_package
     
-    # 检查备份并处理旧部署
-    check_and_handle_backup
+    # 准备新版本（在 releases 目录，不停服）
+    prepare_release
+    
+    # 备份 shared 数据（可选）
+    if [ "$BACKUP" = true ]; then
+        backup_shared_data
+    fi
+    
+    # ========== 第二阶段：停服切换（最小化停服时间） ==========
+    echo ""
+    echo -e "${YELLOW}═════ 阶段 2/2: 原子切换（停服开始） ═════${NC}"
+    local switch_start=$(date +%s)
     
     # 停止现有服务
     stop_service
     
-    # 部署新版本
-    deploy_new_version
+    # 原子切换软链接（ln -sfn，秒级操作）
+    activate_release
     
-    # 恢复数据（如果有备份）
-    restore_data
-    
-    # 更新 systemd 服务
+    # 更新 systemd 服务（仅首次部署或配置变更时需要）
     update_systemd_service
     
     # 启动服务
     start_service
     
-    # 最终权限检查和修复（保险措施）
+    local switch_end=$(date +%s)
+    local switch_duration=$((switch_end - switch_start))
+    echo -e "${GREEN}═════ 停服切换完成，耗时: ${switch_duration} 秒 ═════${NC}"
+    
+    # 最终权限检查
     print_info "执行最终权限检查..."
-    if [ -d "$DEPLOY_DIR" ]; then
-        # 检查是否有 root 权限的文件
-        if find "$DEPLOY_DIR" -user root 2>/dev/null | head -1 | grep -q .; then
+    if [ -d "$NEW_RELEASE_DIR" ]; then
+        if find "$NEW_RELEASE_DIR" -user root 2>/dev/null | head -1 | grep -q .; then
             print_warning "发现 root 权限文件，正在修复..."
-            sudo chown -R "$USER:$USER" "$DEPLOY_DIR"
+            sudo chown -R "$USER:$USER" "$NEW_RELEASE_DIR"
             print_success "权限修复完成"
         else
             print_success "权限检查通过"
@@ -983,32 +923,123 @@ main() {
     # 显示部署信息
     show_deployment_info
     
-    # 清理旧备份
+    # 清理旧备份和旧版本
     cleanup_old_backups
+    cleanup_old_releases
     
     print_success "自动化部署完成！"
 }
 
+# 备份 shared 数据
+backup_shared_data() {
+    if [ -d "$SHARED_DIR" ] && [ "$(ls -A "$SHARED_DIR/downloads" 2>/dev/null)" ]; then
+        local backup_name="backup_$(date +%Y%m%d_%H%M%S)"
+        LATEST_BACKUP="$BACKUP_ROOT/$backup_name"
+        mkdir -p "$LATEST_BACKUP"
+        
+        print_info "备份 shared 数据..."
+        cp -r "$SHARED_DIR/downloads" "$LATEST_BACKUP/" 2>/dev/null || true
+        cp -r "$SHARED_DIR/config" "$LATEST_BACKUP/" 2>/dev/null || true
+        
+        local file_count=$(find "$LATEST_BACKUP" -type f 2>/dev/null | wc -l)
+        print_success "已备份 $file_count 个文件到: $LATEST_BACKUP"
+    fi
+}
+
 # 清理旧备份（保留最近的N个）
 cleanup_old_backups() {
-    local keep_count=5  # 保留最近的5个备份
+    local keep_count=5
     
     if [ -d "$BACKUP_ROOT" ]; then
         local backup_count=$(ls -d "$BACKUP_ROOT"/backup_* 2>/dev/null | wc -l)
         
         if [ "$backup_count" -gt "$keep_count" ]; then
             print_info "清理旧备份（保留最近的 $keep_count 个）..."
-            
-            # 获取要删除的备份列表（保留最新的N个）
             local backups_to_delete=$(ls -d "$BACKUP_ROOT"/backup_* 2>/dev/null | sort -r | tail -n +$((keep_count + 1)))
-            
             for backup in $backups_to_delete; do
                 print_info "删除旧备份: $(basename "$backup")"
                 rm -rf "$backup"
             done
-            
             print_success "备份清理完成"
         fi
+    fi
+}
+
+# 清理旧版本（保留最近的N个）
+cleanup_old_releases() {
+    local keep_count=5
+    
+    if [ -d "$RELEASES_DIR" ]; then
+        local release_count=$(ls -d "$RELEASES_DIR"/*/ 2>/dev/null | wc -l)
+        
+        if [ "$release_count" -gt "$keep_count" ]; then
+            print_info "清理旧版本（保留最近的 $keep_count 个）..."
+            cd "$RELEASES_DIR"
+            ls -t | tail -n +$((keep_count + 1)) | xargs -I {} rm -rf "{}"
+            print_success "旧版本清理完成"
+        fi
+    fi
+}
+
+# 回滚到上一个版本
+rollback() {
+    print_info "开始回滚操作..."
+    
+    if [ ! -L "$CURRENT_LINK" ]; then
+        print_error "当前没有有效的部署，无法回滚"
+        exit 1
+    fi
+    
+    local current_release=$(readlink -f "$CURRENT_LINK")
+    local current_name=$(basename "$current_release")
+    
+    # 获取所有版本并排序
+    local releases=($(ls -t "$RELEASES_DIR"))
+    
+    if [ ${#releases[@]} -lt 2 ]; then
+        print_error "没有可以回滚的历史版本"
+        exit 1
+    fi
+    
+    # 找到上一个版本
+    local previous_release=""
+    for release in "${releases[@]}"; do
+        if [ "$release" != "$current_name" ]; then
+            previous_release="$RELEASES_DIR/$release"
+            break
+        fi
+    done
+    
+    if [ -z "$previous_release" ] || [ ! -d "$previous_release" ]; then
+        print_error "找不到可回滚的版本"
+        exit 1
+    fi
+    
+    print_info "当前版本: $current_name"
+    print_info "回滚目标: $(basename "$previous_release")"
+    
+    # 确认回滚
+    if ! confirm_with_countdown "确认回滚到上一个版本？" "n" 5; then
+        print_info "回滚已取消"
+        exit 0
+    fi
+    
+    # 停止服务
+    stop_service
+    
+    # 切换软链接
+    ln -sfn "$previous_release" "$CURRENT_LINK"
+    print_success "已回滚到: $(basename "$previous_release")"
+    
+    # 启动服务
+    sudo systemctl start "$SERVICE_NAME"
+    
+    # 检查服务状态
+    sleep 2
+    if systemctl is-active --quiet "$SERVICE_NAME"; then
+        print_success "服务已启动"
+    else
+        print_error "服务启动失败"
     fi
 }
 
@@ -1016,28 +1047,26 @@ cleanup_old_backups() {
 fix_permissions_only() {
     print_info "开始修复现有部署的文件权限..."
     
-    if [ ! -d "$DEPLOY_DIR" ]; then
-        print_error "部署目录不存在: $DEPLOY_DIR"
+    if [ ! -L "$CURRENT_LINK" ]; then
+        print_error "没有有效的部署: $CURRENT_LINK"
         exit 1
     fi
     
-    print_info "检查当前权限状态..."
+    local current_release=$(readlink -f "$CURRENT_LINK")
+    print_info "检查当前版本: $current_release"
     
-    # 显示当前权限问题
-    local root_files=$(find "$DEPLOY_DIR" -user root 2>/dev/null | wc -l)
-    if [ "$root_files" -gt 0 ]; then
-        print_warning "发现 $root_files 个 root 权限文件"
-        
-        echo ""
-        echo "示例文件权限问题："
-        find "$DEPLOY_DIR" -user root 2>/dev/null | head -5 | while read file; do
-            ls -ld "$file"
-        done
+    # 检查权限问题
+    local root_files=$(find "$current_release" -user root 2>/dev/null | wc -l)
+    local shared_root_files=$(find "$SHARED_DIR" -user root 2>/dev/null | wc -l)
+    local total_root_files=$((root_files + shared_root_files))
+    
+    if [ "$total_root_files" -gt 0 ]; then
+        print_warning "发现 $total_root_files 个 root 权限文件"
         
         if [ "$DRY_RUN" = true ]; then
             print_info "演练模式：将执行以下命令修复权限："
-            echo "  chown -R $USER:$USER $DEPLOY_DIR"
-            echo "  chmod -R u+rwX,g+rX,o+rX $DEPLOY_DIR"
+            echo "  chown -R $USER:$USER $current_release"
+            echo "  chown -R $USER:$USER $SHARED_DIR"
             return
         fi
         
@@ -1047,11 +1076,12 @@ fix_permissions_only() {
         
         if [[ "$confirm" =~ ^[Yy]$ ]]; then
             print_info "正在修复权限..."
-            sudo chown -R "$USER:$USER" "$DEPLOY_DIR"
-            chmod -R u+rwX,g+rX,o+rX "$DEPLOY_DIR"
+            sudo chown -R "$USER:$USER" "$current_release"
+            sudo chown -R "$USER:$USER" "$SHARED_DIR"
+            chmod -R u+rwX,g+rX,o+rX "$current_release"
             print_success "权限修复完成"
             
-            # 重启服务确保使用正确权限
+            # 重启服务
             if systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
                 print_info "重启服务以应用权限更改..."
                 sudo systemctl restart "$SERVICE_NAME"
@@ -1071,4 +1101,4 @@ fix_permissions_only() {
 }
 
 # 运行主流程
-main    
+main

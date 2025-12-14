@@ -639,6 +639,8 @@ const app = createApp({
       documentTitle.value = '';
       readingFilename.value = '';
       readingHash.value = '';
+      // 重置下载长图状态，避免切换文章时状态共享
+      longImageGenerating.value = false;
     };
 
     const handleViewChange = (view) => {
@@ -1279,6 +1281,9 @@ const app = createApp({
 
       // 处理传统的多参数调用（来自 LibraryView）
       const title = dataOrTitle;
+
+      // 切换文章时重置长图生成状态
+      longImageGenerating.value = false;
 
       // 先设置文档数据
       documentTitle.value = title_cn || title;

@@ -11,6 +11,10 @@ logger = logging.getLogger(__name__)
 # 加载 .env 文件
 load_dotenv()
 
+# --- 环境判断 ---
+# ENVIRONMENT=production 标识生产环境
+IS_PRODUCTION = os.getenv("ENVIRONMENT", "development").lower() == "production"
+
 # 获取项目根目录
 # 在部署环境中，程序应该从正确的工作目录启动
 # 工作目录应该包含 web/ 目录和 .env 文件
@@ -63,10 +67,29 @@ OUTPUT_DIR.mkdir(exist_ok=True) # 确保输出目录存在
 TTS_TEXT_DIR = DOWNLOAD_DIR / "tts_texts"
 TTS_TEXT_DIR.mkdir(exist_ok=True) # 确保 TTS 文本目录存在
 
+# --- 缓存目录（临时文件，不持久化） ---
+CACHE_DIR = PROJECT_ROOT / "cache"
+CACHE_DIR.mkdir(exist_ok=True)
+
+# 任务工作目录（工作流中间文件）
+TASKS_DIR = CACHE_DIR / "tasks"
+TASKS_DIR.mkdir(exist_ok=True)
+
+# 字幕分片调试目录
+CHUNK_DEBUG_DIR = CACHE_DIR / "chunks"
+CHUNK_DEBUG_DIR.mkdir(exist_ok=True)
+
 # --- 日志配置 ---
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-LOG_DIR = DOWNLOAD_DIR / "logs"
-LOG_FILE_ENABLED = os.getenv("LOG_FILE_ENABLED", "true").lower() == "true"
+# 生产环境使用 journalctl，关闭文件日志；开发环境输出到 logs/ 目录
+if IS_PRODUCTION:
+    LOG_DIR = None
+    LOG_FILE_ENABLED = False
+else:
+    LOG_DIR = PROJECT_ROOT / "logs" / "app"
+    LOG_FILE_ENABLED = os.getenv("LOG_FILE_ENABLED", "true").lower() == "true"
+    if LOG_FILE_ENABLED and LOG_DIR:
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
 LOG_MAX_BYTES = int(os.getenv("LOG_MAX_BYTES", str(50 * 1024 * 1024)))  # 50MB
 LOG_BACKUP_COUNT = int(os.getenv("LOG_BACKUP_COUNT", "5"))
 
@@ -282,11 +305,15 @@ TTS_PREPROCESSING_VERSION = "1.0.0"
 SUBTITLE_AUTO_TRANSLATE = os.getenv("SUBTITLE_AUTO_TRANSLATE", "true").lower() == "true"
 
 # --- 模型可观测层配置 ---
-# 是否启用模型可观测
-MODEL_OBSERVABILITY_ENABLED = os.getenv("MODEL_OBSERVABILITY_ENABLED", "false").lower() == "true"
-
-# 日志输出目录
-MODEL_OBSERVABILITY_OUTPUT_DIR = DOWNLOAD_DIR / "model_logs"
+# 生产环境关闭模型日志，开发环境可启用
+if IS_PRODUCTION:
+    MODEL_OBSERVABILITY_ENABLED = False
+    MODEL_OBSERVABILITY_OUTPUT_DIR = None
+else:
+    MODEL_OBSERVABILITY_ENABLED = os.getenv("MODEL_OBSERVABILITY_ENABLED", "false").lower() == "true"
+    MODEL_OBSERVABILITY_OUTPUT_DIR = PROJECT_ROOT / "logs" / "model"
+    if MODEL_OBSERVABILITY_ENABLED and MODEL_OBSERVABILITY_OUTPUT_DIR:
+        MODEL_OBSERVABILITY_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # 日志详细程度: SIMPLE / DETAILED / FULL
 MODEL_OBSERVABILITY_LOG_LEVEL = os.getenv("MODEL_OBSERVABILITY_LOG_LEVEL", "DETAILED")

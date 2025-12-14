@@ -927,9 +927,8 @@ _translating_videos: set = set()
 TRANSLATED_SUBTITLE_DIR = app_config.SUBTITLE_DIR / "translated"
 TRANSLATED_SUBTITLE_DIR.mkdir(exist_ok=True)
 
-# 分片调试目录
-CHUNK_DEBUG_DIR = app_config.SUBTITLE_DIR / "chunks"
-CHUNK_DEBUG_DIR.mkdir(exist_ok=True)
+# 分片调试目录（使用 config 中的缓存目录）
+CHUNK_DEBUG_DIR = app_config.CHUNK_DEBUG_DIR
 
 # 最大保留分片目录数
 MAX_CHUNK_DIRS = 10

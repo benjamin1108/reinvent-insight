@@ -40,8 +40,16 @@ class CookieHealthCheck:
                 'running': status.get('is_running', False),
                 'details': status
             }
+        except ImportError as e:
+            # 导入失败通常意味着依赖问题，记录 warning
+            logger.warning(f"无法导入 Cookie Manager 服务模块: {e}")
+            return {
+                'available': False,
+                'running': False,
+                'error': f"ImportError: {e}"
+            }
         except Exception as e:
-            logger.debug(f"无法获取 Cookie Manager 服务状态: {e}")
+            logger.warning(f"检查 Cookie Manager 服务状态时出错: {e}")
             return {
                 'available': False,
                 'running': False,

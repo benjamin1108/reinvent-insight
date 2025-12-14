@@ -115,7 +115,10 @@ venv.bak/
 
 # uv
 .cookies
-tasks/
+
+# 缓存和日志目录
+cache/
+logs/
 *.pdf
 
 # User data

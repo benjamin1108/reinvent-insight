@@ -76,13 +76,24 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
         # 使用统一的模式指令获取函数
         mode_instructions = prompts.get_outline_instructions(self.is_ultra_mode)
         
+        # 根据内容类型设置不同的描述
+        if self.is_pdf:
+            content_type_desc = "PDF文档"
+            content_description = "PDF文档内容"
+            # PDF 多模态：内容通过文件传递，不在 prompt 中嵌入
+            full_content = "[PDF文档内容请参见附件]"
+        else:
+            content_type_desc = "完整英文字幕"
+            content_description = "完整字幕"
+            full_content = self.transcript
+        
         # 构建提示词
         prompt = prompts.OUTLINE_PROMPT_TEMPLATE.format(
             role_and_style=prompts.ROLE_AND_STYLE_GUIDE,
             base_prompt=self.base_prompt,
-            content_type="完整英文字幕",
-            content_description="完整字幕",
-            full_content=self.transcript,
+            content_type=content_type_desc,
+            content_description=content_description,
+            full_content=full_content,
             mode_instructions=mode_instructions,
             quality_control_rules=prompts.QUALITY_CONTROL_RULES
         )
@@ -90,7 +101,13 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
         # 重试逻辑
         for attempt in range(self.max_retries + 1):
             try:
-                outline = await self.client.generate_content(prompt)
+                # 根据内容类型选择调用方式
+                if self.is_pdf and self.file_info:
+                    # PDF 多模态：使用 generate_content_with_file
+                    outline = await self.client.generate_content_with_file(prompt, self.file_info)
+                else:
+                    # 文本内容：使用普通的 generate_content
+                    outline = await self.client.generate_content(prompt)
                 
                 if outline:
                     # 后处理：清理不必要的英文注释
@@ -182,13 +199,23 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
         if self.is_ultra_mode:
             chapter_depth_constraint += f"\n\n**Ultra 模式字数要求**：目标约 {target_words} 字，{mode_config['expansion_desc']}"
         
+        # 根据内容类型设置不同的描述
+        if self.is_pdf:
+            content_type_desc = "PDF文档"
+            content_description = "PDF文档内容"
+            full_content = "[PDF文档内容请参见附件]"
+        else:
+            content_type_desc = "完整英文字幕"
+            content_description = "完整字幕"
+            full_content = self.transcript
+        
         # 构建提示词
         prompt = prompts.CHAPTER_PROMPT_TEMPLATE.format(
             role_and_style=prompts.ROLE_AND_STYLE_GUIDE,
             base_prompt=self.base_prompt,
-            content_type="完整英文字幕",
-            content_description="完整字幕",
-            full_content=self.transcript,
+            content_type=content_type_desc,
+            content_description=content_description,
+            full_content=full_content,
             full_outline=outline_content,
             previous_chapters_context=previous_chapters_context,
             chapter_depth_constraint=chapter_depth_constraint,
@@ -201,7 +228,11 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
         # 重试逻辑
         for attempt in range(self.max_retries + 1):
             try:
-                chapter_content = await self.client.generate_content(prompt)
+                # 根据内容类型选择调用方式
+                if self.is_pdf and self.file_info:
+                    chapter_content = await self.client.generate_content_with_file(prompt, self.file_info)
+                else:
+                    chapter_content = await self.client.generate_content(prompt)
                 
                 if chapter_content:
                     # 后处理
@@ -287,13 +318,23 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
         
         full_chapters_text = "\n\n".join(all_chapters_content)
         
+        # 根据内容类型设置不同的描述
+        if self.is_pdf:
+            content_type_desc = "PDF文档"
+            content_description = "PDF文档内容"
+            full_content = "[PDF文档内容请参见附件]"
+        else:
+            content_type_desc = "完整英文字幕"
+            content_description = "完整字幕"
+            full_content = self.transcript
+        
         # 构建提示词
         prompt = prompts.CONCLUSION_PROMPT_TEMPLATE.format(
             role_and_style=prompts.ROLE_AND_STYLE_GUIDE,
             base_prompt=self.base_prompt,
-            content_type="完整英文字幕",
-            content_description="完整字幕",
-            full_content=self.transcript,
+            content_type=content_type_desc,
+            content_description=content_description,
+            full_content=full_content,
             all_generated_chapters=full_chapters_text,
             quality_control_rules=prompts.QUALITY_CONTROL_RULES
         )
@@ -301,7 +342,11 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
         # 重试逻辑
         for attempt in range(self.max_retries + 1):
             try:
-                conclusion_content = await self.client.generate_content(prompt)
+                # 根据内容类型选择调用方式
+                if self.is_pdf and self.file_info:
+                    conclusion_content = await self.client.generate_content_with_file(prompt, self.file_info)
+                else:
+                    conclusion_content = await self.client.generate_content(prompt)
                 
                 if conclusion_content:
                     # 后处理
