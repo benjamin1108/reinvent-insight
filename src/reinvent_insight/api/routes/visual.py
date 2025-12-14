@@ -268,7 +268,8 @@ async def generate_visual_long_image(
     doc_hash: str,
     version: Optional[int] = Query(None, description="版本号"),
     viewport_width: Optional[int] = Query(None, description="视口宽度（像素）"),
-    force_regenerate: bool = Query(False, description="是否强制重新生成")
+    force_regenerate: bool = Query(False, description="是否强制重新生成"),
+    authorization: str = Header(None)
 ):
     """
     生成 Visual Insight 长图
@@ -282,6 +283,9 @@ async def generate_visual_long_image(
     Returns:
         生成结果 JSON
     """
+    from reinvent_insight.api.routes.auth import verify_token
+    verify_token(authorization)
+    
     try:
         # 检查功能是否启用
         if not config.VISUAL_LONG_IMAGE_ENABLED:
@@ -401,7 +405,8 @@ class PostProcessRequest(BaseModel):
 async def trigger_post_processor(
     doc_hash: str,
     request: PostProcessRequest,
-    version: Optional[int] = Query(None, description="版本号")
+    version: Optional[int] = Query(None, description="版本号"),
+    authorization: str = Header(None)
 ):
     """
     触发指定的后处理器
@@ -419,6 +424,8 @@ async def trigger_post_processor(
         get_default_pipeline,
         PostProcessorContext
     )
+    from reinvent_insight.api.routes.auth import verify_token
+    verify_token(authorization)
     
     try:
         # 获取文章文件名
