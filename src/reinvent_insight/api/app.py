@@ -28,7 +28,13 @@ from reinvent_insight.api.routes import (
     subtitles_router,
 )
 
-setup_logger(config.LOG_LEVEL)
+setup_logger(
+    level=config.LOG_LEVEL,
+    log_dir=config.LOG_DIR if config.LOG_FILE_ENABLED else None,
+    enable_file_logging=config.LOG_FILE_ENABLED,
+    max_bytes=config.LOG_MAX_BYTES,
+    backup_count=config.LOG_BACKUP_COUNT
+)
 logger = logging.getLogger(__name__)
 
 # Create FastAPI application
@@ -47,6 +53,10 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["Content-Length", "Content-Range", "Content-Type"]
 )
+
+# Add logging middleware
+from reinvent_insight.api.middleware import RequestLoggingMiddleware
+app.add_middleware(RequestLoggingMiddleware)
 
 # Include routers
 app.include_router(auth_router)
@@ -68,7 +78,7 @@ app.include_router(subtitles_router)
 @app.on_event("startup")
 async def startup_event():
     """Application startup event"""
-    logger.info("应用启动，开始初始化...")
+    logger.info("应用启动")
     
     # Import startup services
     from reinvent_insight.services.document.hash_registry import init_hash_mappings
@@ -104,7 +114,7 @@ async def startup_event():
     try:
         pregeneration_service = get_tts_pregeneration_service()
         await pregeneration_service.start()
-        logger.info("TTS 预生成服务已启动（按需生成模式，未启动文件监控）")
+        logger.debug("TTS 预生成服务已启动（按需模式）")
     except Exception as e:
         logger.error(f"启动 TTS 预生成服务失败: {e}", exc_info=True)
     
@@ -112,9 +122,8 @@ async def startup_event():
     try:
         await worker_pool.start()
         logger.info(
-            f"✅ Worker Pool 已启动: "
-            f"并发数={config.MAX_CONCURRENT_ANALYSIS_TASKS}, "
-            f"队列容量={config.ANALYSIS_QUEUE_MAX_SIZE}"
+            f"Worker Pool 已启动（并发: {config.MAX_CONCURRENT_ANALYSIS_TASKS}, "
+            f"队列: {config.ANALYSIS_QUEUE_MAX_SIZE}）"
         )
     except Exception as e:
         logger.error(f"启动 Worker Pool 失败: {e}", exc_info=True)

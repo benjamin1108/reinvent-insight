@@ -11,7 +11,7 @@ from typing import List, Dict, Optional
 from dataclasses import dataclass
 from datetime import datetime
 
-from loguru import logger
+import logging
 
 from reinvent_insight.core import config
 from reinvent_insight.infrastructure.ai.model_config import get_model_client
@@ -27,7 +27,7 @@ from reinvent_insight.services.analysis.post_processors.base import (
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
 
 
-logger = logger.bind(name=__name__)
+logger = logging.getLogger(__name__)
 
 
 @dataclass

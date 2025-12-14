@@ -2,11 +2,11 @@
 
 import os
 import re
+import logging
 import asyncio
 import json
 from typing import List, Optional, Tuple, Dict
 from pathlib import Path
-from loguru import logger
 
 from reinvent_insight.core import config
 from reinvent_insight.core.utils import (
@@ -18,6 +18,8 @@ from reinvent_insight.core.utils import (
 from reinvent_insight.domain.workflows.base import AnalysisWorkflow
 from reinvent_insight.infrastructure.media.youtube_downloader import VideoMetadata
 from reinvent_insight.domain import prompts
+
+logger = logging.getLogger(__name__)
 
 
 class YouTubeAnalysisWorkflow(AnalysisWorkflow):

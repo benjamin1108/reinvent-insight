@@ -1,9 +1,12 @@
 import markdown
 import os
+import logging
 import argparse
 from bs4 import BeautifulSoup, NavigableString
 from weasyprint import HTML, CSS
 from weasyprint.text.fonts import FontConfiguration
+
+logger = logging.getLogger(__name__)
 
 def markdown_to_custom_html(markdown_text: str) -> str:
     """
@@ -116,7 +119,7 @@ def generate_pdf_from_markdown(markdown_content: str, output_pdf_path: str, css_
                 css_string = f.read()
             stylesheets.append(CSS(string=css_string, font_config=font_config))
         except FileNotFoundError:
-            print(f"Warning: CSS file not found at {css_path}. Skipping.")
+            logger.warning(f"CSS file not found at {css_path}, skipping.")
             continue
     
     # 4. Create WeasyPrint HTML object
@@ -130,7 +133,7 @@ def generate_pdf_from_markdown(markdown_content: str, output_pdf_path: str, css_
         stylesheets=stylesheets,
         font_config=font_config
     )
-    print(f"Successfully generated PDF at {output_pdf_path}")
+    logger.info(f"Successfully generated PDF at {output_pdf_path}")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(

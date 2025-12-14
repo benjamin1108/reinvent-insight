@@ -113,19 +113,18 @@ class HTMLToMarkdownConverter:
         
         # 获取HTML
         try:
-            print("📡 正在获取网页...")
+            logger.info("正在获取网页...")
             # 增加超时时间，SemiAnalysis网页较大
             timeout_config = httpx.Timeout(60.0, connect=10.0)
             async with httpx.AsyncClient(timeout=timeout_config, follow_redirects=True) as client:
-                print("   发送HTTP请求...")
+                logger.debug("发送HTTP请求...")
                 response = await client.get(url)
                 response.raise_for_status()
                 html = response.text
                 html_size_mb = len(html) / (1024 * 1024)
-                print(f"✅ 获取成功！HTML大小: {html_size_mb:.2f} MB ({len(html):,} 字符)")
+                logger.info(f"获取成功，HTML大小: {html_size_mb:.2f} MB ({len(html):,} 字符)")
         except Exception as e:
-            logger.error(f"Failed to fetch URL {url}: {e}")
-            print(f"❌ 获取失败: {e}")
+            logger.error(f"获取失败: {e}")
             raise HTMLToMarkdownError(f"Failed to fetch URL: {e}") from e
         
         # 使用URL作为base_url
@@ -168,14 +167,11 @@ class HTMLToMarkdownConverter:
                 logger.info(f"Debug: Saved original HTML to {original_html_path}")
             
             # 步骤1: 预处理HTML
-            print("\n🧽 步骤1: 预处理HTML（去除JS/CSS/广告等）...")
-            logger.info("Step 1: Preprocessing HTML...")
+            logger.info("步骤1: 预处理HTML（去除JS/CSS/广告等）...")
             cleaned_html = self.preprocessor.preprocess(html)
             cleaned_size_mb = len(cleaned_html) / (1024 * 1024)
             reduction = (1 - len(cleaned_html) / len(html)) * 100
-            print(f"   ✅ 预处理完成: {cleaned_size_mb:.2f} MB ({len(cleaned_html):,} 字符)")
-            print(f"   📉 压缩率: {reduction:.1f}%")
-            logger.info(f"HTML preprocessed: {len(cleaned_html)} chars")
+            logger.info(f"预处理完成: {cleaned_size_mb:.2f} MB ({len(cleaned_html):,} 字符)，压缩率: {reduction:.1f}%")
             
             # 如果启用调试模式，保存预处理后的HTML
             if self.debug and output_path:
@@ -185,8 +181,7 @@ class HTMLToMarkdownConverter:
                 logger.info(f"Debug: Saved cleaned HTML to {cleaned_html_path}")
             
             # 步骤2: LLM提取内容
-            print("\n🤖 步骤2: 使用 Gemini 提取正文内容...")
-            logger.info("Step 2: Extracting content with LLM...")
+            logger.info("步骤2: 使用 Gemini 提取正文内容...")
             
             # 如果启用调试模式，传递调试目录给extractor
             if self.debug and output_path:

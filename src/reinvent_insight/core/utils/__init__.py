@@ -1,8 +1,10 @@
 """工作流相关的工具函数"""
 
 import re
+import logging
 from typing import List, Optional, Tuple
-from loguru import logger
+
+logger = logging.getLogger(__name__)
 
 
 def create_anchor(text: str) -> str:

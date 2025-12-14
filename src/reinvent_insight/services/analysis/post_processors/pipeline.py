@@ -1,9 +1,11 @@
 """后处理管道实现"""
 
+import logging
 from typing import List, Optional, Type
-from loguru import logger
 
 from .base import PostProcessor, PostProcessorContext, PostProcessorResult, ProcessorPriority
+
+logger = logging.getLogger(__name__)
 
 
 class PostProcessorPipeline:

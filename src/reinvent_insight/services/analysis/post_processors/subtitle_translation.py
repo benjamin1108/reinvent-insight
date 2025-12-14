@@ -4,9 +4,9 @@
 """
 
 import re
+import logging
 import asyncio
 from typing import Optional
-from loguru import logger
 
 from reinvent_insight.core import config
 from reinvent_insight.services.subtitle_translation_service import (
@@ -14,6 +14,8 @@ from reinvent_insight.services.subtitle_translation_service import (
     trigger_subtitle_translation
 )
 from .base import PostProcessor, PostProcessorContext, PostProcessorResult, ProcessorPriority
+
+logger = logging.getLogger(__name__)
 
 
 class SubtitleTranslationProcessor(PostProcessor):

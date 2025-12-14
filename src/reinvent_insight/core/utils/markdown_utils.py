@@ -1,8 +1,11 @@
 """Markdown 文本处理工具"""
 
 import re
+import logging
 from typing import List, Optional, Tuple
 from zhon import hanzi
+
+logger = logging.getLogger(__name__)
 
 
 def create_anchor(text: str) -> str:
@@ -49,7 +52,6 @@ def remove_parenthetical_english(text: str) -> str:
     Returns:
         清理后的文本
     """
-    from loguru import logger
     
     # 匹配模式：中文（可能包含加粗标记**）后跟括号，括号内是英文
     # 支持：中文（英文）、**中文**（英文）、中文 (英文) 等格式
@@ -102,7 +104,6 @@ def parse_outline(content: str) -> Tuple[Optional[str], Optional[List[str]], Opt
         - chapters: 章节列表（从 1. 章节 提取）
         - introduction: 引言（从 ### 引言 部分提取）
     """
-    from loguru import logger
     
     title_match = re.search(r"^#\s*(.*)", content, re.MULTILINE)
     title = title_match.group(1).strip() if title_match else None
@@ -130,7 +131,6 @@ def extract_titles_from_outline(outline_content: str) -> Tuple[Optional[str], Op
     Returns:
         (title_en, title_cn) 元组，如果提取失败则返回(None, None)
     """
-    from loguru import logger
     import json
     
     title_en = None
@@ -192,7 +192,6 @@ def clean_content_metadata(content: str, title: str = '') -> str:
     Returns:
         清理后的内容
     """
-    from loguru import logger
     import yaml
     
     if not content:

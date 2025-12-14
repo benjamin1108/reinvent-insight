@@ -8,13 +8,13 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
 
-from loguru import logger
+import logging
 
 from reinvent_insight.core import config
 from reinvent_insight.domain.models import DocumentContent
 from reinvent_insight.core.utils.file_utils import generate_pdf_identifier
 
-logger = logger.bind(name=__name__)
+logger = logging.getLogger(__name__)
 
 
 class DocumentProcessor:

@@ -9,13 +9,13 @@ from pathlib import Path
 from typing import Optional, Dict
 from datetime import datetime
 
-from loguru import logger
+import logging
 from playwright.async_api import async_playwright, Browser, Page, TimeoutError as PlaywrightTimeoutError
 
 from reinvent_insight.core import config
 
 
-logger = logger.bind(name=__name__)
+logger = logging.getLogger(__name__)
 
 
 class ScreenshotGenerator:

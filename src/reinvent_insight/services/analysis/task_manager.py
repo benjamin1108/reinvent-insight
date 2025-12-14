@@ -5,6 +5,8 @@ from typing import Dict, List, Optional
 from asyncio import Queue
 from pathlib import Path
 
+from reinvent_insight.core.logger import task_id_var
+
 logger = logging.getLogger(__name__)
 
 # 导入内容清理函数
@@ -208,6 +210,8 @@ class TaskManager:
     def create_task(self, task_id: str, coro: asyncio.Task):
         # 将 coro 包装一下，确保任务完成时能被正确处理
         async def task_wrapper():
+            # 设置任务上下文
+            token = task_id_var.set(task_id)
             try:
                 await coro
             except asyncio.CancelledError:
@@ -216,6 +220,9 @@ class TaskManager:
                 logger.error(f"任务 {task_id} 内部发生未捕获的异常: {e}", exc_info=True)
                 # 确保即使在意外情况下也更新任务状态
                 await self.set_task_error(task_id, f"工作流发生意外错误: {e}")
+            finally:
+                # 清理上下文
+                task_id_var.reset(token)
 
         task = asyncio.create_task(task_wrapper())
         state = TaskState(task_id=task_id, status="pending", task=task)

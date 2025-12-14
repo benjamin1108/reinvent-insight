@@ -175,8 +175,7 @@ class LLMContentExtractor:
         # 提取所有段落级元素
         chunks = self._split_html_semantically(soup, max_chunk_size)
         
-        logger.info(f"Split HTML into {len(chunks)} chunks")
-        print(f"\n📦 将HTML分为 {len(chunks)} 个分段，准备并发处理...")
+        logger.info(f"将HTML分为 {len(chunks)} 个分段，准备并发处理...")
         
         # 并发处理所有分段
         tasks = []
@@ -193,7 +192,7 @@ class LLMContentExtractor:
             tasks.append(task)
         
         # 等待所有任务完成
-        print(f"\n⚡ 开始并发处理 {len(chunks)} 个分段...")
+        logger.info(f"开始并发处理 {len(chunks)} 个分段...")
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
         # 收集结果
@@ -231,7 +230,7 @@ class LLMContentExtractor:
             logger.info(f"Chunk {i+1} processed: {len(chunk_content.content)} chars, "
                        f"{len(chunk_content.images)} images")
         
-        print(f"\n✅ 并发处理完成: {successful_chunks}/{len(chunks)} 成功, {failed_chunks} 失败")
+        logger.info(f"并发处理完成: {successful_chunks}/{len(chunks)} 成功, {failed_chunks} 失败")
         
         if not all_contents:
             raise ContentExtractionError("所有分段处理都失败了，无法提取内容")
@@ -287,8 +286,7 @@ class LLMContentExtractor:
         if delay > 0:
             await asyncio.sleep(delay)
         
-        print(f"\n📝 [分段 {chunk_index+1}/{total_chunks}] 开始处理 ({len(chunk_html):,} 字符)...")
-        logger.info(f"Processing chunk {chunk_index+1}/{total_chunks} ({len(chunk_html)} chars)")
+        logger.info(f"[分段 {chunk_index+1}/{total_chunks}] 开始处理 ({len(chunk_html):,} 字符)...")
         
         # 如果启用调试模式，保存分段HTML
         if self.debug_dir and self.output_stem:
@@ -301,13 +299,13 @@ class LLMContentExtractor:
             # 为分段创建特殊提示词
             chunk_prompt = self._build_chunk_prompt(chunk_html, chunk_index, total_chunks)
             
-            print(f"   ⏳ [分段 {chunk_index+1}] 调用 Gemini API...")
+            logger.debug(f"[分段 {chunk_index+1}] 调用 Gemini API...")
             # thinking_level由配置决定
             response = await self.model_client.generate_content(
                 prompt=chunk_prompt,
                 is_json=True
             )
-            print(f"   ✅ [分段 {chunk_index+1}] 处理完成")
+            logger.info(f"[分段 {chunk_index+1}] 处理完成")
             
             chunk_content = self._parse_llm_response(response)
             
@@ -327,12 +325,11 @@ class LLMContentExtractor:
                     f.write(chunk_content.content)
                 logger.info(f"Debug: Saved chunk {chunk_index+1} markdown to {chunk_md_path}")
             
-            print(f"   📊 [分段 {chunk_index+1}] 提取了 {len(chunk_content.images)} 张图片")
+            logger.info(f"[分段 {chunk_index+1}] 提取了 {len(chunk_content.images)} 张图片")
             return chunk_content
             
         except Exception as e:
-            logger.error(f"Failed to process chunk {chunk_index+1}: {e}")
-            print(f"   ❌ [分段 {chunk_index+1}] 处理失败: {e}")
+            logger.error(f"[分段 {chunk_index+1}] 处理失败: {e}")
             return None
     
     def _split_html_semantically(

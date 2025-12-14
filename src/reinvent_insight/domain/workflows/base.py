@@ -3,11 +3,11 @@
 import os
 import re
 import json
+import logging
 import asyncio
 from abc import ABC, abstractmethod
 from typing import List, Optional, Tuple, Dict, Any, Union, Protocol
 from pathlib import Path
-from loguru import logger
 
 from reinvent_insight.core import config
 from reinvent_insight.domain.models import DocumentContent
@@ -19,6 +19,8 @@ from reinvent_insight.services.analysis.post_processors import (
     PostProcessorContext,
     get_default_pipeline,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # 任务通知接口（依赖倒置）

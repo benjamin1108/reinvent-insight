@@ -41,9 +41,6 @@ XAI_API_KEY = os.getenv("XAI_API_KEY")
 ALIBABA_API_KEY = os.getenv("ALIBABA_API_KEY")
 DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY")
 
-# --- 日志配置 ---
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-
 # --- Prompt 配置 ---
 PROMPT_FILE_PATH = PROJECT_ROOT / "prompt" / "youtbe-deep-summary.txt"
 
@@ -65,6 +62,13 @@ OUTPUT_DIR = DOWNLOAD_DIR / "summaries"
 OUTPUT_DIR.mkdir(exist_ok=True) # 确保输出目录存在
 TTS_TEXT_DIR = DOWNLOAD_DIR / "tts_texts"
 TTS_TEXT_DIR.mkdir(exist_ok=True) # 确保 TTS 文本目录存在
+
+# --- 日志配置 ---
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+LOG_DIR = DOWNLOAD_DIR / "logs"
+LOG_FILE_ENABLED = os.getenv("LOG_FILE_ENABLED", "true").lower() == "true"
+LOG_MAX_BYTES = int(os.getenv("LOG_MAX_BYTES", str(50 * 1024 * 1024)))  # 50MB
+LOG_BACKUP_COUNT = int(os.getenv("LOG_BACKUP_COUNT", "5"))
 
 # --- 认证配置 ---
 # 优先读取 .env 中的 ADMIN_USERNAME / ADMIN_PASSWORD，避免被系统级 USERNAME / PASSWORD 覆盖

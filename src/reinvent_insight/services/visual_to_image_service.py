@@ -9,8 +9,9 @@ from pathlib import Path
 from typing import Optional, Dict
 from datetime import datetime
 
+import logging
+
 import yaml
-from loguru import logger
 
 from reinvent_insight.core import config
 from reinvent_insight.services.document.hash_registry import (
@@ -20,7 +21,7 @@ from reinvent_insight.services.document.hash_registry import (
 from reinvent_insight.infrastructure.media.screenshot_generator import ScreenshotGenerator
 
 
-logger = logger.bind(name=__name__)
+logger = logging.getLogger(__name__)
 
 
 class VisualToImageService:

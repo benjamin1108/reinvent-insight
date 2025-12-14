@@ -12,9 +12,12 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
+import logging
+
 from reinvent_insight.services.visual_to_image_service import get_visual_to_image_service
 from reinvent_insight.core import config
-from loguru import logger
+
+logger = logging.getLogger(__name__)
 
 
 async def test_visual_to_image():
@@ -84,7 +87,7 @@ async def test_visual_to_image():
             output_path=output_path
         )
         
-        logger.success("截图测试成功！")
+        logger.info("截图测试成功！")
         logger.info(f"图片路径: {result['path']}")
         logger.info(f"图片尺寸: {result['dimensions']['width']}x{result['dimensions']['height']}px")
         logger.info(f"文件大小: {result['file_size'] / 1024 / 1024:.2f}MB")
@@ -92,7 +95,7 @@ async def test_visual_to_image():
         
         # 验证文件存在
         if output_path.exists():
-            logger.success(f"图片文件已生成: {output_path}")
+            logger.info(f"图片文件已生成: {output_path}")
         else:
             logger.error("图片文件未生成！")
             

@@ -1,46 +1,109 @@
 import logging
 import sys
+from pathlib import Path
+from datetime import datetime
+from typing import Optional
+from logging.handlers import RotatingFileHandler
+from contextvars import ContextVar
 from rich.logging import RichHandler
 
-def setup_logger(level: str = "INFO") -> None:
-    """
-    配置根日志记录器。
+# 请求上下文
+request_id_var: ContextVar[Optional[str]] = ContextVar('request_id', default=None)
+task_id_var: ContextVar[Optional[str]] = ContextVar('task_id', default=None)
 
+
+class ContextFilter(logging.Filter):
+    """添加上下文信息到日志记录"""
+    
+    def filter(self, record):
+        record.request_id = request_id_var.get() or "-"
+        record.task_id = task_id_var.get() or "-"
+        return True
+
+
+def setup_logger(
+    level: str = "INFO",
+    log_dir: Optional[Path] = None,
+    enable_file_logging: bool = True,
+    max_bytes: int = 50 * 1024 * 1024,  # 50MB
+    backup_count: int = 5
+) -> None:
+    """
+    配置根日志记录器
+    
     Args:
-        level (str): 要设置的日志级别 (e.g., "DEBUG", "INFO", "WARNING").
+        level: 日志级别
+        log_dir: 日志文件目录
+        enable_file_logging: 是否启用文件日志
+        max_bytes: 单个日志文件最大字节数
+        backup_count: 保留的日志文件数量
     """
     log_level = getattr(logging, level.upper(), logging.INFO)
-
-    # 获取根日志记录器
+    
     root_logger = logging.getLogger()
     root_logger.setLevel(log_level)
-
-    # 移除任何已存在的处理器，以避免重复日志
+    
+    # 清理现有处理器
     if root_logger.hasHandlers():
         root_logger.handlers.clear()
-
-    # 创建一个 RichHandler，它将格式化并为日志输出着色
-    handler = RichHandler(
+    
+    # 添加上下文过滤器
+    context_filter = ContextFilter()
+    
+    # 1. 控制台处理器 (Rich)
+    console_handler = RichHandler(
         rich_tracebacks=True,
         tracebacks_show_locals=True,
         log_time_format="[%X]",
-        keywords=RichHandler.KEYWORDS + ["SUCCESS"]
+        keywords=RichHandler.KEYWORDS + ["SUCCESS"],
+        show_path=True  # 显示文件路径
     )
-
-    # 创建一个格式化器并将其添加到处理器
-    formatter = logging.Formatter(
-        fmt="%(message)s",
+    console_handler.addFilter(context_filter)
+    
+    # 增强的格式：包含模块名
+    console_formatter = logging.Formatter(
+        fmt="%(name)s │ %(message)s",
         datefmt="[%X]"
     )
-    handler.setFormatter(formatter)
-
-    # 将处理器添加到根日志记录器
-    root_logger.addHandler(handler)
-
-    # 为 httpx 添加特殊处理，因为它在 DEBUG 级别下过于冗长
-    logging.getLogger("httpx").setLevel(logging.WARNING)
-
-    logging.info(f"日志级别已设置为: {level.upper()}")
+    console_handler.setFormatter(console_formatter)
+    root_logger.addHandler(console_handler)
+    
+    # 2. 文件处理器 (可选)
+    if enable_file_logging and log_dir:
+        log_dir = Path(log_dir)
+        log_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 按日期的日志文件
+        log_file = log_dir / f"app_{datetime.now().strftime('%Y-%m-%d')}.log"
+        
+        file_handler = RotatingFileHandler(
+            log_file,
+            maxBytes=max_bytes,
+            backupCount=backup_count,
+            encoding='utf-8'
+        )
+        file_handler.setLevel(log_level)
+        file_handler.addFilter(context_filter)
+        
+        # 文件格式：包含完整信息
+        file_formatter = logging.Formatter(
+            fmt="%(asctime)s │ %(levelname)-8s │ %(name)s:%(lineno)d │ "
+                "req=%(request_id)s task=%(task_id)s │ %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S"
+        )
+        file_handler.setFormatter(file_formatter)
+        root_logger.addHandler(file_handler)
+    
+    # 3. 静默第三方库
+    noisy_loggers = [
+        "httpx", "httpcore", "uvicorn", "uvicorn.access", 
+        "uvicorn.error", "watchfiles", "websockets", 
+        "asyncio", "PIL", "multipart"
+    ]
+    for logger_name in noisy_loggers:
+        logging.getLogger(logger_name).setLevel(logging.WARNING)
+    
+    root_logger.info(f"日志系统初始化，级别: {level.upper()}")
 
 # 添加一个新的日志级别 "SUCCESS"
 logging.SUCCESS = 25  # 在 INFO (20) 和 WARNING (30) 之间
