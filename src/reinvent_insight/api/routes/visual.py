@@ -3,7 +3,7 @@
 import logging
 from typing import Optional, List
 from pathlib import Path
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Header
 from fastapi.responses import Response, FileResponse
 from pydantic import BaseModel
 import yaml
