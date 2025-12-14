@@ -6,7 +6,7 @@
 #   --no-backup  不备份现有数据
 #   --copy-dev-articles  自动复制开发环境文章到生产环境（默认不复制）
 #   --port PORT  指定端口号（默认：8001）
-#   --host HOST  指定主机地址（默认：0.0.0.0）
+#   --host HOST  指定主机地址（默认：127.0.0.1）
 #   --dry-run    显示将要执行的操作但不实际执行
 #   --fix-permissions 只修复现有部署的文件权限
 
@@ -21,7 +21,7 @@ NC='\033[0m' # No Color
 
 # 默认配置
 PORT=8001
-HOST="0.0.0.0"
+HOST="127.0.0.1"
 BACKUP=true
 COPY_DEV_ARTICLES=false  # 默认不复制开发环境文章
 PROJECT_NAME="reinvent-insight"

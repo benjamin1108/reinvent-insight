@@ -275,7 +275,7 @@ if web_dir.is_dir():
             raise HTTPException(status_code=404, detail="Web application not found.")
 
 
-def serve(host: str = "0.0.0.0", port: int = 8001, reload: bool = False):
+def serve(host: str = "127.0.0.1", port: int = 8001, reload: bool = False):
     """使用 uvicorn 启动 Web 服务器。"""
     import uvicorn
     import signal
@@ -303,4 +303,4 @@ def serve(host: str = "0.0.0.0", port: int = 8001, reload: bool = False):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("reinvent_insight.api.app:app", host="0.0.0.0", port=8001, reload=True)
+    uvicorn.run("reinvent_insight.api.app:app", host="127.0.0.1", port=8001, reload=True)

@@ -19,7 +19,7 @@ NC='\033[0m' # No Color
 
 # 默认配置
 PORT=8002
-HOST="0.0.0.0"
+HOST="127.0.0.1"
 RELOAD=true
 PROJECT_NAME="reinvent-insight"
 
