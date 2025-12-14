@@ -498,6 +498,20 @@ prepare_release() {
         # 不删除 bin 目录，直接 update
         python3 -m venv "$VENV_NAME"
         
+        # 修复所有脚本的 shebang 路径（关键步骤！）
+        # 旧 venv 中的脚本 shebang 仍指向旧路径，需要替换为新路径
+        local old_venv_path=$(readlink -f "$OLD_VENV")
+        local new_venv_path=$(readlink -f "$VENV_NAME")
+        if [ "$old_venv_path" != "$new_venv_path" ]; then
+            print_info "修复脚本 shebang 路径..."
+            for script in "$VENV_NAME/bin"/*; do
+                if [ -f "$script" ] && file "$script" | grep -q "text"; then
+                    sed -i "s|${old_venv_path}|${new_venv_path}|g" "$script" 2>/dev/null || true
+                fi
+            done
+            print_info "shebang 路径修复完成"
+        fi
+        
         # 强制尝试恢复 pip 启动器
         "$VENV_NAME/bin/python" -m ensurepip --upgrade --default-pip >/dev/null 2>&1 || true
 
