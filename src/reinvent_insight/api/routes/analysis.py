@@ -33,6 +33,7 @@ async def summarize_endpoint(
     req: SummarizeRequest, 
     priority: int = 0,
     force: bool = Query(default=False),
+    is_ultra: bool = Query(default=False, description="是否使用 UltraDeep 模式"),
     authorization: str = Header(None)
 ):
     """
@@ -155,7 +156,8 @@ async def summarize_endpoint(
         task_id=task_id,
         task_type="youtube",
         url_or_path=str(req.url),
-        priority=task_priority
+        priority=task_priority,
+        is_ultra_mode=is_ultra
     )
     
     if not success:
@@ -245,6 +247,7 @@ async def analyze_document_endpoint(
     file: UploadFile = File(...),
     title: Optional[str] = None,
     priority: int = 0,
+    is_ultra: bool = Query(default=False, description="是否使用 UltraDeep 模式"),
     authorization: str = Header(None)
 ):
     """
@@ -266,28 +269,60 @@ async def analyze_document_endpoint(
     # 验证文件大小
     max_size = config.MAX_TEXT_FILE_SIZE if file_ext in ['.txt', '.md'] else config.MAX_BINARY_FILE_SIZE
     
+    # 读取文件内容（用于去重检查和后续处理）
+    content = await file.read()
+    
+    # 检查文件大小
+    if len(content) > max_size:
+        raise HTTPException(
+            status_code=413,
+            detail=f"文件大小超过限制 ({max_size / 1024 / 1024:.1f}MB)"
+        )
+    
+    # 处理标题（用于去重检查）
+    display_title = title or file.filename or "未命名文档"
+    if display_title.lower().endswith(file_ext):
+        display_title = display_title[:-len(file_ext)]
+    
+    # === 去重检查 ===
+    from reinvent_insight.core.utils.file_utils import generate_content_identifier
+    
+    # 基于文件内容生成 content_identifier（不使用文件名，只用内容）
+    doc_type = file_ext[1:]  # 移除点号，如 '.txt' -> 'txt'
+    content_identifier = generate_content_identifier(content, doc_type)
+    
+    # 生成 doc_hash 并检查是否已存在
+    doc_hash = generate_doc_hash(content_identifier)
+    existing_filename = hash_to_filename.get(doc_hash)
+    
+    if existing_filename:
+        logger.info(f"检测到重复文档: identifier={content_identifier}, doc_hash={doc_hash}")
+        from reinvent_insight.services.document.metadata_service import parse_metadata_from_md
+        file_path = config.OUTPUT_DIR / existing_filename
+        if file_path.exists():
+            try:
+                existing_content = file_path.read_text(encoding="utf-8")
+                metadata = parse_metadata_from_md(existing_content)
+                existing_title = metadata.get("title_cn") or metadata.get("title_en", display_title)
+                
+                return SummarizeResponse(
+                    status="exists",
+                    exists=True,
+                    doc_hash=doc_hash,
+                    task_id=None,
+                    message=f"文档已存在: {existing_title}"
+                )
+            except Exception as e:
+                logger.warning(f"读取已存在文档失败，继续处理: {e}")
+    
     task_id = str(uuid.uuid4())
     
     try:
         # 创建临时文件保存上传的文档
         with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as tmp_file:
-            content = await file.read()
-            
-            # 检查文件大小
-            if len(content) > max_size:
-                os.unlink(tmp_file.name)
-                raise HTTPException(
-                    status_code=413,
-                    detail=f"文件大小超过限制 ({max_size / 1024 / 1024:.1f}MB)"
-                )
-            
+            # content 已在上面读取
             tmp_file.write(content)
             tmp_file_path = tmp_file.name
-        
-        # 处理标题
-        display_title = title or file.filename or "未命名文档"
-        if display_title.lower().endswith(file_ext):
-            display_title = display_title[:-len(file_ext)]
         
         # 先在 manager 中创建占位状态
         state = TaskState(task_id=task_id, status="queued", task=None)
@@ -308,7 +343,8 @@ async def analyze_document_endpoint(
             task_type="document",
             url_or_path=tmp_file_path,
             title=display_title,
-            priority=task_priority
+            priority=task_priority,
+            is_ultra_mode=is_ultra
         )
         
         if not success:

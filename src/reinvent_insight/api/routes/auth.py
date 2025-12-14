@@ -84,6 +84,29 @@ def check_admin(authorization: Optional[str] = Header(None)):
         return {"is_admin": False}
 
 
+@router.get("/api/auth/verify")
+def verify_token_endpoint(authorization: Optional[str] = Header(None)):
+    """验证 token 是否有效（用于前端启动时检查）"""
+    if not authorization or not authorization.startswith("Bearer "):
+        return {"valid": False, "reason": "missing_token"}
+    
+    token = authorization.split(" ", 1)[1]
+    if token not in session_tokens:
+        return {"valid": False, "reason": "invalid_token"}
+    
+    # Token 有效，返回用户信息
+    username = session_tokens[token]
+    user = user_service.get_user(username)
+    if not user:
+        return {"valid": False, "reason": "user_not_found"}
+    
+    return {
+        "valid": True,
+        "username": user.username,
+        "role": user.role
+    }
+
+
 # ==================== 用户管理 API ====================
 
 @router.post("/api/auth/register", response_model=UserResponse)

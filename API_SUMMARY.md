@@ -121,6 +121,7 @@ Authorization: Bearer {token}
       "modified_at": 1701234567.89,
       "upload_date": "20241102",
       "video_url": "https://...",
+      "content_identifier": "pdf://...",
       "is_reinvent": false,
       "course_code": "ABC123",
       "level": 300,
@@ -179,6 +180,7 @@ Authorization: Bearer {token}
   "title_en": "英文标题",
   "content": "Markdown 内容（已清理元数据）",
   "video_url": "https://...",
+  "content_identifier": "pdf://...",
   "versions": [
     {
       "filename": "string",
@@ -865,7 +867,8 @@ interface SummaryInfo {
   created_at: number;
   modified_at: number;
   upload_date: string;
-  video_url: string;
+  video_url: string;           // YouTube视频类型使用
+  content_identifier: string;  // 文档类型使用（如 pdf://xxx, txt://xxx）
   is_reinvent: boolean;
   course_code?: string;
   level?: number;

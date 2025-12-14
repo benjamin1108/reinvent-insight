@@ -172,6 +172,9 @@ if web_dir.is_dir():
         '',           # 主页
         'd/',         # 文档页
         'article/',   # 文章页（别名）
+        'admin',      # 管理页面
+        'trash',      # 回收站页面
+        'documents/', # 文档路由
     )
     
     @app.get("/{full_path:path}", response_class=FileResponse, include_in_schema=False)

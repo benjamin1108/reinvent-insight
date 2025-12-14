@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse, Response
 
 from reinvent_insight.core import config
 from reinvent_insight.api.routes.auth import verify_token
-from reinvent_insight.core.utils.file_utils import generate_doc_hash, is_pdf_document
+from reinvent_insight.core.utils.file_utils import generate_doc_hash, is_pdf_document, get_source_identifier
 
 # Import from new modules
 from reinvent_insight.services.document.hash_registry import (
@@ -179,9 +179,20 @@ async def get_public_summary(filename: str):
             title_cn = title_en if title_en else file_path.stem
 
         video_url = metadata.get("video_url", "")
+        content_identifier = metadata.get("content_identifier", "")
+        
+        # 兼容处理：旧文档可能将文档标识符存储在 video_url 中
+        # 如果 video_url 是文档格式（pdf://, txt://, md://, docx://），则转移到 content_identifier
+        if video_url and "://" in video_url and not video_url.startswith(("http://", "https://")):
+            # 这是文档标识符，不是视频 URL
+            if not content_identifier:
+                content_identifier = video_url
+            video_url = ""  # 前端不应该看到这个值
+        
+        source_id = content_identifier or video_url
         versions = []
-        if video_url:
-            versions = discover_versions(video_url, config.OUTPUT_DIR)
+        if source_id:
+            versions = discover_versions(source_id, config.OUTPUT_DIR)
 
         cleaned_content = clean_content_metadata(content, title_cn)
 
@@ -192,6 +203,7 @@ async def get_public_summary(filename: str):
             "title_en": title_en,
             "content": cleaned_content,
             "video_url": video_url,
+            "content_identifier": content_identifier,
             "versions": versions
         }
     except HTTPException:

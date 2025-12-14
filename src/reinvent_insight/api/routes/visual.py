@@ -268,11 +268,10 @@ async def generate_visual_long_image(
     doc_hash: str,
     version: Optional[int] = Query(None, description="版本号"),
     viewport_width: Optional[int] = Query(None, description="视口宽度（像素）"),
-    force_regenerate: bool = Query(False, description="是否强制重新生成"),
-    authorization: str = Header(None)
+    force_regenerate: bool = Query(False, description="是否强制重新生成")
 ):
     """
-    生成 Visual Insight 长图
+    生成 Visual Insight 长图（公开接口，无需认证）
     
     Args:
         doc_hash: 文档哈希
@@ -283,9 +282,6 @@ async def generate_visual_long_image(
     Returns:
         生成结果 JSON
     """
-    from reinvent_insight.api.routes.auth import verify_token
-    verify_token(authorization)
-    
     try:
         # 检查功能是否启用
         if not config.VISUAL_LONG_IMAGE_ENABLED:

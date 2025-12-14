@@ -66,6 +66,8 @@ OUTPUT_DIR = DOWNLOAD_DIR / "summaries"
 OUTPUT_DIR.mkdir(exist_ok=True) # 确保输出目录存在
 TTS_TEXT_DIR = DOWNLOAD_DIR / "tts_texts"
 TTS_TEXT_DIR.mkdir(exist_ok=True) # 确保 TTS 文本目录存在
+RAW_DOCUMENTS_DIR = DOWNLOAD_DIR / "raw_documents"
+RAW_DOCUMENTS_DIR.mkdir(exist_ok=True)  # 存储文档原始文件，供 UltraDeep 使用
 
 # --- 缓存目录（临时文件，不持久化） ---
 CACHE_DIR = PROJECT_ROOT / "cache"

@@ -430,20 +430,39 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
                         quotes = full_part
             
             # 生成 YAML front matter
+            # 根据内容类型选择标识符字段
+            source_id = getattr(metadata, 'content_identifier', None) or metadata.video_url
+            is_document = bool(getattr(metadata, 'content_identifier', None))
+            
             yaml_data = {
                 'title_cn': title,
-                'video_url': metadata.video_url,
                 'upload_date': metadata.upload_date,
                 'created_at': datetime.now().isoformat(),
                 'chapter_count': chapter_count,
             }
             
+            # 根据类型设置不同的标识符字段
+            if is_document:
+                yaml_data['content_identifier'] = source_id  # 文档类型
+            else:
+                yaml_data['video_url'] = source_id  # 视频类型
+            
             # 添加可选字段
-            # 优先使用原始标题（YouTube/PDF等），只有无法提取时才用 AI 生成标题
-            if self.generated_title_en:
-                yaml_data['title_en'] = self.generated_title_en
-            if hasattr(metadata, 'title') and metadata.title:
-                yaml_data['title_en'] = metadata.title  # 原始标题优先，会覆盖 AI 标题
+            # 标题优先级逻辑：
+            # - 文档类型：AI 生成的英文标题优先（因为 metadata.title 只是文件名）
+            # - 视频类型：原始标题优先（YouTube 视频有真实标题）
+            if is_document:
+                # 文档类型：AI 生成的英文标题优先
+                if self.generated_title_en:
+                    yaml_data['title_en'] = self.generated_title_en
+                elif hasattr(metadata, 'title') and metadata.title:
+                    yaml_data['title_en'] = metadata.title  # 降级使用文件名
+            else:
+                # 视频类型：原始标题优先
+                if hasattr(metadata, 'title') and metadata.title:
+                    yaml_data['title_en'] = metadata.title
+                elif self.generated_title_en:
+                    yaml_data['title_en'] = self.generated_title_en
             if hasattr(metadata, 'is_reinvent'):
                 yaml_data['is_reinvent'] = metadata.is_reinvent
             if hasattr(metadata, 'course_code') and metadata.course_code:
@@ -468,7 +487,9 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
                             match = re.match(r'^---\s*\n(.*?)\n---\s*\n', content, re.DOTALL)
                             if match:
                                 file_metadata = yaml.safe_load(match.group(1))
-                                if file_metadata.get('video_url') == metadata.video_url:
+                                # 检查 content_identifier 或 video_url
+                                file_source_id = file_metadata.get('content_identifier') or file_metadata.get('video_url')
+                                if file_source_id == source_id:
                                     file_version = file_metadata.get('version', 0)
                                     existing_version = max(existing_version, file_version)
                         except:
@@ -477,7 +498,7 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
                 yaml_data['version'] = new_version
             
             # 生成文档哈希
-            doc_hash = generate_doc_hash(metadata.video_url)
+            doc_hash = generate_doc_hash(source_id)
             yaml_data['hash'] = doc_hash
             
             # 组装 YAML front matter
@@ -497,13 +518,21 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
             final_report = "\n\n".join(part for part in final_report_parts if part and part.strip())
             
             # 生成文件名
-            # 优先使用原始标题（YouTube/PDF等），只有无法提取时才用 AI 生成标题
-            if hasattr(metadata, 'title') and metadata.title:
-                base_name = sanitize_filename(metadata.title)
-            elif self.generated_title_en:
-                base_name = sanitize_filename(self.generated_title_en)
+            # 文档类型：AI 生成标题优先；视频类型：原始标题优先
+            if is_document:
+                if self.generated_title_en:
+                    base_name = sanitize_filename(self.generated_title_en)
+                elif hasattr(metadata, 'title') and metadata.title:
+                    base_name = sanitize_filename(metadata.title)
+                else:
+                    base_name = sanitize_filename(title)
             else:
-                base_name = sanitize_filename(title)  # 最后降级使用中文标题
+                if hasattr(metadata, 'title') and metadata.title:
+                    base_name = sanitize_filename(metadata.title)
+                elif self.generated_title_en:
+                    base_name = sanitize_filename(self.generated_title_en)
+                else:
+                    base_name = sanitize_filename(title)
             
             final_filename = f"{base_name}_v{new_version}.md"
             

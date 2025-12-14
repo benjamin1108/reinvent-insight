@@ -375,6 +375,28 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+/* 日志列表滚动条样式 */
+.create-view__log-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.create-view__log-list::-webkit-scrollbar-track {
+  background: rgba(31, 41, 55, 0.3);
+  border-radius: 3px;
+}
+
+.create-view__log-list::-webkit-scrollbar-thumb {
+  background: rgba(107, 114, 128, 0.5);
+  border-radius: 3px;
+}
+
+.create-view__log-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(107, 114, 128, 0.8);
 }
 
 .create-view__log-item {
@@ -919,4 +941,83 @@
   line-height: 1.5;
   white-space: pre-wrap;
   word-wrap: break-word;
+}
+
+/* 分析深度选择器样式 */
+.create-view__depth-selector {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.create-view__depth-label {
+  display: block;
+  color: #9ca3af;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  font-family: 'Inter', 'PingFang SC', 'SF Pro Text', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+.create-view__depth-options {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.create-view__depth-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(31, 41, 55, 0.5);
+  border: 1px solid #4b5563;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.create-view__depth-option:hover {
+  background: rgba(31, 41, 55, 0.7);
+  border-color: #6b7280;
+}
+
+.create-view__depth-option--active {
+  background: rgba(6, 182, 212, 0.1);
+  border-color: #06b6d4;
+  box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.3);
+}
+
+.create-view__depth-radio {
+  display: none;
+}
+
+.create-view__depth-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.create-view__depth-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.create-view__depth-text strong {
+  color: #e5e7eb;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: 'Inter', 'PingFang SC', 'SF Pro Text', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+.create-view__depth-text small {
+  color: #9ca3af;
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+/* 移动端适配 */
+@media (max-width: 640px) {
+  .create-view__depth-options {
+    flex-direction: column;
+  }
 }

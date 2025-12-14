@@ -29,7 +29,7 @@ import os
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.reinvent_insight.html_to_markdown import HTMLToMarkdownConverter
+from reinvent_insight.infrastructure.html import HTMLToMarkdownConverter
 
 
 # 示例HTML
@@ -185,7 +185,7 @@ async def example_error_handling():
     print("示例3: 错误处理")
     print("=" * 60)
     
-    from src.reinvent_insight.html_to_markdown import (
+    from reinvent_insight.infrastructure.html import (
         ContentExtractionError,
         HTMLParseError
     )

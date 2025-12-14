@@ -3,7 +3,6 @@
 提供统一的文档处理接口，支持多种文档格式（TXT、MD、PDF、DOCX）
 """
 import os
-import hashlib
 from pathlib import Path
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
@@ -12,7 +11,7 @@ import logging
 
 from reinvent_insight.core import config
 from reinvent_insight.domain.models import DocumentContent
-from reinvent_insight.core.utils.file_utils import generate_pdf_identifier
+from reinvent_insight.core.utils.file_utils import generate_content_identifier
 
 logger = logging.getLogger(__name__)
 
@@ -155,9 +154,11 @@ class DocumentProcessor:
             file_size = os.path.getsize(file_path)
             file_name = Path(file_path).name
             
-            # 生成文档标识符
+            # 生成文档标识符（基于文件内容，不使用文件名）
             doc_title = title or file_name
-            doc_identifier = self._generate_document_identifier(doc_title, text_content[:200])
+            file_bytes = Path(file_path).read_bytes()
+            doc_type = file_ext.lstrip('.')  # 移除点号用于 identifier
+            doc_identifier = generate_content_identifier(file_bytes, doc_type)
             
             # 构建文件信息
             file_info = {
@@ -172,7 +173,7 @@ class DocumentProcessor:
             content = DocumentContent(
                 file_info=file_info,
                 title=doc_title,
-                content_type="text",
+                content_type=doc_type,  # txt 或 md
                 text_content=text_content
             )
             
@@ -213,12 +214,13 @@ class DocumentProcessor:
             # 获取文件名作为默认标题
             file_name = Path(file_path).name
             doc_title = title or file_name
+            file_ext = Path(file_path).suffix.lower().lstrip('.')  # pdf 或 docx
             
             # 创建 DocumentContent 对象
             content = DocumentContent(
                 file_info=file_info,
                 title=doc_title,
-                content_type="multimodal",
+                content_type=file_ext,  # pdf 或 docx
                 text_content=None
             )
             
@@ -229,27 +231,7 @@ class DocumentProcessor:
             logger.error(f"处理多模态文档失败: {e}", exc_info=True)
             raise IOError(f"文件处理失败: {str(e)}")
     
-    def _generate_document_identifier(self, title: str, content_preview: str = "") -> str:
-        """
-        为文档生成唯一标识符
-        
-        Args:
-            title: 文档标题
-            content_preview: 内容预览（用于增强唯一性）
-            
-        Returns:
-            唯一标识符
-        """
-        # 清理标题，移除特殊字符
-        clean_title = "".join(c for c in title if c.isalnum() or c in (' ', '-', '_'))
-        clean_title = clean_title.strip().replace(' ', '_')[:50]
-        
-        # 生成内容哈希
-        content_hash = hashlib.md5(
-            (title + content_preview).encode('utf-8')
-        ).hexdigest()[:8]
-        
-        return f"doc_{clean_title}_{content_hash}"
+    # _generate_document_identifier 已废弃，统一使用 generate_content_identifier
 
 
 class UnsupportedFormatError(ValueError):

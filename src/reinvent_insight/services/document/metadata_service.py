@@ -193,11 +193,11 @@ def count_chinese_words(text: str) -> int:
     return len(hanzi_chars) + len(punctuation_chars)
 
 
-def discover_versions(video_url: str, output_dir, metadata_parser=None) -> list:
-    """发现指定视频URL的所有版本
+def discover_versions(source_identifier: str, output_dir, metadata_parser=None) -> list:
+    """发现指定内容标识符的所有版本
     
     Args:
-        video_url: 视频URL
+        source_identifier: 内容来源标识符（video_url 或 content_identifier）
         output_dir: 输出目录（Path对象）
         metadata_parser: 元数据解析函数，如果不提供则使用默认
         
@@ -219,8 +219,9 @@ def discover_versions(video_url: str, output_dir, metadata_parser=None) -> list:
             content = md_file.read_text(encoding="utf-8")
             metadata = metadata_parser(content)
             
-            # 检查是否是同一个视频
-            if metadata.get('video_url') == video_url:
+            # 检查是否是同一个内容（支持 content_identifier 和 video_url）
+            file_source_id = metadata.get('content_identifier') or metadata.get('video_url')
+            if file_source_id == source_identifier:
                 version_info = {
                     'filename': md_file.name,
                     'version': metadata.get('version', 0),

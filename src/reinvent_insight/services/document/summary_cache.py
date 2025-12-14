@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Any
 from pathlib import Path
 
 from reinvent_insight.core import config
-from reinvent_insight.core.utils.file_utils import generate_doc_hash, is_pdf_document
+from reinvent_insight.core.utils.file_utils import generate_doc_hash, is_pdf_document, get_source_identifier
 
 logger = logging.getLogger(__name__)
 
@@ -97,8 +97,8 @@ class SummaryCache:
             logger.warning("OUTPUT_DIR 不存在，跳过缓存初始化")
             return
         
-        # video_url 分组（用于版本去重，只保留最新版本）
-        video_url_map: Dict[str, Dict[str, Any]] = {}
+        # video_url/content_identifier 分组（用于版本去重，只保留最新版本）
+        source_id_map: Dict[str, Dict[str, Any]] = {}
         processed = 0
         errors = 0
         
@@ -132,8 +132,9 @@ class SummaryCache:
                 
                 # 获取文件时间
                 stat = md_file.stat()
-                video_url = metadata.get("video_url", "")
-                is_pdf = is_pdf_document(video_url)
+                source_id = get_source_identifier(metadata)
+                is_pdf = is_pdf_document(source_id) if source_id else False
+                is_document = bool(metadata.get('content_identifier'))
                 
                 # 解析时间
                 created_at_value = stat.st_ctime
@@ -168,29 +169,38 @@ class SummaryCache:
                     "created_at": created_at_value,
                     "modified_at": modified_at_value,
                     "upload_date": metadata.get("upload_date", "1970-01-01"),
-                    "video_url": video_url,
+                    "video_url": metadata.get("video_url", ""),
+                    "content_identifier": metadata.get("content_identifier", ""),
                     "is_reinvent": metadata.get("is_reinvent", False),
                     "course_code": metadata.get("course_code"),
                     "level": metadata.get("level"),
                     "hash": doc_hash,
                     "version": metadata.get("version", 0),
                     "is_pdf": is_pdf,
-                    "content_type": "PDF文档" if is_pdf else "YouTube视频"
+                    "is_document": is_document,
+                    "content_type": "文档" if is_document else ("PDF文档" if is_pdf else "YouTube视频")
                 }
+                
+                # 兼容处理：旧文档可能将文档标识符存储在 video_url 中
+                video_url_val = summary_data["video_url"]
+                if video_url_val and "://" in video_url_val and not video_url_val.startswith(("http://", "https://")):
+                    if not summary_data["content_identifier"]:
+                        summary_data["content_identifier"] = video_url_val
+                    summary_data["video_url"] = ""
                 
                 # 记录文件修改时间
                 self._file_mtimes[md_file.name] = stat.st_mtime
                 self._filename_to_hash[md_file.name] = doc_hash
                 
-                # 按 video_url 分组，只保留最新版本
-                if video_url:
-                    if video_url not in video_url_map:
-                        video_url_map[video_url] = summary_data
+                # 按 source_id 分组，只保留最新版本
+                if source_id:
+                    if source_id not in source_id_map:
+                        source_id_map[source_id] = summary_data
                     else:
-                        existing_version = video_url_map[video_url].get("version", 0)
+                        existing_version = source_id_map[source_id].get("version", 0)
                         new_version = summary_data.get("version", 0)
                         if new_version > existing_version:
-                            video_url_map[video_url] = summary_data
+                            source_id_map[source_id] = summary_data
                 
                 processed += 1
                 
@@ -199,10 +209,10 @@ class SummaryCache:
                 logger.warning(f"缓存初始化: 处理文件 {md_file.name} 失败: {e}")
         
         # 将去重后的结果存入缓存
-        for video_url, summary_data in video_url_map.items():
+        for source_id, summary_data in source_id_map.items():
             doc_hash = summary_data["hash"]
             self._cache[doc_hash] = summary_data
-            self._video_url_to_hash[video_url] = doc_hash
+            self._video_url_to_hash[source_id] = doc_hash
         
         self._cache_version += 1
         self._last_updated = time.time()
@@ -313,8 +323,9 @@ class SummaryCache:
             pure_text = extract_text_from_markdown(content)
             word_count = count_chinese_words(pure_text)
             stat = file_path.stat()
-            video_url = metadata.get("video_url", "")
-            is_pdf = is_pdf_document(video_url)
+            source_id = get_source_identifier(metadata)
+            is_pdf = is_pdf_document(source_id) if source_id else False
+            is_document = bool(metadata.get('content_identifier'))
             
             created_at_value = stat.st_ctime
             modified_at_value = stat.st_mtime
@@ -348,23 +359,32 @@ class SummaryCache:
                 "created_at": created_at_value,
                 "modified_at": modified_at_value,
                 "upload_date": metadata.get("upload_date", "1970-01-01"),
-                "video_url": video_url,
+                "video_url": metadata.get("video_url", ""),
+                "content_identifier": metadata.get("content_identifier", ""),
                 "is_reinvent": metadata.get("is_reinvent", False),
                 "course_code": metadata.get("course_code"),
                 "level": metadata.get("level"),
                 "hash": doc_hash,
                 "version": metadata.get("version", 0),
                 "is_pdf": is_pdf,
-                "content_type": "PDF文档" if is_pdf else "YouTube视频"
+                "is_document": is_document,
+                "content_type": "文档" if is_document else ("PDF文档" if is_pdf else "YouTube视频")
             }
+            
+            # 兼容处理：旧文档可能将文档标识符存储在 video_url 中
+            video_url_val = summary_data["video_url"]
+            if video_url_val and "://" in video_url_val and not video_url_val.startswith(("http://", "https://")):
+                if not summary_data["content_identifier"]:
+                    summary_data["content_identifier"] = video_url_val
+                summary_data["video_url"] = ""
             
             # 更新缓存
             self._cache[doc_hash] = summary_data
             self._filename_to_hash[filename] = doc_hash
             self._file_mtimes[filename] = stat.st_mtime
             
-            if video_url:
-                self._video_url_to_hash[video_url] = doc_hash
+            if source_id:
+                self._video_url_to_hash[source_id] = doc_hash
             
             self._cache_version += 1
             self._last_updated = time.time()
@@ -382,11 +402,13 @@ class SummaryCache:
         """
         doc_hash = self._filename_to_hash.get(filename)
         if doc_hash and doc_hash in self._cache:
-            video_url = self._cache[doc_hash].get("video_url")
+            # 获取 source_id
+            cached_data = self._cache[doc_hash]
+            source_id = cached_data.get("content_identifier") or cached_data.get("video_url")
             del self._cache[doc_hash]
             
-            if video_url and video_url in self._video_url_to_hash:
-                del self._video_url_to_hash[video_url]
+            if source_id and source_id in self._video_url_to_hash:
+                del self._video_url_to_hash[source_id]
         
         if filename in self._filename_to_hash:
             del self._filename_to_hash[filename]

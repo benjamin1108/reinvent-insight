@@ -59,11 +59,12 @@ def get_task_dir_path(task_id: str, content_type: str = "youtube") -> str:
     # 类型映射
     type_map = {
         "transcript": "youtube",
+        "youtube": "youtube",
         "pdf": "pdf",
+        "docx": "docx",
         "md": "md",
         "txt": "txt",
         "document": "doc",
-        "youtube": "youtube",
     }
     task_type = type_map.get(content_type, "unknown")
     
@@ -238,6 +239,10 @@ class AnalysisWorkflow(ABC):
                 logger.info(f"[工作流完成] task_id={self.task_id}, 标题={title[:30]}..., 章节数={len(chapters)}, doc_hash={doc_hash}")
                 await self._log("分析完成！", progress=100)
                 await self.task_notifier.send_result(title, final_report, self.task_id, final_filename, doc_hash)
+                
+                # Ultra 模式完成后，清理文档类型的原始文件
+                if self.is_ultra_mode:
+                    await self._cleanup_raw_document()
 
             except Exception as e:
                 error_message = f"工作流遇到严重错误: {e}"
@@ -299,15 +304,14 @@ class AnalysisWorkflow(ABC):
         # 提取章节元数据（JSON部分）
         self._extract_chapter_metadata(outline_content)
         
-        # 对于PDF文档，尝试提取AI生成的英文标题
-        if self.is_pdf:
-            try:
-                title_en, title_cn = extract_titles_from_outline(outline_content)
-                if title_en:
-                    self.generated_title_en = title_en
-                    logger.info(f"从大纲中提取到AI生成的英文标题: {self.generated_title_en}")
-            except Exception as e:
-                logger.warning(f"无法从大纲中提取英文标题: {e}")
+        # 尝试提取AI生成的英文标题（适用于所有文档类型）
+        try:
+            title_en, title_cn = extract_titles_from_outline(outline_content)
+            if title_en:
+                self.generated_title_en = title_en
+                logger.info(f"从大纲中提取到AI生成的英文标题: {self.generated_title_en}")
+        except Exception as e:
+            logger.warning(f"无法从大纲中提取英文标题: {e}")
         
         return title, chapters_raw, introduction
     
@@ -370,6 +374,30 @@ class AnalysisWorkflow(ABC):
             章节元数据字典
         """
         return self.chapter_metadata.get(chapter_index, {})
+    
+    async def _cleanup_raw_document(self):
+        """清理文档类型的原始文件（仅 Ultra 模式完成后调用）
+        
+        仅当文档类型有 content_identifier 时才清理
+        """
+        try:
+            # 检查是否是文档类型（有 content_identifier）
+            content_identifier = getattr(self.metadata, 'content_identifier', None)
+            if not content_identifier:
+                return  # 视频类型，无需清理
+            
+            # 清理 content_identifier 中的特殊字符（如 txt://abc -> txt_abc）
+            safe_identifier = content_identifier.replace("://", "_") if "://" in content_identifier else content_identifier
+            
+            # 遍历可能的扩展名查找并删除
+            for ext in ['.pdf', '.docx', '.txt', '.md']:
+                raw_path = config.RAW_DOCUMENTS_DIR / f"{safe_identifier}{ext}"
+                if raw_path.exists():
+                    raw_path.unlink()
+                    logger.info(f"已清理原始文档: {raw_path}")
+                    break
+        except Exception as e:
+            logger.warning(f"清理原始文档失败: {e}")
     
     async def _validate_chapter_count(self, chapters: List[str], outline_content: str):
         """验证章节数量（Ultra模式）"""

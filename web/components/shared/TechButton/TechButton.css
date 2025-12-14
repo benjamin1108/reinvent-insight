@@ -513,4 +513,16 @@ svg.tech-button__spinner--spinning {
 .tech-button *::before,
 .tech-button *::after {
   box-sizing: border-box;
+}
+
+/* 确保 slot 内容（包括嵌入的 SVG 和文字）垂直居中 */
+.tech-button > svg {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* 确保所有内容垂直居中对齐 */
+.tech-button {
+  line-height: 1;
 } 

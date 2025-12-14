@@ -128,13 +128,15 @@ class RetryStrategy:
 
 @dataclass
 class VideoMetadata:
-    """封装从视频中提取的所有元数据。"""
+    """封装从视频/文档中提取的所有元数据。"""
     title: str
     upload_date: str  # YYYYMMDD
-    video_url: str
+    video_url: str  # 视频类型使用 YouTube URL
     is_reinvent: bool = False
     course_code: Optional[str] = None
     level: Optional[str] = None
+    # 文档类型使用 content_identifier（如 pdf://xxx, txt://xxx）
+    content_identifier: Optional[str] = None
     # 内部使用字段
     sanitized_title: str = field(init=False, repr=False)
 

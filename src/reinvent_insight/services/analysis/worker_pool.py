@@ -57,10 +57,14 @@ class WorkerTask:
     # 回调函数（可选）
     callback: Optional[Callable] = field(default=None, compare=False, repr=False)
     
+    # 分析模式
+    is_ultra_mode: bool = field(default=False, compare=False)  # 是否为 UltraDeep 模式
+    
     # Ultra DeepInsight 相关参数
     doc_hash: Optional[str] = field(default=None, compare=False)  # 文档哈希
     base_version: Optional[int] = field(default=None, compare=False)  # 基础版本号
     next_version: Optional[int] = field(default=None, compare=False)  # 目标版本号
+    content_identifier: Optional[str] = field(default=None, compare=False)  # 文档标识符
 
 
 class WorkerPool:
@@ -152,9 +156,11 @@ class WorkerPool:
                 url_or_path=url_or_path,
                 title=title,
                 callback=callback,
+                is_ultra_mode=kwargs.get('is_ultra_mode', False),
                 doc_hash=kwargs.get('doc_hash'),
                 base_version=kwargs.get('base_version'),
-                next_version=kwargs.get('next_version')
+                next_version=kwargs.get('next_version'),
+                content_identifier=kwargs.get('content_identifier')
             )
             
             # 非阻塞加入队列
@@ -228,7 +234,9 @@ class WorkerPool:
             # 根据任务类型选择不同的 worker
             if task.task_type == "youtube":
                 from .worker import summary_task_worker_async
-                worker_func = summary_task_worker_async(task.url_or_path, task_id)
+                worker_func = summary_task_worker_async(
+                    task.url_or_path, task_id, task.is_ultra_mode
+                )
                 
             elif task.task_type == "pdf":
                 from .pdf_worker import pdf_analysis_worker_async
@@ -239,7 +247,8 @@ class WorkerPool:
             elif task.task_type == "document":
                 from reinvent_insight.services.document.document_worker import document_analysis_worker_async
                 worker_func = document_analysis_worker_async(
-                    task_id, task.url_or_path, task.title or "未命名文档"
+                    task_id, task.url_or_path, task.title or "未命名文档",
+                    task.is_ultra_mode
                 )
                 
             elif task.task_type == "ultra_deep_insight":
@@ -249,7 +258,8 @@ class WorkerPool:
                     task.url_or_path,
                     task_id,
                     task.doc_hash,
-                    task.next_version
+                    task.next_version,
+                    task.content_identifier  # 新增：传递文档标识符
                 )
             else:
                 raise ValueError(f"未知的任务类型: {task.task_type}")

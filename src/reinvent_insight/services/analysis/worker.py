@@ -9,11 +9,17 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-async def summary_task_worker_async(url: str, task_id: str):
+async def summary_task_worker_async(url: str, task_id: str, is_ultra_mode: bool = False):
     """
     异步工作函数，负责下载并启动多步骤摘要工作流。
+    
+    Args:
+        url: YouTube 视频链接
+        task_id: 任务ID
+        is_ultra_mode: 是否为 UltraDeep 模式
     """
-    logger.info(f"[任务启动] task_id={task_id}, 类型=YouTube, url={url}")
+    mode_str = "UltraDeep" if is_ultra_mode else "Deep"
+    logger.info(f"[任务启动] task_id={task_id}, 类型=YouTube, 模式={mode_str}, url={url}")
     
     # 1. 下载字幕 (这是一个阻塞操作，在异步函数中通过 to_thread 运行以避免阻塞事件循环)
     try:
@@ -96,13 +102,21 @@ async def summary_task_worker_async(url: str, task_id: str):
         model_name=config.PREFERRED_MODEL,
         content=content_for_summary,
         video_metadata=metadata,
-        task_notifier=manager
+        task_notifier=manager,
+        is_ultra_mode=is_ultra_mode
     )
 
-    logger.info(f"[任务完成] task_id={task_id}, 类型=YouTube, 工作流执行完毕")
+    mode_str = "UltraDeep" if is_ultra_mode else "Deep"
+    logger.info(f"[任务完成] task_id={task_id}, 类型=YouTube, 模式={mode_str}, 工作流执行完毕")
 
 
-async def ultra_deep_insight_worker_async(url: str, task_id: str, doc_hash: str, target_version: int):
+async def ultra_deep_insight_worker_async(
+    url: str, 
+    task_id: str, 
+    doc_hash: str, 
+    target_version: int,
+    content_identifier: str = None
+):
     """
     Ultra DeepInsight 异步工作函数，生成超深度解读版本
     
@@ -111,6 +125,7 @@ async def ultra_deep_insight_worker_async(url: str, task_id: str, doc_hash: str,
         task_id: 任务ID
         doc_hash: 文档哈希值
         target_version: 目标版本号
+        content_identifier: 文档标识符（仅文档类型使用）
     """
     logger.info(f"[Ultra任务启动] task_id={task_id}, doc_hash={doc_hash}, target_version={target_version}")
     
@@ -144,14 +159,51 @@ async def ultra_deep_insight_worker_async(url: str, task_id: str, doc_hash: str,
             content_for_summary = f"视频标题: {video_title}\n\n{subtitle_text}"
             
         else:
-            # 文档文件，需要从已存在的文件中读取内容
-            # TODO: 实现文档读取逻辑
-            logger.error(f"Ultra任务 {task_id}: 暂不支持文档类型")
-            await manager.set_task_error(task_id, {
-                "error_type": "not_supported",
-                "message": "暂不支持从文档生成Ultra版本"
-            })
-            return
+            # 文档文件，从 raw_documents 读取原始文件
+            await manager.send_message("正在读取原始文档...", task_id)
+            
+            # url 在文档类型中是文件路径
+            file_path = url
+            
+            if not Path(file_path).exists():
+                logger.error(f"Ultra任务 {task_id}: 原始文档不存在 - {file_path}")
+                await manager.set_task_error(task_id, {
+                    "error_type": "source_not_found",
+                    "message": "原始文档不存在，无法生成 Ultra 版本"
+                })
+                return
+            
+            # 使用 DocumentProcessor 处理文档
+            from reinvent_insight.services.document.document_processor import DocumentProcessor
+            from reinvent_insight.infrastructure.media.youtube_downloader import VideoMetadata
+            
+            processor = DocumentProcessor()
+            document_content = await processor.process_document(file_path)
+            
+            # 构造 metadata
+            metadata = VideoMetadata(
+                title=document_content.title,
+                upload_date="19700101",
+                video_url="",
+                content_identifier=content_identifier
+            )
+            
+            await manager.send_message("文档读取成功，开始 Ultra 深度分析...", task_id)
+            
+            # 运行 Ultra 深度摘要工作流（使用 DocumentContent 而非字符串）
+            await run_deep_summary_workflow(
+                task_id=task_id,
+                model_name=config.PREFERRED_MODEL,
+                content=document_content,  # DocumentContent 对象
+                video_metadata=metadata,
+                task_notifier=manager,
+                is_ultra_mode=True,
+                target_version=target_version,
+                doc_hash=doc_hash
+            )
+            
+            logger.info(f"[Ultra任务完成] task_id={task_id}, doc_hash={doc_hash}, 类型=文档")
+            return  # 文档类型处理完成，直接返回
         
         await manager.send_message("内容获取成功，开始Ultra深度分析...", task_id)
         

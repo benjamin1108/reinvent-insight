@@ -20,6 +20,30 @@ from reinvent_insight.services.analysis.task_manager import manager
 
 logger = logging.getLogger(__name__)
 
+
+def find_raw_document(content_identifier: str):
+    """查找原始文档文件
+    
+    Args:
+        content_identifier: 文档标识符 (如 pdf://abc123)
+        
+    Returns:
+        Path 对象或 None
+    """
+    if not content_identifier:
+        return None
+    
+    # 清理 content_identifier 中的特殊字符（如 txt://abc -> txt_abc）
+    safe_identifier = content_identifier.replace("://", "_") if "://" in content_identifier else content_identifier
+    
+    # 遍历所有可能的扩展名
+    for ext in [".pdf", ".txt", ".md", ".docx"]:
+        raw_path = config.RAW_DOCUMENTS_DIR / f"{safe_identifier}{ext}"
+        if raw_path.exists():
+            return raw_path
+    
+    return None
+
 router = APIRouter(prefix="/api/article", tags=["ultra_deep"])
 
 
@@ -382,10 +406,23 @@ async def trigger_ultra_deep_generation(doc_hash: str, authorization: str = Head
                 detail="该文章已存在Ultra DeepInsight版本"
             )
         
-        # 5. 获取原始视频URL或文档路径
+        # 5. 获取原始视频URL或文档标识符
         video_url = metadata.get("video_url")
-        if not video_url:
+        content_identifier = metadata.get("content_identifier")
+        
+        if not video_url and not content_identifier:
             raise HTTPException(status_code=400, detail="无法获取原始内容来源")
+        
+        # 文档类型：检查原始文件是否存在
+        source_path = None
+        if content_identifier and not video_url:
+            raw_file = find_raw_document(content_identifier)
+            if not raw_file:
+                raise HTTPException(
+                    status_code=400,
+                    detail="原始文档不存在，无法生成 Ultra 版本"
+                )
+            source_path = str(raw_file)
         
         # 6. 确定新版本号
         versions = hash_to_versions.get(doc_hash, [])
@@ -415,12 +452,13 @@ async def trigger_ultra_deep_generation(doc_hash: str, authorization: str = Head
         success = await worker_pool.add_task(
             task_id=task_id,
             task_type="ultra_deep_insight",
-            url_or_path=video_url,
+            url_or_path=video_url or source_path,  # 视频URL或文档路径
             priority=TaskPriority.LOW,
             # 额外参数
             doc_hash=doc_hash,
             base_version=metadata.get("version", 0),
-            next_version=next_version
+            next_version=next_version,
+            content_identifier=content_identifier  # 新增：传递文档标识符
         )
         
         if not success:

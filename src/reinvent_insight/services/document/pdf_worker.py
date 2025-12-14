@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import hashlib
 import google.generativeai as genai
 from datetime import datetime
 from pathlib import Path
@@ -8,9 +9,9 @@ from reinvent_insight.core import config
 from reinvent_insight.domain.workflows import run_deep_summary_workflow
 from reinvent_insight.services.analysis.task_manager import manager
 from reinvent_insight.infrastructure.media.pdf_processor import PDFProcessor
-from .api import PDFAnalysisRequest
+from reinvent_insight.api.schemas.analysis import PDFAnalysisRequest
 from reinvent_insight.infrastructure.media.youtube_downloader import VideoMetadata
-from .utils import generate_pdf_identifier
+from reinvent_insight.core.utils.file_utils import generate_content_identifier
 
 logger = logging.getLogger(__name__)
 
@@ -39,9 +40,14 @@ async def pdf_analysis_worker_async(req: PDFAnalysisRequest, task_id: str, file_
             if len(clean_title) < 3 or clean_title.replace('_', '').replace('-', '').replace(' ', '').isdigit():
                 clean_title = None
         
-        # 为PDF生成唯一标识符
-        # 使用临时标识符，实际的英文标题会在workflow中由AI生成
-        pdf_identifier = generate_pdf_identifier(clean_title or "PDF_Document", pdf_file_info.get("name", ""))
+        # 基于文件内容生成 content_identifier（不使用文件名，只用内容）
+        try:
+            with open(file_path, 'rb') as f:
+                file_content = f.read()
+            pdf_identifier = generate_content_identifier(file_content, 'pdf')
+        except Exception:
+            # 回退方案：使用随机 hash
+            pdf_identifier = f"pdf://{hashlib.md5(str(datetime.now()).encode()).hexdigest()[:16]}"
         
         # 创建PDFContent对象
         from reinvent_insight.domain.models import DocumentContent as PDFContent
@@ -51,11 +57,12 @@ async def pdf_analysis_worker_async(req: PDFAnalysisRequest, task_id: str, file_
         )
         
         # 构造视频元数据（复用现有结构）
-        # 注意：这里的title会在workflow中被AI生成的英文标题替换
+        # 注意：文档类型使用 content_identifier，不赋值 video_url
         metadata = VideoMetadata(
             title=clean_title or "PDF Document Analysis",  # 临时标题
             upload_date="19700101",
-            video_url=pdf_identifier  # 使用唯一的PDF标识符
+            video_url="",  # 文档类型不使用 video_url
+            content_identifier=pdf_identifier  # 使用PDF标识符
         )
         
         await manager.send_message("开始使用多模态分析PDF文档...", task_id)

@@ -252,6 +252,8 @@ const app = createApp({
     const isAdmin = ref(false); // 管理员标识
     const showLogin = ref(false);
     const loginSuccessCallback = ref(null); // 存储登录成功后的回调函数
+    const pendingView = ref(null); // 保存登录前的视图，用于登录后恢复
+    const pendingPath = ref(null); // 保存登录前的路径
 
     // 视图控制
     const getInitialView = () => {
@@ -468,8 +470,17 @@ const app = createApp({
         const filename = decodeURIComponent(docMatch[1]);
         loadSummary(filename, false);
       } else if (path === '/trash') {
-        // 回收站页面
-        currentView.value = 'trash';
+        // 回收站页面 - 需要登录
+        if (isAuthenticated.value) {
+          currentView.value = 'trash';
+        } else {
+          // 未登录，保存路径并显示登录弹窗
+          pendingView.value = 'trash';
+          pendingPath.value = path;
+          currentView.value = 'library';
+          showLogin.value = true;
+          showToast('请先登录', 'warning');
+        }
       } else if (path === '/admin') {
         // 管理页面 - 需要管理员权限
         if (isAuthenticated.value && isAdmin.value) {
@@ -479,7 +490,9 @@ const app = createApp({
           currentView.value = 'library';
           showToast('无权访问管理页面', 'danger');
         } else {
-          // 未登录，跳转到首页并显示登录
+          // 未登录，保存路径并显示登录弹窗
+          pendingView.value = 'admin';
+          pendingPath.value = path;
           currentView.value = 'library';
           showLogin.value = true;
           showToast('请先登录', 'warning');
@@ -509,13 +522,59 @@ const app = createApp({
         isAdmin.value = (userRole === 'admin');
         showLogin.value = false;
 
-        // 如果有登录回调（如Ultra触发），则不切换视图，直接执行回调
+        // 如果有登录回调（如Ultra触发或被中断的操作），执行回调
         if (loginSuccessCallback.value) {
           const callback = loginSuccessCallback.value;
           loginSuccessCallback.value = null; // 清空回调
+          
+          // 如果有待恢复的视图，先恢复视图（需要权限检查）
+          if (pendingView.value) {
+            const targetView = pendingView.value;
+            const targetPath = pendingPath.value;
+            pendingView.value = null;
+            pendingPath.value = null;
+            
+            // 检查目标视图的权限
+            if (targetView === 'admin' && !isAdmin.value) {
+              currentView.value = 'recent';
+              showToast('无权访问管理页面', 'danger');
+            } else {
+              currentView.value = targetView;
+              if (targetPath && targetPath !== '/') {
+                history.replaceState(null, '', targetPath);
+              }
+            }
+          }
+          
+          await nextTick();
           await callback();
+        } else if (pendingView.value) {
+          // 有待恢复的视图（会话过期后重新登录）
+          const targetView = pendingView.value;
+          const targetPath = pendingPath.value;
+          pendingView.value = null;
+          pendingPath.value = null;
+          
+          // 检查目标视图的权限
+          if (targetView === 'admin' && !isAdmin.value) {
+            // 不是管理员，无法恢复到 admin 页面
+            currentView.value = 'recent';
+            showToast('无权访问管理页面', 'danger');
+          } else {
+            // 正常恢复视图
+            currentView.value = targetView;
+            if (targetPath && targetPath !== '/') {
+              history.replaceState(null, '', targetPath);
+            }
+          }
+          
+          await nextTick();
+          // 如果恢复的是列表页，加载数据
+          if (currentView.value === 'library' || currentView.value === 'recent') {
+            await loadSummaries();
+          }
         } else {
-          // 无回调时，正常跳转到主页
+          // 无回调、无待恢复视图时，正常跳转到最近文章
           currentView.value = 'recent';
           await nextTick();
           await loadSummaries();
@@ -529,35 +588,87 @@ const app = createApp({
       }
     };
 
+    // 主动退出登录
     const logout = async () => {
       localStorage.removeItem('authToken');
       delete axios.defaults.headers.common['Authorization'];
       isAuthenticated.value = false;
+      isAdmin.value = false;
+      
+      // 清空待恢复状态
+      pendingView.value = null;
+      pendingPath.value = null;
+      loginSuccessCallback.value = null;
+      
       currentView.value = 'library';
-      showLogin.value = true;
-      showToast('会话已过期，请重新登录', 'warning');
+      showToast('已退出登录', 'info');
 
       // 重新加载访客模式下的公开文章列表
       try {
         await loadSummaries();
       } catch (error) {
         console.error('❌ 退出登录后重新加载文章列表失败:', error);
-        // 如果加载失败，至少保持数组为空而不是显示错误数据
         summaries.value = [];
       }
+    };
+    
+    // 会话过期处理（被动失效，保存状态以便恢复）
+    const handleSessionExpired = () => {
+      // 保存当前视图和路径，登录后恢复
+      if (currentView.value !== 'library') {
+        pendingView.value = currentView.value;
+        pendingPath.value = window.location.pathname;
+      }
+      
+      localStorage.removeItem('authToken');
+      delete axios.defaults.headers.common['Authorization'];
+      isAuthenticated.value = false;
+      isAdmin.value = false;
+      
+      // 显示登录弹窗，但不跳转视图
+      showLogin.value = true;
+      showToast('会话已过期，请重新登录', 'warning');
     };
 
     const checkAuth = async () => {
       const token = localStorage.getItem('authToken');
       if (token) {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        isAuthenticated.value = true;
-        // 检查管理员权限 - 等待完成
-        await checkAdminStatus();
+        
+        // 验证 token 是否有效（调用后端验证接口）
+        try {
+          const response = await axios.get('/api/auth/verify', {
+            headers: { 'Authorization': `Bearer ${token}` },
+            // 设置较短的超时，避免启动时卡住
+            timeout: 5000
+          });
+          
+          if (response.data && response.data.valid) {
+            isAuthenticated.value = true;
+            // 检查管理员权限 - 等待完成
+            await checkAdminStatus();
+          } else {
+            // Token 无效，清理
+            console.warn('Token 验证失败，清理认证状态');
+            clearAuthState();
+          }
+        } catch (error) {
+          // Token 验证失败（包括 401 错误），清理认证状态
+          console.warn('Token 验证请求失败:', error.message);
+          clearAuthState();
+        }
       } else {
         isAuthenticated.value = false;
         isAdmin.value = false;
       }
+    };
+    
+    // 清理认证状态（不显示弹窗，不跳转）
+    const clearAuthState = () => {
+      localStorage.removeItem('authToken');
+      delete axios.defaults.headers.common['Authorization'];
+      isAuthenticated.value = false;
+      isAdmin.value = false;
     };
     
     const checkAdminStatus = async () => {
@@ -583,6 +694,15 @@ const app = createApp({
 
     const requireAuth = (action) => {
       if (!isAuthenticated.value) {
+        // 保存当前视图和路径，以便登录后恢复
+        pendingView.value = currentView.value;
+        pendingPath.value = window.location.pathname;
+        
+        // 保存回调函数，登录成功后执行
+        if (action && typeof action === 'function') {
+          loginSuccessCallback.value = action;
+        }
+        
         showLogin.value = true;
         showToast('请先登录', 'warning');
       } else {
@@ -768,7 +888,7 @@ const app = createApp({
             // 添加上传进度日志
             logs.value.push(`正在上传${fileTypeName} (${(analysisData.file.size / 1024 / 1024).toFixed(2)} MB)...`);
 
-            res = await axios.post('/analyze-document', formData, {
+            res = await axios.post(`/analyze-document?is_ultra=${analysisData.isUltra || false}`, formData, {
               headers: {
                 'Content-Type': 'multipart/form-data'
               },
@@ -786,9 +906,32 @@ const app = createApp({
 
             // 上传完成
             logs.value.push(`${fileTypeName}上传成功，服务器正在处理...`);
+            
+            // 检查是否返回了重复文档信息
+            if (res.data.exists) {
+              loading.value = false;
+              const message = res.data.message || '该文档已有解读';
+              const docHash = res.data.doc_hash;
+              
+              // 清空日志
+              logs.value = [];
+              
+              // 设置标题和 hash，触发结果卡片显示
+              title.value = message;
+              if (docHash) {
+                createdDocHash.value = docHash;
+              }
+              
+              showToast('文档已存在，可点击下方按钮查看', 'info', 5000);
+              return;
+            }
           } else {
             // 处理URL分析（保持原有逻辑）
-            const requestUrl = analysisData.force ? '/summarize?force=true' : '/summarize';
+            const params = new URLSearchParams();
+            if (analysisData.force) params.append('force', 'true');
+            if (analysisData.isUltra) params.append('is_ultra', 'true');
+            const queryString = params.toString();
+            const requestUrl = queryString ? `/summarize?${queryString}` : '/summarize';
             res = await axios.post(requestUrl, { url: analysisData.url });
             
             // 检查是否返回了重复视频信息
@@ -1804,13 +1947,15 @@ const app = createApp({
       }
     };
 
-    // Axios 拦截器
+    // Axios 拦截器 - 处理 401 错误
     axios.interceptors.response.use(
       response => response,
       error => {
         if (error.response && error.response.status === 401) {
-          if (error.config.url !== '/login') {
-            logout();
+          // 排除登录和 token 验证接口
+          const url = error.config.url || '';
+          if (url !== '/login' && !url.includes('/api/auth/verify')) {
+            handleSessionExpired();
           }
         }
         return Promise.reject(error);

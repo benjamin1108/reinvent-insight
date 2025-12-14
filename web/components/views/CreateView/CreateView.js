@@ -80,7 +80,7 @@ export default {
   ],
   
   setup(props, { emit }) {
-    const { computed, ref, watch } = Vue;
+    const { computed, ref, watch, onMounted, nextTick } = Vue;
     
     // 错误处理辅助函数（从全局获取）
     const getErrorIcon = window.getErrorIcon || ((type) => '⚠️');
@@ -93,8 +93,15 @@ export default {
     const isDragging = ref(false);
     const fileInput = ref(null);
     
+    // 日志列表引用和自动滚动状态
+    const logListRef = ref(null);
+    const shouldAutoScroll = ref(true);
+    
     // 输入模式管理
     const inputMode = ref('url'); // 'url' 或 'file'
+    
+    // 分析深度选择
+    const analysisDepth = ref('deep'); // 'deep' 或 'ultra'
     
     // 重复检测相关状态
     const showDuplicateWarning = ref(false);
@@ -260,7 +267,7 @@ export default {
       }, 500);
     };
     
-    // 监听URL变化
+    // 监听 URL 变化
     watch(() => props.url, (newUrl) => {
       if (newUrl && isValidUrl.value && inputMode.value === 'url') {
         debouncedCheckVideo(newUrl);
@@ -268,6 +275,30 @@ export default {
         showDuplicateWarning.value = false;
       }
     });
+    
+    // 监听日志变化，自动滚动到底部
+    watch(() => props.finalizedLogs.length, () => {
+      if (shouldAutoScroll.value) {
+        nextTick(() => {
+          scrollToBottom();
+        });
+      }
+    });
+    
+    // 滚动到底部
+    const scrollToBottom = () => {
+      if (logListRef.value) {
+        logListRef.value.scrollTop = logListRef.value.scrollHeight;
+      }
+    };
+    
+    // 处理日志列表滚动事件
+    const handleLogScroll = () => {
+      if (!logListRef.value) return;
+      const { scrollTop, scrollHeight, clientHeight } = logListRef.value;
+      // 如果滚动到底部（允许5px误差），恢复自动滚动
+      shouldAutoScroll.value = scrollHeight - scrollTop - clientHeight < 5;
+    };
     
     // 查看已有版本
     const viewExistingAnalysis = () => {
@@ -293,7 +324,8 @@ export default {
       
       const analysisData = {
         url: inputMode.value === 'url' ? props.url : '',
-        file: inputMode.value === 'file' ? selectedFile.value : null
+        file: inputMode.value === 'file' ? selectedFile.value : null,
+        isUltra: analysisDepth.value === 'ultra'
       };
       emit('start-analysis', analysisData);
     };
@@ -418,6 +450,7 @@ export default {
       isDragging,
       fileInput,
       inputMode,
+      analysisDepth,
       canStartAnalysis,
       getAnalysisButtonText,
       getFileTypeLabel,
@@ -440,7 +473,10 @@ export default {
       existingVideo,
       isCheckingDuplicate,
       viewExistingAnalysis,
-      forceReanalyze
+      forceReanalyze,
+      // 日志滚动相关
+      logListRef,
+      handleLogScroll
     };
   }
 };

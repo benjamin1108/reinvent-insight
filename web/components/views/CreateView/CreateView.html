@@ -125,6 +125,29 @@
         </div>
       </div>
 
+      <!-- 分析深度选择 -->
+      <div v-if="!loading" class="create-view__depth-selector">
+        <label class="create-view__depth-label">分析深度</label>
+        <div class="create-view__depth-options">
+          <label class="create-view__depth-option" :class="{ 'create-view__depth-option--active': analysisDepth === 'deep' }">
+            <input type="radio" v-model="analysisDepth" value="deep" class="create-view__depth-radio" />
+            <span class="create-view__depth-icon">⚡</span>
+            <span class="create-view__depth-text">
+              <strong>Deep</strong>
+              <small>快速模式，约 5 分钟</small>
+            </span>
+          </label>
+          <label class="create-view__depth-option" :class="{ 'create-view__depth-option--active': analysisDepth === 'ultra' }">
+            <input type="radio" v-model="analysisDepth" value="ultra" class="create-view__depth-radio" />
+            <span class="create-view__depth-icon">🔬</span>
+            <span class="create-view__depth-text">
+              <strong>UltraDeep</strong>
+              <small>深度模式，约 15 分钟</small>
+            </span>
+          </label>
+        </div>
+      </div>
+
       <!-- 统一的开始分析按钮 -->
       <tech-button 
         variant="primary" 
@@ -160,7 +183,7 @@
       </svg>
       处理进度
     </h3>
-    <div class="create-view__log-list">
+    <div class="create-view__log-list" ref="logListRef" @scroll="handleLogScroll">
       <div v-for="(log, index) in finalizedLogs" :key="index" 
            class="create-view__log-item">
         <div :class="['create-view__log-indicator', 
@@ -224,9 +247,9 @@
     </div>
     
     <div class="create-view__result-content">
-      <p class="create-view__result-label">分析完成</p>
+      <p class="create-view__result-label">{{ title.includes('已存在') ? '文档已存在' : '分析完成' }}</p>
       <h2 class="create-view__result-title">{{ title }}</h2>
-      <p class="create-view__result-hint">文档已准备就绪，点击下方按钮查看完整内容</p>
+      <p class="create-view__result-hint">{{ title.includes('已存在') ? '点击下方按钮查看已有内容' : '文档已准备就绪，点击下方按钮查看完整内容' }}</p>
       
       <tech-button 
         variant="primary" 

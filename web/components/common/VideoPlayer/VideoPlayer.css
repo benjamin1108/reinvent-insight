@@ -8,7 +8,7 @@
 /* 浮动视频播放器主容器 */
 .floating-video-player {
   position: fixed;
-  z-index: 100;
+  z-index: 500; /* 确保悬浮视频窗口在 Visual iframe(100) 之上 */
   background: #0a0e17;
   border: 2px solid rgba(251, 146, 60, 0.4);
   border-radius: 12px;
