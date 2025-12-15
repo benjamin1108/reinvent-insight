@@ -12,6 +12,10 @@ curl -X POST https://ri.mindfree.top/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"你的密码"}'
 
+curl -X POST https://ri-dev.mindfree.top/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"你的密码"}'
+
 # 返回示例: {"token":"xxx","username":"admin","role":"admin"}
 # 后续请求需要带上 Header: Authorization: Bearer xxx
 ```
@@ -96,6 +100,11 @@ curl https://ri.mindfree.top/api/article/{doc_hash}/visual/image -o visual.png
 
 # 触发后处理器（需认证）
 curl -X POST https://ri.mindfree.top/api/article/{doc_hash}/post-process \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"processor":"visual_insight","force":true}'
+
+curl -X POST https://ri-dev.mindfree.top/api/article/{doc_hash}/post-process \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"processor":"visual_insight","force":true}'

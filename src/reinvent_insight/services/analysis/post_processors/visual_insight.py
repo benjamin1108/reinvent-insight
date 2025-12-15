@@ -86,8 +86,37 @@ class VisualInsightProcessor(PostProcessor):
                     f"文章文件不存在"
                 )
             
-            # 生成任务ID
-            task_id = self._generate_task_id(article_path)
+            # 生成标准化的文档标识（用于去重检查）
+            normalized_name = self._get_normalized_name(article_path)
+            
+            # 检查是否已有同一文档的 visual 任务正在运行
+            from reinvent_insight.services.analysis.task_manager import manager as task_manager
+            
+            for task_id, task_state in task_manager.tasks.items():
+                if not task_id.startswith('visual_'):
+                    continue
+                
+                if task_state.status not in ['pending', 'running']:
+                    continue
+                
+                # 从任务 ID 中提取文档名部分（移除 visual_ 前缀和时间戳后缀）
+                # 任务 ID 格式: visual_{文档名}_{时间戳}
+                task_parts = task_id[7:].rsplit('_', 1)  # 移除 'visual_' 前缀，分割时间戳
+                if len(task_parts) >= 1:
+                    task_doc_name = task_parts[0]
+                    
+                    if task_doc_name == normalized_name:
+                        logger.info(
+                            f"跳过 Visual 生成：已有同一文档的任务正在运行 "
+                            f"(task_id: {task_id}, status: {task_state.status})"
+                        )
+                        return PostProcessorResult.skip(
+                            context.report_content,
+                            f"已有任务正在运行: {task_id} ({task_state.status})"
+                        )
+            
+            # 生成任务ID（包含时间戳）
+            task_id = f"visual_{normalized_name}_{int(time.time())}"
             
             # 提取版本号
             version = self._extract_version(article_path.stem)
@@ -122,6 +151,18 @@ class VisualInsightProcessor(PostProcessor):
                 f"触发失败: {e}"
             )
     
+    def _get_normalized_name(self, article_path: Path) -> str:
+        """获取标准化的文档名（用于任务去重）"""
+        base_name = article_path.stem
+        
+        # 移除版本号后缀
+        version_match = re.match(r'^(.+)_v(\d+)$', base_name)
+        if version_match:
+            base_name = version_match.group(1)
+        
+        # 标准化文件名：空格转为下划线，长破折号转为短破折号
+        return base_name.replace(' ', '_').replace('–', '-')
+
     def _get_article_path(self, context: PostProcessorContext) -> Optional[Path]:
         """获取文章文件路径"""
         # 优先从 extra 中获取（工作流可能已设置）
@@ -151,20 +192,6 @@ class VisualInsightProcessor(PostProcessor):
             html_filename = f"{base_name}_visual.html"
         
         return article_path.parent / html_filename
-    
-    def _generate_task_id(self, article_path: Path) -> str:
-        """生成任务ID"""
-        base_name = article_path.stem
-        
-        # 移除版本号后缀
-        version_match = re.match(r'^(.+)_v(\d+)$', base_name)
-        if version_match:
-            base_name = version_match.group(1)
-        
-        # 标准化文件名
-        normalized_name = base_name.replace(' ', '_').replace('–', '-')
-        
-        return f"visual_{normalized_name}_{int(time.time())}"
     
     def _extract_version(self, filename: str) -> int:
         """从文件名提取版本号"""

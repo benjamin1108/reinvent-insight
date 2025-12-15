@@ -43,9 +43,8 @@ class VisualInterpretationWorker:
     DEFAULT_STYLE_SPEC = {
         "brand_color": "#3B82F6",
         "brand_color_name": "blue-500",
-        "chapter_title_style": "text-3xl md:text-4xl font-bold text-white",
-        "chapter_number_style": "text-blue-500 font-mono text-2xl mr-3",
-        "card_style": "bg-zinc-900 rounded-2xl p-6 border border-zinc-800"
+        "card_style": "bg-zinc-900 rounded-2xl p-6 border border-zinc-800",
+        "chapter_title_template": '<div class="mb-8"><div class="flex items-baseline gap-3 mb-3"><span class="text-sm text-[#3B82F6]/60 font-mono">{{NUMBER}}</span><h2 class="text-2xl md:text-3xl font-bold text-white">{{TITLE}}</h2></div><p class="text-zinc-400 text-base">{{SUBTITLE}}</p></div>'
     }
     
     def __init__(
@@ -334,14 +333,24 @@ class VisualInterpretationWorker:
         return html.strip()
     
     def _format_style_spec_for_prompt(self) -> str:
-        """将样式规范格式化为提示词文本"""
+        """将样式规范格式化为提示词文本，包含完整的标题模板"""
         spec = self.style_spec or self.DEFAULT_STYLE_SPEC
+        
+        # 获取章节标题模板（核心！确保样式统一）
+        title_template = spec.get(
+            'chapter_title_template',
+            '<div class="mb-8"><div class="flex items-baseline gap-3 mb-3"><span class="text-sm text-[#3B82F6]/60 font-mono">{{NUMBER}}</span><h2 class="text-2xl md:text-3xl font-bold text-white">{{TITLE}}</h2></div><p class="text-zinc-400 text-base">{{SUBTITLE}}</p></div>'
+        )
         
         return f"""
 - **品牌色**: {spec.get('brand_color', '#3B82F6')} ({spec.get('brand_color_name', 'blue-500')})
-- **章节标题样式**: `{spec.get('chapter_title_style', 'text-3xl md:text-4xl font-bold text-white')}`
-- **章节序号样式**: `{spec.get('chapter_number_style', 'text-blue-500 font-mono text-2xl mr-3')}`
 - **卡片样式**: `{spec.get('card_style', 'bg-zinc-900 rounded-2xl p-6 border border-zinc-800')}`
+- **章节标题模板 (chapter_title_template)**:
+```html
+{title_template}
+```
+
+**重要**：上方的 `chapter_title_template` 是完整的 HTML 模板，你必须直接复制使用，仅替换 `{{{{NUMBER}}}}`, `{{{{TITLE}}}}`, `{{{{SUBTITLE}}}}` 占位符！
 """
     
     def _ensure_iframe_script(self, footer: str) -> str:
