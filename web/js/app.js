@@ -239,6 +239,10 @@ const app = createApp({
     const currentVersion = ref(1); // 统一为数字类型
     const documentLoading = ref(false);
 
+    // Pre分析相关状态
+    const showPreAnalysisModal = ref(false);
+    const preAnalysisData = ref(null);
+
     // ========== 显示模式状态 ==========
     const displayMode = ref('deep'); // 'deep' | 'quick'
     const coreSummary = ref(null); // 核心要点数据（预留）
@@ -1054,6 +1058,11 @@ const app = createApp({
             eventSource.close();
           } else if (data.type === 'heartbeat') {
             // 心跳消息，保持连接活跃
+          } else if (data.type === 'pre_analysis') {
+            // 处理Pre分析结果，弹出确认对话框
+            logs.value.push('✨ 内容分析完成，请确认解读风格...');
+            preAnalysisData.value = data.data;
+            showPreAnalysisModal.value = true;
           }
         } catch (error) {
           console.error('解析 SSE 消息失败:', error, event.data);
@@ -2088,6 +2097,11 @@ const app = createApp({
       currentVersion,
       documentLoading,
       displayMode,
+
+      // Pre分析状态
+      showPreAnalysisModal,
+      preAnalysisData,
+      currentTaskId,
       coreSummary,
       simplifiedText,
       articleTextForTTS,
@@ -2166,7 +2180,13 @@ const app = createApp({
       selectYear,
       formatWordCount,
       isValidYoutubeUrl,
-      manualReconnect
+      manualReconnect,
+
+      // Pre分析确认处理
+      handlePreAnalysisConfirm: (data) => {
+        showPreAnalysisModal.value = false;
+        logs.value.push('✅ 解读风格已确认，继续生成...');
+      }
     };
   }
 });
@@ -2250,6 +2270,14 @@ const components = [
     fileName: 'LoginModal',
     critical: true,
     priority: 1,
+    version: '1.0.0'
+  },
+  {
+    name: 'pre-analysis-modal',
+    path: '/components/common/PreAnalysisModal',
+    fileName: 'PreAnalysisModal',
+    critical: false,
+    priority: 6,
     version: '1.0.0'
   },
   {

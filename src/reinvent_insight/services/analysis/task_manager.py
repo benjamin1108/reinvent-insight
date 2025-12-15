@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from asyncio import Queue
 from pathlib import Path
 
@@ -21,7 +21,7 @@ except ImportError:
 @dataclass
 class TaskState:
     task_id: str
-    status: str  # "pending", "running", "completed", "error"
+    status: str  # "pending", "running", "awaiting_confirmation", "completed", "error"
     logs: List[str] = field(default_factory=list)
     progress: int = 0  # 进度百分比
     result_title: Optional[str] = None
@@ -29,6 +29,10 @@ class TaskState:
     result_path: Optional[str] = None # 最终报告的文件路径
     task: Optional[asyncio.Task] = None
     message_queue: Optional[Queue] = None  # SSE 消息队列
+    
+    # Pre分析相关
+    pre_analysis_result: Optional[Dict[str, Any]] = None  # Pre分析结果
+    confirmation_event: Optional[asyncio.Event] = None  # 用于等待用户确认
 
 class TaskManager:
     """管理 SSE 连接和后台任务状态"""
@@ -343,6 +347,141 @@ class TaskManager:
                     logger.warning(f"向任务 {task_id} 发送错误消息超时（队列可能已满）")
                 except Exception as e:
                     logger.warning(f"向任务 {task_id} 发送错误消息失败: {e}")
+    
+    async def send_pre_analysis_result(
+        self, 
+        task_id: str, 
+        pre_analysis_data: Dict[str, Any]
+    ) -> bool:
+        """
+        发送Pre分析结果到队列，并等待用户确认
+        
+        Args:
+            task_id: 任务ID
+            pre_analysis_data: Pre分析结果字典
+            
+        Returns:
+            是否成功发送
+        """
+        if task_id not in self.tasks:
+            logger.warning(f"任务 {task_id} 不存在，无法发送Pre分析结果")
+            return False
+        
+        task_state = self.tasks[task_id]
+        
+        # 保存Pre分析结果
+        task_state.pre_analysis_result = pre_analysis_data
+        task_state.status = "awaiting_confirmation"
+        
+        # 创建确认事件
+        task_state.confirmation_event = asyncio.Event()
+        
+        # 发送到SSE队列
+        queue = task_state.message_queue
+        if queue:
+            pre_analysis_message = {
+                "type": "pre_analysis",
+                "data": pre_analysis_data,
+                "message": "内容分析完成，请确认或修改解读风格"
+            }
+            try:
+                await asyncio.wait_for(
+                    queue.put(pre_analysis_message),
+                    timeout=1.0
+                )
+                logger.info(f"任务 {task_id} Pre分析结果已发送，等待用户确认")
+                return True
+            except asyncio.TimeoutError:
+                logger.warning(f"向任务 {task_id} 发送Pre分析结果超时")
+                return False
+            except Exception as e:
+                logger.warning(f"向任务 {task_id} 发送Pre分析结果失败: {e}")
+                return False
+        
+        return True
+    
+    async def wait_for_confirmation(self, task_id: str, timeout: float = 300.0) -> bool:
+        """
+        等待用户确认Pre分析结果
+        
+        Args:
+            task_id: 任务ID
+            timeout: 超时时间（秒），默认5分钟
+            
+        Returns:
+            是否收到确认（True=确认，False=超时或失败）
+        """
+        if task_id not in self.tasks:
+            return False
+        
+        task_state = self.tasks[task_id]
+        if not task_state.confirmation_event:
+            return False
+        
+        try:
+            await asyncio.wait_for(
+                task_state.confirmation_event.wait(),
+                timeout=timeout
+            )
+            logger.info(f"任务 {task_id} 收到用户确认，继续执行")
+            return True
+        except asyncio.TimeoutError:
+            logger.warning(f"任务 {task_id} 等待用户确认超时")
+            return False
+    
+    def confirm_pre_analysis(
+        self, 
+        task_id: str, 
+        modified_data: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """
+        确认Pre分析结果，并可选更新分析结果
+        
+        Args:
+            task_id: 任务ID
+            modified_data: 用户修改后的分析结果（可选）
+            
+        Returns:
+            是否成功
+        """
+        if task_id not in self.tasks:
+            logger.warning(f"任务 {task_id} 不存在")
+            return False
+        
+        task_state = self.tasks[task_id]
+        
+        if task_state.status != "awaiting_confirmation":
+            logger.warning(f"任务 {task_id} 不在等待确认状态")
+            return False
+        
+        # 如果有修改，更新Pre分析结果
+        if modified_data:
+            task_state.pre_analysis_result = modified_data
+            logger.info(f"任务 {task_id} Pre分析结果已更新")
+        
+        # 恢复运行状态
+        task_state.status = "running"
+        
+        # 触发确认事件
+        if task_state.confirmation_event:
+            task_state.confirmation_event.set()
+        
+        logger.info(f"任务 {task_id} 已确认，继续执行工作流")
+        return True
+    
+    def get_pre_analysis_result(self, task_id: str) -> Optional[Dict[str, Any]]:
+        """
+        获取Pre分析结果
+        
+        Args:
+            task_id: 任务ID
+            
+        Returns:
+            Pre分析结果字典，不存在返回None
+        """
+        if task_id not in self.tasks:
+            return None
+        return self.tasks[task_id].pre_analysis_result
 
 # 创建一个全局唯一的 TaskManager 实例
 manager = TaskManager() 

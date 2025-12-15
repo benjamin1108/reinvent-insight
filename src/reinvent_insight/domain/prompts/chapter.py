@@ -72,6 +72,8 @@ CHAPTER_PROMPT_TEMPLATE = """
 
 {chapter_depth_constraint}
 
+{pre_analysis_injection}
+
 ---
 ## 当前任务
 你的任务是为上述 **完整大纲** 中的**特定一章**撰写详细内容。

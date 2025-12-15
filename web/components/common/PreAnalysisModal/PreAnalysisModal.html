@@ -1,0 +1,120 @@
+<transition name="fade">
+  <div class="pre-analysis-modal" @click="handleBackdropClick">
+    <div class="pre-analysis-modal__content tech-gradient glow-effect">
+      <!-- 标题栏 -->
+      <div class="pre-analysis-modal__header">
+        <h2 class="pre-analysis-modal__title">
+          <svg class="pre-analysis-modal__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+          </svg>
+          内容风格分析
+        </h2>
+        <p class="pre-analysis-modal__subtitle">AI 已完成对内容的预分析，请确认或调整以下解读策略</p>
+      </div>
+
+      <!-- 分析结果展示 -->
+      <div class="pre-analysis-modal__body">
+        <!-- 内容类型 -->
+        <div class="pre-analysis-modal__field">
+          <label class="pre-analysis-modal__label">内容类型</label>
+          <select v-model="form.content_type" class="pre-analysis-modal__select">
+            <option value="技术演讲">技术演讲</option>
+            <option value="产品发布">产品发布</option>
+            <option value="访谈对话">访谈对话</option>
+            <option value="理念阐述">理念阐述</option>
+            <option value="操作指南">操作指南</option>
+            <option value="行业分析">行业分析</option>
+            <option value="案例分享">案例分享</option>
+          </select>
+        </div>
+
+        <!-- 内容风格 -->
+        <div class="pre-analysis-modal__field">
+          <label class="pre-analysis-modal__label">内容风格</label>
+          <select v-model="form.content_style" class="pre-analysis-modal__select">
+            <option value="深度理论型">深度理论型</option>
+            <option value="实操导向型">实操导向型</option>
+            <option value="对话互动型">对话互动型</option>
+            <option value="叙事驱动型">叙事驱动型</option>
+            <option value="数据驱动型">数据驱动型</option>
+          </select>
+        </div>
+
+        <!-- 目标受众 -->
+        <div class="pre-analysis-modal__field">
+          <label class="pre-analysis-modal__label">目标受众</label>
+          <select v-model="form.target_audience" class="pre-analysis-modal__select">
+            <option value="技术专家">技术专家</option>
+            <option value="产品经理">产品经理</option>
+            <option value="行业观察者">行业观察者</option>
+            <option value="入门学习者">入门学习者</option>
+            <option value="决策层管理者">决策层管理者</option>
+            <option value="全栈开发者">全栈开发者</option>
+          </select>
+        </div>
+
+        <!-- 深度级别 -->
+        <div class="pre-analysis-modal__field">
+          <label class="pre-analysis-modal__label">深度级别</label>
+          <select v-model="form.depth_level" class="pre-analysis-modal__select">
+            <option value="入门普及">入门普及</option>
+            <option value="进阶理解">进阶理解</option>
+            <option value="专业深度">专业深度</option>
+            <option value="前沿探索">前沿探索</option>
+          </select>
+        </div>
+
+        <!-- 核心价值 -->
+        <div class="pre-analysis-modal__field pre-analysis-modal__field--full">
+          <label class="pre-analysis-modal__label">核心价值</label>
+          <textarea 
+            v-model="form.core_value" 
+            class="pre-analysis-modal__textarea"
+            rows="2"
+            placeholder="该内容的核心价值是什么"
+          ></textarea>
+        </div>
+
+        <!-- 解读风格建议 -->
+        <div class="pre-analysis-modal__field pre-analysis-modal__field--full">
+          <label class="pre-analysis-modal__label">解读风格建议</label>
+          <textarea 
+            v-model="form.interpretation_style" 
+            class="pre-analysis-modal__textarea"
+            rows="3"
+            placeholder="建议的解读风格描述"
+          ></textarea>
+        </div>
+
+        <!-- 语气指导 -->
+        <div class="pre-analysis-modal__field pre-analysis-modal__field--full">
+          <label class="pre-analysis-modal__label">语气指导</label>
+          <textarea 
+            v-model="form.tone_guidance" 
+            class="pre-analysis-modal__textarea"
+            rows="2"
+            placeholder="行文语气的具体建议"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- 操作按钮 -->
+      <div class="pre-analysis-modal__footer">
+        <button 
+          @click="handleConfirm" 
+          class="tech-button tech-button--primary"
+          :disabled="isSubmitting"
+        >
+          <svg v-if="!isSubmitting" class="pre-analysis-modal__btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+          <span v-if="isSubmitting">提交中...</span>
+          <span v-else>确认并继续</span>
+        </button>
+        <p class="pre-analysis-modal__hint">
+          确认后将开始生成大纲和章节内容
+        </p>
+      </div>
+    </div>
+  </div>
+</transition>

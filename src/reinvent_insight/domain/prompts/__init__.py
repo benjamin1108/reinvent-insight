@@ -42,6 +42,16 @@ from .subtitle import (
     build_translation_prompt,
 )
 
+from .pre_analysis import (
+    PRE_ANALYSIS_PROMPT_TEMPLATE,
+    PRE_ANALYSIS_INJECTION_FOR_OUTLINE,
+    PRE_ANALYSIS_INJECTION_FOR_CHAPTER,
+    PreAnalysisResult,
+    format_pre_analysis_for_outline,
+    format_pre_analysis_for_chapter,
+    parse_pre_analysis_response,
+)
+
 __all__ = [
     # Common
     'PDF_MULTIMODAL_GUIDE',
@@ -69,4 +79,12 @@ __all__ = [
     'SUBTITLE_TRANSLATION_PROMPT_WITH_CONTEXT',
     'SUBTITLE_TRANSLATION_PROMPT_FALLBACK',
     'build_translation_prompt',
+    # Pre Analysis
+    'PRE_ANALYSIS_PROMPT_TEMPLATE',
+    'PRE_ANALYSIS_INJECTION_FOR_OUTLINE',
+    'PRE_ANALYSIS_INJECTION_FOR_CHAPTER',
+    'PreAnalysisResult',
+    'format_pre_analysis_for_outline',
+    'format_pre_analysis_for_chapter',
+    'parse_pre_analysis_response',
 ]

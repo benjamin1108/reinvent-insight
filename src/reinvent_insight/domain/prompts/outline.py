@@ -203,6 +203,8 @@ OUTLINE_PROMPT_TEMPLATE = """
 
 {mode_instructions}
 
+{pre_analysis_injection}
+
 ## 章节划分与密度建议
 
 **章节划分原则**：

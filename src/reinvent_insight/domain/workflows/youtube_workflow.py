@@ -18,6 +18,13 @@ from reinvent_insight.core.utils import (
 from reinvent_insight.domain.workflows.base import AnalysisWorkflow
 from reinvent_insight.infrastructure.media.youtube_downloader import VideoMetadata
 from reinvent_insight.domain import prompts
+from reinvent_insight.domain.prompts.pre_analysis import (
+    PRE_ANALYSIS_PROMPT_TEMPLATE,
+    PreAnalysisResult,
+    parse_pre_analysis_response,
+    format_pre_analysis_for_outline,
+    format_pre_analysis_for_chapter,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +38,49 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
     3. 生成结论（洞见和金句）
     4. 组装最终Markdown报告
     """
+    
+    async def _generate_pre_analysis(self) -> Optional[PreAnalysisResult]:
+        """生成Pre分析，识别内容类型和解读策略
+        
+        分析内容的类型（技术演讲、访谈、产品发布等）和最适合的解读风格。
+        分析结果将注入到后续的大纲和章节生成中。
+        
+        Returns:
+            PreAnalysisResult 或 None
+        """
+        # 构建内容预览（取前部分内容，避免过长）
+        if self.is_pdf:
+            content_type_desc = "PDF文档"
+            # PDF 用较短的预览
+            content_preview = self.transcript[:8000] if len(self.transcript) > 8000 else self.transcript
+        else:
+            content_type_desc = "视频字幕/讲稿"
+            # 字幕取前10000字符作为预览
+            content_preview = self.transcript[:10000] if len(self.transcript) > 10000 else self.transcript
+        
+        # 构建 Pre分析 prompt
+        prompt = PRE_ANALYSIS_PROMPT_TEMPLATE.format(
+            content_type=content_type_desc,
+            content_preview=content_preview
+        )
+        
+        try:
+            # 调用AI生成分析
+            if self.is_pdf and self.file_info:
+                response = await self.client.generate_content_with_file(prompt, self.file_info)
+            else:
+                response = await self.client.generate_content(prompt)
+            
+            if response:
+                # 解析响应
+                result = parse_pre_analysis_response(response)
+                return result
+            
+            return None
+            
+        except Exception as e:
+            logger.warning(f"任务 {self.task_id} - Pre分析生成失败: {e}")
+            return None
     
     async def _parse_outline_result(self, outline_content: str) -> Tuple[Optional[str], Optional[List[str]], Optional[str]]:
         """解析大纲生成结果
@@ -87,6 +137,11 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
             content_description = "完整字幕"
             full_content = self.transcript
         
+        # 构建Pre分析结果注入（如果有）
+        pre_analysis_injection = ""
+        if self.pre_analysis_result:
+            pre_analysis_injection = format_pre_analysis_for_outline(self.pre_analysis_result)
+        
         # 构建提示词
         prompt = prompts.OUTLINE_PROMPT_TEMPLATE.format(
             role_and_style=prompts.ROLE_AND_STYLE_GUIDE,
@@ -95,6 +150,7 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
             content_description=content_description,
             full_content=full_content,
             mode_instructions=mode_instructions,
+            pre_analysis_injection=pre_analysis_injection,
             quality_control_rules=prompts.QUALITY_CONTROL_RULES
         )
         
@@ -199,6 +255,11 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
         if self.is_ultra_mode:
             chapter_depth_constraint += f"\n\n**Ultra 模式字数要求**：目标约 {target_words} 字，{mode_config['expansion_desc']}"
         
+        # 构建Pre分析结果注入（如果有）
+        pre_analysis_injection = ""
+        if self.pre_analysis_result:
+            pre_analysis_injection = format_pre_analysis_for_chapter(self.pre_analysis_result)
+        
         # 根据内容类型设置不同的描述
         if self.is_pdf:
             content_type_desc = "PDF文档"
@@ -219,6 +280,7 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
             full_outline=outline_content,
             previous_chapters_context=previous_chapters_context,
             chapter_depth_constraint=chapter_depth_constraint,
+            pre_analysis_injection=pre_analysis_injection,
             chapter_number=index + 1,
             current_chapter_title=chapter_title,
             deduplication_instruction=deduplication_instruction,

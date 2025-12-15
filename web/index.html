@@ -254,6 +254,14 @@
       @close="showLogin = false">
     </login-modal>
 
+    <!-- Pre分析确认弹窗 -->
+    <pre-analysis-modal 
+      v-if="showPreAnalysisModal && preAnalysisData && currentTaskId"
+      :task-id="currentTaskId"
+      :analysis-data="preAnalysisData"
+      @confirm="handlePreAnalysisConfirm">
+    </pre-analysis-modal>
+
     <!-- Toast消息容器 -->
     <toast-container></toast-container>
 

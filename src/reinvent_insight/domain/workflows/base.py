@@ -19,6 +19,7 @@ from reinvent_insight.services.analysis.post_processors import (
     PostProcessorContext,
     get_default_pipeline,
 )
+from reinvent_insight.domain.prompts.pre_analysis import PreAnalysisResult
 
 logger = logging.getLogger(__name__)
 
@@ -158,6 +159,9 @@ class AnalysisWorkflow(ABC):
         
         # 后处理管道（默认使用全局管道，可通过子类覆盖）
         self.post_processor_pipeline: Optional[PostProcessorPipeline] = None
+        
+        # Pre分析结果（用于指导后续的大纲和章节生成）
+        self.pre_analysis_result: Optional[PreAnalysisResult] = None
     
     def _get_model_client(self):
         """获取模型客户端（子类可覆盖）"""
@@ -192,6 +196,15 @@ class AnalysisWorkflow(ABC):
                 
                 await self._log("正在启动深度分析流程...")
                 self.task_notifier.tasks[self.task_id].status = "running"
+
+                # 步骤 0: Pre分析（内容类型和解读策略识别）
+                self.pre_analysis_result = await self._run_pre_analysis()
+                if self.pre_analysis_result:
+                    logger.info(
+                        f"[Pre分析完成] task_id={self.task_id}, "
+                        f"内容类型={self.pre_analysis_result.content_type}, "
+                        f"目标受众={self.pre_analysis_result.target_audience}"
+                    )
 
                 # 步骤 1: 生成大纲
                 outline_content = await self._generate_outline()
@@ -250,6 +263,95 @@ class AnalysisWorkflow(ABC):
                 await self.task_notifier.set_task_error(self.task_id, "分析过程中出现错误，请稍后重试")
     
     # ======= 抽象方法（子类必须实现） =======
+    
+    async def _run_pre_analysis(self) -> Optional[PreAnalysisResult]:
+        """执行Pre分析，识别内容类型和解读策略
+        
+        默认实现调用子类的 _generate_pre_analysis 方法。
+        子类可以覆盖此方法来自定义Pre分析流程。
+        
+        Returns:
+            PreAnalysisResult 或 None（如果分析失败或跳过）
+        """
+        try:
+            await self._log("步骤 0/4: 正在分析内容类型和解读策略...")
+            result = await self._generate_pre_analysis()
+            if result:
+                # 保存到任务目录
+                pre_analysis_path = os.path.join(self.task_dir, "pre_analysis.md")
+                with open(pre_analysis_path, "w", encoding="utf-8") as f:
+                    f.write(f"# Pre分析结果\n\n")
+                    f.write(f"**内容类型**: {result.content_type}\n")
+                    f.write(f"**内容风格**: {result.content_style}\n")
+                    f.write(f"**目标受众**: {result.target_audience}\n")
+                    f.write(f"**深度级别**: {result.depth_level}\n")
+                    f.write(f"**核心价值**: {result.core_value}\n\n")
+                    f.write(f"## 解读风格建议\n{result.interpretation_style}\n\n")
+                    f.write(f"## 章节设计建议\n{result.chapter_design_hints}\n\n")
+                    f.write(f"## 行文语气建议\n{result.tone_guidance}\n\n")
+                    f.write(f"---\n\n## 原始分析\n{result.raw_analysis}\n")
+                
+                await self._log(f"内容识别完成：{result.content_type} | 目标受众：{result.target_audience}")
+                
+                # 发送Pre分析结果并等待用户确认
+                pre_analysis_data = {
+                    "content_type": result.content_type,
+                    "content_style": result.content_style,
+                    "target_audience": result.target_audience,
+                    "depth_level": result.depth_level,
+                    "core_value": result.core_value,
+                    "interpretation_style": result.interpretation_style,
+                    "chapter_design_hints": result.chapter_design_hints,
+                    "tone_guidance": result.tone_guidance
+                }
+                
+                # 发送结果到前端
+                await self.task_notifier.send_pre_analysis_result(self.task_id, pre_analysis_data)
+                
+                # 等待用户确认（5分钟超时）
+                await self._log("等待确认解读风格...")
+                confirmed = await self.task_notifier.wait_for_confirmation(self.task_id, timeout=300.0)
+                
+                if not confirmed:
+                    # 超时未确认，使用默认结果继续
+                    logger.warning(f"任务 {self.task_id} - 用户未确认Pre分析，使用默认结果继续")
+                    await self._log("未收到确认，使用默认解读风格继续...")
+                else:
+                    # 检查是否有修改
+                    updated_data = self.task_notifier.get_pre_analysis_result(self.task_id)
+                    if updated_data and updated_data != pre_analysis_data:
+                        # 用户修改了结果，更新PreAnalysisResult
+                        result = PreAnalysisResult(
+                            content_type=updated_data.get("content_type", result.content_type),
+                            content_style=updated_data.get("content_style", result.content_style),
+                            target_audience=updated_data.get("target_audience", result.target_audience),
+                            depth_level=updated_data.get("depth_level", result.depth_level),
+                            core_value=updated_data.get("core_value", result.core_value),
+                            interpretation_style=updated_data.get("interpretation_style", result.interpretation_style),
+                            chapter_design_hints=updated_data.get("chapter_design_hints", result.chapter_design_hints),
+                            tone_guidance=updated_data.get("tone_guidance", result.tone_guidance),
+                            raw_analysis=result.raw_analysis
+                        )
+                        logger.info(f"任务 {self.task_id} - Pre分析结果已由用户修改")
+                        await self._log("解读风格已更新，继续生成...")
+                    else:
+                        await self._log("解读风格已确认，继续生成...")
+                
+            return result
+        except Exception as e:
+            logger.warning(f"任务 {self.task_id} - Pre分析失败，将使用默认策略: {e}")
+            return None
+    
+    async def _generate_pre_analysis(self) -> Optional[PreAnalysisResult]:
+        """生成Pre分析（子类可选实现）
+        
+        默认返回None，跳过Pre分析。
+        子类可以覆盖此方法来实现具体的Pre分析逻辑。
+        
+        Returns:
+            PreAnalysisResult 或 None
+        """
+        return None
     
     @abstractmethod
     async def _generate_outline(self) -> str:
