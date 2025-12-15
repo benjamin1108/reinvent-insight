@@ -29,7 +29,7 @@ const LevelFilter = {
     
     // 级别选项
     const levelOptions = computed(() => [
-      { value: '', label: '全部级别' },
+      { value: '', label: '级别' },
       { value: '100', label: '100-基础' },
       { value: '200', label: '200-中级' },
       { value: '300', label: '300-高级' },
@@ -39,12 +39,12 @@ const LevelFilter = {
     
     // 占位文本
     const placeholder = computed(() => {
-      if (!props.modelValue) return '全部级别';
+      if (!props.modelValue) return '级别';
       const selected = levelOptions.value.find(opt => opt.value === props.modelValue);
       if (selected && selected.value === 'Keynote') {
         return 'Keynote';
       }
-      return selected ? `${selected.value} 级` : '全部级别';
+      return selected ? `${selected.value} 级` : '级别';
     });
     
     // 处理值变化

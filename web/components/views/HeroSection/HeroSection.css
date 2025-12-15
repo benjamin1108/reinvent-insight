@@ -7,9 +7,8 @@
   position: relative;
   color: white;
   text-align: center;
-  padding: 3rem 1.5rem;        /* 从5rem减少到3rem */
+  padding: 1rem 1.5rem;        /* 极致压缩垂直padding */
   overflow: hidden;
-  min-height: 40vh;            /* 从60vh减少到40vh */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -51,6 +50,11 @@
 .hero-section__content {
   position: relative;
   z-index: 10;
+  min-height: 140px;           /* 固定最小高度，防止按钮显隐跳动 */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 /* 时间轴容器 */
@@ -95,12 +99,12 @@
 
 /* 副标题样式 */
 .hero-section__subtitle {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   max-width: 48rem;
-  margin: 0 auto 2rem auto;
+  margin: 0 auto 1rem auto;    /* 减少底部间距 */
   color: #d1d5db;
   opacity: 0.9;
-  line-height: 1.5;
+  line-height: 1.4;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
@@ -109,15 +113,19 @@
 /* 响应式设计 */
 @media (min-width: 768px) {
   .hero-section {
-    padding: 4rem 1.5rem;        /* 从8rem减少到4rem */
+    padding: 1.5rem 1.5rem;      /* 压缩桌面端padding */
+  }
+  
+  .hero-section__content {
+    min-height: 160px;           /* 桌面端稍大 */
   }
   
   .hero-section__title {
-    font-size: 3.75rem;
+    font-size: 3rem;
   }
   
   .hero-section__subtitle {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
   }
   
   .hero-section__title-part {
@@ -127,25 +135,28 @@
 
 @media (min-width: 1024px) {
   .hero-section__title {
-    font-size: 4rem;
+    font-size: 3.25rem;
   }
 }
 
 /* 移动端优化 */
 @media (max-width: 768px) {
   .hero-section {
-    padding: 1rem 0.5rem;        /* 大幅减少padding */
-    min-height: 25vh;            /* 进一步减少高度 */
+    padding: 0.5rem 0.5rem;      /* 极致压缩 */
+  }
+  
+  .hero-section__content {
+    min-height: 110px;           /* 移动端固定高度 */
   }
   
   .hero-section__title {
-    font-size: 1.75rem;          /* 大幅缩小标题 */
-    margin-bottom: 0.75rem;      /* 减少边距 */
+    font-size: 1.5rem;           /* 缩小标题 */
+    margin-bottom: 0.5rem;
   }
   
   .hero-section__subtitle {
-    font-size: 0.875rem;         /* 大幅缩小副标题 */
-    margin-bottom: 1.5rem;       /* 减少边距 */
+    font-size: 0.8rem;           /* 缩小副标题 */
+    margin-bottom: 0.75rem;
   }
   
   /* 移动端标题换行 */
@@ -157,18 +168,21 @@
 /* 极小屏幕进一步优化 */
 @media (max-width: 480px) {
   .hero-section {
-    padding: 0.75rem 0.25rem;    /* 极致精简padding */
-    min-height: 20vh;            /* 进一步减少高度 */
+    padding: 0.25rem 0.25rem;    /* 极致精简 */
+  }
+  
+  .hero-section__content {
+    min-height: 100px;           /* 极小屏固定高度 */
   }
   
   .hero-section__title {
-    font-size: 1.5rem;           /* 进一步缩小标题 */
-    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+    margin-bottom: 0.375rem;
   }
   
   .hero-section__subtitle {
-    font-size: 0.75rem;          /* 进一步缩小副标题 */
-    margin-bottom: 1rem;
+    font-size: 0.7rem;
+    margin-bottom: 0.5rem;
   }
 }
 

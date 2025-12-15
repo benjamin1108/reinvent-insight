@@ -35,7 +35,7 @@ const YearFilter = {
     
     // 年份选项
     const yearOptions = computed(() => {
-      const options = [{ value: '', label: '全部年份' }];
+      const options = [{ value: '', label: '年份' }];
       
       // 添加可用年份（按降序排列）
       const sortedYears = [...props.availableYears].sort((a, b) => b - a);
@@ -48,7 +48,7 @@ const YearFilter = {
     
     // 占位文本
     const placeholder = computed(() => {
-      return props.modelValue || '全部年份';
+      return props.modelValue || '年份';
     });
     
     // 处理值变化
