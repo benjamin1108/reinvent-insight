@@ -19,14 +19,17 @@
 {
   "brand_color": "#XXXXXX",
   "brand_color_name": "xxx-color",
-  "chapter_title_style": "text-3xl md:text-4xl font-bold text-white",
-  "chapter_number_style": "text-[#XXXXXX] font-mono text-2xl mr-3",
+  "chapter_title_template": "<div class=\"mb-8\"><div class=\"flex items-center mb-4\"><span class=\"text-[#XXXXXX] font-mono text-xl mr-3\">{{INDEX}}</span><h2 class=\"text-3xl md:text-4xl font-bold text-white\">{{TITLE}}</h2></div></div>",
   "card_style": "bg-zinc-900 rounded-2xl p-6 border border-zinc-800"
 }
 STYLE_SPEC_END -->
 ```
 
-这个样式规范将传递给后续章节生成，确保整篇文章风格一致。
+**重要说明：**
+- `chapter_title_template` 是章节标题的完整 HTML 模板
+- `{{INDEX}}` 和 `{{TITLE}}` 是占位符，将被替换为实际内容
+- 模板中的品牌色必须与 `brand_color` 一致
+- 后续章节生成将严格使用此模板，确保所有章节标题样式完全一致
 
 ## 技术规范
 

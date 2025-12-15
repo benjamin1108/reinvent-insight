@@ -43,8 +43,7 @@ class VisualInterpretationWorker:
     DEFAULT_STYLE_SPEC = {
         "brand_color": "#3B82F6",
         "brand_color_name": "blue-500",
-        "chapter_title_style": "text-3xl md:text-4xl font-bold text-white",
-        "chapter_number_style": "text-blue-500 font-mono text-2xl mr-3",
+        "chapter_title_template": '<div class="mb-8"><div class="flex items-center mb-4"><span class="text-[#3B82F6] font-mono text-xl mr-3">{{INDEX}}</span><h2 class="text-3xl md:text-4xl font-bold text-white">{{TITLE}}</h2></div></div>',
         "card_style": "bg-zinc-900 rounded-2xl p-6 border border-zinc-800"
     }
     
@@ -337,10 +336,20 @@ class VisualInterpretationWorker:
         """将样式规范格式化为提示词文本"""
         spec = self.style_spec or self.DEFAULT_STYLE_SPEC
         
+        # 章节标题模板
+        chapter_title_template = spec.get(
+            'chapter_title_template',
+            '<div class="mb-8"><div class="flex items-center mb-4"><span class="text-[#3B82F6] font-mono text-xl mr-3">{{INDEX}}</span><h2 class="text-3xl md:text-4xl font-bold text-white">{{TITLE}}</h2></div></div>'
+        )
+        
         return f"""
 - **品牌色**: {spec.get('brand_color', '#3B82F6')} ({spec.get('brand_color_name', 'blue-500')})
-- **章节标题样式**: `{spec.get('chapter_title_style', 'text-3xl md:text-4xl font-bold text-white')}`
-- **章节序号样式**: `{spec.get('chapter_number_style', 'text-blue-500 font-mono text-2xl mr-3')}`
+- **章节标题模板** (`chapter_title_template`): 
+  ```html
+  {chapter_title_template}
+  ```
+  - `{{{{INDEX}}}}` → 章节序号（如 "01"）
+  - `{{{{TITLE}}}}` → 章节标题文字
 - **卡片样式**: `{spec.get('card_style', 'bg-zinc-900 rounded-2xl p-6 border border-zinc-800')}`
 """
     
