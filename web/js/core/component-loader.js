@@ -8,6 +8,7 @@ class ComponentLoader {
   static MAX_CONCURRENT = 6; // 🚀 增加并发数，加快加载速度 // 降低并发数，避免浏览器连接数限制
   static loadingQueue = []; // 加载队列
   static activeLoads = 0; // 当前活跃的加载数
+  static CACHE_VERSION = '20251215'; // 缓存版本号，部署时更新以破除浏览器缓存
 
   /**
    * 加载单个组件（增强版，支持缓存和性能监控）
@@ -78,10 +79,13 @@ class ComponentLoader {
         setTimeout(() => reject(new Error(`Component load timeout: ${name}`)), timeout);
       });
 
+      // 缓存破除参数
+      const cacheBuster = `?v=${this.CACHE_VERSION}`;
+
       // 并行加载HTML和CSS（使用 credentials: 'same-origin' 以优化缓存）
       const loadPromise = Promise.all([
-        fetch(`${path}/${actualFileName}.html`, { credentials: 'same-origin' }),
-        fetch(`${path}/${actualFileName}.css`, { credentials: 'same-origin' }).catch(() => null) // CSS可选
+        fetch(`${path}/${actualFileName}.html${cacheBuster}`, { credentials: 'same-origin' }),
+        fetch(`${path}/${actualFileName}.css${cacheBuster}`, { credentials: 'same-origin' }).catch(() => null) // CSS可选
       ]);
 
       const [htmlResponse, cssResponse] = await Promise.race([loadPromise, timeoutPromise]);
@@ -93,8 +97,8 @@ class ComponentLoader {
       const html = await htmlResponse.text();
       const css = cssResponse?.ok ? await cssResponse.text() : '';
 
-      // 动态导入JS模块
-      const jsModule = await import(`${path}/${actualFileName}.js`);
+      // 动态导入JS模块（带缓存破除参数）
+      const jsModule = await import(`${path}/${actualFileName}.js${cacheBuster}`);
 
       // 计算文件大小
       const fileSize = new Blob([html, css]).size;
