@@ -1023,7 +1023,7 @@
   
   .reading-view .prose-tech p { font-size: 16px; line-height: 1.85; padding: 8px 0; }
   .reading-view .prose-tech ul,
-  .reading-view .prose-tech ol { margin: 8px 0; padding-left: 24px; }
+  .reading-view .prose-tech ol { margin: 8px 0; padding-left: 32px; }
   .reading-view .prose-tech li { font-size: 16px; line-height: 1.75; margin-bottom: 6px; }
   
   .reading-view .prose-tech code { font-size: 12px; }
@@ -1118,7 +1118,7 @@
   
   .reading-view .prose-tech p { font-size: 15px; line-height: 1.75; padding: 6px 0; }
   .reading-view .prose-tech ul,
-  .reading-view .prose-tech ol { margin: 6px 0; padding-left: 20px; }
+  .reading-view .prose-tech ol { margin: 6px 0; padding-left: 30px; }
   .reading-view .prose-tech li { font-size: 15px; line-height: 1.7; margin-bottom: 5px; }
   
   .reading-view .prose-tech code { font-size: 11px; }
