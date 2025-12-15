@@ -4,7 +4,7 @@
  */
 
 .reading-view {
-  height: 100vh;
+  height: 100%;  /* 继承父容器高度，而非使用视口高度 */
   width: 100vw;
   background: #111827;
   color: #e5e7eb;
@@ -75,7 +75,7 @@
 
 /* 主布局 */
 .reading-view__layout {
-  height: 100vh;
+  height: 100%;  /* 继承父容器高度 */
   width: 100%;
   max-width: 100vw;
   display: flex;
@@ -102,7 +102,7 @@
   background: #111827;
   position: relative;
   transition: all 0.3s ease;
-  height: 100vh; /* 确保高度正确 */
+  height: 100%;  /* 继承父容器高度 */
   max-width: 100%;
   min-width: 0; /* 防止 flex 子元素溢出 */
 }
@@ -117,7 +117,7 @@
   max-width: calc(100vw - var(--toc-width, 300px));
   position: absolute;
   left: var(--toc-width, 300px);
-  height: 100vh; /* 使用视口高度而不是100% */
+  height: 100%;  /* 继承父容器高度 */
   top: 0;
   overflow-x: hidden;
 }
@@ -127,7 +127,7 @@
   max-width: 100vw;
   margin-left: 0;
   position: relative;
-  height: 100vh; /* 确保高度正确 */
+  height: 100%;  /* 继承父容器高度 */
   overflow-x: hidden;
 }
 
@@ -900,20 +900,21 @@
 
 /* 移动端优化 */
 @media (max-width: 768px) {
+  .reading-view {
+    height: calc(100vh - 56px);  /* 减去 AppHeader 高度 */
+  }
+  
   .reading-view__layout {
     flex-direction: column;
-    height: 100vh;
+    height: calc(100vh - 56px);  /* 减去 AppHeader 高度 */
     width: 100vw !important;
     max-width: 100vw !important;
     overflow-x: hidden !important;
     position: relative !important;
-    /* 关键：在移动端重置 CSS 变量，防止 Chrome 缓存 */
     --toc-width: 0px !important;
-    /* 🔧 iPad Chrome 修复：添加硬件加速和稳定性属性 */
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
     will-change: auto;
-    /* 移除 padding-top，改为调整 content 的 top 位置 */
   }
   
   .reading-view__toc {
@@ -921,6 +922,7 @@
   }
   
   /* 强制移动端内容区域占满全宽 - 使用多重选择器确保覆盖所有情况 */
+  /* 注意：由于 layout 有 transform，fixed 定位是相对于 layout 的，所以 top: 0 */
   .reading-view__content,
   .reading-view__content:not(.reading-view__content--no-toc),
   .reading-view__layout .reading-view__content {
@@ -928,20 +930,17 @@
     width: 100vw !important;
     max-width: 100vw !important;
     position: fixed !important;
-    top: 80px !important; /* 从 AppHeader 下方开始 */
-    left: 0 !important; /* 不使用 var(--toc-width)，直接 0 */
+    top: 0 !important; /* 相对于 layout 定位，layout 已在正确位置 */
+    left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
     margin: 0 !important;
-    height: calc(100vh - 80px) !important; /* 减去 AppHeader 的高度 */
-    transform: translateZ(0) !important; /* 🔧 强制硬件加速 */
+    height: 100% !important; /* 占满 layout 高度 */
+    transform: translateZ(0) !important;
     -webkit-transform: translateZ(0) !important;
-    /* 额外保险：明确覆盖可能的 calc() 计算 */
     margin-left: 0 !important;
     margin-right: 0 !important;
-    /* 确保内容从顶部开始滚动 */
     padding-top: 0 !important;
-    /* 🔧 iPad Chrome 修复：添加稳定性属性 */
     backface-visibility: hidden !important;
     -webkit-backface-visibility: hidden !important;
     will-change: auto !important;
@@ -951,21 +950,22 @@
     width: 100vw !important;
     max-width: 100vw !important;
     position: fixed !important;
-    top: 80px !important; /* 从 AppHeader 下方开始 */
+    top: 0 !important; /* 相对于 layout 定位，layout 已在正确位置 */
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
     margin: 0 !important;
-    height: calc(100vh - 80px) !important; /* 减去 AppHeader 的高度 */
+    height: 100% !important; /* 占满 layout 高度 */
   }
   
   .reading-view__article-wrapper {
-    padding: 2rem 0 2rem;
+    padding: 0 0 2rem;         /* 移除顶部padding */
     max-width: 100%;
+    margin: 0;                 /* 移除所有margin */
   }
   
   .reading-view__article {
-    padding: 1rem 16px;
+    padding: 0 16px 1rem;      /* 移除顶部padding */
     background: none;
     border: none;
     box-shadow: none;
@@ -978,15 +978,17 @@
   
   /* 确保覆盖 no-toc 的样式 */
   .reading-view__content--no-toc .reading-view__article {
-    padding: 1rem 16px;
+    padding: 0 16px 1rem;       /* 移除顶部padding */
     max-width: 100%;
     margin-left: 0;
     margin-right: 0;
   }
   
   .reading-view__article-header {
+    padding-top: 0.5rem;        /* 文章标题上方留一点空间 */
     padding-bottom: 1rem;
     margin-bottom: 1rem;
+    margin-top: 0;              /* 移除顶部margin */
   }
   
   /* 移动端滚动容器样式 */
@@ -1040,13 +1042,31 @@
 
 /* 极小屏幕优化 */
 @media (max-width: 480px) {
+  .reading-view {
+    height: calc(100vh - 48px);  /* 极小屏 AppHeader 高度 */
+  }
+  
+  .reading-view__layout {
+    height: calc(100vh - 48px);  /* 极小屏 AppHeader 高度 */
+  }
+  
+  /* 极小屏内容区域 - 相对于 layout 定位，无需额外偏移 */
+  .reading-view__content,
+  .reading-view__content:not(.reading-view__content--no-toc),
+  .reading-view__layout .reading-view__content,
+  .reading-view__content--no-toc {
+    top: 0 !important;
+    height: 100% !important;
+  }
+  
   .reading-view__article-wrapper {
-    padding: 2rem 0 2rem;
+    padding: 0 0 2rem;         /* 极小屏移除顶部padding */
     max-width: 100%;
+    margin: 0;
   }
   
   .reading-view__article {
-    padding: 0.75rem 12px;
+    padding: 0 12px 0.75rem;   /* 移除顶部padding */
     margin-bottom: 1.5rem;
     border-radius: 0;
     max-width: 100%;
@@ -1906,6 +1926,16 @@
 
 /* 移动端 iframe 适配 */
 @media (max-width: 768px) {
+  /* 移动端 visual-container 偏移调整 */
+  .reading-view__visual-container {
+    top: 56px;
+    height: calc(100vh - 56px);
+  }
+  
+  .reading-view__visual-header {
+    top: 66px; /* 56px + 10px */
+  }
+  
   .reading-view__visual-iframe-container {
     /* 移动端优化滚动 */
     -webkit-overflow-scrolling: touch;
@@ -1913,6 +1943,18 @@
   
   .reading-view__visual-iframe {
     min-height: 100vh;
+  }
+}
+
+/* 极小屏 visual-container 偏移 */
+@media (max-width: 480px) {
+  .reading-view__visual-container {
+    top: 48px;
+    height: calc(100vh - 48px);
+  }
+  
+  .reading-view__visual-header {
+    top: 58px; /* 48px + 10px */
   }
 }
 
