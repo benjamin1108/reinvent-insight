@@ -2,6 +2,7 @@ import asyncio
 import logging
 import uuid
 from reinvent_insight.core import config
+from reinvent_insight.core.config import GenerationMode
 from reinvent_insight.infrastructure.media import youtube_downloader as downloader
 from reinvent_insight.domain.workflows import run_deep_summary_workflow
 from .task_manager import manager  # Import the shared manager instance
@@ -9,7 +10,12 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-async def summary_task_worker_async(url: str, task_id: str, is_ultra_mode: bool = False):
+async def summary_task_worker_async(
+    url: str, 
+    task_id: str, 
+    is_ultra_mode: bool = False,
+    generation_mode: GenerationMode = GenerationMode.CONCURRENT
+):
     """
     异步工作函数，负责下载并启动多步骤摘要工作流。
     
@@ -17,9 +23,11 @@ async def summary_task_worker_async(url: str, task_id: str, is_ultra_mode: bool 
         url: YouTube 视频链接
         task_id: 任务ID
         is_ultra_mode: 是否为 UltraDeep 模式
+        generation_mode: 章节生成模式 (concurrent/sequential)
     """
     mode_str = "UltraDeep" if is_ultra_mode else "Deep"
-    logger.info(f"[任务启动] task_id={task_id}, 类型=YouTube, 模式={mode_str}, url={url}")
+    gen_mode_str = generation_mode.value
+    logger.info(f"[任务启动] task_id={task_id}, 类型=YouTube, 模式={mode_str}, 生成模式={gen_mode_str}, url={url}")
     
     # 1. 下载字幕 (这是一个阻塞操作，在异步函数中通过 to_thread 运行以避免阻塞事件循环)
     try:
@@ -103,11 +111,13 @@ async def summary_task_worker_async(url: str, task_id: str, is_ultra_mode: bool 
         content=content_for_summary,
         video_metadata=metadata,
         task_notifier=manager,
-        is_ultra_mode=is_ultra_mode
+        is_ultra_mode=is_ultra_mode,
+        generation_mode=generation_mode
     )
 
     mode_str = "UltraDeep" if is_ultra_mode else "Deep"
-    logger.info(f"[任务完成] task_id={task_id}, 类型=YouTube, 模式={mode_str}, 工作流执行完毕")
+    gen_mode_str = generation_mode.value
+    logger.info(f"[任务完成] task_id={task_id}, 类型=YouTube, 模式={mode_str}, 生成模式={gen_mode_str}, 工作流执行完毕")
 
 
 async def ultra_deep_insight_worker_async(

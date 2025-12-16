@@ -131,6 +131,21 @@ DOWNLOAD_TIMEOUT = 60
 # 在并行生成章节时，每个API调用之间的延迟（秒）
 CHAPTER_GENERATION_DELAY_SECONDS = 0.5
 
+# --- 生成模式 ---
+from enum import Enum
+
+class GenerationMode(str, Enum):
+    """章节生成模式
+    
+    CONCURRENT: 并发模式 - 所有章节同时生成（当前默认模式）
+    SEQUENTIAL: 顺序模式 - 一章一章生成，后续章节参考前序章节避免重复
+    """
+    CONCURRENT = "concurrent"
+    SEQUENTIAL = "sequential"
+
+# 默认生成模式
+DEFAULT_GENERATION_MODE = GenerationMode.CONCURRENT
+
 # --- 任务队列配置 ---
 # 最大并发分析任务数（同时运行的 worker 数量）
 MAX_CONCURRENT_ANALYSIS_TASKS = int(os.getenv("MAX_CONCURRENT_ANALYSIS_TASKS", "3"))

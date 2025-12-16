@@ -10,6 +10,7 @@ from typing import List, Optional, Tuple, Dict, Any, Union, Protocol
 from pathlib import Path
 
 from reinvent_insight.core import config
+from reinvent_insight.core.config import GenerationMode
 from reinvent_insight.domain.models import DocumentContent
 from reinvent_insight.infrastructure.media.youtube_downloader import VideoMetadata
 from reinvent_insight.infrastructure.ai.model_config import get_model_client
@@ -101,7 +102,8 @@ class AnalysisWorkflow(ABC):
         task_notifier: TaskNotifier,
         is_ultra_mode: bool = False,
         target_version: Optional[int] = None,
-        doc_hash: Optional[str] = None
+        doc_hash: Optional[str] = None,
+        generation_mode: GenerationMode = GenerationMode.CONCURRENT
     ):
         """
         初始化工作流
@@ -115,6 +117,7 @@ class AnalysisWorkflow(ABC):
             is_ultra_mode: 是否为Ultra模式
             target_version: 目标版本号（仅Ultra模式）
             doc_hash: 文档哈希（仅Ultra模式）
+            generation_mode: 章节生成模式 (concurrent/sequential)
         """
         self.task_id = task_id
         self.model_name = model_name
@@ -126,6 +129,9 @@ class AnalysisWorkflow(ABC):
         self.is_ultra_mode = is_ultra_mode
         self.target_version = target_version
         self.doc_hash = doc_hash
+        
+        # 生成模式
+        self.generation_mode = generation_mode
         
         # 内容类型判断
         if isinstance(content, str):
@@ -214,8 +220,12 @@ class AnalysisWorkflow(ABC):
                 from reinvent_insight.core.utils import generate_toc_with_links
                 toc_md = generate_toc_with_links(chapters)
 
-                # 步骤 2: 并发生成章节
-                success = await self._generate_chapters_parallel(chapters, title, outline_content)
+                # 步骤 2: 根据模式生成章节
+                if self.generation_mode == GenerationMode.SEQUENTIAL:
+                    success = await self._generate_chapters_sequential(chapters, title, outline_content)
+                else:
+                    success = await self._generate_chapters_parallel(chapters, title, outline_content)
+                    
                 if not success:
                     raise Exception("部分或全部章节内容生成失败")
                 
@@ -454,6 +464,57 @@ class AnalysisWorkflow(ABC):
             elif result:
                 successful_chapters += 1
                 logger.info(f"任务 {self.task_id} - 章节 '{chapters[i]}' 已成功生成。")
+        
+        await self._log(f"章节分析完成（{successful_chapters}/{len(chapters)}）", progress=75)
+        
+        return successful_chapters == len(chapters)
+    
+    async def _generate_chapters_sequential(
+        self, 
+        chapters: List[str], 
+        title: str, 
+        outline_content: str
+    ) -> bool:
+        """顺序生成所有章节（一章一章生成，后续章节参考前序章节避免重复）"""
+        await self._log(f"步骤 2/4: 正在顺序生成 {len(chapters)} 个核心章节（参考前序章节避免重复）...")
+        
+        logger.info(f"任务 {self.task_id} - 启用顺序生成模式，共 {len(chapters)} 章")
+        
+        # 存储已生成的章节内容，用于传递给后续章节
+        generated_chapters: List[Dict] = []
+        successful_chapters = 0
+        
+        for i, chapter_title in enumerate(chapters):
+            try:
+                # 获取章节元数据
+                chapter_meta = self._get_chapter_metadata(i + 1)
+                rationale = self._build_chapter_rationale(i + 1, chapter_meta)
+                
+                # 生成单个章节，传递已生成的章节列表
+                chapter_content = await self._generate_single_chapter(
+                    i, chapter_title, outline_content, 
+                    previous_chapters=generated_chapters,
+                    rationale=rationale
+                )
+                
+                if chapter_content:
+                    # 将生成的章节添加到列表中
+                    generated_chapters.append({
+                        'index': i + 1,
+                        'title': chapter_title,
+                        'content': chapter_content
+                    })
+                    successful_chapters += 1
+                    logger.info(f"任务 {self.task_id} - 章节 {i + 1}/{len(chapters)} '{chapter_title}' 已成功生成")
+                else:
+                    logger.error(f"任务 {self.task_id} - 生成章节 '{chapter_title}' 返回空内容")
+                
+                # 更新进度
+                progress = 25 + int(50 * ((i + 1) / len(chapters)))
+                await self._log(f"章节 {i + 1}/{len(chapters)} 生成完成", progress=progress)
+                
+            except Exception as e:
+                logger.error(f"任务 {self.task_id} - 生成章节 '{chapter_title}' 失败: {e}", exc_info=e)
         
         await self._log(f"章节分析完成（{successful_chapters}/{len(chapters)}）", progress=75)
         

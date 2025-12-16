@@ -103,6 +103,12 @@ export default {
     // 分析深度选择
     const analysisDepth = ref('deep'); // 'deep' 或 'ultra'
     
+    // 生成模式选择
+    const generationMode = ref('concurrent'); // 'concurrent' 或 'sequential'
+    
+    // 生成模式是否被锁定（ultra模式下强制sequential）
+    const isGenerationModeLocked = computed(() => analysisDepth.value === 'ultra');
+    
     // 重复检测相关状态
     const showDuplicateWarning = ref(false);
     const existingVideo = ref(null);
@@ -276,6 +282,13 @@ export default {
       }
     });
     
+    // 监听分析深度变化，ultra 模式下强制 sequential
+    watch(analysisDepth, (newDepth) => {
+      if (newDepth === 'ultra') {
+        generationMode.value = 'sequential';
+      }
+    });
+    
     // 监听日志变化，自动滚动到底部
     watch(() => props.finalizedLogs.length, () => {
       if (shouldAutoScroll.value) {
@@ -325,7 +338,8 @@ export default {
       const analysisData = {
         url: inputMode.value === 'url' ? props.url : '',
         file: inputMode.value === 'file' ? selectedFile.value : null,
-        isUltra: analysisDepth.value === 'ultra'
+        isUltra: analysisDepth.value === 'ultra',
+        generationMode: generationMode.value
       };
       emit('start-analysis', analysisData);
     };
@@ -451,6 +465,8 @@ export default {
       fileInput,
       inputMode,
       analysisDepth,
+      generationMode,
+      isGenerationModeLocked,
       canStartAnalysis,
       getAnalysisButtonText,
       getFileTypeLabel,

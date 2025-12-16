@@ -888,7 +888,7 @@ const app = createApp({
             // 添加上传进度日志
             logs.value.push(`正在上传${fileTypeName} (${(analysisData.file.size / 1024 / 1024).toFixed(2)} MB)...`);
 
-            res = await axios.post(`/analyze-document?is_ultra=${analysisData.isUltra || false}`, formData, {
+            res = await axios.post(`/analyze-document?is_ultra=${analysisData.isUltra || false}&generation_mode=${analysisData.generationMode || 'concurrent'}`, formData, {
               headers: {
                 'Content-Type': 'multipart/form-data'
               },
@@ -930,6 +930,7 @@ const app = createApp({
             const params = new URLSearchParams();
             if (analysisData.force) params.append('force', 'true');
             if (analysisData.isUltra) params.append('is_ultra', 'true');
+            if (analysisData.generationMode) params.append('generation_mode', analysisData.generationMode);
             const queryString = params.toString();
             const requestUrl = queryString ? `/summarize?${queryString}` : '/summarize';
             res = await axios.post(requestUrl, { url: analysisData.url });

@@ -1,5 +1,6 @@
 """工作流定义模块"""
 
+from reinvent_insight.core.config import GenerationMode
 from .base import AnalysisWorkflow, TaskNotifier
 from .youtube_workflow import YouTubeAnalysisWorkflow
 
@@ -12,7 +13,8 @@ async def run_deep_summary_workflow(
     task_notifier: TaskNotifier,
     is_ultra_mode: bool = False,
     target_version: int = None,
-    doc_hash: str = None
+    doc_hash: str = None,
+    generation_mode: GenerationMode = GenerationMode.CONCURRENT
 ):
     """运行深度摘要工作流
     
@@ -25,6 +27,7 @@ async def run_deep_summary_workflow(
         is_ultra_mode: 是否为Ultra模式
         target_version: 目标版本号（仅Ultra模式）
         doc_hash: 文档哈希（仅Ultra模式）
+        generation_mode: 章节生成模式 (concurrent/sequential)
     """
     # 创建工作流实例
     workflow = YouTubeAnalysisWorkflow(
@@ -35,7 +38,8 @@ async def run_deep_summary_workflow(
         task_notifier=task_notifier,
         is_ultra_mode=is_ultra_mode,
         target_version=target_version,
-        doc_hash=doc_hash
+        doc_hash=doc_hash,
+        generation_mode=generation_mode
     )
     
     # 执行工作流

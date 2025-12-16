@@ -126,24 +126,69 @@
       </div>
 
       <!-- 分析深度选择 -->
-      <div v-if="!loading" class="create-view__depth-selector">
-        <label class="create-view__depth-label">分析深度</label>
-        <div class="create-view__depth-options">
-          <label class="create-view__depth-option" :class="{ 'create-view__depth-option--active': analysisDepth === 'deep' }">
-            <input type="radio" v-model="analysisDepth" value="deep" class="create-view__depth-radio" />
-            <span class="create-view__depth-icon">⚡</span>
-            <span class="create-view__depth-text">
-              <strong>Deep</strong>
-              <small>快速模式，约 5 分钟</small>
-            </span>
+      <div v-if="!loading" class="create-view__mode-selector">
+        <div class="create-view__mode-options">
+          <label class="create-view__mode-option" :class="{ 'create-view__mode-option--active': analysisDepth === 'deep' }">
+            <input type="radio" v-model="analysisDepth" value="deep" class="create-view__mode-radio" />
+            <div class="create-view__mode-content">
+              <span class="create-view__mode-icon">⚡</span>
+              <div class="create-view__mode-info">
+                <strong class="create-view__mode-title">Deep Insight</strong>
+                <span class="create-view__mode-desc">8-10 章节</span>
+              </div>
+            </div>
           </label>
-          <label class="create-view__depth-option" :class="{ 'create-view__depth-option--active': analysisDepth === 'ultra' }">
-            <input type="radio" v-model="analysisDepth" value="ultra" class="create-view__depth-radio" />
-            <span class="create-view__depth-icon">🔬</span>
-            <span class="create-view__depth-text">
-              <strong>UltraDeep</strong>
-              <small>深度模式，约 15 分钟</small>
-            </span>
+          <label class="create-view__mode-option" :class="{ 'create-view__mode-option--active': analysisDepth === 'ultra' }">
+            <input type="radio" v-model="analysisDepth" value="ultra" class="create-view__mode-radio" />
+            <div class="create-view__mode-content">
+              <span class="create-view__mode-icon">🔬</span>
+              <div class="create-view__mode-info">
+                <strong class="create-view__mode-title">UltraDeep Insight</strong>
+                <span class="create-view__mode-desc">12-16 章节</span>
+              </div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- 生成模式选择 -->
+      <div v-if="!loading" class="create-view__mode-selector">
+        <div class="create-view__mode-options">
+          <label 
+            class="create-view__mode-option" 
+            :class="{ 
+              'create-view__mode-option--active': generationMode === 'concurrent',
+              'create-view__mode-option--disabled': isGenerationModeLocked
+            }">
+            <input 
+              type="radio" 
+              v-model="generationMode" 
+              value="concurrent" 
+              :disabled="isGenerationModeLocked"
+              class="create-view__mode-radio" />
+            <div class="create-view__mode-content">
+              <span class="create-view__mode-icon">⚡</span>
+              <div class="create-view__mode-info">
+                <strong class="create-view__mode-title">并发模式</strong>
+                <span class="create-view__mode-desc">约5分钟，更快速</span>
+              </div>
+            </div>
+          </label>
+          <label 
+            class="create-view__mode-option" 
+            :class="{ 
+              'create-view__mode-option--active': generationMode === 'sequential',
+              'create-view__mode-option--locked': isGenerationModeLocked
+            }">
+            <input type="radio" v-model="generationMode" value="sequential" class="create-view__mode-radio" />
+            <div class="create-view__mode-content">
+              <span class="create-view__mode-icon">📝</span>
+              <div class="create-view__mode-info">
+                <strong class="create-view__mode-title">顺序模式</strong>
+                <span class="create-view__mode-desc">约15分钟，质量更高</span>
+              </div>
+              <span v-if="isGenerationModeLocked" class="create-view__mode-lock">🔒</span>
+            </div>
           </label>
         </div>
       </div>

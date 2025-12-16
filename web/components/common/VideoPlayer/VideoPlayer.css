@@ -167,7 +167,7 @@
   font-size: 18px;
   line-height: 1.5;
   text-align: center;
-  cursor: ns-resize;
+  cursor: grab;
   z-index: 5;
   white-space: pre-wrap;
   word-break: normal;

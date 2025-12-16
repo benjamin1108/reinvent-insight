@@ -156,23 +156,42 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
             index: 章节索引（0-based）
             chapter_title: 章节标题
             outline_content: 完整大纲内容
-            previous_chapters: 已生成的章节列表（并发模式下为None）
+            previous_chapters: 已生成的章节列表（顺序模式下使用，并发模式下为None）
             rationale: 该章节的详细生成指导
             
         Returns:
             章节内容（Markdown格式）
         """
-        # 构建去重指令
+        # 构建去重指令 - 顺序模式下使用更强的去重指令
         if index == 0:
             deduplication_instruction = prompts.DEDUPLICATION_INSTRUCTION_FIRST
+        elif previous_chapters and len(previous_chapters) > 0:
+            # 顺序模式：使用更强的去重指令
+            deduplication_instruction = prompts.DEDUPLICATION_INSTRUCTION_SEQUENTIAL
         else:
+            # 并发模式：使用基础去重指令
             deduplication_instruction = prompts.DEDUPLICATION_INSTRUCTION_WITH_PREVIOUS
         
-        # 构建前序章节上下文（并发模式下为空）
+        # 构建前序章节上下文（顺序模式下传递所有已生成章节的摘要）
         previous_chapters_context = ""
         if previous_chapters and len(previous_chapters) > 0:
+            # 构建所有前序章节的摘要
+            previous_chapters_context = prompts.PREVIOUS_CHAPTERS_SUMMARY_HEADER
+            for prev_chapter in previous_chapters:
+                # 提取章节的前500字作为摘要
+                content_preview = prev_chapter.get('content', '')[:500]
+                if len(prev_chapter.get('content', '')) > 500:
+                    content_preview += '...'
+                
+                previous_chapters_context += prompts.PREVIOUS_CHAPTER_SUMMARY_ITEM.format(
+                    chapter_index=prev_chapter.get('index', index),
+                    chapter_title=prev_chapter.get('title', ''),
+                    chapter_summary=content_preview
+                )
+            
+            # 添加最后一章的完整内容（用于更精确的衔接）
             last_chapter = previous_chapters[-1]
-            previous_chapters_context = prompts.PREVIOUS_CHAPTER_CONTEXT_TEMPLATE.format(
+            previous_chapters_context += prompts.PREVIOUS_CHAPTER_CONTEXT_TEMPLATE.format(
                 chapter_index=last_chapter.get('index', index),
                 chapter_title=last_chapter.get('title', ''),
                 chapter_content=last_chapter.get('content', '')
@@ -229,10 +248,15 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
         for attempt in range(self.max_retries + 1):
             try:
                 # 根据内容类型选择调用方式
+                # 章节生成使用 low thinking 模式以加快速度
                 if self.is_pdf and self.file_info:
-                    chapter_content = await self.client.generate_content_with_file(prompt, self.file_info)
+                    chapter_content = await self.client.generate_content_with_file(
+                        prompt, self.file_info, thinking_level="low"
+                    )
                 else:
-                    chapter_content = await self.client.generate_content(prompt)
+                    chapter_content = await self.client.generate_content(
+                        prompt, thinking_level="low"
+                    )
                 
                 if chapter_content:
                     # 后处理

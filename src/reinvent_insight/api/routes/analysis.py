@@ -9,6 +9,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Header, UploadFile, File, Query
 
 from reinvent_insight.core import config
+from reinvent_insight.core.config import GenerationMode
 from reinvent_insight.api.schemas.analysis import (
     SummarizeRequest,
     SummarizeResponse,
@@ -34,6 +35,7 @@ async def summarize_endpoint(
     priority: int = 0,
     force: bool = Query(default=False),
     is_ultra: bool = Query(default=False, description="是否使用 UltraDeep 模式"),
+    generation_mode: str = Query(default="concurrent", description="章节生成模式: concurrent(并发) 或 sequential(顺序)"),
     authorization: str = Header(None)
 ):
     """
@@ -44,6 +46,7 @@ async def summarize_endpoint(
     - 并发控制
     - 队列管理
     - 重复检测（force=false时检查是否已存在）
+    - 生成模式选择（concurrent/sequential）
     """
     verify_token(authorization)
     
@@ -132,6 +135,12 @@ async def summarize_endpoint(
         except Exception as e:
             logger.warning(f"重复检测失败: {e}")
 
+    # 解析生成模式
+    try:
+        gen_mode = GenerationMode(generation_mode)
+    except ValueError:
+        gen_mode = GenerationMode.CONCURRENT
+    
     task_id = str(uuid.uuid4())
     
     # 记录新任务创建
@@ -157,7 +166,8 @@ async def summarize_endpoint(
         task_type="youtube",
         url_or_path=str(req.url),
         priority=task_priority,
-        is_ultra_mode=is_ultra
+        is_ultra_mode=is_ultra,
+        generation_mode=gen_mode
     )
     
     if not success:
@@ -169,10 +179,11 @@ async def summarize_endpoint(
         )
     
     queue_size = worker_pool.get_queue_size()
-    logger.info(f"[YouTube分析] 任务已入队 task_id={task_id}, priority={task_priority.name}, queue_size={queue_size}")
+    gen_mode_desc = "顺序生成" if gen_mode == GenerationMode.SEQUENTIAL else "并发生成"
+    logger.info(f"[YouTube分析] 任务已入队 task_id={task_id}, priority={task_priority.name}, generation_mode={gen_mode.value}, queue_size={queue_size}")
     return SummarizeResponse(
         task_id=task_id, 
-        message=f"任务已加入队列（优先级: {task_priority.name}，排队: {queue_size} 个任务），请连接 WebSocket。", 
+        message=f"任务已加入队列（优先级: {task_priority.name}，{gen_mode_desc}，排队: {queue_size} 个任务），请连接 WebSocket。", 
         status="created"
     )
 
@@ -248,6 +259,7 @@ async def analyze_document_endpoint(
     title: Optional[str] = None,
     priority: int = 0,
     is_ultra: bool = Query(default=False, description="是否使用 UltraDeep 模式"),
+    generation_mode: str = Query(default="concurrent", description="章节生成模式: concurrent(并发) 或 sequential(顺序)"),
     authorization: str = Header(None)
 ):
     """
@@ -315,6 +327,12 @@ async def analyze_document_endpoint(
             except Exception as e:
                 logger.warning(f"读取已存在文档失败，继续处理: {e}")
     
+    # 解析生成模式
+    try:
+        gen_mode = GenerationMode(generation_mode)
+    except ValueError:
+        gen_mode = GenerationMode.CONCURRENT
+    
     task_id = str(uuid.uuid4())
     
     try:
@@ -344,7 +362,8 @@ async def analyze_document_endpoint(
             url_or_path=tmp_file_path,
             title=display_title,
             priority=task_priority,
-            is_ultra_mode=is_ultra
+            is_ultra_mode=is_ultra,
+            generation_mode=gen_mode
         )
         
         if not success:
@@ -356,9 +375,10 @@ async def analyze_document_endpoint(
             )
         
         queue_size = worker_pool.get_queue_size()
+        gen_mode_desc = "顺序生成" if gen_mode == GenerationMode.SEQUENTIAL else "并发生成"
         return SummarizeResponse(
             task_id=task_id, 
-            message=f"文档分析任务已加入队列（{file_ext[1:].upper()}，排队: {queue_size} 个任务），请连接 WebSocket。", 
+            message=f"文档分析任务已加入队列（{file_ext[1:].upper()}，{gen_mode_desc}，排队: {queue_size} 个任务），请连接 WebSocket。", 
             status="created"
         )
         

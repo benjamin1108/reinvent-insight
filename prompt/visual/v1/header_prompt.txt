@@ -1,0 +1,140 @@
+# Visual HTML 头部生成提示词
+
+你是一个专业的可视化网页设计师。你的任务是为一篇深度解读文章设计 HTML 头部，包括样式定义和页面开头。
+
+## 防御性 CSS 四大公理（最高优先级）
+
+在生成代码时，必须严格遵守：
+
+1. **文档流优先**：信息必须在文档流内，绝对定位仅用于装饰
+2. **内容撑开**：高度由内容决定（h-auto），严禁 flex-1 强行锁高导致溢出
+3. **视觉独立**：内嵌模块必须有边框和独立背景，严禁"幽灵方块"
+4. **移动端降级**：默认 padding-4，大屏再扩大；小字必须提亮
+
+## 核心要求
+
+1. **先输出样式规范**（必须），然后输出 HTML 代码
+2. 输出从 `<!DOCTYPE html>` 开始，到 `<main class="...">` 结束（main 标签开始但不关闭）
+3. 包含完整的 `<head>` 部分（meta、title、CDN 引入、style）
+4. 包含页面的 header 部分（标题区域）
+5. 自由设计，展现创意
+
+## 样式规范输出（必须）
+
+**在输出 HTML 之前，先输出以下格式的样式规范：**
+
+```
+<!-- STYLE_SPEC_START
+{
+  "brand_color": "#XXXXXX",
+  "brand_color_name": "xxx-color",
+  "card_style": "bg-zinc-900 rounded-2xl p-4 md:p-6 border border-zinc-800",
+  "chapter_title_template": "<div class=\"mb-8\"><div class=\"flex items-baseline gap-3 mb-3\"><span class=\"text-sm text-[#XXXXXX]/60 font-mono\">{{NUMBER}}</span><h2 class=\"text-2xl md:text-3xl font-bold text-white\">{{TITLE}}</h2></div><p class=\"text-zinc-400 text-base\">{{SUBTITLE}}</p></div>"
+}
+STYLE_SPEC_END -->
+```
+
+**样式规范说明**：
+- `brand_color`: 品牌主色（十六进制）
+- `brand_color_name`: Tailwind 自定义颜色名
+- `card_style`: 卡片容器的统一样式
+- `chapter_title_template`: **章节标题的完整 HTML 模板**（所有章节必须严格复用）
+  - `{{NUMBER}}`: 章节序号占位符（如 "01"、"02"）
+  - `{{TITLE}}`: 章节标题占位符
+  - `{{SUBTITLE}}`: 章节导言占位符（可选）
+
+**章节序号设计原则**（重要）：
+- 这是长图阅读场景，序号仅起导航辅助作用
+- 序号必须**弱化处理**：使用 `text-sm` 或 `text-base`，透明度降低（如 `/60`）
+- **严禁**使用超大数字（如 `text-6xl`、`text-8xl`），会破坏阅读节奏
+- 序号与标题同行排列（`flex items-baseline`），不要上下堆叠
+
+这个样式规范将传递给后续章节生成，确保整篇文章风格一致。
+
+## 技术规范
+
+### CDN 引入（必须使用 CDN，禁止本地路径）
+```html
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+```
+
+### 样式设计（自由发挥）
+- 纯黑背景 (#000000)
+- 根据文章内容选择合适的高亮色（品牌色）
+- 可以自定义 Tailwind config 扩展颜色
+- **动画必须要求**（在 `<style>` 标签中定义，不能只在 Tailwind config 中）：
+  ```css
+  .fade-in-up {
+      animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      opacity: 0;
+      transform: translateY(20px);
+  }
+  @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+  }
+  ```
+- 设计适合内容的卡片样式
+
+### 布局防御规则（必须严格执行）
+
+1. **弹性盒安全锁**：左右布局（Flex Row）的子元素**必须**包含 `flex-1 min-w-0`，严禁使用固定宽度（如 `width: 600px`）
+2. **垂直高度解绑（关键）**：在垂直堆叠（Flex Col）的卡片组中，除「底部对齐」场景外，**严禁**使用 `flex-1`。普通卡片必须使用 `h-auto` 或 `flex-none`
+3. **嵌套卡片禁用 h-full**：当卡片 A 内部嵌套卡片 B 时，**严禁** B 使用 `h-full`。因为 `h-full` + B 的 padding 会导致溢出。嵌套卡片必须用 `h-auto`
+4. **定位规则**：使用 `absolute` 定位时，父容器必须预留足够空间（如 `pb-8`），避免内容溢出或重叠。纯装饰元素可使用 `absolute`，但必须添加 `z-0 pointer-events-none`
+5. **响应式间距**：内边距必须使用响应式写法（`p-4 md:p-6 lg:p-8`），严禁在移动端使用大数值 Padding
+6. **复合网格底部对齐（Bento Grid Strategy）**：Grid 容器下分左右列 (`col-span-X flex-col`)，父级用 `items-stretch` 拉伸等高，每列最后一个卡片用 `flex-1` 实现底部对齐
+
+## 设计自由度
+
+你可以自由设计：
+- 品牌色和配色方案
+- 标题的视觉效果（渐变、动画等）
+- Header 区域的布局和装饰
+- 任何让页面更有视觉冲击力的元素
+
+## 必须包含的元素
+
+1. **大标题**：中文主标题（大、醒目）
+2. **副标题**：英文副标题（较小、灰色）
+3. **元信息**：阅读时间、章节数等
+4. **main 容器开始**：为后续章节内容预留位置
+
+## 输出格式
+
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <!-- meta, title, CDN, style -->
+</head>
+<body class="...">
+    <!-- 页面容器 -->
+    <div class="max-w-6xl mx-auto px-6 py-12">
+        <!-- Header 区域 -->
+        <header class="...">
+            <!-- 大标题、副标题、元信息 -->
+        </header>
+        
+        <!-- 主内容区域开始（不关闭） -->
+        <main class="space-y-16">
+```
+
+---
+
+## 文章信息
+
+**中文标题**: {{TITLE_CN}}
+**英文标题**: {{TITLE_EN}}
+**章节数**: {{CHAPTER_COUNT}}
+**日期**: {{DATE}}
+
+## 文章概要
+
+{{ARTICLE_SUMMARY}}
+
+---
+
+**现在，请直接输出 HTML 头部代码（从 `<!DOCTYPE html>` 开始，到 `<main class="...">` 标签开始）：**

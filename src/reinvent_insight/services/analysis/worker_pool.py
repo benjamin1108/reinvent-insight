@@ -16,6 +16,7 @@ from datetime import datetime
 from enum import Enum
 
 from reinvent_insight.core import config
+from reinvent_insight.core.config import GenerationMode
 from .task_manager import manager
 
 logger = logging.getLogger(__name__)
@@ -65,6 +66,9 @@ class WorkerTask:
     base_version: Optional[int] = field(default=None, compare=False)  # 基础版本号
     next_version: Optional[int] = field(default=None, compare=False)  # 目标版本号
     content_identifier: Optional[str] = field(default=None, compare=False)  # 文档标识符
+    
+    # 生成模式
+    generation_mode: GenerationMode = field(default=GenerationMode.CONCURRENT, compare=False)
 
 
 class WorkerPool:
@@ -149,6 +153,11 @@ class WorkerPool:
         """
         try:
             # 创建任务对象（使用负优先级，因为 PriorityQueue 是最小堆）
+            # 获取生成模式，默认使用配置中的默认值
+            gen_mode = kwargs.get('generation_mode', config.DEFAULT_GENERATION_MODE)
+            if isinstance(gen_mode, str):
+                gen_mode = GenerationMode(gen_mode)
+            
             task = WorkerTask(
                 priority=-priority.value,  # 负值：数值越大优先级越高
                 task_id=task_id,
@@ -160,7 +169,8 @@ class WorkerPool:
                 doc_hash=kwargs.get('doc_hash'),
                 base_version=kwargs.get('base_version'),
                 next_version=kwargs.get('next_version'),
-                content_identifier=kwargs.get('content_identifier')
+                content_identifier=kwargs.get('content_identifier'),
+                generation_mode=gen_mode
             )
             
             # 非阻塞加入队列
@@ -235,7 +245,7 @@ class WorkerPool:
             if task.task_type == "youtube":
                 from .worker import summary_task_worker_async
                 worker_func = summary_task_worker_async(
-                    task.url_or_path, task_id, task.is_ultra_mode
+                    task.url_or_path, task_id, task.is_ultra_mode, task.generation_mode
                 )
                 
             elif task.task_type == "pdf":
@@ -248,7 +258,7 @@ class WorkerPool:
                 from reinvent_insight.services.document.document_worker import document_analysis_worker_async
                 worker_func = document_analysis_worker_async(
                     task_id, task.url_or_path, task.title or "未命名文档",
-                    task.is_ultra_mode
+                    task.is_ultra_mode, task.generation_mode
                 )
                 
             elif task.task_type == "ultra_deep_insight":

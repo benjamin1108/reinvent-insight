@@ -16,32 +16,40 @@ Deep 和 Ultra 使用同一套核心逻辑，通过配置参数控制差异：
 
 MODE_CONFIGS = {
     "deep": {
-        "chapter_range": "10-20",
-        "chapter_min": 10,
-        "chapter_max": 20,
-        "subsection_range": "1-3",
-        "depth_mode": "adaptive",  # brief/moderate/detailed 根据内容自适应
-        "depth_mode_desc": "根据原文内容量自适应选择 brief/moderate/detailed",
+        # 章节规模：精炼深度，适合 30-60 分钟内容
+        "chapter_range": "8-10",
+        "chapter_min": 8,
+        "chapter_max": 10,
+        "subsection_range": "1-2",  # 子章节较少
+        "depth_mode": "all_detailed",
+        "depth_mode_desc": "所有章节统一标注为 detailed，确保深度一致",
+        # 字数配置：精炼版
         "word_targets": {
-            "brief": 2000,
-            "moderate": 3000,
-            "detailed": 5000
+            "detailed": 4000,
+            "min_detailed": 3000  # 硬性最低字数
         },
-        "expansion_strategy": "conservative",
-        "expansion_desc": "基于原文事实，不过度扩展；原文简略则输出简短"
+        "expansion_strategy": "balanced",
+        "expansion_desc": "适度展开核心论点，避免过度扩展",
+        # 洞见配置
+        "insights_count": "5-6"
     },
     "ultra": {
-        "chapter_range": "18-20",
-        "chapter_min": 18,
-        "chapter_max": 20,
-        "subsection_range": "2-4",
-        "depth_mode": "all_detailed",  # 全部使用 detailed
+        # 章节规模：全面深度，适合 1-2 小时或复杂文档
+        "chapter_range": "12-16",  # 从 18-20 降到 12-16，减少碎片化
+        "chapter_min": 12,
+        "chapter_max": 16,
+        "subsection_range": "2-4",  # 子章节较多
+        "depth_mode": "all_detailed",
         "depth_mode_desc": "所有章节统一标注为 detailed，确保深度一致",
+        # 字数配置：详尽版
         "word_targets": {
-            "detailed": 6000
+            "detailed": 5000,
+            "min_detailed": 4000  # 硬性最低字数
         },
         "expansion_strategy": "aggressive",
-        "expansion_desc": "充分展开，可补充技术背景、行业上下文和相关案例类比"
+        "expansion_desc": "充分展开，可补充技术背景、行业上下文和相关案例类比",
+        # 洞见配置
+        "insights_count": "8-10"
     }
 }
 
@@ -105,7 +113,17 @@ OUTLINE_MODE_INSTRUCTIONS = """
 
 - **opening_hook**：设计每章独特的开篇方式，避免所有章节都以类似方式开始
 - **closing_transition**：规划与下一章的自然过渡，确保阅读连贯性
+  - ⚠️ **禁止使用以下模板化过渡**：
+    * "在确立了X之后，AWS开始..."
+    * "解决了X问题后，接下来面临的挑战是..."
+    * "这为X奠定了基础，下一章将探讨..."
+  - ✅ **推荐过渡方式**：
+    * 悬念式：提出一个新问题
+    * 对比式：暗示不同视角
+    * 静默式：直接结束，不刻意过渡（技术章节推荐）
 - **must_exclude**：**强制负向约束** - 绝对禁止包含的内容，这是防止内容撞车的最强防火墙
+  - ⚠️ 即使你认为再提一次很有必要，也必须遵守
+  - ⚠️ 如需引用已覆盖内容，使用"这一点在第X章已详细分析"的引用式表达
 - **prev_chapter_link / next_chapter_link**：建立章节间的逻辑链条
 """
 
@@ -127,25 +145,33 @@ def get_outline_instructions(is_ultra: bool) -> str:
 # ========================================
 
 CHAPTER_DEPTH_INSTRUCTIONS = """
-## 字数与扩展要求
+## 字数硬性要求（强制执行）
 
-**目标字数**：约{target_words}字
+**最低字数**：{min_words} 字（低于此数视为任务未完成）
+**目标字数**：{target_words} 字
 **扩展策略**：{expansion_desc}
 
-**生成要求**：
-1. **严格遵守深度建议**：
-   - brief（简洁）：快速概括核心要点，不展开细节，约2000字
-   - moderate（适度）：适度展开关键论点和案例，约3000字
-   - detailed（详细）：深入分析并提供详细解读，约5000字以上
+⚠️ **字数警告**：
+- 如果你的输出少于 {min_words} 字，说明内容展开不充分
+- 宁可超出目标 20%，也绝不能低于最低字数
+- 每个子章节至少 800 字，不要一两句话就跳到下一个小节
 
-2. **防止过度扩展**：
-   - 如果原文内容稀少(sparse)，绝对不要为了凑字数而编造或过度推测
-   - 如果原文只是简单提及某个点，你的解读也应该简短
-   - 宁可生成较短但准确的内容，也不要生成冗长但偏离原文的内容
+**字数不足时的补救措施**（按优先级）：
+1. 为每个论点补充具体案例或数据佐证
+2. 展开技术原理的详细解释
+3. 添加「为什么重要」「意味着什么」的分析
+4. 补充行业背景或历史演进
+5. 增加对比分析（与竞品/前代/替代方案）
 
-3. **基于原文事实**：
-   - 所有论述必须有原文支撑
-   - 不要添加原文中没有的案例、数据或观点
+**生成深度说明**：
+- brief（简洁）：约 2000-2500 字，快速概括核心要点
+- moderate（适度）：约 3000-3500 字，适度展开关键论点
+- detailed（详细）：约 {target_words} 字，深入分析并详细解读
+
+**防止注水**：
+- 如果原文内容稀少(sparse)，绝对不要为了凑字数而编造
+- 宁可写得少但准确，也不要冗长但偏离原文
+- 所有论述必须有原文支撑
 """
 
 
@@ -158,14 +184,13 @@ def get_chapter_instructions(is_ultra: bool, generation_depth: str = "detailed")
     """
     config = get_mode_config(is_ultra)
     
-    # Ultra 模式固定使用 detailed 的字数目标
-    if is_ultra:
-        target_words = config["word_targets"]["detailed"]
-    else:
-        target_words = config["word_targets"].get(generation_depth, 3000)
+    # 获取目标字数和最低字数
+    target_words = config["word_targets"].get("detailed", 5000)
+    min_words = config["word_targets"].get("min_detailed", 3000)
     
     return CHAPTER_DEPTH_INSTRUCTIONS.format(
         target_words=target_words,
+        min_words=min_words,
         expansion_desc=config["expansion_desc"]
     )
 

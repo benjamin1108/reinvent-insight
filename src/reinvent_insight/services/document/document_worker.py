@@ -9,6 +9,7 @@ import shutil
 from pathlib import Path
 
 from reinvent_insight.core import config
+from reinvent_insight.core.config import GenerationMode
 from reinvent_insight.domain.workflows import run_deep_summary_workflow
 from reinvent_insight.services.analysis.task_manager import manager
 from .document_processor import DocumentProcessor
@@ -22,7 +23,8 @@ async def document_analysis_worker_async(
     task_id: str, 
     file_path: str, 
     title: str = None,
-    is_ultra_mode: bool = False
+    is_ultra_mode: bool = False,
+    generation_mode: GenerationMode = GenerationMode.CONCURRENT
 ):
     """
     异步工作函数，负责处理文档文件并使用统一的分析工作流
@@ -32,9 +34,11 @@ async def document_analysis_worker_async(
         file_path: 文档文件路径
         title: 可选的文档标题
         is_ultra_mode: 是否为 UltraDeep 模式
+        generation_mode: 章节生成模式 (concurrent/sequential)
     """
     mode_str = "UltraDeep" if is_ultra_mode else "Deep"
-    logger.info(f"[任务启动] task_id={task_id}, 类型=文档, 模式={mode_str}")
+    gen_mode_str = generation_mode.value
+    logger.info(f"[任务启动] task_id={task_id}, 类型=文档, 模式={mode_str}, 生成模式={gen_mode_str}")
     try:
         await manager.send_message("正在处理文档文件...", task_id)
         
@@ -87,11 +91,13 @@ async def document_analysis_worker_async(
             content=document_content,
             video_metadata=metadata,
             task_notifier=manager,
-            is_ultra_mode=is_ultra_mode
+            is_ultra_mode=is_ultra_mode,
+            generation_mode=generation_mode
         )
         
         mode_str = "UltraDeep" if is_ultra_mode else "Deep"
-        logger.info(f"[任务完成] task_id={task_id}, 类型=文档, 模式={mode_str}")
+        gen_mode_str = generation_mode.value
+        logger.info(f"[任务完成] task_id={task_id}, 类型=文档, 模式={mode_str}, 生成模式={gen_mode_str}")
         
         # 工作流完成后清理临时文件
         try:
