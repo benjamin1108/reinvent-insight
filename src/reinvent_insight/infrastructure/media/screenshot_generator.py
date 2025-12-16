@@ -110,7 +110,7 @@ class ScreenshotGenerator:
                 # 注意：2x 在超长页面下可能导致渲染问题
                 page = await browser.new_page(
                     viewport={'width': width, 'height': 1080},
-                    device_scale_factor=1.5  # 1.5倍分辨率，平衡清晰度和稳定性
+                    device_scale_factor=3.0  # 2倍分辨率，高清输出
                 )
                 
                 # 设置超时
@@ -126,17 +126,13 @@ class ScreenshotGenerator:
                     timeout=self.browser_timeout
                 )
                 
-                logger.info("页面加载完成，开始触发懒加载内容渲染...")
+                logger.info("页面加载完成，触发动画和渲染...")
                 
-                # 滚动页面触发所有懒加载内容
-                await self._scroll_to_trigger_lazy_load(page)
+                # 优化：直接通过 JS 触发所有动画元素，绕过 Intersection Observer
+                await self._trigger_all_animations(page)
                 
-                # 等待图表和动画渲染
-                await self._wait_for_charts(page)
-                
-                # 滚动回顶部
-                await page.evaluate("window.scrollTo(0, 0)")
-                await asyncio.sleep(0.5)  # 短暂等待滚动完成
+                # 等待动画和图表渲染完成
+                await self._wait_for_render(page)
                 
                 # 获取页面实际尺寸
                 dimensions = await self._get_page_dimensions(page)
@@ -191,66 +187,74 @@ class ScreenshotGenerator:
                 except Exception:
                     pass
     
-    async def _scroll_to_trigger_lazy_load(self, page: Page) -> None:
+    async def _trigger_all_animations(self, page: Page) -> None:
         """
-        滚动页面触发所有懒加载内容（Intersection Observer）
+        通过 JS 直接触发所有动画元素，绕过 Intersection Observer 的滚动触发机制
         
         Args:
             page: Playwright Page 对象
         """
-        logger.info("滚动页面触发懒加载内容...")
-        
         try:
-            # 获取页面总高度
-            total_height = await page.evaluate("document.documentElement.scrollHeight")
-            viewport_height = 1080  # 视口高度
-            
-            # 分段滚动，确保所有内容进入视口触发 Intersection Observer
-            scroll_step = viewport_height * 0.8  # 每次滚动80%视口高度，确保有重叠
-            current_position = 0
-            
-            while current_position < total_height:
-                await page.evaluate(f"window.scrollTo(0, {current_position})")
-                await asyncio.sleep(0.3)  # 每次滚动后等待300ms，让动画和图表有时间渲染
-                current_position += scroll_step
-            
-            # 滚动到底部，确保最后一屏内容也被触发
-            await page.evaluate("window.scrollTo(0, document.documentElement.scrollHeight)")
-            await asyncio.sleep(0.5)
-            
-            logger.info(f"页面滚动完成，总高度: {total_height}px")
-            
-        except Exception as e:
-            logger.warning(f"页面滚动失败（可能影响截图完整性）: {e}")
-    
-    async def _wait_for_charts(self, page: Page) -> None:
-        """
-        等待 Chart.js 图表渲染完成
-        
-        Args:
-            page: Playwright Page 对象
-        """
-        # 固定延迟，等待图表和动画渲染
-        logger.info(f"等待 {self.wait_time} 秒以确保图表和动画渲染完成...")
-        await asyncio.sleep(self.wait_time)
-        
-        # 可选：检测 Chart.js 是否加载完成
-        try:
-            # 执行 JavaScript 检测图表是否存在
-            has_charts = await page.evaluate("""
+            # 一次性触发所有 fade-in-up 动画元素
+            triggered_count = await page.evaluate("""
                 () => {
-                    return typeof Chart !== 'undefined' && 
-                           document.querySelectorAll('canvas').length > 0;
+                    const elements = document.querySelectorAll('.fade-in-up');
+                    elements.forEach(el => el.classList.add('visible'));
+                    return elements.length;
                 }
             """)
             
+            logger.info(f"已触发 {triggered_count} 个动画元素")
+            
+        except Exception as e:
+            logger.warning(f"触发动画失败，回退到滚动模式: {e}")
+            await self._scroll_fallback(page)
+    
+    async def _scroll_fallback(self, page: Page) -> None:
+        """
+        回退方案：快速滚动触发懒加载（优化版）
+        """
+        try:
+            total_height = await page.evaluate("document.documentElement.scrollHeight")
+            
+            # 快速滚动：只触发 3 个关键位置（顶部、中部、底部）
+            positions = [0, total_height // 2, total_height]
+            for pos in positions:
+                await page.evaluate(f"window.scrollTo(0, {pos})")
+                await asyncio.sleep(0.1)
+            
+            # 回到顶部
+            await page.evaluate("window.scrollTo(0, 0)")
+            
+        except Exception as e:
+            logger.warning(f"滚动回退失败: {e}")
+    
+    async def _wait_for_render(self, page: Page) -> None:
+        """
+        等待动画和图表渲染完成（优化版）
+        
+        Args:
+            page: Playwright Page 对象
+        """
+        # 检测是否有图表需要额外等待
+        try:
+            has_charts = await page.evaluate("""
+                () => typeof Chart !== 'undefined' && document.querySelectorAll('canvas').length > 0
+            """)
+            
             if has_charts:
-                logger.info("检测到 Chart.js 图表，已等待渲染完成")
+                # 有图表：等待图表渲染
+                wait_time = min(self.wait_time, 2)  # 最多等 2 秒
+                logger.info(f"检测到图表，等待 {wait_time}s 渲染")
+                await asyncio.sleep(wait_time)
             else:
-                logger.info("未检测到图表，页面已准备就绪")
+                # 无图表：只等待动画完成（0.8s 是 fade-in-up 动画时长）
+                logger.info("无图表，等待动画完成")
+                await asyncio.sleep(1.0)
                 
         except Exception as e:
-            logger.warning(f"图表检测失败（可忽略）: {e}")
+            logger.warning(f"渲染检测失败，使用默认等待: {e}")
+            await asyncio.sleep(1.0)
     
     async def _get_page_dimensions(self, page: Page) -> Dict[str, int]:
         """
