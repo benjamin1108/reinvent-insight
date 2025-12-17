@@ -106,11 +106,11 @@ class ScreenshotGenerator:
                 )
                 
                 # 创建页面并设置视口
-                # 使用 1.5x deviceScaleFactor 平衡清晰度和渲染稳定性
-                # 注意：2x 在超长页面下可能导致渲染问题
+                # 使用 2x deviceScaleFactor 平衡清晰度和渲染稳定性
+                # 注意：3x 在无 GPU 环境下超长页面会出现色块遮挡
                 page = await browser.new_page(
                     viewport={'width': width, 'height': 1080},
-                    device_scale_factor=3.0  # 2倍分辨率，高清输出
+                    device_scale_factor=2.0  # 2倍分辨率，高清输出
                 )
                 
                 # 设置超时
