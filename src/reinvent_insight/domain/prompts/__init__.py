@@ -22,7 +22,7 @@ from .common import (
 from .outline import OUTLINE_PROMPT_TEMPLATE
 
 from .chapter import (
-    CHAPTER_DEPTH_CONSTRAINT_TEMPLATE,
+    CHAPTER_CONTENT_CONSTRAINT_TEMPLATE,
     CHAPTER_PROMPT_TEMPLATE,
 )
 
@@ -32,11 +32,9 @@ from .ultra import (
     MODE_CONFIGS,
     get_mode_config,
     get_outline_instructions,
-    get_chapter_instructions,
     # 向后兼容
     DEEP_OUTLINE_INSTRUCTIONS,
     ULTRA_OUTLINE_INSTRUCTIONS,
-    ULTRA_CHAPTER_INSTRUCTIONS,
 )
 
 from .subtitle import (
@@ -59,7 +57,7 @@ __all__ = [
     # Outline
     'OUTLINE_PROMPT_TEMPLATE',
     # Chapter
-    'CHAPTER_DEPTH_CONSTRAINT_TEMPLATE',
+    'CHAPTER_CONTENT_CONSTRAINT_TEMPLATE',
     'CHAPTER_PROMPT_TEMPLATE',
     # Conclusion
     'CONCLUSION_PROMPT_TEMPLATE',
@@ -67,10 +65,8 @@ __all__ = [
     'MODE_CONFIGS',
     'get_mode_config',
     'get_outline_instructions',
-    'get_chapter_instructions',
     'DEEP_OUTLINE_INSTRUCTIONS',
     'ULTRA_OUTLINE_INSTRUCTIONS',
-    'ULTRA_CHAPTER_INSTRUCTIONS',
     # Subtitle
     'SUBTITLE_TRANSLATION_PROMPT_WITH_CONTEXT',
     'SUBTITLE_TRANSLATION_PROMPT_FALLBACK',

@@ -93,32 +93,45 @@ def generate_toc_with_links(chapters: List[str]) -> str:
 
 
 def parse_outline(content: str) -> Tuple[Optional[str], Optional[List[str]], Optional[str]]:
-    """从Markdown文本中解析标题、引言和章节列表
+    """从大纲JSON中解析标题、引言和章节列表
     
     Args:
-        content: Markdown 格式的大纲内容
+        content: outline内容（JSON格式）
         
     Returns:
         (title, chapters, introduction) 元组
-        - title: 标题（从 # 标题 提取）
-        - chapters: 章节列表（从 1. 章节 提取）
-        - introduction: 引言（从 ### 引言 部分提取）
     """
-    
-    title_match = re.search(r"^#\s*(.*)", content, re.MULTILINE)
-    title = title_match.group(1).strip() if title_match else None
-
-    # 解析引言
-    introduction_match = re.search(r"###\s*引言\s*\n(.*?)(?=\n###|$)", content, re.DOTALL)
-    introduction = introduction_match.group(1).strip() if introduction_match else None
-
-    chapters = re.findall(r"^\d+\.\s*(.*)", content, re.MULTILINE)
-    
-    if not title or not chapters:
-        logger.warning(f"无法从内容中解析出完整的标题和章节: {content[:500]}")
-        return None, None, None
+    import json
+    try:
+        json_match = re.search(r'```json\s*([\s\S]*?)```', content)
+        if json_match:
+            json_str = json_match.group(1).strip()
+        else:
+            json_match = re.search(r'\{[\s\S]*"chapters"[\s\S]*\}', content)
+            if json_match:
+                json_str = json_match.group(0)
+            else:
+                logger.warning("未找到JSON内容")
+                return None, None, None
         
-    return title, chapters, introduction
+        outline_json = json.loads(json_str)
+        title = outline_json.get('title_cn') or outline_json.get('title')
+        introduction = outline_json.get('introduction')
+        chapters_data = outline_json.get('chapters', [])
+        chapters = [ch.get('title', '') for ch in chapters_data if ch.get('title')]
+        
+        if not title or not chapters:
+            logger.warning(f"解析大纲失败: title={title}, chapters={len(chapters) if chapters else 0}")
+            return None, None, None
+        
+        logger.info(f"解析大纲成功: 标题={title[:30]}..., 章节数={len(chapters)}")
+        return title, chapters, introduction
+    except json.JSONDecodeError as e:
+        logger.warning(f"JSON解析失败: {e}")
+        return None, None, None
+    except Exception as e:
+        logger.warning(f"解析大纲失败: {e}")
+        return None, None, None
 
 
 def extract_titles_from_outline(outline_content: str) -> Tuple[Optional[str], Optional[str]]:

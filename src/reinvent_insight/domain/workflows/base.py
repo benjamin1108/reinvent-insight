@@ -354,17 +354,10 @@ class AnalysisWorkflow(ABC):
                 if index > 0:
                     self.chapter_metadata[index] = {
                         'title': chapter.get('title', ''),
-                        'source_content_amount': chapter.get('source_content_amount', 'moderate'),
-                        'information_density': chapter.get('information_density', 'medium'),
-                        'generation_depth': chapter.get('generation_depth', 'detailed'),
                         'subsections': chapter.get('subsections', []),
-                        'opening_hook': chapter.get('opening_hook', ''),
-                        'closing_transition': chapter.get('closing_transition', ''),
                         'must_include': chapter.get('must_include', []),
                         'must_exclude': chapter.get('must_exclude', []),
-                        'prev_chapter_link': chapter.get('prev_chapter_link', ''),
-                        'next_chapter_link': chapter.get('next_chapter_link', ''),
-                        'rationale': chapter.get('rationale', '')
+                        'content_guidance': chapter.get('content_guidance', '')
                     }
             
             logger.info(f"成功提取 {len(self.chapter_metadata)} 个章节的元数据")

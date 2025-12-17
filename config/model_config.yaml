@@ -109,7 +109,7 @@ tasks:
       temperature: 0.5
       top_p: 0.9
       top_k: 40
-      max_output_tokens: 8000
+      max_output_tokens: 65535
     
     rate_limit:
       interval: 0.5

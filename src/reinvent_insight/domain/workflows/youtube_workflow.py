@@ -197,26 +197,40 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
                 chapter_content=last_chapter.get('content', '')
             )
         
-        # 构建章节深度约束（优先从元数据获取）
+        # 构建章节内容约束（从元数据提取）
         chapter_meta = self._get_chapter_metadata(index + 1)
-        source_content_amount = chapter_meta.get('source_content_amount', 'moderate')
-        information_density = chapter_meta.get('information_density', 'medium')
-        generation_depth = chapter_meta.get('generation_depth', 'detailed' if self.is_ultra_mode else 'moderate')
         
-        # 获取模式配置以确定字数目标
-        mode_config = prompts.get_mode_config(self.is_ultra_mode)
-        target_words = mode_config["word_targets"].get(generation_depth, 3000)
+        # 提取子章节结构
+        subsections = chapter_meta.get('subsections', [])
+        subsections_structure = ""
+        if subsections:
+            for i, sub in enumerate(subsections, 1):
+                subtitle = sub.get('subtitle', '')
+                key_points = sub.get('key_points', [])
+                subsections_structure += f"\n{i}. **{subtitle}**\n"
+                if key_points:
+                    subsections_structure += "   核心论点：\n"
+                    for point in key_points:
+                        subsections_structure += f"   - {point}\n"
+        else:
+            subsections_structure = f"\n(无预定义子章节结构，请根据内容自行组织至少 3 个子章节)\n"
         
-        chapter_depth_constraint = prompts.CHAPTER_DEPTH_CONSTRAINT_TEMPLATE.format(
-            source_content_amount=source_content_amount,
-            information_density=information_density,
-            generation_depth=generation_depth,
-            rationale=rationale or f"本章节聚焦于'{chapter_title}'主题，请基于原文内容深入分析。"
+        # 提取 must_include 和 must_exclude
+        must_include = chapter_meta.get('must_include', [])
+        must_include_list = "\n".join([f"- {item}" for item in must_include]) if must_include else "(无)"  
+        
+        must_exclude = chapter_meta.get('must_exclude', [])
+        must_exclude_list = "\n".join([f"- {item}" for item in must_exclude]) if must_exclude else "(无)"
+        
+        # 提取 content_guidance
+        content_guidance = chapter_meta.get('content_guidance', f"本章节聚焦于'{chapter_title}'主题，请基于原文内容充分展开。")
+        
+        chapter_content_constraint = prompts.CHAPTER_CONTENT_CONSTRAINT_TEMPLATE.format(
+            subsections_structure=subsections_structure,
+            must_include_list=must_include_list,
+            must_exclude_list=must_exclude_list,
+            content_guidance=content_guidance
         )
-        
-        # Ultra 模式追加字数要求
-        if self.is_ultra_mode:
-            chapter_depth_constraint += f"\n\n**Ultra 模式字数要求**：目标约 {target_words} 字，{mode_config['expansion_desc']}"
         
         # 根据内容类型设置不同的描述
         if self.is_pdf:
@@ -237,7 +251,7 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
             full_content=full_content,
             full_outline=outline_content,
             previous_chapters_context=previous_chapters_context,
-            chapter_depth_constraint=chapter_depth_constraint,
+            chapter_content_constraint=chapter_content_constraint,
             chapter_number=index + 1,
             current_chapter_title=chapter_title,
             deduplication_instruction=deduplication_instruction,
