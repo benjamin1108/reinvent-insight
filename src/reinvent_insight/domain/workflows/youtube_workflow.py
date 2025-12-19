@@ -13,11 +13,22 @@ from reinvent_insight.core.utils import (
     parse_outline, 
     generate_toc_with_links,
     remove_parenthetical_english,
-    extract_titles_from_outline
+    extract_titles_from_outline,
+    extract_content_type_info
 )
 from reinvent_insight.domain.workflows.base import AnalysisWorkflow
 from reinvent_insight.infrastructure.media.youtube_downloader import VideoMetadata
-from reinvent_insight.domain import prompts
+# v2 prompt 模块
+from prompt.v2 import (
+    build_outline_prompt,
+    build_chapter_prompt,
+    build_conclusion_prompt,
+    get_mode_config
+)
+from prompt.v2.deep_ultra import (
+    DEDUPLICATION_INSTRUCTION_SEQUENTIAL,
+    build_previous_context
+)
 
 logger = logging.getLogger(__name__)
 
@@ -73,30 +84,15 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
         """生成大纲（包含标题、引言、章节列表）"""
         await self._log("步骤 1/4: 正在分析内容结构...")
         
-        # 使用统一的模式指令获取函数
-        mode_instructions = prompts.get_outline_instructions(self.is_ultra_mode)
-        
-        # 根据内容类型设置不同的描述
+        # 确定内容
         if self.is_pdf:
-            content_type_desc = "PDF文档"
-            content_description = "PDF文档内容"
-            # PDF 多模态：内容通过文件传递，不在 prompt 中嵌入
             full_content = "[PDF文档内容请参见附件]"
         else:
-            content_type_desc = "完整英文字幕"
-            content_description = "完整字幕"
             full_content = self.transcript
         
-        # 构建提示词
-        prompt = prompts.OUTLINE_PROMPT_TEMPLATE.format(
-            role_and_style=prompts.ROLE_AND_STYLE_GUIDE,
-            base_prompt=self.base_prompt,
-            content_type=content_type_desc,
-            content_description=content_description,
-            full_content=full_content,
-            mode_instructions=mode_instructions,
-            quality_control_rules=prompts.QUALITY_CONTROL_RULES
-        )
+        # 使用 v2 prompt 构建函数
+        mode = "ultra" if self.is_ultra_mode else "deep"
+        prompt = build_outline_prompt(full_content, mode=mode)
         
         # 重试逻辑
         for attempt in range(self.max_retries + 1):
@@ -118,14 +114,43 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
                     with open(outline_path, "w", encoding="utf-8") as f:
                         f.write(outline)
                     
-                    # 提取英文标题（用于文件命名）
+                    # 提取标题并发送到前端
                     try:
                         title_en, title_cn = extract_titles_from_outline(outline)
                         if title_en:
                             self.generated_title_en = title_en
                             logger.info(f"任务 {self.task_id} - 成功提取英文标题: {title_en}")
+                        # 发送标题到前端进度窗口
+                        if title_cn:
+                            await self._log(f"标题: {title_cn}")
                     except Exception as e:
                         logger.warning(f"任务 {self.task_id} - 提取标题时出错: {e}")
+                    
+                    # 提取内容类型信息并发送到前端（v2 prompt 新功能）
+                    try:
+                        content_type, content_type_rationale = extract_content_type_info(outline)
+                        if content_type:
+                            await self._log(f"类型: {content_type}")
+                            if content_type_rationale:
+                                # 截取判断理由，简洁展示
+                                rationale = content_type_rationale[:80] + ('...' if len(content_type_rationale) > 80 else '')
+                                await self._log(f"理由: {rationale}")
+                    except Exception as e:
+                        logger.debug(f"任务 {self.task_id} - 提取内容类型失败: {e}")
+                    
+                    # 提取章节目录并发送到前端
+                    try:
+                        _, chapters_list, _ = parse_outline(outline)
+                        if chapters_list and len(chapters_list) > 0:
+                            await self._log(f"目录: 共 {len(chapters_list)} 章")
+                            # 每章单独一行，最多展示8章
+                            for i, ch in enumerate(chapters_list[:8], 1):
+                                ch_title = ch[:35] + ('...' if len(ch) > 35 else '')
+                                await self._log(f"  {i}. {ch_title}")
+                            if len(chapters_list) > 8:
+                                await self._log(f"  ... 等共 {len(chapters_list)} 章")
+                    except Exception as e:
+                        logger.debug(f"任务 {self.task_id} - 提取章节目录失败: {e}")
                     
                     await self._log("内容结构分析完成", progress=25)
                     return outline
@@ -162,100 +187,56 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
         Returns:
             章节内容（Markdown格式）
         """
-        # 构建去重指令 - 顺序模式下使用更强的去重指令
-        if index == 0:
-            deduplication_instruction = prompts.DEDUPLICATION_INSTRUCTION_FIRST
-        elif previous_chapters and len(previous_chapters) > 0:
-            # 顺序模式：使用更强的去重指令
-            deduplication_instruction = prompts.DEDUPLICATION_INSTRUCTION_SEQUENTIAL
-        else:
-            # 并发模式：使用基础去重指令
-            deduplication_instruction = prompts.DEDUPLICATION_INSTRUCTION_WITH_PREVIOUS
-        
-        # 构建前序章节上下文（顺序模式下传递所有已生成章节的摘要）
-        previous_chapters_context = ""
-        if previous_chapters and len(previous_chapters) > 0:
-            # 构建所有前序章节的摘要
-            previous_chapters_context = prompts.PREVIOUS_CHAPTERS_SUMMARY_HEADER
-            for prev_chapter in previous_chapters:
-                # 提取章节的前500字作为摘要
-                content_preview = prev_chapter.get('content', '')[:500]
-                if len(prev_chapter.get('content', '')) > 500:
-                    content_preview += '...'
-                
-                previous_chapters_context += prompts.PREVIOUS_CHAPTER_SUMMARY_ITEM.format(
-                    chapter_index=prev_chapter.get('index', index),
-                    chapter_title=prev_chapter.get('title', ''),
-                    chapter_summary=content_preview
-                )
-            
-            # 添加最后一章的完整内容（用于更精确的衔接）
-            last_chapter = previous_chapters[-1]
-            previous_chapters_context += prompts.PREVIOUS_CHAPTER_CONTEXT_TEMPLATE.format(
-                chapter_index=last_chapter.get('index', index),
-                chapter_title=last_chapter.get('title', ''),
-                chapter_content=last_chapter.get('content', '')
-            )
-        
-        # 构建章节内容约束（从元数据提取）
-        chapter_meta = self._get_chapter_metadata(index + 1)
-        
-        # 提取子章节结构
-        subsections = chapter_meta.get('subsections', [])
-        subsections_structure = ""
-        if subsections:
-            for i, sub in enumerate(subsections, 1):
-                subtitle = sub.get('subtitle', '')
-                key_points = sub.get('key_points', [])
-                subsections_structure += f"\n{i}. **{subtitle}**\n"
-                if key_points:
-                    subsections_structure += "   核心论点：\n"
-                    for point in key_points:
-                        subsections_structure += f"   - {point}\n"
-        else:
-            subsections_structure = f"\n(无预定义子章节结构，请根据内容自行组织至少 3 个子章节)\n"
-        
-        # 提取 must_include 和 must_exclude
-        must_include = chapter_meta.get('must_include', [])
-        must_include_list = "\n".join([f"- {item}" for item in must_include]) if must_include else "(无)"  
-        
-        must_exclude = chapter_meta.get('must_exclude', [])
-        must_exclude_list = "\n".join([f"- {item}" for item in must_exclude]) if must_exclude else "(无)"
-        
-        # 提取 content_guidance
-        content_guidance = chapter_meta.get('content_guidance', f"本章节聚焦于'{chapter_title}'主题，请基于原文内容充分展开。")
-        
-        chapter_content_constraint = prompts.CHAPTER_CONTENT_CONSTRAINT_TEMPLATE.format(
-            subsections_structure=subsections_structure,
-            must_include_list=must_include_list,
-            must_exclude_list=must_exclude_list,
-            content_guidance=content_guidance
-        )
-        
-        # 根据内容类型设置不同的描述
+        # 确定内容
         if self.is_pdf:
-            content_type_desc = "PDF文档"
-            content_description = "PDF文档内容"
             full_content = "[PDF文档内容请参见附件]"
         else:
-            content_type_desc = "完整英文字幕"
-            content_description = "完整字幕"
             full_content = self.transcript
         
-        # 构建提示词
-        prompt = prompts.CHAPTER_PROMPT_TEMPLATE.format(
-            role_and_style=prompts.ROLE_AND_STYLE_GUIDE,
-            base_prompt=self.base_prompt,
-            content_type=content_type_desc,
-            content_description=content_description,
+        # 构建章节元数据
+        chapter_meta = self._get_chapter_metadata(index + 1)
+        subsections = chapter_meta.get('subsections', [])
+        must_include = chapter_meta.get('must_include', [])
+        must_exclude = chapter_meta.get('must_exclude', [])
+        content_guidance = chapter_meta.get('content_guidance', f"本章节聚焦于'{chapter_title}'主题，请基于原文内容充分展开。")
+        
+        # 构建前序章节上下文
+        previous_chapter = None
+        previous_summaries = None
+        
+        if previous_chapters and len(previous_chapters) > 0:
+            # 构建摘要列表
+            previous_summaries = []
+            for prev in previous_chapters:
+                content_preview = prev.get('content', '')[:500]
+                if len(prev.get('content', '')) > 500:
+                    content_preview += '...'
+                previous_summaries.append({
+                    'index': prev.get('index', 0),
+                    'title': prev.get('title', ''),
+                    'summary': content_preview
+                })
+            
+            # 最后一章完整内容
+            last = previous_chapters[-1]
+            previous_chapter = {
+                'index': last.get('index', 0),
+                'title': last.get('title', ''),
+                'content': last.get('content', '')
+            }
+        
+        # 使用 v2 prompt 构建函数
+        prompt = build_chapter_prompt(
             full_content=full_content,
             full_outline=outline_content,
-            previous_chapters_context=previous_chapters_context,
-            chapter_content_constraint=chapter_content_constraint,
             chapter_number=index + 1,
-            current_chapter_title=chapter_title,
-            deduplication_instruction=deduplication_instruction,
-            quality_control_rules=prompts.QUALITY_CONTROL_RULES
+            chapter_title=chapter_title,
+            subsections=subsections,
+            must_include=must_include,
+            must_exclude=must_exclude,
+            content_guidance=content_guidance,
+            previous_chapter=previous_chapter,
+            previous_summaries=previous_summaries
         )
         
         # 重试逻辑
@@ -356,25 +337,16 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
         
         full_chapters_text = "\n\n".join(all_chapters_content)
         
-        # 根据内容类型设置不同的描述
+        # 确定内容
         if self.is_pdf:
-            content_type_desc = "PDF文档"
-            content_description = "PDF文档内容"
             full_content = "[PDF文档内容请参见附件]"
         else:
-            content_type_desc = "完整英文字幕"
-            content_description = "完整字幕"
             full_content = self.transcript
         
-        # 构建提示词
-        prompt = prompts.CONCLUSION_PROMPT_TEMPLATE.format(
-            role_and_style=prompts.ROLE_AND_STYLE_GUIDE,
-            base_prompt=self.base_prompt,
-            content_type=content_type_desc,
-            content_description=content_description,
+        # 使用 v2 prompt 构建函数
+        prompt = build_conclusion_prompt(
             full_content=full_content,
-            all_generated_chapters=full_chapters_text,
-            quality_control_rules=prompts.QUALITY_CONTROL_RULES
+            all_generated_chapters=full_chapters_text
         )
         
         # 重试逻辑

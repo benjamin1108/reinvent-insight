@@ -238,3 +238,45 @@ def count_toc_chapters(toc_content: str) -> int:
     # 在 TOC 区域内统计编号列表项
     chapters = re.findall(r'^\d+\.\s+.+', toc_area, re.MULTILINE)
     return len(chapters)
+
+
+def extract_content_type_info(outline_content: str) -> Tuple[Optional[str], Optional[str]]:
+    """从 outline 内容中提取内容类型信息（v2 prompt 新增字段）
+    
+    用于向用户展示 AI 对内容类型的判断和理由。
+    
+    Args:
+        outline_content: outline.md 的完整内容
+        
+    Returns:
+        (content_type, content_type_rationale) 元组，如果提取失败则返回 (None, None)
+    """
+    import json
+    
+    try:
+        # 提取 JSON
+        json_str = None
+        start_idx = outline_content.find('{')
+        if start_idx != -1:
+            brace_count = 0
+            for i in range(start_idx, len(outline_content)):
+                if outline_content[i] == '{':
+                    brace_count += 1
+                elif outline_content[i] == '}':
+                    brace_count -= 1
+                    if brace_count == 0:
+                        json_str = outline_content[start_idx:i+1]
+                        break
+        
+        if json_str:
+            data = json.loads(json_str)
+            content_type = data.get('content_type', '').strip()
+            content_type_rationale = data.get('content_type_rationale', '').strip()
+            
+            if content_type:
+                logger.info(f"提取内容类型: {content_type}")
+                return content_type, content_type_rationale
+    except Exception as e:
+        logger.debug(f"提取内容类型失败: {e}")
+    
+    return None, None

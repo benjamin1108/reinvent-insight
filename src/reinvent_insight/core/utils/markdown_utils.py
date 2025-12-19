@@ -134,6 +134,47 @@ def parse_outline(content: str) -> Tuple[Optional[str], Optional[List[str]], Opt
         return None, None, None
 
 
+def extract_content_type_info(outline_content: str) -> Tuple[Optional[str], Optional[str]]:
+    """
+    从 outline 内容中提取内容类型信息（v2 prompt 新增字段）
+    
+    Args:
+        outline_content: outline.md 的完整内容
+        
+    Returns:
+        (content_type, content_type_rationale) 元组，如果提取失败则返回 (None, None)
+    """
+    import json
+    
+    try:
+        # 提取 JSON
+        json_str = None
+        start_idx = outline_content.find('{')
+        if start_idx != -1:
+            brace_count = 0
+            for i in range(start_idx, len(outline_content)):
+                if outline_content[i] == '{':
+                    brace_count += 1
+                elif outline_content[i] == '}':
+                    brace_count -= 1
+                    if brace_count == 0:
+                        json_str = outline_content[start_idx:i+1]
+                        break
+        
+        if json_str:
+            data = json.loads(json_str)
+            content_type = data.get('content_type', '').strip()
+            content_type_rationale = data.get('content_type_rationale', '').strip()
+            
+            if content_type:
+                logger.info(f"提取内容类型: {content_type}")
+                return content_type, content_type_rationale
+    except Exception as e:
+        logger.debug(f"提取内容类型失败: {e}")
+    
+    return None, None
+
+
 def extract_titles_from_outline(outline_content: str) -> Tuple[Optional[str], Optional[str]]:
     """
     从outline内容中提取中英文标题
