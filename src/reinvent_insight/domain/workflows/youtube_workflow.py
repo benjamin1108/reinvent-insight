@@ -19,13 +19,13 @@ from reinvent_insight.core.utils import (
 from reinvent_insight.domain.workflows.base import AnalysisWorkflow
 from reinvent_insight.infrastructure.media.youtube_downloader import VideoMetadata
 # v2 prompt 模块
-from prompt.v2 import (
+from reinvent_insight.domain.prompts.v2 import (
     build_outline_prompt,
     build_chapter_prompt,
     build_conclusion_prompt,
     get_mode_config
 )
-from prompt.v2.deep_ultra import (
+from reinvent_insight.domain.prompts.v2 import (
     DEDUPLICATION_INSTRUCTION_SEQUENTIAL,
     build_previous_context
 )
