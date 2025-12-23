@@ -537,9 +537,9 @@ prepare_release() {
         
         # 安装 Playwright 浏览器
         if "$VENV_NAME/bin/python" -c "import playwright" 2>/dev/null; then
-            print_info "安装 Chromium 浏览器..."
-            "$VENV_NAME/bin/playwright" install chromium >/dev/null 2>&1 || true
-            print_info "  ✓ Chromium 浏览器已安装"
+            print_info "安装 Playwright 浏览器 (Chromium + Firefox)..."
+            "$VENV_NAME/bin/playwright" install chromium firefox >/dev/null 2>&1 || true
+            print_info "  ✓ Chromium + Firefox 浏览器已安装"
         fi
     fi
     

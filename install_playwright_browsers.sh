@@ -64,11 +64,11 @@ if [ "$AVAILABLE_SPACE" -lt 500 ]; then
 fi
 
 # 安装浏览器
-print_info "开始安装 Playwright Chromium 浏览器..."
+print_info "开始安装 Playwright 浏览器 (Chromium + Firefox)..."
 print_info "这可能需要几分钟时间，请耐心等待..."
 
-if $PYTHON_BIN -m playwright install chromium; then
-    print_success "Playwright Chromium 浏览器安装成功"
+if $PYTHON_BIN -m playwright install chromium firefox; then
+    print_success "Playwright 浏览器安装成功"
 else
     print_error "浏览器安装失败"
     exit 1

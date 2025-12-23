@@ -87,21 +87,12 @@ class ScreenshotGenerator:
         try:
             # 启动 Playwright
             async with async_playwright() as p:
-                logger.info("启动 Chromium 浏览器（无头模式）")
+                logger.info("启动 Firefox 浏览器（无头模式）")
                 
                 # 启动浏览器（无头模式）
-                # 注意：移除 --disable-gpu，使用 GPU 加速渲染避免长页面色块/撕裂问题
-                browser = await p.chromium.launch(
+                # 使用 Firefox 替代 Chromium，解决长图截图问题
+                browser = await p.firefox.launch(
                     headless=True,
-                    args=[
-                        '--no-sandbox',
-                        '--disable-dev-shm-usage',
-                        '--disable-web-security',  # 允许加载本地资源
-                        '--disable-software-rasterizer',  # 禁用软件光栅化
-                        '--enable-gpu-rasterization',  # 启用 GPU 光栅化
-                        '--enable-zero-copy',  # 零拷贝优化
-                        '--ignore-gpu-blocklist',  # 忽略 GPU 黑名单
-                    ],
                     timeout=self.browser_timeout
                 )
                 
