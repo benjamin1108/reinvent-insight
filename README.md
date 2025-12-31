@@ -40,19 +40,30 @@
 - 🧠 **深度分析**：使用 Gemini 2.5 Pro 生成结构化的长文笔记
 - 📄 **多格式支持**：支持 TXT、MD、PDF、DOCX 等多种文档格式的深度分析
 - 📊 **并行处理**：异步架构支持批量视频/文档分析和实时进度反馈
-- 🎨 **优雅展示**：科技感 UI 设计，支持 Markdown 渲染和 PDF 导出
+- 🎨 **Visual Insight**：生成高质量的长图报告和关键帧截图，便于社交分享
 
 ## ✨ 核心特性
 
 ### 🎯 智能分析能力
 - **多层次内容生成**：标题 → 大纲 → 章节内容 → 洞见总结 → 金句提炼
+- **v2 Prompt 引擎**：全新重构的提示词系统，支持更精准的上下文控制和风格定制
 - **Token 优化算法**：智能清洗字幕，大幅降低 API 调用成本
 - **并行章节生成**：10-20 个章节同时生成，效率提升 5-10 倍
-- **版本管理系统**：同一视频/文档支持多次分析，便于对比迭代
-- **多格式文档支持**：
+- **多模态文档支持**：
   - **文本文档**：TXT、Markdown（文本注入方式）
   - **多模态文档**：PDF、DOCX（利用 Gemini 多模态能力分析图表、架构图等）
-  - **统一工作流**：所有格式共享相同的分析流程和输出格式
+  - **网页转换**：内置 HTML 转 Markdown 引擎，支持智能提取正文和清洗干扰信息
+
+### 🖼 Visual Insight (可视化增强)
+- **长图报告生成**：
+  - 基于 Playwright 的高性能渲染引擎
+  - 智能视口适配（支持 2x/3x 高清缩放）
+  - GPU 加速渲染，解决长页面色块问题
+  - 自动动画触发，确保所有动态元素正确捕获
+- **关键帧智能截图**：
+  - 自动识别视频关键节点
+  - 生成 1080p/4K 高清截图
+  - 自动整合进分析报告
 
 ### 🚀 多端交互体验
 - **CLI 工具**：支持交互式菜单、批量处理、命令行参数
@@ -63,14 +74,13 @@
 ### 🔧 企业级特性
 - **异步任务架构**：基于 asyncio 的高性能任务处理
 - **实时进度推送**：WebSocket 双向通信，毫秒级状态更新
+- **模型可观测性**：详细记录 AI 交互日志（Prompt/Response），支持敏感信息脱敏
 - **错误恢复机制**：智能重试、断点续传、优雅降级
-- **可扩展设计**：模块化架构，易于添加新的 AI 模型和功能
 
 ### 💎 前端体验与架构
 - **模块化组件系统**: 采用自定义的、免构建的Vue 3组件化方案，实现了UI的快速开发与维护。
-- **丰富的组件库**: 包含`TechButton`、`Toast`、`ProgressBar`等一系列可复用、可定制主题的共享组件。
 - **动态异步加载**: 组件的HTML, CSS, JS被异步加载，显著提升了首屏性能。
-- **响应式设计**: 完美适配桌面、平板和移动设备，确保在所有终端上都有一致的优质体验。
+- **HTML转SVG优化**: 前端支持将复杂的 HTML 报表转换为 SVG/Canvas，提升长图生成性能。
 
 ## 🏗 系统架构
 
@@ -82,82 +92,45 @@ graph TB
         A[Vue.js SPA] --> B[WebSocket Client]
         A --> C[Axios HTTP Client]
     end
-    
+
     subgraph "API层"
         D[FastAPI Server] --> E[REST Endpoints]
         D --> F[WebSocket Handler]
         D --> G[Static File Server]
     end
-    
+
     subgraph "业务逻辑层"
         H[Task Manager] --> I[Async Worker]
-        I --> J[Downloader Module]
+        I --> J[Media Processor]
         I --> K[AI Workflow Engine]
     end
-    
-    subgraph "AI处理层"
+
+    subgraph "AI处理层 (v2 Prompts)"
         K --> L[Outline Generator]
         K --> M[Chapter Generator]
         K --> N[Conclusion Generator]
         K --> O[Report Assembler]
     end
-    
+
     subgraph "外部服务"
         J --> P[YouTube/yt-dlp]
+        J --> Playwright[Playwright (Screenshots)]
         L --> Q[Gemini API]
         M --> Q
         N --> Q
     end
-    
+
     subgraph "存储层"
         O --> R[File System]
         R --> S[Subtitles]
         R --> T[Summaries]
         R --> U[Tasks Cache]
     end
-    
+
     B -.-> F
     C --> E
     E --> H
     F --> H
-```
-
-### 前端架构
-项目前端采用了一种创新的 **"免构建" Vue 3 架构**，旨在简化开发流程并最大化性能。
-
-- **核心加载器**: `component-loader.js` 是架构的核心，它负责动态、异步地获取和渲染组件。当需要一个组件时，它会并行请求该组件的 `.html`, `.css`, 和 `.js` 文件。
-- **组件化**: 所有UI元素都被拆分为独立的组件（位于 `web/components/`），每个组件都封装了自己的视图(HTML)、样式(CSS)和逻辑(JS)。这种方式使得组件高度内聚和可复用。
-- **全局通信**: 使用 `event-bus.js` 实现了一个轻量级的全局事件总线，用于处理跨组件之间的通信，解耦了组件间的直接依赖。
-- **原生技术栈**: 该架构不依赖于Node.js、Webpack或Vite等重型工具链，直接使用浏览器原生支持的ES模块、Fetch API等技术，回归了Web开发的本质。
-
-```
-graph TD
-    subgraph "浏览器"
-        A[index.html] --> B(app.js)
-        B --> C{init-modules.js}
-        C --> D(ComponentLoader)
-        C --> E(EventBus)
-    end
-
-    subgraph "组件加载流程"
-        D -- "请求 'AppHeader'" --> F{加载组件资源}
-        F --> G[AppHeader.html]
-        F --> H[AppHeader.css]
-        F --> I[AppHeader.js]
-    end
-    
-    subgraph "动态注入"
-       G -- "HTML" --> J[DOM]
-       H -- "CSS" --> K["<style> tag"]
-       I -- "JS (ES Module)" --> L[Vue Component]
-    end
-
-    E -.-> L
-    
-    subgraph "全局暴露"
-       D --> M[window.ComponentLoader]
-       E --> N[window.eventBus]
-    end
 ```
 
 ### 核心工作流
@@ -168,47 +141,33 @@ sequenceDiagram
     participant W as Web界面
     participant A as API服务
     participant T as TaskManager
-    participant D as Downloader
     participant AI as AI Workflow
-    participant G as Gemini API
+    participant SS as Screenshot Gen
 
     U->>W: 输入YouTube链接
     W->>A: POST /summarize
     A->>T: 创建任务
     T-->>W: 返回 task_id
-    W->>A: WebSocket /ws/{task_id}
-    
-    T->>D: 下载字幕
-    D->>D: yt-dlp 获取视频信息
-    D-->>T: 字幕文本 + 元数据
-    
+
     T->>AI: 启动AI工作流
-    
+    AI->>AI: 加载 v2 Prompts
+
     par 并行处理
-        AI->>G: 生成大纲
-        G-->>AI: 大纲内容
+        AI->>AI: 生成大纲
     and
-        Note over AI: 等待大纲完成
+        AI->>AI: 并行生成章节
     end
-    
-    AI-->>W: 进度更新 25%
-    
-    par 并行生成章节
-        loop 每个章节
-            AI->>G: 生成章节内容
-            G-->>AI: 章节文本
-        end
+
+    AI-->>T: 报告生成完成
+
+    opt 可视化生成
+        T->>SS: 生成长图报告 (Playwright)
+        SS->>SS: 渲染 HTML -> PNG
+        SS-->>T: 图片路径
     end
-    
-    AI-->>W: 进度更新 75%
-    
-    AI->>G: 生成结论部分
-    G-->>AI: 引言+洞见+金句
-    
-    AI->>AI: 组装最终报告
-    AI-->>T: 完成状态 + 文件路径
+
     T-->>W: 推送最终结果
-    W-->>U: 显示完整笔记
+    W-->>U: 显示完整笔记 + 长图
 ```
 
 ## 🛠 技术栈
@@ -218,13 +177,10 @@ sequenceDiagram
 |------|------|------|
 | Python | 3.9+ | 主要开发语言 |
 | FastAPI | 0.111.0+ | 高性能 Web 框架 |
-| asyncio | - | 异步并发处理 |
-| WebSocket | - | 实时双向通信 |
+| Playwright | 1.40.0+ | 无头浏览器/截图引擎 |
+| Google Generative AI | 0.8.3+ | Gemini API 客户端 |
 | yt-dlp | latest | YouTube 字幕下载 |
-| Google Generative AI | 0.5.4+ | Gemini API 客户端 |
-| loguru | 0.7.2+ | 结构化日志 |
-| rich | 13.7.1+ | 终端美化输出 |
-| questionary | 2.0.1+ | CLI 交互界面 |
+| BeautifulSoup4 | 4.12+ | HTML 解析与清洗 |
 
 ### 前端技术
 | 技术 | 版本 | 用途 |
@@ -233,11 +189,6 @@ sequenceDiagram
 | Axios | latest | HTTP 客户端 |
 | WebSocket | - | 实时通信 |
 | marked.js | latest | Markdown 渲染 |
-| highlight.js | 11.9.0 | 代码高亮 |
-
-### AI 模型
-- **主模型**: Google Gemini 2.5 Pro (128K context)
-- **备选模型**: XAI (预留接口), Alibaba (预留接口)
 
 ## 🚀 快速开始
 
@@ -261,331 +212,49 @@ source .venv/bin/activate       # 激活虚拟环境 (Linux/macOS)
 
 # 3. 安装项目依赖
 pip install --upgrade pip       # 升级pip
-pip install -e .                # 安装项目和所有依赖（-e 表示可编辑模式，适合开发）
+pip install -e .                # 安装项目和所有依赖
 
-# 4. 安装中文字体（PDF生成必需）
-./scripts/install_chinese_fonts.sh
-# 或手动安装：
-# Ubuntu/Debian: sudo apt-get install fonts-noto-cjk fonts-wqy-microhei
-# CentOS/RHEL: sudo dnf install google-noto-sans-cjk-fonts wqy-microhei-fonts
-# 详见: docs/PDF_CHINESE_FONT_SETUP.md
+# 4. 安装 Playwright 浏览器（用于截图功能）
+playwright install chromium
 ```
 
 ### 3. 配置设置
 
-```
-# 1. 创建配置文件
-# 如果项目中有 .env.example：
+```bash
+# 创建配置文件
 cp .env.example .env
-
-# 如果没有 .env.example，手动创建：
-cat > .env << EOF
-GEMINI_API_KEY=your-gemini-api-key-here
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=your-secure-password
-LOG_LEVEL=INFO
-PREFERRED_MODEL=Gemini
-EOF
-
-# 2. 编辑配置文件
-nano .env                       # 或使用你喜欢的编辑器
+nano .env
 ```
 
-**必需的配置项：**
-```
-# AI API密钥（至少配置一个）
-GEMINI_API_KEY="your-gemini-api-key"         # Google Gemini (推荐)
-XAI_API_KEY="your-xai-api-key"               # XAI (可选)
-ALIBABA_API_KEY="your-alibaba-api-key"       # 阿里云 (可选)
+**推荐配置项：**
+
+```ini
+# AI API密钥
+GEMINI_API_KEY="your-gemini-api-key"
 
 # Web界面认证
-ADMIN_USERNAME="admin"                        # 管理员用户名
-ADMIN_PASSWORD="your-secure-password"         # 管理员密码
+ADMIN_USERNAME="admin"
+ADMIN_PASSWORD="your-secure-password"
 
-# 系统配置
-LOG_LEVEL="INFO"                             # 日志级别
-PREFERRED_MODEL="Gemini"                     # 默认AI模型
+# 可视化配置
+VISUAL_LONG_IMAGE_ENABLED=true
+VISUAL_SCREENSHOT_VIEWPORT_WIDTH=1080
+VISUAL_SCREENSHOT_WAIT_TIME=3
+
+# 模型可观测性 (调试用)
+MODEL_OBSERVABILITY_ENABLED=true
+MODEL_OBSERVABILITY_LOG_LEVEL=DETAILED
 ```
 
 ### 4. 快速体验
 
-```
-# 方式1：CLI 交互模式
-reinvent-insight
-
-# 方式2：Web 界面（推荐） - 开发环境
-./run-dev.sh  # 默认运行在 http://localhost:8002
-
-# 或者手动启动（生产环境）
-python -m src.reinvent_insight.main web  # 默认运行在 http://localhost:8001
-```
-
-## 📘 使用指南
-
-### CLI 使用方式
-
-#### 1. 交互式模式
-```
-reinvent-insight
-```
-- 通过友好的菜单选择操作
-- 支持中文提示和彩色输出
-
-#### 2. 命令行参数模式
-```
-# 分析单个视频
-reinvent-insight --url "https://www.youtube.com/watch?v=xxxxx"
-
-# 批量处理
-reinvent-insight --file video_list.txt --concurrency 3
-
-# 启动 Web 服务
-reinvent-insight web --host 0.0.0.0 --port 8001 --reload
-
-# 重新组装报告
-reinvent-insight reassemble <task_id>
-```
-
-### Web 界面使用
-
-1. **访问主页**: 
-   - 开发环境: http://localhost:8002 (使用 `./run-dev.sh`)
-   - 生产环境: http://localhost:8001 (使用 `reinvent-insight web`)
-2. **登录系统**: 使用配置的用户名密码
-3. **创建分析**:
-   - **视频分析**：
-     - 点击"创建深度解读"
-     - 粘贴 YouTube 链接
-     - 点击"开始分析"
-   - **文档分析**：
-     - 点击"上传文档"
-     - 选择文档文件（TXT、MD、PDF、DOCX）
-     - 可选填写文档标题
-     - 点击"开始分析"
-   - 实时查看处理进度
-4. **浏览笔记**:
-   - 点击"浏览笔记库"
-   - 支持按级别、年份、类型筛选
-   - 点击卡片查看详情
-5. **分享笔记**:
-   - 在阅读界面点击分享按钮
-   - 复制短链接发送给他人
-
-### 批量处理指南
-
-创建 `urls.txt` 文件：
-```
-https://www.youtube.com/watch?v=video1
-https://www.youtube.com/watch?v=video2
-https://www.youtube.com/watch?v=video3
-```
-
-执行批量处理：
 ```bash
-reinvent-insight --file urls.txt --concurrency 5
+# 启动 Web 服务 (开发模式)
+./run-dev.sh
+
+# 或者手动启动
+python -m src.reinvent_insight.main web
 ```
-
-## 📚 API 文档
-
-### 认证
-
-所有需要认证的接口都需要在 Header 中携带 Bearer Token：
-```
-Authorization: Bearer <your-token>
-```
-
-### 核心接口
-
-#### 1. 用户登录
-```http
-POST /login
-Content-Type: application/json
-
-{
-  "username": "admin",
-  "password": "your-password"
-}
-
-Response:
-{
-  "token": "your-bearer-token"
-}
-```
-
-#### 2. 获取环境信息
-```http
-GET /api/env
-
-Response:
-{
-  "environment": "development",
-  "project_root": "/home/user/reinvent-insight",
-  "host": "localhost",
-  "port": "8001",
-  "version": "0.1.0",
-  "is_development": true
-}
-```
-
-#### 3. 创建摘要任务
-```http
-POST /summarize
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "url": "https://www.youtube.com/watch?v=xxxxx",
-  "task_id": null  // 可选，用于重连
-}
-
-Response:
-{
-  "task_id": "uuid-string",
-  "message": "任务已创建，请连接 WebSocket。",
-  "status": "created"
-}
-```
-
-#### 4. WebSocket 连接
-```javascript
-const ws = new WebSocket(`ws://localhost:8002/ws/${taskId}`);  // 开发环境
-// const ws = new WebSocket(`ws://localhost:8001/ws/${taskId}`);  // 生产环境
-
-// 接收的消息类型
-{
-  "type": "log",      // 日志消息
-  "message": "正在下载字幕..."
-}
-
-{
-  "type": "progress", // 进度更新
-  "progress": 50,
-  "message": "正在生成章节内容..."
-}
-
-{
-  "type": "result",   // 最终结果
-  "title": "深度解析...",
-  "summary": "# 完整的Markdown内容..."
-}
-
-{
-  "type": "error",    // 错误信息
-  "message": "处理失败：..."
-}
-```
-
-#### 5. 获取摘要列表
-```http
-GET /api/public/summaries
-
-Response:
-{
-  "summaries": [
-    {
-      "filename": "AWS reInvent 2024 - Dive into the depths of routing on AWS (NET318).md",
-      "title_cn": "深入解析AWS路由：原理、实践与新功能 (NET318)",
-      "title_en": "AWS re:Invent 2024 - Dive into the depths of routing on AWS (NET318)",
-      "size": 132048,
-      "word_count": 16502,
-      "created_at": 1721286000,
-      "modified_at": 1721286500,
-      "upload_date": "2024-07-18",
-      "video_url": "https://www.youtube.com/watch?v=example",
-      "is_reinvent": true,
-      "course_code": "NET318",
-      "level": "300",
-      "hash": "d4e5f6a1",
-      "version": 1
-    }
-  ]
-}
-```
-
-#### 6. 获取摘要内容
-```http
-GET /api/public/summaries/{filename}
-GET /api/public/doc/{hash}  // 短链接方式
-GET /api/public/doc/{hash}/{version}  // 指定版本
-
-Response:
-{
-  "filename": "AWS reInvent 2024 - Dive into the depths of routing on AWS (NET318).md",
-  "title": "深入解析AWS路由：原理、实践与新功能 (NET318)",  // 向后兼容
-  "title_cn": "深入解析AWS路由：原理、实践与新功能 (NET318)",
-  "title_en": "AWS re:Invent 2024 - Dive into the depths of routing on AWS (NET318)",
-  "content": "完整的Markdown内容",
-  "video_url": "https://...",
-  "versions": [
-    {
-        "filename": "AWS reInvent 2024 - Dive into the depths of routing on AWS (NET318)_v1.md",
-        "version": 1,
-        "created_at": 1721286000
-    },
-    {
-        "filename": "AWS reInvent 2024 - Dive into the depths of routing on AWS (NET318).md",
-        "version": 0,
-        "created_at": 1721280000
-    }
-  ]
-}
-```
-
-#### 7. 下载 PDF
-```http
-GET /api/public/summaries/{filename}/pdf
-
-Response: PDF文件流
-```
-
-#### 8. 获取摘要列表（需认证）
-```http
-GET /summaries
-Authorization: Bearer <token>
-
-Response: 同 /api/public/summaries
-```
-
-#### 9. 获取摘要内容（需认证）
-```http
-GET /summaries/{filename}
-Authorization: Bearer <token>
-
-Response: 同 /api/public/summaries/{filename}
-```
-
-#### 10. 分析文档（多格式支持）
-```http
-POST /analyze-document
-Authorization: Bearer <token>
-Content-Type: multipart/form-data
-
-Form Data:
-- file: 文档文件（支持 .txt, .md, .pdf, .docx）
-- title: 可选的文档标题
-
-Response:
-{
-  "task_id": "uuid-string",
-  "message": "文档分析任务已创建（TXT），请连接 WebSocket。",
-  "status": "created"
-}
-```
-
-**支持的文档格式：**
-- **TXT**：纯文本文件（最大 10MB）
-- **MD**：Markdown 文档（最大 10MB）
-- **PDF**：PDF 文档（最大 50MB，支持多模态分析）
-- **DOCX**：Word 文档（最大 50MB，支持多模态分析）
-
-**处理方式：**
-- **文本文档（TXT/MD）**：直接读取文本内容并注入到 Prompt 中进行分析
-- **多模态文档（PDF/DOCX）**：上传到 Gemini API，利用多模态能力分析文档中的文字、图表、架构图等
-
-**注意事项：**
-- 文档分析使用与视频分析相同的工作流和输出格式
-- 支持通过 WebSocket 实时查看分析进度
-- 生成的报告会自动保存到 `downloads/summaries/` 目录
 
 ## 🔧 开发指南
 
@@ -599,226 +268,57 @@ reinvent-insight/
 │   ├── main.py                     # CLI 入口与主程序
 │   │
 │   ├── api/                        # API 层 - HTTP 接口与路由
-│   │   ├── app.py                  # FastAPI 应用入口
-│   │   ├── dependencies.py         # 依赖注入
-│   │   ├── routes/                 # 路由模块
-│   │   │   ├── analysis.py         # 视频分析接口
-│   │   │   ├── documents.py        # 文档处理接口
-│   │   │   ├── downloads.py        # 下载与PDF导出
-│   │   │   ├── tasks.py            # 任务状态SSE推送
-│   │   │   ├── tts_*.py            # TTS语音合成接口
-│   │   │   ├── ultra_deep.py       # 深度分析接口
-│   │   │   └── visual.py           # 可视化生成接口
-│   │   └── schemas/                # 请求/响应模型
 │   │
 │   ├── core/                       # 核心层 - 配置与基础设施
-│   │   ├── config.py               # 应用配置管理
-│   │   ├── logger.py               # 日志系统
-│   │   ├── error_recovery.py       # 错误恢复机制
-│   │   └── utils/                  # 通用工具函数
 │   │
 │   ├── domain/                     # 领域层 - 业务逻辑核心
 │   │   ├── models/                 # 领域模型
-│   │   │   ├── document.py         # 文档模型
-│   │   │   └── outline.py          # 大纲模型
-│   │   ├── prompts/                # AI提示词模板
-│   │   │   ├── common.py           # 通用提示词
-│   │   │   ├── outline.py          # 大纲生成提示词
-│   │   │   ├── chapter.py          # 章节生成提示词
-│   │   │   ├── conclusion.py       # 结论生成提示词
-│   │   │   └── ultra.py            # 深度分析提示词
-│   │   └── workflows/              # 业务工作流
-│   │       └── youtube_workflow.py # YouTube分析工作流
+│   │   └── prompts/                # AI提示词模板
+│   │       ├── v2/                 # [NEW] v2版提示词引擎
+│   │       │   ├── _base.py        # 基础提示词类
+│   │       │   ├── outline.py      # 大纲生成
+│   │       │   ├── chapter.py      # 章节生成
+│   │       │   └── conclusion.py   # 结论生成
+│   │       └── ...                 # 旧版提示词(向后兼容)
 │   │
-│   ├── infrastructure/             # 基础设施层 - 外部服务集成
+│   ├── infrastructure/             # 基础设施层
 │   │   ├── ai/                     # AI 模型客户端
-│   │   │   ├── base_client.py      # 抽象基类
-│   │   │   ├── gemini_client.py    # Google Gemini 客户端
-│   │   │   ├── dashscope_client.py # 阿里云 DashScope 客户端
-│   │   │   ├── client_factory.py   # 客户端工厂
-│   │   │   └── config_manager.py   # 模型配置管理
-│   │   ├── media/                  # 媒体处理
-│   │   │   ├── youtube_downloader.py # YouTube字幕下载
-│   │   │   ├── pdf_processor.py    # PDF文档处理
-│   │   │   └── pdf_generator.py    # PDF生成
-│   │   ├── html/                   # HTML转Markdown
-│   │   ├── audio/                  # 音频处理
-│   │   └── file_system/            # 文件系统监控
+│   │   ├── html/                   # [NEW] HTML转Markdown引擎
+│   │   │   ├── converter.py        # 转换主入口
+│   │   │   └── preprocessor.py     # HTML清洗与SVG处理
+│   │   ├── media/                  # [NEW] 媒体处理
+│   │   │   ├── screenshot_generator.py # Playwright截图引擎
+│   │   │   └── youtube_downloader.py
 │   │
-│   ├── services/                   # 服务层 - 业务服务
-│   │   ├── analysis/               # 分析服务
-│   │   │   ├── task_manager.py     # 任务管理器
-│   │   │   ├── worker.py           # 异步工作器
-│   │   │   ├── worker_pool.py      # 工作线程池
-│   │   │   ├── summarizer.py       # AI摘要器
-│   │   │   ├── visual_worker.py    # 可视化生成器
-│   │   │   └── visual_watcher.py   # 可视化监控
-│   │   ├── document/               # 文档服务
-│   │   │   ├── document_processor.py   # 文档处理
-│   │   │   ├── document_service.py     # 文档业务逻辑
-│   │   │   ├── metadata_service.py     # 元数据管理
-│   │   │   └── hash_registry.py        # 哈希注册表
-│   │   ├── cookie/                 # Cookie管理服务
-│   │   │   ├── manager_cli.py      # CLI管理工具
-│   │   │   ├── manager_service.py  # 管理服务
-│   │   │   └── health_checker.py   # 健康检查
-│   │   ├── tts_service.py          # TTS语音服务
-│   │   └── startup_service.py      # 启动服务
-│   │
-│   └── tools/                      # 辅助工具脚本
-│       ├── generate_pdfs.py        # PDF批量生成
-│       ├── update_level.py         # 级别更新
-│       └── update_metadata.py      # 元数据更新
+│   └── services/                   # 服务层 - 业务服务
 │
 ├── web/                            # 前端代码 (免构建 Vue 3)
-│   ├── index.html                  # 应用主入口
-│   ├── components/                 # UI组件
-│   │   ├── common/                 # 通用组件 (AppHeader, Toast)
-│   │   ├── shared/                 # 共享组件 (TechButton, ProgressBar)
-│   │   └── views/                  # 视图组件 (CreateView, LibraryView)
-│   ├── css/                        # 全局样式
-│   └── js/                         # JavaScript 核心
-│       ├── core/                   # 核心模块 (ComponentLoader, EventBus)
-│       └── vendor/                 # 第三方库 (Vue, Axios)
-│
-├── downloads/                      # 数据存储
-│   ├── subtitles/                  # 字幕文件
-│   ├── summaries/                  # 分析报告
-│   └── tasks/                      # 任务缓存
-│
-├── pyproject.toml                  # 项目配置与依赖
-└── .env                            # 环境变量
 ```
 
-### 架构分层说明
+### 模型可观测性
 
-| 层次 | 目录 | 职责 |
-|------|------|------|
-| **API层** | `api/` | HTTP路由、请求验证、响应序列化 |
-| **核心层** | `core/` | 配置管理、日志、通用工具 |
-| **领域层** | `domain/` | 业务模型、提示词、工作流定义 |
-| **基础设施层** | `infrastructure/` | AI客户端、媒体处理、外部服务 |
-| **服务层** | `services/` | 业务逻辑、任务调度、文档处理 |
+系统内置了详细的模型交互日志记录功能，位于 `logs/model/` 目录下。
 
-### 添加新的 AI 模型
+- **Prompt记录**：记录发送给模型的所有提示词
+- **Response记录**：记录模型的原始响应
+- **Token统计**：记录消耗的 Input/Output Token 数量
 
-1. 在 `infrastructure/ai/` 目录创建新的客户端类：
-```python
-# infrastructure/ai/newmodel_client.py
-from .base_client import BaseAIClient
-
-class NewModelClient(BaseAIClient):
-    async def generate_content(self, prompt: str, **kwargs) -> str | None:
-        # 实现你的模型调用逻辑
-        pass
-    
-    async def generate_content_with_file(self, prompt: str, file_path: str, **kwargs) -> str | None:
-        # 实现多模态调用（如果支持）
-        pass
-```
-
-2. 在 `infrastructure/ai/client_factory.py` 中注册：
-```python
-from .newmodel_client import NewModelClient
-
-CLIENT_MAP = {
-    "NewModel": NewModelClient,
-    # ... 其他模型
-}
-```
-
-3. 在 `core/config.py` 中添加配置：
-```python
-NEWMODEL_API_KEY = os.getenv("NEWMODEL_API_KEY")
-```
-
-### 自定义提示词
-
-编辑 `prompt/youtbe-deep-summary.txt` 文件，可以调整：
-- AI 角色设定
-- 输出格式要求
-- 内容结构定义
-- 写作风格指导
-
-### 调试技巧
-
-1. **启用调试日志**:
-```bash
-LOG_LEVEL=DEBUG reinvent-insight
-```
-
-2. **查看任务详情**:
-```bash
-ls -la downloads/tasks/<task_id>/
-```
-
-3. **手动测试 API**:
-```bash
-curl -X POST http://localhost:8001/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"password"}'
-```
+可以通过 `.env` 中的 `MODEL_OBSERVABILITY_*` 变量进行配置。
 
 ## 🚢 部署说明
 
 ### 生产环境部署
 
-使用自动化部署脚本进行生产环境部署：
+使用自动化部署脚本：
 
-```
-# 使用部署脚本
-./redeploy.sh
-
-# 带选项的部署
-./redeploy.sh --port 8080 --host 0.0.0.0
-```
-
-详细的部署说明请参考 [部署脚本详解](./docs/DEPLOY_SCRIPTS.md)。
-
-### 生产环境配置
-
-1. **使用环境变量**:
 ```bash
-export GEMINI_API_KEY="your-production-key"
-export ADMIN_PASSWORD="strong-password-here"
-export LOG_LEVEL="WARNING"
+./redeploy.sh
 ```
 
-2. **使用 Nginx 反向代理**:
-```
-server {
-    listen 80;
-    server_name your-domain.com;
+### 性能优化
 
-    location / {
-        proxy_pass http://localhost:8001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
-```
-
-3. **使用 Supervisor 管理进程**:
-```
-[program:reinvent_insight_web]
-command=/app/.venv/bin/python -m src.reinvent_insight.main web --host 0.0.0.0 --port 8001
-directory=/app/
-autostart=true
-autorestart=true
-stderr_logfile=/var/log/reinvent_insight_web.err.log
-stdout_logfile=/var/log/reinvent_insight_web.out.log
-user=your_user
-```
-
-### 性能优化建议
-
-1. **API 并发限制**: 在 `config.py` 中调整 `CHAPTER_GENERATION_DELAY_SECONDS`
-2. **缓存策略**: 利用 `downloads/tasks/` 目录缓存中间结果
-3. **进程管理**: 使用 systemd 或 supervisor 管理服务进程
-4. **并发控制**: 合理设置批量处理的并发数
+- **截图优化**：系统默认使用 GPU 加速和 2x 缩放进行截图。在无 GPU 的服务器上，可能需要调整 `VISUAL_SCREENSHOT_BROWSER_TIMEOUT`。
+- **并发控制**：通过 `MAX_CONCURRENT_ANALYSIS_TASKS` 控制同时分析的任务数。
 
 ## 📄 许可证
 
