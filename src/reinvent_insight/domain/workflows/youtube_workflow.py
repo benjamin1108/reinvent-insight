@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 class YouTubeAnalysisWorkflow(AnalysisWorkflow):
-    """YouTube 视频分析工作流
+    """YouTube 视频 analysis 工作流
     
     实现YouTube视频字幕的深度分析流程：
     1. 生成大纲（标题、引言、章节列表）
@@ -42,43 +42,6 @@ class YouTubeAnalysisWorkflow(AnalysisWorkflow):
     3. 生成结论（洞见和金句）
     4. 组装最终Markdown报告
     """
-    
-    async def _parse_outline_result(self, outline_content: str) -> Tuple[Optional[str], Optional[List[str]], Optional[str]]:
-        """解析大纲生成结果
-        
-        Args:
-            outline_content: 大纲内容
-            
-        Returns:
-            (title, chapters, introduction)
-        """
-        title, chapters, introduction = parse_outline(outline_content)
-        
-        # 提取章节元数据（复用父类方法）
-        self._extract_chapter_metadata(outline_content)
-        
-        return title, chapters, introduction
-    
-    async def _validate_chapter_count(self, chapters: List[str], outline_content: str):
-        """验证章节数量（Ultra模式特殊处理）"""
-        if self.is_ultra_mode and len(chapters) > 20:
-            logger.warning(f"任务 {self.task_id} - Ultra模式章节数超出限制（{len(chapters)}章），重新生成大纲")
-            await self._log(f"章节数过多（{len(chapters)}章），正在重新分析内容结构...")
-            
-            # 重新生成大纲
-            outline_content = await self._generate_outline()
-            if not outline_content:
-                raise Exception("重新生成大纲失败")
-            
-            title, chapters_raw, introduction = await self._parse_outline_result(outline_content)
-            if not title or not chapters_raw:
-                raise Exception("解析大纲失败")
-            
-            chapters = [re.sub(r'[\[\]]', '', c).strip() for c in chapters_raw]
-            
-            # 如果还是超过20章，报错
-            if len(chapters) > 20:
-                raise Exception(f"Ultra模式章节数仍超过20（{len(chapters)}章），请检查内容结构")
     
     async def _generate_outline(self) -> str:
         """生成大纲（包含标题、引言、章节列表）"""

@@ -16,17 +16,17 @@ from ._base import get_base_context, get_quality_rules
 
 MODE_CONFIGS = {
     "deep": {
-        "chapter_range": "8-10",
-        "chapter_min": 5,
-        "chapter_max": 15,
-        "subsection_min": 3,
+        "chapter_range": "10-15",
+        "chapter_min": 8,
+        "chapter_max": 18,
+        "subsection_min": 4,
         "description": "精炼深度模式，适合 30-60 分钟内容"
     },
     "ultra": {
-        "chapter_range": "12-20",
-        "chapter_min": 10,
-        "chapter_max": 25,
-        "subsection_min": 4,
+        "chapter_range": "18-30",
+        "chapter_min": 15,
+        "chapter_max": 35,
+        "subsection_min": 5,
         "description": "全面深度模式，适合 1-2 小时或复杂文档"
     }
 }
@@ -71,6 +71,7 @@ OUTLINE_PROMPT_TEMPLATE = """
 | 类型 | 特征 | 章节策略 |
 |------|------|----------|
 | **产品发布会/Keynote** | 混合型：产品发布+战略理念+客户案例 | 按内容属性匹配标题风格 |
+| **AWS re:Invent 技术解读** | 针对特定服务的 PPT 深度技术讲解 | **严格遵循 PPT 时序**，逐层展开，禁止重组 |
 | **技术深度解读** | 深入剖析某个技术/产品的设计与实现 | 问题导向，层次递进 |
 | **长篇访谈/对话** | 问答式结构，话题跳跃性较大 | 主题聚类，观点提炼 |
 | **行业分析报告** | 趋势洞察、战略分析、未来预测 | 概念化标题，横向对比 |
@@ -106,6 +107,10 @@ OUTLINE_PROMPT_TEMPLATE = """
 
 **禁止的操作**：
 - 凭空添加原文没有的内容
+
+**高密度切分原则（针对技术解读）**：
+- **宁细勿粗**：AWS re:Invent 等技术内容，每个独立的技术模块（Feature）、每个核心架构图、每个完整 Demo，都应独立成章。
+- **拒绝笼统**：不要试图用一章概括"三个新功能"，请拆分为三章分别详解。
 
 ## 步骤 4：章节框架设计
 

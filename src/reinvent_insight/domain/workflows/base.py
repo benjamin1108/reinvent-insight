@@ -93,6 +93,9 @@ class AnalysisWorkflow(ABC):
     子类需要实现具体的内容类型处理逻辑
     """
     
+    # Ultra 模式最大章节数限制
+    ULTRA_MODE_MAX_CHAPTERS = 35
+    
     def __init__(
         self, 
         task_id: str, 
@@ -212,7 +215,12 @@ class AnalysisWorkflow(ABC):
                 chapters = [re.sub(r'[\[\]]', '', c).strip() for c in chapters_raw]
                 
                 # Ultra模式章节数量验证
-                await self._validate_chapter_count(chapters, outline_content)
+                title, chapters, introduction, outline_content = await self._validate_chapter_count(
+                    title,
+                    chapters,
+                    introduction,
+                    outline_content,
+                )
                 
                 await self._log(f"成功生成标题和 {len(chapters)} 个章节的分析框架")
                 
@@ -402,9 +410,15 @@ class AnalysisWorkflow(ABC):
         except Exception as e:
             logger.warning(f"清理原始文档失败: {e}")
     
-    async def _validate_chapter_count(self, chapters: List[str], outline_content: str):
-        """验证章节数量（Ultra模式）"""
-        if self.is_ultra_mode and len(chapters) > 20:
+    async def _validate_chapter_count(
+        self,
+        title: str,
+        chapters: List[str],
+        introduction: str,
+        outline_content: str,
+    ) -> Tuple[str, List[str], str, str]:
+        """验证章节数量并在需要时返回重新生成后的结果（Ultra模式）"""
+        if self.is_ultra_mode and len(chapters) > self.ULTRA_MODE_MAX_CHAPTERS:
             logger.warning(f"任务 {self.task_id} - Ultra模式章节数超出限制（{len(chapters)}章），重新生成大纲")
             await self._log(f"章节数过多（{len(chapters)}章），正在重新分析内容结构...")
             
@@ -413,16 +427,17 @@ class AnalysisWorkflow(ABC):
             if not outline_content:
                 raise Exception("重新生成大纲失败")
             
-            from reinvent_insight.core.utils import parse_outline
-            title, chapters_raw, introduction = parse_outline(outline_content)
+            title, chapters_raw, introduction = await self._parse_outline_result(outline_content)
             if not title or not chapters_raw:
                 raise Exception("解析大纲失败")
             
             chapters = [re.sub(r'[\[\]]', '', c).strip() for c in chapters_raw]
             
-            # 如果还是超过20章，报错
-            if len(chapters) > 20:
-                raise Exception(f"Ultra模式章节数仍超过20（{len(chapters)}章），请检查内容结构")
+            # 如果还是超过最大章节数，报错
+            if len(chapters) > self.ULTRA_MODE_MAX_CHAPTERS:
+                raise Exception(f"Ultra模式章节数仍超过{self.ULTRA_MODE_MAX_CHAPTERS}（{len(chapters)}章），请检查内容结构")
+
+        return title, chapters, introduction, outline_content
     
     async def _generate_chapters_parallel(
         self, 

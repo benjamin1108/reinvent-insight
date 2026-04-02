@@ -1,0 +1,25 @@
+[tool.ruff]
+# 选择规则集
+# E: pycodestyle errors
+# F: Pyflakes
+# I: isort
+# W: pycodestyle warnings
+# B: flake8-bugbear
+# UP: pyupgrade
+select = ["E", "F", "I", "W", "B", "UP"]
+ignore = []
+
+# 允许的最大行宽
+line-length = 100
+
+# 排除不需要检查的目录
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".venv",
+    "dist",
+]
+
+[tool.ruff.isort]
+known-first-party = ["reinvent_insight"]

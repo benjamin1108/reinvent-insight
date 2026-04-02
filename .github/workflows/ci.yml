@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      # 如果需要数据库等服务可以在这里添加
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+        cache: 'pip'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libcairo2 \
+          libpango-1.0-0 \
+          libpangocairo-1.0-0 \
+          libgdk-pixbuf2.0-0 \
+          libffi-dev \
+          shared-mime-info \
+          fonts-noto-cjk \
+          fonts-wqy-microhei \
+          libnss3 \
+          libnspr4 \
+          libatk1.0-0 \
+          libatk-bridge2.0-0 \
+          libcups2 \
+          libdrm2 \
+          libxkbcommon0 \
+          libxcomposite1 \
+          libxdamage1 \
+          libxfixes3 \
+          libxrandr2 \
+          libgbm1 \
+          libasound2
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+        pip install ruff mypy pytest pytest-asyncio pytest-cov
+
+    - name: Install Playwright Browsers
+      run: |
+        playwright install chromium firefox
+
+    - name: Lint with Ruff
+      run: |
+        ruff check .
+
+    - name: Type check with Mypy
+      run: |
+        mypy src --config-file mypy.ini
+
+    - name: Run Tests
+      run: |
+        # 只运行不需要外部 API 的单元测试
+        # 如果没有 unit 目录，则运行 tests/ 下的所有测试，但可能导致外部调用失败
+        if [ -n "$(find tests/unit -type f \( -name 'test_*.py' -o -name '*_test.py' \) -print -quit 2>/dev/null)" ]; then
+          pytest tests/unit --cov=src --cov-report=xml
+        else
+          pytest tests --cov=src --cov-report=xml --ignore=tests/manual_test_chunking.py --ignore=tests/manual_test_html_to_markdown.py
+        fi
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+        fail_ci_if_error: false
